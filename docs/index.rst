@@ -3,13 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to abacusutils's documentation!
+abacusutils: Python and C++ code to read halo catalogs and other Abacus N-body data products
 =======================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   modules
 
 
 Indices and tables

@@ -1,11 +1,11 @@
 """
-abacus_halo_catalog.py
-----------------------
+compaso_halo_catalog.py
+-----------------------
 
 Website: https://github.com/abacusorg/AbacusSummit
 
-Loads halo catalogs from Abacus's on-the-fly halo finder.
-This module defines one class, `AbacusHaloCatalog`, whose
+Loads halo catalogs from CompaSO, Abacus's on-the-fly halo finder.
+This module defines one class, `CompaSOHaloCatalog`, whose
 constructor takes the path to a halo catalog as an argument.
 Users should use this class as the primary interface to load
 and manipulate halo catalogs.
@@ -25,12 +25,12 @@ ints), so these columns are unpacked as they are loaded.
 Furthermore, the halo catalogs for big simulations are divided
 across a few dozen files.  These files are transparently loaded
 into one monolithic Astropy table if one passes a directory
-to `AbacusHaloCatalog`; to load only one file, pass just that file.
+to `CompaSOHaloCatalog`; to load only one file, pass just that file.
 
 Importantly, because ASDF and Astropy tables are both column-
 oriented, it can be much faster to load only the subset of
 halo catalog columns that one needs, rather than all 100-odd
-columns.  Use the `fields` argument to the `AbacusHaloCatalog`
+columns.  Use the `fields` argument to the `CompaSOHaloCatalog`
 constructor to specify a subset of fields to load.  Similarly,
 the particles can be quite large, and one can use the `load_subsamples`
 argument to restrict the particles to the subset one needs.
@@ -42,9 +42,9 @@ at [TODO: readthedocs].
 
 Short Example
 =============
->>> from abacus_halo_catalog import AbacusHaloCatalog
+>>> from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 >>> # Load the RVs and PIDs for particle subsample A
->>> cat = AbacusHaloCatalog('/storage/AbacusSummit/AbacusSummit_000/halos/z0.100', load_subsamples='A_all')
+>>> cat = CompaSOHaloCatalog('/storage/AbacusSummit/AbacusSummit_000/halos/z0.100', load_subsamples='A_all')
 >>> print(cat.halos[:5])  # cat.halos is an Astropy Table, print the first 5 rows
    id    npstartA npstartB ... sigmavrad_L2com sigmavtan_L2com rvcirc_max_L2com
 -------- -------- -------- ... --------------- --------------- ----------------
@@ -182,10 +182,9 @@ try:
     asdf.compression.validate('blsc')
 except:
     # Note: this is a temporary solution until blosc is integrated into ASDF, or until we package a pluggable decompressor
-    exit('Error: your ASDF installation does not support Blosc compression.  Please clone https://github.com/lgarrison/asdf and install with "cd asdf; pip install ."')
+    exit('Error: your ASDF installation does not support Blosc compression.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
 
-
-class AbacusHaloCatalog:
+class CompaSOHaloCatalog:
     """
     A halo catalog from Abacus's on-the-fly group finder.
 
@@ -258,8 +257,8 @@ class AbacusHaloCatalog:
         else:
             # if list, must be all files
             for p in path:
-                if not isfile(p):
-                    raise ValueError(f'If passing a list of paths, must be a list of files. Path "{p}" in list is not a file.')
+                if os.path.exists(p) and not isfile(p):
+                    raise ValueError(f'If passing a list of paths, all paths must be files. Path "{p}" in list is not a file.')
 
         for p in path:
             if not os.path.exists(p):

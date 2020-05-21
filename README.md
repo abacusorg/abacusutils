@@ -1,9 +1,9 @@
 # abacusutils
 
-abacusutils is the primary repository for distribution of code to read and manipulate
-data products from the Abacus N-body project.  In particular, these utilities are intended for use
-with the [AbacusSummit](https://abacussummit.readthedocs.io) suite of simulations.  We provide
-C/C++ and Python 3 code.
+abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
+In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io)
+suite of simulations.  Most of the code is in Python 3, but we also provide some examples of how to
+interface with C/C++.
 
 Full API documentation: <https://abacusutils.readthedocs.io>
 
@@ -30,4 +30,14 @@ to be installed (located at: https://github.com/lgarrison/asdf/).  Our fork supp
 [blosc compression](https://blosc.org/pages/blosc-in-depth/).
 
 ## Usage
-See the documentation at <https://abacusutils.readthedocs.io>
+The abacusutils PyPI package contains a Python package called `abacusnbody`.
+This is the name to import (not `abacusutils`, which is just the name of the PyPI package).
+For example, to import the `compaso_halo_catalog` module, use
+```python
+import abacusnbody.data.compaso_halo_catalog
+```
+
+See the full documentation at <https://abacusutils.readthedocs.io>
+
+Specific examples of how to use abacusutils to work with AbacusSummit data are given
+at the AbacusSummit website: <https://abacussummit.readthedocs.io>
