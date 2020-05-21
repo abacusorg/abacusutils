@@ -3,12 +3,27 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-abacusutils: Python and C++ code to read halo catalogs and other Abacus N-body data products
-=======================================
+abacusutils
+===========
+
+abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
+In particular, these utilities are intended for use with the `AbacusSummit <https://abacussummit.readthedocs.io>`_
+suite of simulations.  Most of the code is in Python 3, but we also provide some examples of how to
+interface with C/C++.
+
+abacusutils is hosted in the `abacusorg/abacusutils <https://github.com/abacusorg/abacusutils>`_ GitHub repository.  Please report
+bugs and ask questions by opening an issue in that repository.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started
+
+   installation
+   usage
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Documentation
 
    modules
 

@@ -1,10 +1,7 @@
-abacusnbody.data namespace
-==========================
+abacusnbody.data
+================
 
-Submodules
-----------
-
-abacusnbody.data.compaso\_halo\_catalog module
+compaso_halo_catalog module
 ----------------------------------------------
 
 .. automodule:: abacusnbody.data.compaso_halo_catalog

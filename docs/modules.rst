@@ -1,5 +1,5 @@
-abacusnbody
-===========
+abacusnbody API
+===============
 
 .. toctree::
    :maxdepth: 4

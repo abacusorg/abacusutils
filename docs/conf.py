@@ -28,7 +28,7 @@ author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sown
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['readthedocs_ext.readthedocs', 'recommonmark', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+extensions = ['readthedocs_ext.readthedocs', 'recommonmark', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.intersphinx']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -60,3 +60,6 @@ def setup(app):
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+
+intersphinx_mapping = {'summit': ('https://abacussummit.readthedocs.io/en/latest', None)}

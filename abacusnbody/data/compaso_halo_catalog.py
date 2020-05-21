@@ -1,12 +1,7 @@
 """
-compaso_halo_catalog.py
------------------------
-
-Website: https://github.com/abacusorg/AbacusSummit
-
-Loads halo catalogs from CompaSO, Abacus's on-the-fly halo finder.
-This module defines one class, `CompaSOHaloCatalog`, whose
-constructor takes the path to a halo catalog as an argument.
+The ``compaso_halo_catalog`` module loads halo catalogs from CompaSO, Abacus's
+on-the-fly halo finder.  The module defines one class, ``CompaSOHaloCatalog``,
+whose constructor takes the path to a halo catalog as an argument.
 Users should use this class as the primary interface to load
 and manipulate halo catalogs.
 
@@ -25,26 +20,30 @@ ints), so these columns are unpacked as they are loaded.
 Furthermore, the halo catalogs for big simulations are divided
 across a few dozen files.  These files are transparently loaded
 into one monolithic Astropy table if one passes a directory
-to `CompaSOHaloCatalog`; to load only one file, pass just that file.
+to ``CompaSOHaloCatalog``; to save memory by loading only one file,
+pass just that file as the argument to ``CompaSOHaloCatalog``.
 
 Importantly, because ASDF and Astropy tables are both column-
 oriented, it can be much faster to load only the subset of
-halo catalog columns that one needs, rather than all 100-odd
-columns.  Use the `fields` argument to the `CompaSOHaloCatalog`
-constructor to specify a subset of fields to load.  Similarly,
-the particles can be quite large, and one can use the `load_subsamples`
-argument to restrict the particles to the subset one needs.
+halo catalog columns that one needs, rather than all 60-odd
+columns.  Use the ``fields`` argument to the ``CompaSOHaloCatalog``
+constructor to specify a subset of fields to load (NOTE: this feature
+is under construction).  Similarly, the particles can be quite large,
+and one can use the ``load_subsamples`` argument to restrict the
+particles to the subset one needs.
 
-Some brief examples and technical information are presented
-below, but the full documentation of the data model is located
-at [TODO: readthedocs].
+Some brief examples and technical details about the halo catalog
+layout are presented below, followed by the full module API.
+Examples of using this module to work with AbacusSummit data can
+be found on the AbacusSummit website here:
+https://abacussummit.readthedocs.io
 
 
 Short Example
 =============
 >>> from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 >>> # Load the RVs and PIDs for particle subsample A
->>> cat = CompaSOHaloCatalog('/storage/AbacusSummit/AbacusSummit_000/halos/z0.100', load_subsamples='A_all')
+>>> cat = CompaSOHaloCatalog('/storage/AbacusSummit/AbacusSummit_base_c000_ph000/halos/z0.100', load_subsamples='A_all')
 >>> print(cat.halos[:5])  # cat.halos is an Astropy Table, print the first 5 rows
    id    npstartA npstartB ... sigmavrad_L2com sigmavtan_L2com rvcirc_max_L2com
 -------- -------- -------- ... --------------- --------------- ----------------
@@ -75,19 +74,22 @@ Short Example
 Catalog Structure
 =================
 The catalogs are stored in a directory structure that looks like:
-- SimulationName/
-    - halos/
-        - z0.100/
-            - halo_info/
-                halo_info_000.asdf
-                halo_info_001.asdf
-                ...
-            - halo_rv_A/
-                halo_rv_A_000.asdf
-                halo_rv_A_001.asdf
-                ...
-            - <field & halo, rv & PID, subsample A & B directories>
-        - <other redshift directories, some with particle subsamples, others without>
+
+.. code-block:: none
+
+    - SimulationName/
+        - halos/
+            - z0.100/
+                - halo_info/
+                    halo_info_000.asdf
+                    halo_info_001.asdf
+                    ...
+                - halo_rv_A/
+                    halo_rv_A_000.asdf
+                    halo_rv_A_001.asdf
+                    ...
+                - <field & halo, rv & PID, subsample A & B directories>
+            - <other redshift directories, some with particle subsamples, others without>
 
 The file numbering roughly corresponds to a planar chunk of the simulation
 (all y and z for some range of x).  The matching of the halo_info file numbering
@@ -103,7 +105,7 @@ a halo property).
 
 Internally, the ASDF binary portions are usually compressed.  This should
 be transparent to users, although you may be prompted to install the
-'python-blosc' package if it is not present.  Decompression should be fast,
+blosc package if it is not present.  Decompression should be fast,
 at least 500 MB/s per core.
 
 
@@ -124,13 +126,14 @@ Halo File Types
 ===============
 Each file type (for halos, particles, etc) is grouped into a subdirectory.
 These subdirectories are:
-- `halo_info/`
+
+- ``halo_info/``
     The primary halo catalog files.  Contains stats like
     CoM positions and velocities and moments of the particles.
     Also indicates the index and count of subsampled particles in the
-    `halo_pid_A/B` and `halo_rv_A/B` files.
+    ``halo_pid_A/B`` and ``halo_rv_A/B`` files.
 
-- `halo_pid_A/` and `halo_pid_B/`
+- ``halo_pid_A/`` and ``halo_pid_B/``
     The 64-bit particle IDs of particle subsamples A and B.  The PIDs
     contain information about the Lagrangian position of the particles,
     whether they are tagged, and their local density.
@@ -138,27 +141,27 @@ These subdirectories are:
 The following subdirectories are only present for the redshifts for which
 we output particle subsamples and not just halo catalogs:
     
-- `halo_rv_A/` and `halo_rv_B/`
-    The positions and velocities of the halo subsample particles, in `RVint`
+- ``halo_rv_A/`` and ``halo_rv_B/``
+    The positions and velocities of the halo subsample particles, in "RVint"
     format. The halo associations are recoverable with the indices in the
-    `halo_info` files.
+    ``halo_info`` files.
 
-- `field_rv_A/` and `field_rv_B/`
-    Same as `halo_rv_<A|B>/`, but only for the field (non-halo) particles.
+- ``field_rv_A/`` and ``field_rv_B/``
+    Same as ``halo_rv_<A|B>/``, but only for the field (non-halo) particles.
 
-- `field_pid_A/` and`field_pid_B/`
-    Same as `Halo_pid_<A|B>/`, but only for the field (non-halo) particles.
+- ``field_pid_A/`` and ``field_pid_B/``
+    Same as ``halo_pid_<A|B>/``, but only for the field (non-halo) particles.
 
 
 Bit-packed Formats
 ==================
-The `RVint` format packs six fields (x,y,z, and vx,vy,vz) into three ints (12 bytes).
+The "RVint" format packs six fields (x,y,z, and vx,vy,vz) into three ints (12 bytes).
 Positions are stored to 20 bits (global), and velocities 12 bits (max 6000 km/s).
 
 The PIDs are 8 bytes and encode a local density estimate, tag bits for merger trees,
 and a unique particle id, the last of which encodes the Lagrangian particle coordinate.
 
-These are described in more detail on [TODO: readthedocs]
+These are described in more detail on the :doc:`AbacusSummit Data Model page <summit:data-products>`.
 """
 
 from glob import glob
@@ -187,16 +190,18 @@ except:
 class CompaSOHaloCatalog:
     """
     A halo catalog from Abacus's on-the-fly group finder.
-
-    TODO: maybe this should just be a halotools catalog
     """
+
+    # TODO: maybe this should just be a halotools catalog
+    # TODO: optional progress meter for loading files
+    # TODO: generator mode over chunks
     
     def __init__(self, path, load_subsamples=False, convert_units=True, unpack_bits=False, fields='all'):
         """
-        Loads halos from all slabs.  The `halos` field of this object will contain
-        the halo records; and the `subsamples` field will contain
+        Loads halos.  The ``halos`` field of this object will contain
+        the halo records; and the ``subsamples`` field will contain
         the corresponding halo/field subsample positions and velocities and their
-        ids (if requested via `load_subsamples`).  The `header` field contains
+        ids (if requested via ``load_subsamples``).  The ``header`` field contains
         metadata about the simulation.
         
         Whether a particle is tagged or not is returned when loading the
@@ -204,24 +209,25 @@ class CompaSOHaloCatalog:
         The local density of the particle is also encoded in the PIDs 
         and returned upon loading those.
 
-        TODO: optional progress meter for loading files
-        TODO: generator mode over chunks
-
         Parameters
         ----------
         path: str or list of str
-            The directory containing the halo files, like `MySimulation/halos/z1.000`.
+            The directory containing the halo files, like ``MySimulation/halos/z1.000``.
             Or a halo info file, or a list of halo info files.
 
         load_subsamples: bool or str, optional
             Load halo particle subsamples.  True or False may be specified
             to load all particles or none, or a string in the following format
             may be specified:
-                "<A|B|AB>_[halo_|field_]<pid|rv|all>",
-            where fields in "<>" are mandatory and fields in "[]" are optional.
-            So "A_halo_rv" would load the halo RVs from the A subsample and "AB_pid"
+            
+            .. code-block:: none
+
+                <A|B|AB>_[halo_|field_]<pid|rv|all>
+
+            where fields in ``<>`` are mandatory and fields in ``[]`` are optional.
+            So ``A_halo_rv`` would load the halo RVs from the A subsample and ``AB_pid``
             loads the halo and field PIDs from both subsamples.
-            True is equivalent to "AB_all".
+            True is equivalent to ``AB_all``.
             False (the default) loads nothing.
 
         convert_units: bool, optional
