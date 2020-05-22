@@ -19,9 +19,6 @@ setup(
     ],
     python_requires='>=3.5',
     install_requires = ['numpy','blosc','astropy','numba',
-                        #'asdf==2.6.0.dev38+gc2b1361'
                         'asdf @ git+https://github.com/lgarrison/asdf.git'
                         ],
-    #dependency_links = ['git+https://github.com/lgarrison/asdf.git@master-0']
-    #dependency_links = ['http://github.com/lgarrison/asdf/tarball/master']
 )
