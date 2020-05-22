@@ -11,6 +11,14 @@ For access to the Python functionality of abacusutils, the recommended installat
     $ pip install abacusutils
 
 
+Python Dependencies
+^^^^^^^^^^^^^^^^^^^
+The Python dependencies are numpy, asdf (our fork), blosc, astropy, and numba.
+The only "unusual" dependency is asdf, because we require our fork of the project
+to be installed (located at: https://github.com/lgarrison/asdf/).  Our fork supports
+`blosc compression <https://blosc.org/pages/blosc-in-depth/>`_.
+
+
 Direct Download
 ---------------
 To use the C/C++ code, the recommended method is to clone the repository directly:

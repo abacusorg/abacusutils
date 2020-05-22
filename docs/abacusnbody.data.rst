@@ -9,3 +9,10 @@ compaso_halo_catalog module
    :undoc-members:
    :show-inheritance:
 
+bitpacked module
+----------------
+
+.. automodule:: abacusnbody.data.bitpacked
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="abacusutils",
-    version="0.0.1",
+    version="0.0.2",
     author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska",
     author_email="lgarrison@flatironinstitute.org",
     description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",
@@ -18,4 +18,10 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
     python_requires='>=3.5',
+    install_requires = ['numpy','blosc','astropy','numba',
+                        #'asdf==2.6.0.dev38+gc2b1361'
+                        'asdf @ git+https://github.com/lgarrison/asdf.git'
+                        ],
+    #dependency_links = ['git+https://github.com/lgarrison/asdf.git@master-0']
+    #dependency_links = ['http://github.com/lgarrison/asdf/tarball/master']
 )

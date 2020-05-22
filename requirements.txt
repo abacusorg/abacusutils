@@ -1,5 +1,0 @@
-numpy
-blosc
-astropy
-numba
-git+https://github.com/lgarrison/asdf.git
