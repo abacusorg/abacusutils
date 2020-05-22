@@ -9,6 +9,15 @@ compaso_halo_catalog module
    :undoc-members:
    :show-inheritance:
 
+read_abacus module
+------------------
+
+.. automodule:: abacusnbody.data.read_abacus
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 bitpacked module
 ----------------
 
