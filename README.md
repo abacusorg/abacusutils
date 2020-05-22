@@ -1,5 +1,7 @@
 # abacusutils
 
+[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/)
+
 abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
 In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io)
 suite of simulations.  Most of the code is in Python 3, but we also provide some examples of how to
