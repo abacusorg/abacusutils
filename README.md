@@ -10,9 +10,10 @@ interface with C/C++.
 Full API documentation: <https://abacusutils.readthedocs.io>
 
 ## Installation
-The Python portions of abacusutils are hosted on PyPI and can be installed with:
+The Python abacusutils package is hosted on PyPI and can be installed
+by installing "abacusutils" and our fork of the ASDF library with the following command:
 ```
-pip install abacusutils
+pip install git+https://github.com/lgarrison/asdf.git abacusutils
 ```
 
 The C/C++ code (e.g. the `pack9/` directory) can be downloaded directly by cloning
