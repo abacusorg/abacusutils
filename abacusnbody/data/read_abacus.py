@@ -36,7 +36,7 @@ def read_asdf(fn, colname=None,
     Parameters
     ----------
     fn: str
-        The ASDF file to load
+        The filename of the ASDF file to load
     colname: str or None, optional
         The ASDF column name to load.  Probably one of
         'rvint', 'packedpid', or 'pack9'.  In most cases,

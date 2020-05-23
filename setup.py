@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="abacusutils",
-    version="0.0.3",
+    version="0.0.4",
     author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska",
     author_email="lgarrison@flatironinstitute.org",
     description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",

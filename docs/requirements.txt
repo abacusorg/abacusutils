@@ -1,2 +1,3 @@
 sphinx >= 3.0.3
+git+https://github.com/lgarrison/asdf.git
 .
