@@ -48,9 +48,9 @@ def read_asdf(fn, colname=None,
         this on or off; None (the default) will load
         the positions if the file is an "rv" file.
     load_vel: optional
-        Like the positions, but for the velocities
+        Like load_pos, but for the velocities
     load_pid: optional
-        Like the positions, but for the particle IDs.
+        Like load_pos, but for the particle IDs.
         Under development.
     dtype: np.dtype, optional
         The precision in which to unpack any floating
