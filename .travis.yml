@@ -10,5 +10,5 @@ before_install:
   - pip install -U pip
   - pip install -U pytest
 install:
-  - pip install -r requirements.txt .
+  - pip install git+https://github.com/lgarrison/asdf.git .
 script: pytest
