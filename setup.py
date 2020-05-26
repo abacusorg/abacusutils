@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="abacusutils",
-    version="0.0.4",
+    version="0.0.5",
     author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska",
     author_email="lgarrison@flatironinstitute.org",
     description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",
@@ -17,6 +17,6 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
-    python_requires='>=3.5',
-    install_requires = ['numpy','blosc','astropy','numba','asdf'],
+    python_requires='>=3.6',
+    install_requires = ['numpy>=1.16','blosc','astropy','numba','asdf'],
 )
