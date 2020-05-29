@@ -16,7 +16,7 @@ by installing "abacusutils" and our fork of the ASDF library with the following 
 pip install git+https://github.com/lgarrison/asdf.git abacusutils
 ```
 
-The C/C++ code (e.g. the `pack9/` directory) can be downloaded directly by cloning
+The C/C++ code (coming soon!) can be downloaded directly by cloning
 this repository:
 ```
 git clone https://github.com/abacusorg/abacusutils.git
