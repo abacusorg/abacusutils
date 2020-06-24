@@ -169,6 +169,7 @@ import os
 import os.path
 from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, abspath, samefile
 import re
+import gc
 
 # Stop astropy from trying to download time data; nodes on some clusters are not allowed to access the internet directly
 from astropy.utils import iers
@@ -198,7 +199,7 @@ class CompaSOHaloCatalog:
     # TODO: optional progress meter for loading files
     # TODO: generator mode over chunks
     
-    def __init__(self, path, load_subsamples=False, convert_units=True, unpack_bits=False, fields='all'):
+    def __init__(self, path, load_subsamples=False, convert_units=True, unpack_bits=False, fields='all', verbose=False):
         """
         Loads halos.  The ``halos`` field of this object will contain
         the halo records; and the ``subsamples`` field will contain
@@ -249,16 +250,14 @@ class CompaSOHaloCatalog:
             A list of field names/halo properties to load.  Selecting a small
             subset of fields can be substantially faster than loading all fields
             because the file IO will be limited to the desired fields.
+            See ``compaso_halo_catalog.user_dt`` or the :doc:`AbacusSummit Data Model page <summit:data-products>`
+            for a list of available fields.
             Default: 'all'
+
+        verbose: bool, optional
+            Print informational messages. Default: False
             
         """
-
-        if fields != 'all':
-            # TODO: implement field subset loading
-            # TODO: need npstart/out fields when requesting subsamples
-            # TODO: delete npstart/out fields when not requesting halo subsamples?
-            # TODO: define pre-set subsets of common fields
-            raise NotImplementedError('field subset loading not yet implemented')
 
         if type(path) is str:
             path = [path]  # dir or file
@@ -288,6 +287,32 @@ class CompaSOHaloCatalog:
         self.chunk_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
+        self.verbose = verbose
+
+        if load_subsamples == False:
+            # stub
+            self.load_AB = []  
+            self.load_halofield = []
+            self.load_pidrv = []
+        else:
+            # If user has not specified which subsamples, then assume user wants to load everything
+            if load_subsamples == True:
+                load_subsamples = "AB_all" 
+            if type(load_subsamples) != str:
+                raise ValueError("`load_subsamples` argument must be string or bool")
+
+            # Validate the user's `load_subsamples` option and figure out what subsamples we need to load
+            subsamp_match = re.match(r'(?P<AB>(A|B|AB))(_(?P<hf>halo|field))?_(?P<pidrv>all|pid|rv)', load_subsamples)
+            if not subsamp_match:
+                raise ValueError(f'Value "{load_subsamples}" for argument `load_subsamples` not understood')
+            self.load_AB = subsamp_match.group('AB')
+            self.load_halofield = subsamp_match.group('hf')
+            self.load_halofield = [self.load_halofield] if self.load_halofield else ['halo','field']  # default is both
+            self.load_pidrv = subsamp_match.group('pidrv')
+            if self.load_pidrv == 'all':
+                self.load_pidrv = ['pid','rv']
+        del load_subsamples  # use the parsed values
+
 
         # Open the first file, just to grab the header
         with asdf.open(halo_fns[0], lazy_load=True, copy_arrays=False) as af:
@@ -296,34 +321,12 @@ class CompaSOHaloCatalog:
 
         # Read and unpack the catalog into self.halos
         N_halo_per_file = self._read_halo_info(halo_fns, fields)
-        
-        # If user has not requested to load subsamples, we might as well exit here
-        if load_subsamples == False:
-            return
 
         self.subsamples = Table()  # empty table, to be filled with PIDs and RVs in the loading functions below
 
-        # If user has not specified which subsamples, then assume user wants to load everything
-        if load_subsamples == True:
-            load_subsamples = "AB_all" 
-
+        # reindex subsamples if this is an L1 redshift
         # halo subsamples have not yet been reindexed
         self._reindexed = {'A': False, 'B': False}
-
-        # reindex subsamples if this is an L1 redshift
-        assert type(load_subsamples) == str
-
-        # Validate the user's `load_subsamples` option and figure out what subsamples we need to load
-        subsamp_match = re.match(r'^(?P<AB>(A|B){1,2})(_(?P<hf>halo|field))?_(?P<pidrv>all|pid|rv)$', load_subsamples)
-        if not subsamp_match:
-            raise ValueError(f'Value "{load_subsamples}" for argument `load_subsamples` not understood')
-        self.load_AB = subsamp_match.group('AB')
-        self.load_halofield = subsamp_match.group('hf')
-        self.load_halofield = [self.load_halofield] if self.load_halofield else ['halo','field']  # default is both
-        self.load_pidrv = subsamp_match.group('pidrv')
-        if self.load_pidrv == 'all':
-            self.load_pidrv = ['pid','rv']
-        del load_subsamples  # use the parsed values
         
         # Loading the particle information
         if "pid" in self.load_pidrv:
@@ -341,14 +344,68 @@ class CompaSOHaloCatalog:
         N_halos = N_halo_per_file.sum()
 
         if fields == 'all':
-            fields = list(afs[0][self.data_key].keys())
+            fields = list(user_dt.names)
+        if type(fields) == str:
+            fields = [fields]
+
+        # Figure out what raw columns we need to read based on the fields the user requested
+        # This will also modify `fields` if necessary
+        # TODO: provide option to drop un-requested columns
+        raw_dependencies, fields_with_deps, extra_fields = self._setup_halo_field_loaders(fields)
+        # save for informational purposes
+        self.dependency_info = dict(raw_dependencies=raw_dependencies,
+                                    fields_with_deps=fields_with_deps,
+                                    extra_fields=extra_fields)
+
+        if self.verbose:
+            print(f'{len(fields)} halo catalog fields requested. '
+                f'Reading {len(raw_dependencies)} fields from disk. '
+                f'Computing {len(extra_fields)} intermediate fields.')
 
         # Make an empty table for the concatenated, unpacked values
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
-        cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in user_dt.names}
-        halos = Table(cols, copy=False)
-        halos.meta.update(self.header)
-        self.halos = halos
+        #cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
+        cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
+        self.halos = Table(cols, copy=False)
+        self.halos.meta.update(self.header)
+
+        # Unpack the cats into the concatenated array
+        # The writes would probably be more efficient if the outer loop was over column
+        # and the inner was over cats, but wow that would be ugly
+        N_written = 0
+        for af in afs:
+            # This is where the IO on the raw columns happens
+            # There are some fields that we'd prefer to directly read into the concatenated table,
+            # but ASDF doesn't presently support that, so this is the best we can do
+            rawhalos = Table(data={field:af[self.data_key][field] for field in raw_dependencies}, copy=False)
+            af.close()
+
+            # `halos` will be a "pointer" to the next open space in the master table
+            halos = self.halos[N_written:N_written+len(rawhalos)]
+            N_written += len(rawhalos)  # actually not written yet, but let's aggregate the logic
+
+            # For temporary (extra) columns, only need to construct the per-file version
+            #halos.add_columns([np.empty(len(rawhalos), dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
+            halos.add_columns([np.full(len(rawhalos), np.nan, dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
+
+            loaded_fields = []
+            for field in fields_with_deps:
+                if field in loaded_fields:
+                    continue
+                loaded_fields += self._load_halo_field(halos, rawhalos, field)
+
+            del rawhalos
+            del halos
+            gc.collect()
+
+        return N_halo_per_file
+
+
+    def _setup_halo_field_loaders(self, fields):
+        # Loaders is a dict of regex -> lambda
+        # The lambda is responsible for unpacking the rawhalos field
+        # The first regex that matches will be used, so they must be precise
+        self.halo_field_loaders = {}
 
         if self.convert_units:
             box = self.header['BoxSize']
@@ -358,84 +415,170 @@ class CompaSOHaloCatalog:
             box = 1.
             zspace_to_kms = 1.
 
-        # Unpack the cats into the concatenated array
-        # The writes would probably be more efficient if the outer loop was over column
-        # and the inner was over cats, but wow that would be ugly
-        N_written = 0
-        for af in afs:
-            # Despite copy=False, this triggers a real read of the ASDF columns
-            # There are some fields that we'd prefer to directly read into the concatenated table,
-            # but ASDF doesn't presently support that, so this is the best we can do
-            rawhalos = Table(data={field:af[self.data_key][field] for field in fields}, copy=False)
-            af.close()
+        # The first argument to the following lambdas is the match object from re.match()
+        # We will use m[0] to access the full match (i.e. the full field name)
+        # Other indices, like m['com'], will access the sub-match with that group name
 
-            # `halos` will be a "pointer" to the next open space in the master table
-            halos = self.halos[N_written:N_written+len(rawhalos)]
-            N_written += len(rawhalos)  # actually not written yet, but let's aggregate the logic
+        # r10,r25,r33,r50,r67,r75,r90,r95,r98
+        pat = re.compile(r'(?:r\d{1,2}|rvcirc_max)(?P<com>_(?:L2)?com)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]+'_i16']*raw['r100'+m['com']]/INT16SCALE*box
 
-            # We must use the halos['field'][:] syntax in order to do an in-place update
-            # We will enable column replacement warnings to make sure we don't make a mistake
-            _oldwarn = astropy.table.conf.replace_warnings
-            astropy.table.conf.replace_warnings = ['always']
+        # sigmavMin, sigmavMaj, sigmavrad, sigmavtan
+        pat = re.compile(r'(?P<stem>sigmav(?:Min|Maj|rad|tan))(?P<com>_(?:L2)?com)')
+        def _sigmav_loader(m,raw,halos):
+            stem = m['stem'].replace('Maj','Max')
+            return raw[stem+'_to_sigmav3d'+m['com']+'_i16']*raw['sigmav3d'+m['com']]/INT16SCALE*box
+        self.halo_field_loaders[pat] = _sigmav_loader
 
-            # TODO: attach units to all these?
-            for com in ['_com','_L2com']:
-                # r100 is processed later
-                for perc in ['10','25','33','50','67','75','90','95','98']:
-                    halos['r'+perc+com][:] = rawhalos['r'+perc+com+'_i16']*rawhalos['r100'+com]/INT16SCALE*box
-                            
-                halos['sigmavMin'+com][:] = rawhalos['sigmavMin_to_sigmav3d'+com+'_i16']*rawhalos['sigmav3d'+com]/INT16SCALE*box
-                halos['sigmavMaj'+com][:] = rawhalos['sigmavMax_to_sigmav3d'+com+'_i16']*rawhalos['sigmav3d'+com]/INT16SCALE*box
-                halos['sigmavMid'+com][:] = np.sqrt(rawhalos['sigmav3d'+com]*rawhalos['sigmav3d'+com]*box**2 \
-                                                - halos['sigmavMaj'+com]**2 - halos['sigmavMin'+com]**2)
+        # sigmavMid
+        pat = re.compile(r'sigmavMid(?P<com>_(?:L2)?com)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: np.sqrt(raw['sigmav3d'+m['com']]*raw['sigmav3d'+m['com']]*box**2 \
+                                                            - halos['sigmavMaj'+m['com']]**2 - halos['sigmavMin'+m['com']]**2)
 
-                halos['sigmavrad'+com][:] = rawhalos['sigmavrad_to_sigmav3d'+com+'_i16']*rawhalos['sigmav3d'+com]/INT16SCALE*box
-                halos['sigmavtan'+com][:] = rawhalos['sigmavtan_to_sigmav3d'+com+'_i16']*rawhalos['sigmav3d'+com]/INT16SCALE*box
+        # sigmar
+        pat = re.compile(r'sigmar(?P<com>_(?:L2)?com)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]+'_i16']*raw['r100'+m['com']].reshape(-1,1)/INT16SCALE*box
+
+        # sigman
+        pat = re.compile(r'sigman(?P<com>_(?:L2)?com)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]+'_i16']/INT16SCALE*box
+
+        # x,r100 (box-scaled fields)
+        pat = re.compile(r'(x|r100)(?P<com>_(?:L2)?com)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]*box
+
+        # v,sigmav,sigmav3d,meanSpeed,sigmav3d_r50,meanSpeed_r50,vcirc_max (vel-scaled fields)
+        pat = re.compile(r'(v|sigmav3d|meanSpeed|sigmav3d_r50|meanSpeed_r50|vcirc_max)(?P<com>_(?:L2)?com)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]*zspace_to_kms
+
+        # id,npstartA,npstartB,npoutA,npoutB,ntaggedA,ntaggedB,N,L2_N,L0_N (raw/passthrough fields)
+        # If ASDF could read into a user-provided array, could avoid these copies
+        pat = re.compile(r'id|npstartA|npstartB|npoutA|npoutB|ntaggedA|ntaggedB|N|L2_N|L0_N')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
+
+        # SO_central_particle,SO_radius (and _L2max) (box-scaled fields)
+        pat = re.compile(r'SO(?:_L2max)?(?:_central_particle|_radius)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]*box
+
+        # SO_central_density (and _L2max)
+        pat = re.compile(r'SO(?:_L2max)?(?:_central_density)')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
+
+        # eigvecs loader
+        pat = re.compile(r'(?P<rnv>sigma(?:r|n|v)_eigenvecs)(?P<which>Min|Mid|Maj)(?P<com>_(?:L2)?com)')
+        def eigvecs_loader(m,raw,halos):
+            minor,middle,major = unpack_euler16(raw[m['rnv']+m['com']+'_u16'])
+            columns = {}
+
+            minor_field = m['rnv'] + 'Min' + m['com']
+            if minor_field in halos.colnames:
+                columns[minor_field] = minor
+            middle_field = m['rnv'] + 'Mid' + m['com']
+            if middle_field in halos.colnames:
+                columns[middle_field] = middle
+            major_field = m['rnv'] + 'Maj' + m['com']
+            if major_field in halos.colnames:
+                columns[major_field] = major
+
+            return columns
+
+        self.halo_field_loaders[pat] = eigvecs_loader
+
+        raw_deps, fields_with_deps, field_deps = self._get_halo_fields_dependencies(fields)
+        #print(raw_deps,fields_with_deps,field_deps)
+
+        return raw_deps,fields_with_deps,field_deps
+
+
+    def _get_halo_fields_dependencies(self, fields):
+        # Each of the loaders accesses some fields of the raw catalog
+        # We can do automatic dependency generation by stubbing the raw catalog and recording accesses
+
+        # TODO: define pre-set subsets of common fields
+
+        class DepCapture:
+            def __init__(self):
+                self.keys = []
+                self.colnames = []
+            def __getitem__(self,key):
+                self.keys += [key]
+                return np.ones(1)  # a safe numeric value
+
+        iter_fields = list(fields)  # make a copy
+
+        raw_dependencies = []
+        field_dependencies = []
+        for field in iter_fields:
+            have_match = False
+            for pat in self.halo_field_loaders:
+                match = pat.match(field)
+                if match:
+                    if have_match:
+                        raise KeyError(f'Found more than one way to load field "{field}"')
+                    capturer,raw_capturer = DepCapture(),DepCapture()
+                    self.halo_field_loaders[pat](match,raw_capturer,capturer)
+                    raw_dependencies += raw_capturer.keys
+
+                    # these are fields of `halos`
+                    for k in capturer.keys:
+                        # Add fields regardless of whether they have already been encountered
+                        iter_fields += [k]
+                        if k not in fields:
+                            field_dependencies += [k]
+                    have_match = True
+                    #break  # comment out for debugging
+            else:
+                if not have_match:
+                    raise KeyError(f"Don't know how to load halo field \"{field}\"")
+
+        raw_dependencies = list(set(raw_dependencies))  # make unique
+        # unique, preserve order, but using last occurrence
+        # because nested dependencies need to be loaded in reverse order
+        fields_with_deps = list(dict.fromkeys(iter_fields[::-1]))
+        field_deps = list(dict.fromkeys(field_dependencies[::-1]))
+
+        # All raw dependencies for all user-requested fields
+        return raw_dependencies, fields_with_deps, field_deps
+
+
+    def _load_halo_field(self, halos, rawhalos, field):
+        # TODO: attach units to all these?
+
+        # We must use the halos['field'][:] syntax in order to do an in-place update
+        # We will enable column replacement warnings to make sure we don't make a mistake
+        # Remember that "halos" here is a view into the self.halos table
+        _oldwarn = astropy.table.conf.replace_warnings
+        astropy.table.conf.replace_warnings = ['always']
+
+        # Look for the loader for this field, should only match one
+        have_match = False
+        loaded_fields = []
+        for pat in self.halo_field_loaders:
+            match = pat.match(field)
+            if match:
+                if have_match:
+                    raise KeyError(f'Found more than one way to load field "{field}"')
+                column = self.halo_field_loaders[pat](match,rawhalos,halos)
+
+                # The loader is allowed to return a dict if it incidentally loaded multiple columns
+                if type(column) == dict:
+                    assert field in column
+                    for k in column:
+                        halos[k][:] = column[k]
+                    loaded_fields += list(column)
+                else:
+                    halos[field][:] = column
+                    loaded_fields += [field]
                 
-                halos['rvcirc_max'+com][:] = rawhalos['rvcirc_max'+com+'_i16']*rawhalos['r100'+com]/INT16SCALE*box
-                halos['sigmar'+com][:] = rawhalos['sigmar'+com+'_i16']*rawhalos['r100'+com].reshape(-1,1)/INT16SCALE*box
-                halos['sigman'+com][:] = rawhalos['sigman'+com+'_i16'].reshape(-1,3)/INT16SCALE*box
+                have_match = True
+                #break  # comment out for debugging
+        else:
+            if not have_match:
+                raise KeyError(f"Don't know how to load halo field \"{field}\"")
 
-                for rv in ['r','v','n']:
-                    # TODO: any unit conversions?
-                    minor, middle, major = unpack_euler16(rawhalos['sigma'+rv+'_eigenvecs'+com+'_u16'])
-                    halos['sigma'+rv+'_eigenvecsMin'+com][:] = minor
-                    halos['sigma'+rv+'_eigenvecsMid'+com][:] = middle
-                    halos['sigma'+rv+'_eigenvecsMaj'+com][:] = major
+        astropy.table.conf.replace_warnings = _oldwarn
 
-                halos['x'+com][:] = rawhalos['x'+com]*box
-                halos['v'+com][:] = rawhalos['v'+com]*zspace_to_kms
-                halos['r100'+com][:] = rawhalos['r100'+com]*box
-                halos['sigmav3d'+com][:] = rawhalos['sigmav3d'+com]*zspace_to_kms
-                halos['meanSpeed'+com][:] = rawhalos['meanSpeed'+com]*zspace_to_kms
-                halos['sigmav3d_r50'+com][:] = rawhalos['sigmav3d_r50'+com]*zspace_to_kms
-                halos['meanSpeed_r50'+com][:] = rawhalos['meanSpeed_r50'+com]*zspace_to_kms
-
-                halos['vcirc_max'+com][:] = rawhalos['vcirc_max'+com]*zspace_to_kms
-
-            for ctr in ('', '_L2max'):
-                halos[f'SO{ctr}_central_particle'][:] = rawhalos[f'SO{ctr}_central_particle']*box
-                halos[f'SO{ctr}_central_density'][:] = rawhalos[f'SO{ctr}_central_density']
-                halos[f'SO{ctr}_radius'][:] = rawhalos[f'SO{ctr}_radius']*box
-
-            # If ASDF could read into a user-provided array, could avoid these copies
-            halos['id'][:] = rawhalos['id']
-            halos['npstartA'][:] = rawhalos['npstartA']
-            halos['npstartB'][:] = rawhalos['npstartB']
-            halos['npoutA'][:] = rawhalos['npoutA']
-            halos['npoutB'][:] = rawhalos['npoutB']
-            halos['ntaggedA'][:] = rawhalos['ntaggedA']
-            halos['ntaggedB'][:] = rawhalos['ntaggedB']
-
-            halos['N'][:] = rawhalos['N']
-            halos['L2_N'][:] = rawhalos['L2_N']
-            halos['L0_N'][:] = rawhalos['L0_N']
-
-            astropy.table.conf.replace_warnings = _oldwarn
-
-            del rawhalos
-
-        return N_halo_per_file
+        return loaded_fields
 
 
     def _reindex_subsamples(self, RVorPID, N_halo_per_file):
@@ -472,7 +615,7 @@ class CompaSOHaloCatalog:
                 assert len(N_halo_per_file) == len(halo_particle_afs) or len(self.halo_fns) == len(field_particle_afs)
             particle_afs = halo_particle_afs + field_particle_afs
             
-            if not self._reindexed[AB] and 'halo' in self.load_halofield:
+            if not self._reindexed[AB] and 'halo' in self.load_halofield and 'npstart'+AB in self.halos.colnames:
                 # Halos only index halo particles; no need to do this if we're just loading field particles!
                 # Offset npstartB in case the user is loading both subsample A and B.  Also accounts for field particles.
                 self.halos['npstart'+AB] += np_total
@@ -599,7 +742,7 @@ def unpack_euler16(bin_this):
     zz = norm
     yy *= norm; xx *= norm;  # These are now a unit vector
 
-    # TODO: rewrite
+    # TODO: legacy code, rewrite
     major[cap==0,0] = zz[cap==0]; major[cap==0,1] = yy[cap==0]; major[cap==0,2] = xx[cap==0];
     major[cap==1,0] = zz[cap==1]; major[cap==1,1] =-yy[cap==1]; major[cap==1,2] = xx[cap==1];
     major[cap==2,0] = zz[cap==2]; major[cap==2,1] = xx[cap==2]; major[cap==2,2] = yy[cap==2];
