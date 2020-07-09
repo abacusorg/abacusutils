@@ -10,7 +10,7 @@ the reading and pipes the data to stdout, and an example analysis program called
 The ``pipe_asdf.py`` script is normally installed as ``pipe_asdf`` via pip.
 However, one can also invoke the ``.py`` file directly from this directory.
 
-For full documentation, see the `abacusutils pipe_asdf documentation <https://abacusutils.readthedocs.io/en/latest/pipes.html>`.
+For full documentation, see the `abacusutils pipe_asdf documentation <https://abacusutils.readthedocs.io/en/latest/pipes.html>`_.
 
 Example C Client Program
 ------------------------
