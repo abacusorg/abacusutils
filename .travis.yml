@@ -1,13 +1,21 @@
-language: python
-python:
-  - 3.6
-  - 3.7
-  - 3.8
-before_install:
-  - python --version
-  - pip install -U pip
-  - pip install -U pytest
-  - pip install git+https://github.com/lgarrison/asdf.git
-install:
-  - pip install .
-script: pytest
+matrix:
+  include:
+    - language: python
+      python:
+        - 3.6
+        - 3.7
+        - 3.8
+      before_install:
+        - python --version
+        - pip install -U pip
+        - pip install -U pytest
+        - pip install git+https://github.com/lgarrison/asdf.git
+      install:
+        - pip install .
+      script: pytest
+    - language: c
+      before_install:
+        - gcc --version
+      script:
+        - cd pipe_asdf
+        - make
