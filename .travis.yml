@@ -1,18 +1,19 @@
-matrix:
+python:
+  - 3.6
+  - 3.7
+  - 3.8
+language: python
+before_install:
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest
+  - pip install git+https://github.com/lgarrison/asdf.git
+install:
+  - pip install .
+script: pytest
+
+jobs:
   include:
-    - python:
-        - 3.6
-        - 3.7
-        - 3.8
-      language: python
-      before_install:
-        - python --version
-        - pip install -U pip
-        - pip install -U pytest
-        - pip install git+https://github.com/lgarrison/asdf.git
-      install:
-        - pip install .
-      script: pytest
     - language: c
       before_install:
         - gcc --version
