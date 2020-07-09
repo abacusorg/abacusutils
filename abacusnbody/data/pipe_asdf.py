@@ -16,7 +16,7 @@ Usage
 positional arguments
 --------------------
   asdf-file
-    An ASDF file
+    An ASDF file. Multiple may be specified.
 
 optional arguments
 ------------------
@@ -154,7 +154,7 @@ def main():
                                                     'See https://abacusutils.readthedocs.io/en/latest/pipes.html',
                                         formatter_class=_ArgParseFormatter)
 
-    parser.add_argument('asdf-file', help='An ASDF file', nargs='+')
+    parser.add_argument('asdf-file', help='An ASDF file. Multiple may be specified.', nargs='+')
     parser.add_argument('-f', '--field', help='A field/column to pipe. Multiple -f flags are allowed, in which case fields will be piped in the order they are specified.', action='append')
     parser.add_argument('--nthread', help='Number of blosc decompression threads (when applicable).  For AbacusSummit, use 1 to 4.', type=int, default=4)
 
