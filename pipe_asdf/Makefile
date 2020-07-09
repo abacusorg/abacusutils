@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS += -O3 -march=native -g
+CFLAGS += -O3 -march=native -g -Wall
 
 all: client
 
