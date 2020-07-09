@@ -12,6 +12,8 @@ For access to the Python functionality of abacusutils, the recommended installat
 
 This command installs both our fork of ASDF and the abacusutils package.
 
+This pip command also gives access to the :doc:`pipes` functionality.
+
 Python Dependencies
 ^^^^^^^^^^^^^^^^^^^
 The Python dependencies are numpy, asdf (our fork), blosc, astropy, and numba.

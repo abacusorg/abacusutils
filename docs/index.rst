@@ -8,8 +8,8 @@ abacusutils
 
 abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
 In particular, these utilities are intended for use with the `AbacusSummit <https://abacussummit.readthedocs.io>`_
-suite of simulations.  Most of the code is in Python 3, but we also provide some examples of how to
-interface with C/C++.
+suite of simulations.  We provide multiple interfaces: primarily Python 3, but also C/C++ [coming soon!] and
+language-agnostic interfaces like Unix pipes.
 
 abacusutils is hosted in the `abacusorg/abacusutils <https://github.com/abacusorg/abacusutils>`_ GitHub repository.  Please report
 bugs and ask questions by opening an issue in that repository.
