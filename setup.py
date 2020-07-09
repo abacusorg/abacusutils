@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="abacusutils",
-    version="0.1.0",
+    version="0.2.0",
     author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska",
     author_email="lgarrison@flatironinstitute.org",
     description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",
@@ -19,4 +19,5 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires = ['numpy>=1.16','blosc','astropy','numba','asdf'],
+    entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main']}
 )

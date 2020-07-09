@@ -4,10 +4,12 @@ abacusnbody.data
 compaso_halo_catalog module
 ---------------------------
 
-.. automodule:: abacusnbody.data.compaso_halo_catalog
-   :members:
-   :undoc-members:
-   :show-inheritance:
+See the :doc:`compaso` page.
+
+pipe_asdf module
+----------------
+
+See the :doc:`pipes` page.
 
 read_abacus module
 ------------------
@@ -16,7 +18,6 @@ read_abacus module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 bitpacked module
 ----------------

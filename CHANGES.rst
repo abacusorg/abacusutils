@@ -1,3 +1,11 @@
+0.2.0 (2020-07-08)
+==================
+
+New Features
+------------
+- Add pipe_asdf.py script as an example of using Python to deal with file container
+  so that C/Fortran/etc don't have to know about ASDF or blosc
+
 0.1.0 (2020-06-24)
 ==================
 

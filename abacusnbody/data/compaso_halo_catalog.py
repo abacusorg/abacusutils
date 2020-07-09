@@ -27,10 +27,9 @@ Importantly, because ASDF and Astropy tables are both column-
 oriented, it can be much faster to load only the subset of
 halo catalog columns that one needs, rather than all 60-odd
 columns.  Use the ``fields`` argument to the ``CompaSOHaloCatalog``
-constructor to specify a subset of fields to load (NOTE: this feature
-is under construction).  Similarly, the particles can be quite large,
-and one can use the ``load_subsamples`` argument to restrict the
-particles to the subset one needs.
+constructor to specify a subset of fields to load.  Similarly, the
+particles can be quite large, and one can use the ``load_subsamples``
+argument to restrict the particles to the subset one needs.
 
 Some brief examples and technical details about the halo catalog
 layout are presented below, followed by the full module API.
@@ -162,6 +161,26 @@ The PIDs are 8 bytes and encode a local density estimate, tag bits for merger tr
 and a unique particle id, the last of which encodes the Lagrangian particle coordinate.
 
 These are described in more detail on the :doc:`AbacusSummit Data Model page <summit:data-products>`.
+
+Field Subset Loading
+====================
+Because the ASDF files are column-oriented, it is possible to load just one or a few
+columns (halo catalog fields) rather than the whole file.  This can save huge amounts
+of IO, memory, and CPU time (due to the decompression).  Use the `fields` argument
+to the ``CompaSOHaloCatalog`` constructor to specify the list of columns you want.
+
+In detail, some columns are stored as ratios to other columns.  For example, ``r90``
+is stored as a ratio relative to ``r100``.  So to properly unpack
+``r90``, the ``r100`` column must also be read.  ``CompaSOHaloCatalog`` knows about
+these dependencies and will load the minimum set necessary to return the requested
+columns to the user.  However, this may result in more IO than expected.  The ``verbose``
+constructor flag or the ``dependency_info`` field of the ``CompaSOHaloCatalog``
+object may be useful for diagnosing exactly what data is being loaded.
+
+Despite the potential extra IO and CPU time, the extra memory usage is granular
+at the level of individual files.  In other words, when loading multiple files,
+the concatenated array will never be constructed for columns that only exist for
+dependency purposes.
 """
 
 from glob import glob
@@ -364,8 +383,8 @@ class CompaSOHaloCatalog:
 
         # Make an empty table for the concatenated, unpacked values
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
-        #cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
-        cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
+        cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
+        #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
         self.halos = Table(cols, copy=False)
         self.halos.meta.update(self.header)
 
@@ -385,8 +404,8 @@ class CompaSOHaloCatalog:
             N_written += len(rawhalos)  # actually not written yet, but let's aggregate the logic
 
             # For temporary (extra) columns, only need to construct the per-file version
-            #halos.add_columns([np.empty(len(rawhalos), dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
-            halos.add_columns([np.full(len(rawhalos), np.nan, dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
+            halos.add_columns([np.empty(len(rawhalos), dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
+            #halos.add_columns([np.full(len(rawhalos), np.nan, dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
 
             loaded_fields = []
             for field in fields_with_deps:
@@ -485,7 +504,6 @@ class CompaSOHaloCatalog:
         self.halo_field_loaders[pat] = eigvecs_loader
 
         raw_deps, fields_with_deps, field_deps = self._get_halo_fields_dependencies(fields)
-        #print(raw_deps,fields_with_deps,field_deps)
 
         return raw_deps,fields_with_deps,field_deps
 

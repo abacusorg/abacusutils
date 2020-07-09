@@ -23,6 +23,13 @@ bugs and ask questions by opening an issue in that repository.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Interfaces
+
+   compaso
+   pipes
+
+.. toctree::
+   :maxdepth: 2
    :caption: API Documentation
 
    modules
