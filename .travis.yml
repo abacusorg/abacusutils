@@ -17,6 +17,7 @@ jobs:
     - language: c
       before_install:
         - gcc --version
+      install: skip
       script:
         - cd pipe_asdf
         - make
