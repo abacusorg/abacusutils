@@ -11,4 +11,4 @@ TMPFN=$(mktemp)
 pipe_asdf Mini_N64_L32/halos/z0.000/halo_info/halo_info_*.asdf -f N -f x_com | ../pipe_asdf/client > $TMPFN
 
 # compare to known output
-diff $TMPFN ./pipe.txt
+diff -s $TMPFN ./pipe.txt

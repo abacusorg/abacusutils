@@ -14,4 +14,4 @@ install:
   - make -C pipe_asdf
 script:
   - pytest
-  - cd tests && ./test_pipe_asdf.sh
+  - ./tests/test_pipe_asdf.sh
