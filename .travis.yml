@@ -8,16 +8,10 @@ before_install:
   - pip install -U pip
   - pip install -U pytest
   - pip install git+https://github.com/lgarrison/asdf.git
+  - gcc --version
 install:
   - pip install .
-script: pytest
-
-jobs:
-  include:
-    - language: c
-      before_install:
-        - gcc --version
-      install: skip
-      script:
-        - cd pipe_asdf
-        - make
+  - cd pipe_asdf && make
+script:
+  - pytest
+  - cd tests && ./test_pipe_asdf.sh
