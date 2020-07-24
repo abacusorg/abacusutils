@@ -11,7 +11,7 @@ before_install:
   - gcc --version
 install:
   - pip install .
-  - cd pipe_asdf && make
+  - (cd pipe_asdf && make)
 script:
   - pytest
   - cd tests && ./test_pipe_asdf.sh
