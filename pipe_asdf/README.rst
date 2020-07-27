@@ -19,11 +19,13 @@ binary data for two columns, ``N`` and ``x_com``, and does something with the
 data (in this case, just prints some values).
 
 One can build this program with:
+
 .. code-block:: console
     
     $ make
 
 and run it with:
+
 .. code-block:: console
 
     $ ./pipe_asdf.py halo_info_000.asdf -f N -f x_com | ./client
