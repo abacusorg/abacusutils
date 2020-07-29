@@ -181,6 +181,25 @@ Despite the potential extra IO and CPU time, the extra memory usage is granular
 at the level of individual files.  In other words, when loading multiple files,
 the concatenated array will never be constructed for columns that only exist for
 dependency purposes.
+
+Multi-threaded Decompression
+============================
+The Blosc compression we use inside the ASDF files supports multi-threaded
+decompression.  We have packed AbacusSummit files with 4 Blosc blocks (each ~few MB)
+per ASDF block, so 4 Blosc threads is probably the optimal value.  This is the
+default value, unless fewer cores are available (as determined by the process
+affinity mask).
+
+.. note::
+
+    Loading a CompaSOHaloCatalog will use 4 decompression threads by default.
+
+You can control the number of decompression threads with:
+
+.. code-block:: python
+
+    import asdf.compression
+    asdf.compression.set_decompression_options(nthreads=N)
 """
 
 from glob import glob
@@ -208,6 +227,11 @@ except:
     exit('Error: your ASDF installation does not support Blosc compression.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
 
 from .bitpacked import unpack_rvint, unpack_pids, AUXPID
+
+# Default to 4 decompression threads, or fewer if fewer cores are available
+DEFAULT_BLOSC_THREADS = 4
+DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
+asdf.compression.set_decompression_options(nthreads=DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
     """
