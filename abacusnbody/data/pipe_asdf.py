@@ -66,7 +66,7 @@ script with:
 
     $ python3 -m abacusnbody.data.pipe_asdf
 
-The ``abacusutils/pipe_asdf`` directory also contains a symlink to this
+The ``abacusnbody/pipe_asdf`` directory also contains a symlink to this
 file, so from this directory one can also run
 
 .. code-block:: bash
