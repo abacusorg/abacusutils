@@ -30,4 +30,4 @@ and run it with:
 
     $ ./pipe_asdf.py halo_info_000.asdf -f N -f x_com | ./client
 
-You'll need a "halo_info" file to test this on, such as comes from AbacusSummit.
+You can use the example ``halo_info_000.asdf`` file symlinked from this directory to test this.
