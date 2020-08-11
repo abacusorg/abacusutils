@@ -26,7 +26,7 @@ and run it with:
 
     $ ./pipe_asdf.py halo_info_000.asdf -f N -f x_com | ./client
 
-You'll need a "halo_info" file to test this on, such as comes from AbacusSummit.
+You can use the example ``halo_info_000.asdf`` file symlinked in the ``pipe_asdf`` directory to test this.
 
 This program is a stand-in for an analysis code. In this case, it just reads the raw
 binary data for two columns, ``N`` and ``x_com``, and prints the values.
