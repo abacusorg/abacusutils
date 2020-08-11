@@ -1,3 +1,15 @@
+0.3.0 (2020-08-11)
+==================
+
+Enhancements
+------------
+- Use 4 Blosc threads for decompression by default
+
+Fixes
+-----
+- Specify minimum Astropy version to avoid
+  ``AttributeError: 'numpy.ndarray' object has no attribute 'info'``
+  
 0.2.0 (2020-07-08)
 ==================
 
