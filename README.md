@@ -9,6 +9,10 @@ language-agnostic interfaces like Unix pipes.
 
 These interfaces are documented here: <https://abacusutils.readthedocs.io>
 
+Press the GitHub "Watch" button in the top right and select "Releases Only" to be notified about bug fixes
+and new features!  This package is still in early stages, and bugs are likely to be identified and squashed,
+and new performance opportunities identified.
+
 ## Installation
 The Python abacusutils package is hosted on PyPI and can be installed
 by installing "abacusutils" and our fork of the ASDF library with the following command:
