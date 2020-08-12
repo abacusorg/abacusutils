@@ -319,7 +319,7 @@ class CompaSOHaloCatalog:
         path = [abspath(p) for p in path]
         
         # Allow users to pass halo_info dirs, even though redshift dirs remain canoncial
-        for i,p in path:
+        for i,p in enumerate(path):
             if basename(p) == 'halo_info':
                 path[i] = abspath(pjoin(p,os.pardir))
     
@@ -330,6 +330,12 @@ class CompaSOHaloCatalog:
                 if not samefile(self.groupdir, dirname(dirname(p))):
                     raise ValueError("Can't mix files from different catalogs!")
                 halo_fns = path  # path is list of one or more files
+                
+            for i,p in enumerate(path):
+                for j,q in enumerate(path[i+1:]):
+                    if samefile(p,q):
+                        raise ValueError(f'Cannot pass duplicate halo_info files! Found duplicate "{p}" and at indices {i} and {i+j}')
+                
         else:
             self.groupdir = path[0]  # path is a singlet of one dir
             globpat = pjoin(self.groupdir, 'halo_info', 'halo_info_*')
