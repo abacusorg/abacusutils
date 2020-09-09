@@ -1,3 +1,10 @@
+0.3.1 (upcoming)
+================
+
+Enhancements
+------------
+- Bump minimum Blosc version to support zero-copy decompression in our ASDF fork
+
 0.3.0 (2020-08-11)
 ==================
 
