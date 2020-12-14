@@ -404,30 +404,30 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
     print("the halo loading stuff took ", time.time() - start)
     start = time.time()
 
-    # if assembly bias parameter is not zero, then we do halo reranking
-    if not ((A == 0) & (Ae == 0)):
+    # # if assembly bias parameter is not zero, then we do halo reranking
+    # if not ((A == 0) & (Ae == 0)):
 
-        # define a ranking parameter
-        halo_pseudomass = halo_mass*np.exp(A*halo_deltac + Ae*halo_fenv)
+    #     # define a ranking parameter
+    #     halo_pseudomass = halo_mass*np.exp(A*halo_deltac + Ae*halo_fenv)
 
-        # create a list that indicates the original order 
-        halo_order = np.arange(len(halo_ids))
+    #     # create a list that indicates the original order 
+    #     halo_order = np.arange(len(halo_ids))
 
-        # first we sort everything by mass, original mass
-        msorted_indices = halo_mass.argsort()[::-1] # descending order
+    #     # first we sort everything by mass, original mass
+    #     msorted_indices = halo_mass.argsort()[::-1] # descending order
 
-        halo_mass = halo_mass[msorted_indices] 
-        halo_pseudomass = halo_pseudomass[msorted_indices]
-        halo_order = halo_order[msorted_indices]
+    #     halo_mass = halo_mass[msorted_indices] 
+    #     halo_pseudomass = halo_pseudomass[msorted_indices]
+    #     halo_order = halo_order[msorted_indices]
 
-        # now we resort using halo_pseudomass and get the indices
-        new_indices = halo_pseudomass.argsort()[::-1] # descending order
-        halo_order = halo_order[new_indices]
-        # we dont touch halo mass so it is still sorted by mass
+    #     # now we resort using halo_pseudomass and get the indices
+    #     new_indices = halo_pseudomass.argsort()[::-1] # descending order
+    #     halo_order = halo_order[new_indices]
+    #     # we dont touch halo mass so it is still sorted by mass
 
-        # revert to the original order 
-        original_indices = halo_order.argsort() # ascending order
-        halo_mass = halo_mass[original_indices]
+    #     # revert to the original order 
+    #     original_indices = halo_order.argsort() # ascending order
+    #     halo_mass = halo_mass[original_indices]
 
     # print("the assembly bias stuff took ", time.time() - start)
     # start = time.time()
