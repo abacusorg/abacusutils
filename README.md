@@ -1,6 +1,6 @@
 # abacusutils
 
-[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Travis (.org)](https://img.shields.io/travis/abacusorg/abacusutils)](https://travis-ci.com/github/abacusorg/abacusutils)
+[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Build Status](https://travis-ci.com/abacusorg/abacusutils.svg?branch=master)](https://travis-ci.com/abacusorg/abacusutils)
 
 abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
 In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io)
