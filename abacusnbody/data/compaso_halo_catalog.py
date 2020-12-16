@@ -258,8 +258,10 @@ class CompaSOHaloCatalog:
         Parameters
         ----------
         path: str or list of str
-            The directory containing the halo files, like ``MySimulation/halos/z1.000``.
-            Or a halo info file, or a list of halo info files.
+            The halo catalog directory, like ``MySimulation/halos/z1.000/``.
+            Or a single halo info file, or a list of halo info files.
+            Will accept ``halo_info`` dirs or "redshift" dirs
+            (e.g. ``z1.000/halo_info/`` or ``z1.000/``).
 
         load_subsamples: bool or str, optional
             Load halo particle subsamples.  True or False may be specified
@@ -308,23 +310,38 @@ class CompaSOHaloCatalog:
             # if list, must be all files
             for p in path:
                 if os.path.exists(p) and not isfile(p):
-                    raise ValueError(f'If passing a list of paths, all paths must be files. Path "{p}" in list is not a file.')
+                    raise ValueError(f'If passing a list of paths, all paths must be files, not dirs. Path "{p}" is not a file.')
 
         for p in path:
             if not os.path.exists(p):
                 raise FileNotFoundError(f'Path "{p}" does not exist!')
 
         path = [abspath(p) for p in path]
+        
+        # Allow users to pass halo_info dirs, even though redshift dirs remain canoncial
+        for i,p in enumerate(path):
+            if basename(p) == 'halo_info':
+                path[i] = abspath(pjoin(p,os.pardir))
     
         # Can't mix files from different catalogs!
         if isfile(path[0]):
             self.groupdir = dirname(dirname(path[0]))
             for p in path:
-                assert samefile(self.groupdir, dirname(dirname(p)))
+                if not samefile(self.groupdir, dirname(dirname(p))):
+                    raise ValueError("Can't mix files from different catalogs!")
                 halo_fns = path  # path is list of one or more files
+                
+            for i,p in enumerate(path):
+                for j,q in enumerate(path[i+1:]):
+                    if samefile(p,q):
+                        raise ValueError(f'Cannot pass duplicate halo_info files! Found duplicate "{p}" and at indices {i} and {i+j}')
+                
         else:
             self.groupdir = path[0]  # path is a singlet of one dir
-            halo_fns = sorted(glob(pjoin(self.groupdir, 'halo_info', 'halo_info_*')))
+            globpat = pjoin(self.groupdir, 'halo_info', 'halo_info_*')
+            halo_fns = sorted(glob(globpat))
+            if len(halo_fns) == 0:
+                raise FileNotFoundError(f'No halo_info files found! Search pattern was: "{globpat}"')
         del path  # use groupdir and halo_fns
 
         self.chunk_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])

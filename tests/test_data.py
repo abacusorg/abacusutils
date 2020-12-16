@@ -1,10 +1,12 @@
+import tempfile
+import filecmp
 import os.path
+
+import pytest
+
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
 HALOS_OUTPUT = os.path.join(os.path.dirname(__file__), 'halos.txt')
 PARTICLES_OUTPUT = os.path.join(os.path.dirname(__file__), 'particles.txt')
-
-import tempfile
-import filecmp
 
 def test_halos(tmp_path):
     '''Test loading a halo catalog
@@ -54,3 +56,22 @@ def test_one_halo_info():
         load_subsamples=True)
     assert len(cat.halos) == 127
     assert len(cat.subsamples) == 9306
+
+    
+def test_halo_info_list():
+    '''Test list of halo infos
+    '''
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+
+    cat = CompaSOHaloCatalog(
+        [os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf'),
+         os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_001.asdf')],
+        load_subsamples=True)
+    assert len(cat.halos) == 281
+    assert len(cat.subsamples) == 19555
+    
+    # check fail on dups
+    with pytest.raises(ValueError):
+        cat = CompaSOHaloCatalog(
+        [os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf'),
+         os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf')])
