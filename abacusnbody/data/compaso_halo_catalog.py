@@ -382,11 +382,13 @@ class CompaSOHaloCatalog:
         # Read and unpack the catalog into self.halos
         self._setup_halo_field_loaders()
         N_halo_per_file = self._read_halo_info(halo_fns, fields)
-        cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields)
+        if cleaned_halos:
+            cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields)
         
-        if (N_halo_per_file != cleaned_N_halo_per_file).any():
-            raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
+            if (N_halo_per_file != cleaned_N_halo_per_file).any():
+                raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
 
+        # TODO: the changes to the subsample loading procedure for the cleaned cats depends on the data model on disk we end up with
         self.subsamples = Table()  # empty table, to be filled with PIDs and RVs in the loading functions below
 
         # reindex subsamples if this is an L1 redshift
