@@ -363,7 +363,12 @@ class CompaSOHaloCatalog:
             self.header = af['header']
 
         # Read and unpack the catalog into self.halos
+        self._setup_halo_field_loaders()
         N_halo_per_file = self._read_halo_info(halo_fns, fields)
+        cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields)
+        
+        if (N_halo_per_file != cleaned_N_halo_per_file).any():
+            raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
 
         self.subsamples = Table()  # empty table, to be filled with PIDs and RVs in the loading functions below
 
@@ -379,28 +384,35 @@ class CompaSOHaloCatalog:
 
 
     def _read_halo_info(self, halo_fns, fields):
+        # Remember, this function may be called twice
+        # Once with the primary fields, then again with the cleaned fields
+        
         # Open all the files, validate them, and count the halos
         # Lazy load, but don't use mmap
         afs = [asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in halo_fns]
 
-        N_halo_per_file = np.array([len(af[self.data_key]['id']) for af in afs])
+        # TODO: can't remember if keys() is an iterator
+        N_halo_per_file = np.array([len(af[self.data_key][af[self.data_key].keys()[0]]) for af in afs])
         N_halos = N_halo_per_file.sum()
 
+        # TODO: maybe this logic should be in the calling function so we can differentiate between base and cleaned
         if fields == 'all':
             fields = list(user_dt.names)
         if type(fields) == str:
             fields = [fields]
 
         # Figure out what raw columns we need to read based on the fields the user requested
-        # This will also modify `fields` if necessary
         # TODO: provide option to drop un-requested columns
-        raw_dependencies, fields_with_deps, extra_fields = self._setup_halo_field_loaders(fields)
+        raw_dependencies, fields_with_deps, extra_fields = self._get_halo_fields_dependencies(fields)
         # save for informational purposes
-        self.dependency_info = dict(raw_dependencies=raw_dependencies,
-                                    fields_with_deps=fields_with_deps,
-                                    extra_fields=extra_fields)
+        if not hasattr(self, 'dependency_info'):
+            dependency_info = defaultdict(list)
+        self.dependency_info['raw_dependencies'] += raw_dependencies
+        self.dependency_info['fields_with_deps'] += fields_with_deps
+        self.dependency_info['extra_fields'] += extra_fields
 
         if self.verbose:
+            # TODO: going to be repeated in output
             print(f'{len(fields)} halo catalog fields requested. '
                 f'Reading {len(raw_dependencies)} fields from disk. '
                 f'Computing {len(extra_fields)} intermediate fields.')
@@ -409,8 +421,14 @@ class CompaSOHaloCatalog:
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
         cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
         #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
-        self.halos = Table(cols, copy=False)
-        self.halos.meta.update(self.header)
+        if hasattr(self, 'halos'):
+            # already exists
+            # will throw error if duplicating a column
+            self.halos.add_columns(list(cols.values()), names=list(cols.keys()), copy=False)
+        else:
+            # first time
+            self.halos = Table(cols, copy=False)
+            self.halos.meta.update(self.header)
 
         # Unpack the cats into the concatenated array
         # The writes would probably be more efficient if the outer loop was over column
@@ -444,7 +462,7 @@ class CompaSOHaloCatalog:
         return N_halo_per_file
 
 
-    def _setup_halo_field_loaders(self, fields):
+    def _setup_halo_field_loaders(self):
         # Loaders is a dict of regex -> lambda
         # The lambda is responsible for unpacking the rawhalos field
         # The first regex that matches will be used, so they must be precise
@@ -496,7 +514,7 @@ class CompaSOHaloCatalog:
 
         # id,npstartA,npstartB,npoutA,npoutB,ntaggedA,ntaggedB,N,L2_N,L0_N (raw/passthrough fields)
         # If ASDF could read into a user-provided array, could avoid these copies
-        pat = re.compile(r'id|npstartA|npstartB|npoutA|npoutB|ntaggedA|ntaggedB|N|L2_N|L0_N')
+        pat = re.compile(r'id|npstartA|npstartB|npoutA|npoutB|ntaggedA|ntaggedB|N|L2_N|L0_N|npoutA_merged')  # TODO: can add other cleaned fields here
         self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
 
         # SO_central_particle,SO_radius (and _L2max) (box-scaled fields)
@@ -526,10 +544,6 @@ class CompaSOHaloCatalog:
             return columns
 
         self.halo_field_loaders[pat] = eigvecs_loader
-
-        raw_deps, fields_with_deps, field_deps = self._get_halo_fields_dependencies(fields)
-
-        return raw_deps,fields_with_deps,field_deps
 
 
     def _get_halo_fields_dependencies(self, fields):
