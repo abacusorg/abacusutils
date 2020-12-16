@@ -423,7 +423,7 @@ class CompaSOHaloCatalog:
         raw_dependencies, fields_with_deps, extra_fields = self._get_halo_fields_dependencies(fields)
         # save for informational purposes
         if not hasattr(self, 'dependency_info'):
-            dependency_info = defaultdict(list)
+            self.dependency_info = defaultdict(list)
         self.dependency_info['raw_dependencies'] += raw_dependencies
         self.dependency_info['fields_with_deps'] += fields_with_deps
         self.dependency_info['extra_fields'] += extra_fields
