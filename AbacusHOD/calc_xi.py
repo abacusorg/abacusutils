@@ -96,7 +96,8 @@ def calc_xi_mock_natural(design, decorations, rpbins, params, newseed, rsd = rsd
     start = time.time()
     # data directory
     scratchdir = "/data_mocks_summit_new"
-    cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
+    cdatadir = "/mnt/marvin1/boryanah/scratch" + scratchdir
+    #cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
     if rsd:
         cdatadir = cdatadir+"_rsd"
     savedir = cdatadir+"/rockstar_"\
@@ -220,7 +221,8 @@ def calc_wp(design, decorations, rpbins, params, newseed, rsd = rsd):
 
     # data directory
     scratchdir = "/data_mocks_summit_new"
-    cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
+    cdatadir = "/mnt/marvin1/boryanah/scratch" + scratchdir
+    #cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
     if rsd:
         cdatadir = cdatadir+"_rsd"
     savedir = cdatadir+"/rockstar_"\
@@ -276,7 +278,8 @@ def plot_xi(design, decorations, rpbins, params, newseeds, rsd = rsd):
     for eseed in newseeds:
         # data directory
         scratchdir = "/data_mocks_summit_new"
-        cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
+        cdatadir = "/mnt/marvin1/boryanah/scratch" + scratchdir
+        #cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
         if rsd:
             cdatadir = cdatadir+"_rsd"
         savedir = cdatadir+"/rockstar_"\
@@ -307,7 +310,7 @@ def plot_xi(design, decorations, rpbins, params, newseeds, rsd = rsd):
     pl.ylabel('$\pi$ ($h^{-1}$Mpc)')
     pl.tight_layout()
     plotname = "./plots/plot_xirppi_mock_reseeded"+decorator
-    fig.savefig(plotname+".pdf", dpi = 300)
+    fig.savefig(plotname+".png", dpi = 300)
 
 def plot_wp(design, decorations, rps, params, newseeds, rsd = rsd):
 
@@ -376,7 +379,7 @@ def plot_wp(design, decorations, rps, params, newseeds, rsd = rsd):
     ax2.legend(loc='best', prop={'size': 13})
 
     pl.tight_layout()
-    fig.savefig("./plots/plot_wp_reseeded"+decorator+".pdf", dpi=720)
+    fig.savefig("./plots/plot_wp_reseeded"+decorator+".png", dpi=720)
     np.savez("./data/data_wp_reseeded"+decorator, wp = wp_avg, rp = rps)
 
 def compare_to_boss(design, decorations, rpbins, params, newseeds, rsd = rsd):
@@ -435,7 +438,7 @@ def compare_to_boss(design, decorations, rpbins, params, newseeds, rsd = rsd):
     pl.ylabel('$\pi$ ($h^{-1}$Mpc)')
     pl.tight_layout()
     plotname = "./plots/plot_delta_xirppi_mock_boss"+decorator
-    fig.savefig(plotname+".pdf", dpi = 300)
+    fig.savefig(plotname+".png", dpi = 300)
 
     # (xi_mock - xi_boss) / xi_mock
     fig = pl.figure(figsize=(5, 4))
@@ -451,7 +454,7 @@ def compare_to_boss(design, decorations, rpbins, params, newseeds, rsd = rsd):
     pl.ylabel('$\pi$ ($h^{-1}$Mpc)')
     pl.tight_layout()
     plotname = "./plots/plot_delta_xirppi_mock_boss_byxi"+decorator
-    fig.savefig(plotname+".pdf", dpi = 300)
+    fig.savefig(plotname+".png", dpi = 300)
 
     # make a triple plot, xi, delta xi, chi2
     fig = pl.figure(figsize=(13, 5))
@@ -503,7 +506,7 @@ def compare_to_boss(design, decorations, rpbins, params, newseeds, rsd = rsd):
 
     pl.subplots_adjust(wspace=20)
     pl.tight_layout()
-    fig.savefig("./plots/plot_xi_mock_diff_2plot"+decorator+".pdf", dpi=720)
+    fig.savefig("./plots/plot_xi_mock_diff_2plot"+decorator+".png", dpi=720)
 
 
 if __name__ == "__main__":

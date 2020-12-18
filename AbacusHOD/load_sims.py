@@ -1,17 +1,15 @@
-import numpy as np
 import os
-import sys
+from pathlib import Path
+
+import numpy as np
 import random
 import time
 from astropy.table import Table
-import astropy.io.fits as pf
-from math import erfc
 import h5py
-from scipy import special
-from glob import glob
 from sklearn.neighbors import KDTree
 
-from abacus_halo_catalog import AbacusHaloCatalog     
+#from abacus_halo_catalog import AbacusHaloCatalog
+from abacus_halo_catalog import CompaSOHaloCatalog
 
 import multiprocessing
 from multiprocessing import Pool

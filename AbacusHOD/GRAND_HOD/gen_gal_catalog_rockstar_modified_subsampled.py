@@ -9,17 +9,17 @@ export PYTHONPATH="/path/to/GRAND-HOD:$PYTHONPATH"
 
 """
 
-import numpy as np
 import os
 import sys
-import random
 import time
+from pathlib import Path
+
+import numpy as np
+import random
 from astropy.table import Table
-import astropy.io.fits as pf
 from math import erfc
 import h5py
 from scipy import special
-from glob import glob
 
 from numba import jit
 
@@ -526,8 +526,8 @@ def gen_gal_cat(whichchunk, halo_data, particle_data, design, decorations, param
 
     # # binary output galaxy catalog
     # print("Building galaxy catalog (binary output)")
-    fcent = open(savedir+"/halos_gal_cent_"+str(whichchunk),'wb')
-    fsats = open(savedir+"/halos_gal_sats_"+str(whichchunk),'wb')
+    fcent = open(savedir / ("halos_gal_cent_%d"%whichchunk),'wb')
+    fsats = open(savedir / ("halos_gal_sats_%d"%whichchunk),'wb')
 
     # # find the halos, populate them with galaxies and write them to files
     gen_gals(whichchunk, halo_data, particle_data, design, decorations, 
