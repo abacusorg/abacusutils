@@ -82,6 +82,12 @@ newdecor = {'s': 0,
             'Ae': 0} 
 decorator = "_fiducial"
 
+mydir = "/mnt/marvin1/syuan/scratch"
+scratchdir = "/data_mocks_summit_new"
+cdatadir = mydir + scratchdir
+if rsd:
+    cdatadir = cdatadir+"_rsd"
+
 rp_bins_course = np.logspace(-1, np.log10(30), 11)
 pimax = 30.0 # h-1 mpc
 pi_bin_size = 5
@@ -94,12 +100,6 @@ def calc_xi_mock_natural(design, decorations, rpbins, params, newseed, rsd = rsd
     s, s_v, alpha_c, s_p, s_r, A, Ae = map(decorations.get, ('s', 's_v', 'alpha_c', 's_p', 's_r', 'A', 'Ae'))
 
     start = time.time()
-    # data directory
-    scratchdir = "/data_mocks_summit_new"
-    cdatadir = "/mnt/marvin1/boryanah/scratch" + scratchdir
-    #cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
-    if rsd:
-        cdatadir = cdatadir+"_rsd"
     savedir = cdatadir+"/rockstar_"\
     +str(np.log10(M_cut))[0:10]+"_"+str(np.log10(M1))[0:10]+"_"+str(sigma)[0:6]+"_"+str(alpha)[0:6]+"_"+str(kappa)[0:6]\
     +"_decor_"+str(s)+"_"+str(s_v)+"_"+str(alpha_c)+"_"+str(s_p)+"_"+str(s_r)+"_"+str(A)+"_"+str(Ae)
@@ -219,12 +219,6 @@ def calc_wp(design, decorations, rpbins, params, newseed, rsd = rsd):
     M_cut, M1, sigma, alpha, kappa = map(design.get, ('M_cut', 'M1', 'sigma', 'alpha', 'kappa'))
     s, s_v, alpha_c, s_p, s_r, A, Ae = map(decorations.get, ('s', 's_v', 'alpha_c', 's_p', 's_r', 'A', 'Ae'))
 
-    # data directory
-    scratchdir = "/data_mocks_summit_new"
-    cdatadir = "/mnt/marvin1/boryanah/scratch" + scratchdir
-    #cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
-    if rsd:
-        cdatadir = cdatadir+"_rsd"
     savedir = cdatadir+"/rockstar_"\
     +str(np.log10(M_cut))[0:10]+"_"+str(np.log10(M1))[0:10]+"_"+str(sigma)[0:6]+"_"+str(alpha)[0:6]+"_"+str(kappa)[0:6]\
     +"_decor_"+str(s)+"_"+str(s_v)+"_"+str(alpha_c)+"_"+str(s_p)+"_"+str(s_r)+"_"+str(A)+"_"+str(Ae)
@@ -276,12 +270,6 @@ def plot_xi(design, decorations, rpbins, params, newseeds, rsd = rsd):
 
     xi_sum = 0
     for eseed in newseeds:
-        # data directory
-        scratchdir = "/data_mocks_summit_new"
-        cdatadir = "/mnt/marvin1/boryanah/scratch" + scratchdir
-        #cdatadir = "/mnt/marvin1/syuan/scratch" + scratchdir
-        if rsd:
-            cdatadir = cdatadir+"_rsd"
         savedir = cdatadir+"/rockstar_"\
         +str(np.log10(M_cut))[0:10]+"_"+str(np.log10(M1))[0:10]+"_"+str(sigma)[0:6]+"_"+str(alpha)[0:6]+"_"+str(kappa)[0:6]\
         +"_decor_"+str(s)+"_"+str(s_v)+"_"+str(alpha_c)+"_"+str(s_p)+"_"+str(s_r)+"_"+str(A)+"_"+str(Ae)
@@ -319,11 +307,6 @@ def plot_wp(design, decorations, rps, params, newseeds, rsd = rsd):
 
     wp_sum = 0
     for eseed in newseeds:
-        # data directory
-        scratchdir = "/data_mocks_summit_new"
-        cdatadir = "/mnt/gosling1/syuan/scratch" + scratchdir
-        if rsd:
-            cdatadir = cdatadir+"_rsd"
         savedir = cdatadir+"/rockstar_"\
         +str(np.log10(M_cut))[0:10]+"_"+str(np.log10(M1))[0:10]+"_"+str(sigma)[0:6]+"_"+str(alpha)[0:6]+"_"+str(kappa)[0:6]\
         +"_decor_"+str(s)+"_"+str(s_v)+"_"+str(alpha_c)+"_"+str(s_p)+"_"+str(s_r)+"_"+str(A)+"_"+str(Ae)
@@ -390,11 +373,6 @@ def compare_to_boss(design, decorations, rpbins, params, newseeds, rsd = rsd):
 
     xi_sum = 0
     for eseed in newseeds:
-        # data directory
-        scratchdir = "/data_mocks_summit_new"
-        cdatadir = "/mnt/gosling1/syuan/scratch" + scratchdir
-        if rsd:
-            cdatadir = cdatadir+"_rsd"
         savedir = cdatadir+"/rockstar_"\
         +str(np.log10(M_cut))[0:10]+"_"+str(np.log10(M1))[0:10]+"_"+str(sigma)[0:6]+"_"+str(alpha)[0:6]+"_"+str(kappa)[0:6]\
         +"_decor_"+str(s)+"_"+str(s_v)+"_"+str(alpha_c)+"_"+str(s_p)+"_"+str(s_r)+"_"+str(A)+"_"+str(Ae)

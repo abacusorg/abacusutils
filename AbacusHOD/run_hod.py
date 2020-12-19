@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from astropy.table import Table
 import h5py
 import asdf
 import argparse
@@ -26,7 +27,7 @@ from GRAND_HOD import gen_gal_catalog_rockstar_modified_subsampled as galcat
 DEFAULTS = {}
 DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
 DEFAULTS['z_mock'] = 0.5
-DEFAULTS['scratch_dir'] = "/mnt/marvin1/boryanah/scratch"
+DEFAULTS['scratch_dir'] = "/mnt/marvin1/syuan/scratch"
 DEFAULTS['subsample_dir'] = "/mnt/marvin1/syuan/scratch/data_summit/"
 DEFAULTS['sim_dir'] = "/mnt/gosling2/bigsims/"
 
@@ -93,21 +94,24 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         maskedhalos = newfile['halos']
 
         # extracting the halo properties that we need
-        halo_ids = maskedhalos["id"] # halo IDs
+        halo_ids = np.array(maskedhalos["id"], dtype = int) # halo IDs
         halo_pos = maskedhalos["x_com"]/params['h'] # halo positions, Mpc
         halo_vels = maskedhalos['v_com'] # halo velocities, km/s
         halo_vrms = maskedhalos["sigmav3d_com"] # halo velocity dispersions, km/s
         halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun, 200b
         halo_deltac = maskedhalos['deltac'] # halo concentration
         halo_fenv = maskedhalos['fenv_binnorm'] # halo velocities, km/s
-        halo_pstart = maskedhalos['npstartA'] # starting index of particles
-        halo_pnum = maskedhalos['npoutA'] # number of particles 
+        halo_pstart = np.array(maskedhalos['npstartA'], dtype = int) # starting index of particles
+        halo_pnum = np.array(maskedhalos['npoutA'], dtype = int) # number of particles 
         halo_multi = maskedhalos['multi_halos']
-        halo_submask = maskedhalos['mask_subsample']
-        halo_data_chunk = np.concatenate((halo_ids[:, None], halo_pos, halo_vels, halo_vrms[:, None], 
-            halo_mass[:, None], halo_deltac[:, None], halo_fenv[:, None], halo_pstart[:, None], halo_pnum[:, None], 
-            halo_multi[:, None], halo_submask[:, None]), axis = 1)
-        halo_data += [halo_data_chunk]
+        halo_submask = np.array(maskedhalos['mask_subsample'], dtype = bool)
+        halo_randoms = maskedhalos['randoms']
+        halo_table = Table([halo_ids, halo_pos[:, 0], halo_pos[:, 1], halo_pos[:, 2], 
+            halo_vels[:, 0], halo_vels[:, 1], halo_vels[:, 2], halo_vrms, halo_mass, halo_deltac, 
+            halo_fenv, halo_pstart, halo_pnum, halo_multi, halo_submask, halo_randoms], 
+            names=('id', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'vrms', 'mass', 'deltac', 'fenv', 
+            'pstart', 'pnum', 'multi', 'submask', 'randoms'))
+        halo_data += [halo_table]
 
         # extract particle data that we need
         newpart = h5py.File(subsample_dir / ('particles_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
@@ -115,28 +119,23 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         part_pos = subsample['pos'] / params['h']
         part_vel = subsample['vel']
         part_halomass = subsample['halo_mass'] / params['h'] # msun
-        part_haloid = subsample['halo_id']
+        part_haloid = np.array(subsample['halo_id'], dtype = int)
         part_Np = subsample['Np'] # number of particles that end up in the halo
         part_subsample = subsample['downsample_halo']
+        part_randoms = subsample['randoms']
+        part_table = Table([part_pos[:, 0], part_pos[:, 1], part_pos[:, 2], 
+            part_vel[:, 0], part_vel[:, 1], part_vel[:, 2], part_halomass, 
+            part_haloid, part_Np, part_subsample, part_randoms],
+            names = ('x', 'y', 'z', 'vx', 'vy', 'vz', 'hmass', 'hid', 'Np', 'subsample', 'randoms'))
 
-        if want_ranks:
-            part_ranks = subsample['ranks']
-            part_ranksv = subsample['ranksv']
-            part_ranksp = subsample['ranksp']
-            part_ranksr = subsample['ranksr']
-            part_data_chunk = np.concatenate((part_pos, part_vel,
-                                              part_ranks[:, None],
-                                              part_ranksv[:, None],
-                                              part_ranksp[:, None],
-                                              part_ranksr[:, None]), axis = 1)
-        else:
-            part_data_chunk = np.concatenate((part_pos, part_vel, 
-                                              part_halomass[:, None],
-                                              part_haloid[:, None],
-                                              part_Np[:, None],
-                                              part_subsample[:, None]), axis = 1)
+        # if want_ranks:
+        #     part_ranks = subsample['ranks']
+        #     part_ranksv = subsample['ranksv']
+        #     part_ranksp = subsample['ranksp']
+        #     part_ranksr = subsample['ranksr']
+        #     part_data_chunk += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
 
-        particle_data += [part_data_chunk]
+        particle_data += [part_table]
 
     return halo_data, particle_data, params, mock_dir
 
@@ -170,6 +169,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     # preload the simulation
+    print("preloading simulation")
     halo_data, particle_data, params, mock_dir = main(**args)
     print("finished loading the data into memory")
 
@@ -233,13 +233,13 @@ if __name__ == "__main__":
         os.makedirs(save_dir)
     
     start = time.time()
-    # run_onebox(0)
+    run_onebox(0)
     #gen_gal_onesim_onehod(0, halo_data, particle_data, newdesign, newdecor, save_dir, newseed, params)
     # multiprocess
-    p = multiprocessing.Pool(17)
-    p.map(run_onebox, range(params['numchunks']))
+    # p = multiprocessing.Pool(17)
+    # p.map(run_onebox, range(params['numchunks']))
     #p.map(gen_gal_onesim_onehod, zip((i, halo_data[i], particle_data[i], newdesign, newdecor, save_dir, newseed, params) for i in range(params['numchunks'])))
-    #p.starmap(gen_gal_onesim_onehod, zip(range(params['numchunks']), repeat(halo_data), repeat(particle_data), repeat(newdesign), repeat(newdecor), repeat(save_dir), repeat(newseed), repeat(params)))
+    # p.starmap(gen_gal_onesim_onehod, zip(range(params['numchunks']), repeat(halo_data), repeat(particle_data), repeat(newdesign), repeat(newdecor), repeat(save_dir), repeat(newseed), repeat(params)))
     #p.close()
     #p.join()
     print("Done ", time.time() - start)

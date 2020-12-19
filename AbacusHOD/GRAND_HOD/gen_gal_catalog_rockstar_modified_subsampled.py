@@ -91,8 +91,7 @@ def n_sat(M_in, design_array, m_cutoff = 1e12):
 
 # generate central galaxy given a halo
 # @jit(nopython = True)
-def gen_cent(halo_ids, halo_pos, halo_vels, halo_vrms, halo_mass, 
-             design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = 0):
+def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = 0):
     """
     Function that generates central galaxies and its position and velocity 
     given a halo catalog and HOD designs and decorations. The generated 
@@ -149,31 +148,36 @@ def gen_cent(halo_ids, halo_pos, halo_vels, halo_vrms, halo_mass,
     # m_cutoff = 1e12
 
     # form the probability array
-    ps = n_cen(halo_mass, design_array) * ic
+    ps = n_cen(maskedhalos['mass'], design_array) * ic
     # ps = 0.5*special.erfc(np.log(M_cut/halo_mass)/(2**.5*sigma)) * ic
 
     # generate a bunch of numbers for central occupation
-    r_cents = np.random.random(len(ps))
     # do we have centrals?
-    mask_cents = r_cents < ps 
+    mask_cents = maskedhalos['randoms'] < ps 
 
     # generate central los velocity
-    vrms_los = halo_vrms/1.7320508076 # km/s
-    extra_vlos = np.random.normal(loc = 0, scale = abs(alpha_c)*vrms_los)
+    extra_vlos = np.random.normal(loc = 0, scale = abs(alpha_c)*maskedhalos['vrms']/1.7320508076)
 
     # compile the centrals
-    pos_cents = halo_pos[mask_cents]
-    vel_cents = halo_vels[mask_cents]
-    vel_cents[:, 2] += extra_vlos[mask_cents] # add on velocity bias
-    mass_cents = halo_mass[mask_cents]
-    ids_cents = halo_ids[mask_cents]
+    x_cents = maskedhalos['x'][mask_cents]
+    y_cents = maskedhalos['y'][mask_cents]
+    z_cents = maskedhalos['z'][mask_cents]
+    vx_cents = maskedhalos['vx'][mask_cents]
+    vy_cents = maskedhalos['vy'][mask_cents]
+    vz_cents = maskedhalos['vz'][mask_cents]
+    vz_cents += extra_vlos[mask_cents] # add on velocity bias
+    mass_cents = maskedhalos['mass'][mask_cents]
+    ids_cents = maskedhalos['id'][mask_cents]
 
     # rsd
     if rsd:
-        pos_cents[:, 2] = (pos_cents[:, 2] + vel_cents[:, 2]/velz2kms) % lbox
+        z_cents = (z_cents + vz_cents/velz2kms) % lbox
 
     # output to file
-    newarray = np.concatenate((pos_cents, vel_cents, ids_cents[:, None], mass_cents[:, None]), axis = 1)
+    newarray = np.concatenate((x_cents[:, None], y_cents[:, None], z_cents[:, None], 
+        vx_cents[:, None], vy_cents[:, None], vz_cents[:, None], 
+        ids_cents[:, None], mass_cents[:, None]), axis = 1)
+    print("number of centrals ", len(newarray))
     newarray.tofile(fcent)
     # for i in range(len(pos_cents)):
     #     if i % 1000 == 0:
@@ -185,8 +189,7 @@ def gen_cent(halo_ids, halo_pos, halo_vels, halo_vrms, halo_mass,
 
 
 # @jit(nopython = True)
-def gen_sats(part_pos, part_vel, part_halomass, part_haloid, part_Np, part_subsample, 
-    design_array, decorations_array, rsd, velz2kms, lbox, Mpart, whatseed = 0):
+def gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, Mpart, whatseed = 0):
 
     """
     Function that generates satellite galaxies and their positions and 
@@ -256,83 +259,13 @@ def gen_sats(part_pos, part_vel, part_halomass, part_haloid, part_Np, part_subsa
     decorations_array[5], decorations_array[6], decorations_array[7]
 
     # expected number of galaxies for each particle 
-    Nsat_exp = n_sat(part_halomass, design_array) / part_Np / part_subsample * ic
+    Nsat_exp = n_sat(subsample['hmass'], design_array) / subsample['Np'] / subsample['subsample'] * ic
 
-    random_list = np.random.random(len(Nsat_exp))
-    satmask = random_list < Nsat_exp
+    # random_list = np.random.random(len(Nsat_exp))
+    satmask = subsample['randoms'] < Nsat_exp
 
     return satmask
 
-    # # loop through the halos to populate satellites
-    # # print("generating satellites")
-    # data_sats = np.zeros((1, 8))
-    # for i in np.arange(len(halo_ids)):
-    #     thishalo_id = halo_ids[i]
-    #     thishalo_mass = halo_mass[i]
-    #     # load the 10% subsample belonging to the halo
-    #     start_ind = int(halo_pstart[i])
-    #     numparts = int(halo_pnum[i])
-    #     # if there are no particles in the particle subsample, move on
-    #     if numparts == 0:
-    #         continue
-    #     # extract the particle positions and vels
-    #     ss_pos = part_pos[start_ind: start_ind + numparts] # Mpc
-    #     ss_vels = part_vel[start_ind: start_ind + numparts] # km/s
-    #     ss_ranks = part_ranks[start_ind: start_ind + numparts] # km/s
-    #     ss_ranksv = part_ranksv[start_ind: start_ind + numparts] # km/s
-    #     ss_ranksp = part_ranksp[start_ind: start_ind + numparts] # km/s
-    #     ss_ranksr = part_ranksr[start_ind: start_ind + numparts] # km/s
-
-    #     # generate a list of random numbers that will track each particle
-    #     random_list = np.random.random(numparts)
-
-    #     # compute the undecorated expected number of satellites
-    #     N_sat = n_sat(halo_mass[i], design_array) * halo_multi[i]
-
-    #     if N_sat == 0:
-    #         continue
-
-    #     # the undecorated probability of each particle hosting a satellite
-    #     eachprob = float(N_sat)/numparts * ic
-    #     eachprob_array = np.ones(numparts)*eachprob
-
-    #     temp_indices = np.arange(numparts)
-    #     temp_range = numparts - 1
-
-    #     # if there is one particle, then we dont need to do any reranking
-    #     if numparts > 1:
-    #         modifier = (1 - s*(1 - ss_ranks/(temp_range/2.0))) * (1 - s_v*(1 - ss_ranksv/(temp_range/2.0))) \
-    #         *(1 - s_p*(1 - ss_ranksp/(temp_range/2.0))) *(1 - s_r*(1 - ss_ranksr/(temp_range/2.0)))
-    #         eachprob_array = eachprob_array*modifier / np.mean(modifier)
-            
-    #     # we have finished the reranking routines
-    #     # decide which particle bears galaxy
-    #     newmask = random_list < eachprob_array
-    #     # generate the position and velocity of the galaxies
-    #     sat_pos = ss_pos[newmask]
-    #     sat_vels = ss_vels[newmask]
-
-    #     # so a lot of the sat_pos are empty, in that case, just pass
-    #     if len(sat_pos) == 0:
-    #         continue
-
-    #     # rsd, modify the satellite positions by their velocities
-    #     if rsd:
-    #         sat_pos[:,2] = (sat_pos[:,2] + sat_vels[:,2]/velz2kms) % lbox
-
-    #     # output
-    #     for j in range(len(sat_pos)):
-    #         newline_sat = np.array([[sat_pos[j, 0],
-    #                                 sat_pos[j, 1],
-    #                                 sat_pos[j, 2],
-    #                                 sat_vels[j, 0],
-    #                                 sat_vels[j, 1],
-    #                                 sat_vels[j, 2],                                    
-    #                                 thishalo_id, 
-    #                                 thishalo_mass]])
-    #         data_sats = np.vstack((data_sats, newline_sat))
-
-    # return data_sats[1:]
 
 
 def gen_gals(whichchunk, maskedhalos, subsample, design, decorations, 
@@ -389,63 +322,21 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
     decorations_array = np.array([s, s_v, alpha_c, s_p, s_r, A, Ae, ic])
 
     start = time.time()
-    # extracting the halo properties that we need
-    halo_ids = np.array(maskedhalos[:, 0], dtype = int) # halo IDs
-    halo_pos = maskedhalos[:, 1:4] # halo positions, Mpc
-    halo_vels = maskedhalos[:, 4:7] # halo velocities, km/s
-    halo_vrms = maskedhalos[:, 7] # halo velocity dispersions, km/s
-    halo_mass = maskedhalos[:, 8] # halo mass, Msun, 200b
-    halo_deltac = maskedhalos[:, 9] # halo concentration
-    halo_fenv = maskedhalos[:, 10] # halo velocities, km/s
-    halo_pstart = np.array(maskedhalos[:, 11], dtype = int) # starting index of particles
-    halo_pnum = np.array(maskedhalos[:, 12], dtype = int) # number of particles 
-    halo_multi = maskedhalos[:, 13]
-    halo_submask = np.array(maskedhalos[:, 14], dtype = bool)
-    print("the halo loading stuff took ", time.time() - start)
-    start = time.time()
-
-    # # if assembly bias parameter is not zero, then we do halo reranking
-    # if not ((A == 0) & (Ae == 0)):
-
-    #     # define a ranking parameter
-    #     halo_pseudomass = halo_mass*np.exp(A*halo_deltac + Ae*halo_fenv)
-
-    #     # create a list that indicates the original order 
-    #     halo_order = np.arange(len(halo_ids))
-
-    #     # first we sort everything by mass, original mass
-    #     msorted_indices = halo_mass.argsort()[::-1] # descending order
-
-    #     halo_mass = halo_mass[msorted_indices] 
-    #     halo_pseudomass = halo_pseudomass[msorted_indices]
-    #     halo_order = halo_order[msorted_indices]
-
-    #     # now we resort using halo_pseudomass and get the indices
-    #     new_indices = halo_pseudomass.argsort()[::-1] # descending order
-    #     halo_order = halo_order[new_indices]
-    #     # we dont touch halo mass so it is still sorted by mass
-
-    #     # revert to the original order 
-    #     original_indices = halo_order.argsort() # ascending order
-    #     halo_mass = halo_mass[original_indices]
-
-    # print("the assembly bias stuff took ", time.time() - start)
-    # start = time.time()
 
     velz2kms = params['velz2kms']
     lbox = params['Lbox']
     # for each halo, generate central galaxies and output to file
-    gen_cent(halo_ids, halo_pos, halo_vels, halo_vrms, halo_mass, 
-             design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = whatseed)
+    gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = whatseed)
 
     print("generating centrals took ", time.time() - start)
     # open particle file
-    part_pos = subsample[:, 0:3]
-    part_vel = subsample[:, 3:6]
-    part_halomass = subsample[:, 6]
-    part_haloid = subsample[:, 7]
-    part_Np = subsample[:, 8]
-    part_subsample = subsample[:, 9]
+    # part_pos = subsample[0]
+    # part_vel = subsample[1]
+    # part_halomass = subsample[2]
+    # part_haloid = subsample[3]
+    # part_Np = subsample[4]
+    # part_subsample = subsample[5]
+    # part_randoms = subsample[6]
     # part_ranks = subsample[:, 6]
     # part_ranksv = subsample[:, 7]
     # part_ranksp = subsample[:, 8]
@@ -454,14 +345,18 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
     start = time.time()
     # for each halo, generate satellites and output to file
     # print(len(halo_ids), sum(halo_submask))
-    satmask = gen_sats(part_pos, part_vel, part_halomass, part_haloid, part_Np, part_subsample, 
-        design_array, decorations_array, rsd, velz2kms, lbox, params['Mpart'], whatseed = whatseed)
+    satmask = gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, 
+        params['Mpart'], whatseed = whatseed)
+    newarray = np.concatenate((subsample['x'][satmask, None], subsample['y'][satmask, None], subsample['z'][satmask, None], 
+        subsample['vx'][satmask, None], subsample['vy'][satmask, None], subsample['vz'][satmask, None], 
+        subsample['hmass'][satmask, None], subsample['hid'][satmask, None]), axis = 1)
     # satellite rsd
     if rsd:
-        subsample[:,2] = (subsample[:,2] + subsample[:,5]/velz2kms) % lbox
+        newarray[:,2] = (newarray[:,2] + newarray[:,5]/velz2kms) % lbox
 
-    subsample[satmask, 0:8].tofile(fsats)
-    print("outputting satellites took ", time.time() - start)
+    # subsample[satmask, 0:8].tofile(fsats)
+    newarray.tofile(fsats)
+    print("outputting satellites took ", time.time() - start, "number of satellites", len(newarray))
 
 
 def gen_gal_cat(whichchunk, halo_data, particle_data, design, decorations, params, savedir, 

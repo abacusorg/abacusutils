@@ -8,17 +8,16 @@ from astropy.table import Table
 import h5py
 from sklearn.neighbors import KDTree
 
-#from abacus_halo_catalog import AbacusHaloCatalog
-from abacus_halo_catalog import CompaSOHaloCatalog
+from abacus_halo_catalog import AbacusHaloCatalog
+# from abacus_halo_catalog import CompaSOHaloCatalog
 
 import multiprocessing
 from multiprocessing import Pool
 
 simname = "/AbacusSummit_base_c000_ph006"
-savedir = "/mnt/gosling1/syuan/scratch/data_summit"+simname
+savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname
 
 newseed = 600
-np.random.seed(newseed)
 
 if not os.path.exists(savedir):
     os.makedirs(savedir)
@@ -35,6 +34,7 @@ def subsample_particles(m):
 
 
 def load_chunk(i):
+    np.random.seed(newseed + i)
     # # if file already exists, just skip
     # if os.path.exists(savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod.h5') \
     # and os.path.exists(savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod.h5'):
@@ -122,7 +122,7 @@ def load_chunk(i):
 
     start_tracker = 0
     for j in np.arange(len(halos)):
-        if j % 1000 == 0:
+        if j % 20000 == 0:
             print(j)
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
@@ -203,6 +203,7 @@ def load_chunk(i):
 
     halos['npstartA'] = halos_pstart_new
     halos['npoutA'] = halos_pnum_new
+    halos['randoms'] = np.random.random(len(halos_pstart_new)) # attaching random numbers
 
     # output halo file 
     print("outputting new halo file ")
@@ -225,6 +226,7 @@ def load_chunk(i):
     parts['halo_mass'] = Mh_parts[mask_parts.astype(bool)]
     parts['Np'] = Np_parts[mask_parts.astype(bool)]
     parts['halo_id'] = idh_parts[mask_parts.astype(bool)]
+    parts['randoms'] = np.random.random(len(parts))
 
     print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0), 
         np.sum(parts['halo_mass'] < 0))
