@@ -186,7 +186,7 @@ def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, velz2kms, lbox
                 gmass[j] = mass[i]
                 gid[j] = ids[i]
                 j += 1
-        assert j == gstart[tid + 1]
+        # assert j == gstart[tid + 1]
 
     return gpos, gvel, gmass, gid 
 
@@ -341,7 +341,7 @@ def gen_sats(ppos, pvel, hmass, hid, Np, subsampling, randoms, design_array, dec
                 gmass[j] = hmass[i]
                 gid[j] = hid[i]
                 j += 1
-        assert j == gstart[tid + 1]
+        # assert j == gstart[tid + 1]
 
     return gpos, gvel, gmass, gid 
 
