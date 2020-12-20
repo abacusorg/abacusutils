@@ -160,6 +160,7 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
 
     # compile the centrals
     x_cents = maskedhalos['x'][mask_cents]
+    print(x_cents)
     y_cents = maskedhalos['y'][mask_cents]
     z_cents = maskedhalos['z'][mask_cents]
     vx_cents = maskedhalos['vx'][mask_cents]
@@ -326,7 +327,7 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
     velz2kms = params['velz2kms']
     lbox = params['Lbox']
     # for each halo, generate central galaxies and output to file
-    gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = whatseed)
+    gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = whatseed + whichchunk)
 
     print("generating centrals took ", time.time() - start)
     # open particle file
@@ -346,7 +347,9 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
     # for each halo, generate satellites and output to file
     # print(len(halo_ids), sum(halo_submask))
     satmask = gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, 
-        params['Mpart'], whatseed = whatseed)
+        params['Mpart'], whatseed = whatseed + whichchunk)
+    print("generating mask took ", time.time() - start)
+    start = time.time()
     newarray = np.concatenate((subsample['x'][satmask, None], subsample['y'][satmask, None], subsample['z'][satmask, None], 
         subsample['vx'][satmask, None], subsample['vy'][satmask, None], subsample['vz'][satmask, None], 
         subsample['hmass'][satmask, None], subsample['hid'][satmask, None]), axis = 1)
