@@ -26,7 +26,7 @@ from scipy import special
 import numba
 from numba import njit
 
-@njit
+@njit(fastmath=True)
 def n_cen(M_in, M_cut, sigma, m_cutoff = 1e12): 
     """
     Computes the expected number of central galaxies given a halo mass and 
@@ -34,30 +34,27 @@ def n_cen(M_in, M_cut, sigma, m_cutoff = 1e12):
 
     Parameters
     ----------
-
     M_in : float
         Halo mass in solar mass.
-
     design : dict
         Dictionary containing the five HOD parameters. 
-        
     m_cutoff: float, optional
         Ignore halos small than this mass.
 
     Returns
     -------
-
     n_cen : float
         Number of centrals expected for the halo within the range (0, 1).
         This number should be interpreted as a probability.
-
     """
     # if M_in < m_cutoff: # this cutoff ignores halos with less than 100 particles
     #     return 0
     # M_cut, M1, sigma, alpha, kappa = \
     # design_array[0], design_array[1], design_array[2], design_array[3], design_array[4]
 
-    return 0.5*math.erfc(np.log(M_cut/M_in)/(2**.5*sigma))
+    #return 0.5*math.erfc(np.log(M_cut/M_in)/(2**.5*sigma))
+    # log seems faster than division
+    return 0.5*math.erfc((np.log(M_cut) - np.log(M_in))/(2**.5*sigma))
 
 @njit
 def n_sat(M_in, M_cut, M1, sigma, alpha, kappa, m_cutoff = 1e12): 
@@ -93,52 +90,52 @@ def n_sat(M_in, M_cut, M1, sigma, alpha, kappa, m_cutoff = 1e12):
 
     return ((M_in - kappa*M_cut)/M1)**alpha*0.5*math.erfc(np.log(M_cut/M_in)/(2**.5*sigma))
 
-@njit(parallel = True)
+
+@njit(fastmath=True)
+def wrap(x, L):
+    '''Fast scalar mod implementation'''
+    L2 = L/2
+    if x >= L2:
+        return x - L
+    elif x < -L2:
+        return x + L
+    return x
+
+
+@njit(parallel=True,fastmath=True)
 def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, velz2kms, lbox):
     """
     Function that generates central galaxies and its position and velocity 
     given a halo catalog and HOD designs and decorations. The generated 
     galaxies are output to file fcent. 
-
+    
     Parameters
     ----------
-
     halo_ids : numpy.array
         Array of halo IDs.
-
     halo_pos : numpy.array
         Array of halo positions of shape (N, 3) in box units.
-
     halo_vels : numpy.array
         Array of halo velocities of shape (N, 3) in km/s.
-
     halo_vrms: numpy.array
         Array of halo particle velocity dispersion in km/s.
-
     halo_mass : numpy.array
         Array of halo mass in solar mass.
-
     design : dict
         Dictionary of the five baseline HOD parameters. 
-
     decorations : dict
         Dictionary of generalized HOD parameters. 
-
     fcent : file pointer
         Pointer to the central galaxies output file location. 
-
     rsd : boolean
         Flag of whether to implement RSD. 
-
     params : dict
         Dictionary of various simulation parameters. 
-
+        
     Outputs
     -------
-
     For each halo, if there exists a central, the function outputs the 
     3D position (Mpc), halo ID, and halo mass (Msun) to file.
-
     """
 
     # parse out the hod parameters 
@@ -178,11 +175,12 @@ def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, velz2kms, lbox
         j = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i]:
-                if rsd:
-                    gpos[j] = (pos[i] + vel[i] / velz2kms) % lbox
-                else:
-                    gpos[j] = pos[i]
-                gvel[j] = vel[i] # need to extend to include vel bias 
+                for k in range(3):
+                    if rsd:
+                        gpos[j,k] = wrap(pos[i,k] + vel[i,k] / velz2kms, lbox)
+                    else:
+                        gpos[j,k] = pos[i,k]
+                    gvel[j,k] = vel[i,k] # need to extend to include vel bias 
                 gmass[j] = mass[i]
                 gid[j] = ids[i]
                 j += 1
