@@ -56,7 +56,7 @@ def n_cen(M_in, M_cut, sigma, m_cutoff = 1e12):
     # log seems faster than division
     return 0.5*math.erfc((np.log(M_cut) - np.log(M_in))/(2**.5*sigma))
 
-@njit
+@njit(fastmath=True)
 def n_sat(M_in, M_cut, M1, sigma, alpha, kappa, m_cutoff = 1e12): 
     """
     Computes the expected number of satellite galaxies given a halo mass and 
@@ -88,7 +88,7 @@ def n_sat(M_in, M_cut, M1, sigma, alpha, kappa, m_cutoff = 1e12):
     # if M_in < kappa*M_cut:
     #     return 0
 
-    return ((M_in - kappa*M_cut)/M1)**alpha*0.5*math.erfc(np.log(M_cut/M_in)/(2**.5*sigma))
+    return ((M_in - kappa*M_cut)/M1)**alpha*0.5*math.erfc((np.log(M_cut) - np.log(M_in))/(2**.5*sigma))
 
 
 @njit(fastmath=True)
@@ -103,7 +103,7 @@ def wrap(x, L):
 
 
 @njit(parallel=True,fastmath=True)
-def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, velz2kms, lbox):
+def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, inv_velz2kms, lbox):
     """
     Function that generates central galaxies and its position and velocity 
     given a halo catalog and HOD designs and decorations. The generated 
@@ -177,7 +177,7 @@ def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, velz2kms, lbox
             if keep[i]:
                 for k in range(3):
                     if rsd:
-                        gpos[j,k] = wrap(pos[i,k] + vel[i,k] / velz2kms, lbox)
+                        gpos[j,k] = wrap(pos[i,k] + vel[i,k] * inv_velz2kms, lbox)
                     else:
                         gpos[j,k] = pos[i,k]
                     gvel[j,k] = vel[i,k] # need to extend to include vel bias 
@@ -230,7 +230,7 @@ def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, velz2kms, lbox
 
 
 @njit(parallel = True)
-def gen_sats(ppos, pvel, hmass, hid, Np, subsampling, randoms, design_array, decorations_array, rsd, velz2kms, lbox, Mpart):
+def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_array, decorations_array, rsd, inv_velz2kms, lbox, Mpart):
 
     """
     Function that generates satellite galaxies and their positions and 
@@ -309,7 +309,7 @@ def gen_sats(ppos, pvel, hmass, hid, Np, subsampling, randoms, design_array, dec
     # figuring out the number of particles kept for each thread
     for tid in numba.prange(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
-            if n_sat(hmass[i], M_cut, M1, sigma, alpha, kappa) / Np[i] / subsampling[i] * ic > randoms[i]:
+            if n_sat(hmass[i], M_cut, M1, sigma, alpha, kappa) * inv_Np[i] * inv_subsampling[i] * ic > randoms[i]:
                 Nout[tid, 0] += 1 # counting
                 keep[i] = 1
             else:
@@ -331,10 +331,11 @@ def gen_sats(ppos, pvel, hmass, hid, Np, subsampling, randoms, design_array, dec
         j = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i]:
-                if rsd:
-                    gpos[j] = (ppos[i] + pvel[i] / velz2kms) % lbox
-                else:
-                    gpos[j] = ppos[i]
+                for k in range(3):
+                    if rsd:
+                        gpos[j, k] = wrap(ppos[i, k] + pvel[i, k] * inv_velz2kms, lbox)
+                    else:
+                        gpos[j, k] = ppos[i, k]
                 gvel[j] = pvel[i] # need to extend to include vel bias 
                 gmass[j] = hmass[i]
                 gid[j] = hid[i]
@@ -406,7 +407,7 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
     # for each halo, generate central galaxies and output to file
     cent_pos, cent_vel, cent_mass, cent_id = \
     gen_cent(halos_array[0], halos_array[1], halos_array[2], halos_array[3],
-     halos_array[4], design_array, ic, rsd, velz2kms, lbox)
+     halos_array[4], design_array, ic, rsd, 1/velz2kms, lbox)
 
     print("generating centrals took ", time.time() - start)
     # open particle file
@@ -422,11 +423,14 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
     # part_ranksp = subsample[:, 8]
     # part_ranksr = subsample[:, 9]
 
+    inv_Np = 1/subsample[4]
+    inv_subsampling = 1/subsample[5]
+    inv_velz2kms = 1/velz2kms
     start = time.time()
     sat_pos, sat_vel, sat_mass, sat_id = \
     gen_sats(subsample[0], subsample[1], subsample[2], subsample[3], 
-        subsample[4],  subsample[5],  subsample[6], 
-        design_array, decorations_array, rsd, velz2kms, lbox, params['Mpart'])
+        inv_Np,  inv_subsampling,  subsample[6], 
+        design_array, decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'])
     print("generating satellites took ", time.time() - start)
 
     # start = time.time()

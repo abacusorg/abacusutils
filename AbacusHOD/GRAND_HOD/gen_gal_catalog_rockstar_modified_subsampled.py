@@ -160,7 +160,7 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
 
     # compile the centrals
     x_cents = maskedhalos['x'][mask_cents]
-    print(x_cents)
+    # print(x_cents)
     y_cents = maskedhalos['y'][mask_cents]
     z_cents = maskedhalos['z'][mask_cents]
     vx_cents = maskedhalos['vx'][mask_cents]
@@ -266,7 +266,6 @@ def gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, Mp
     satmask = subsample['randoms'] < Nsat_exp
 
     return satmask
-
 
 
 def gen_gals(whichchunk, maskedhalos, subsample, design, decorations, 
