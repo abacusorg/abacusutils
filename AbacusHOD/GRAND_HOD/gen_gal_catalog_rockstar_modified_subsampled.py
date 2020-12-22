@@ -148,27 +148,27 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
     # m_cutoff = 1e12
 
     # form the probability array
-    ps = n_cen(maskedhalos['mass'], design_array) * ic
+    ps = n_cen(maskedhalos[8], design_array) * ic
     # ps = 0.5*special.erfc(np.log(M_cut/halo_mass)/(2**.5*sigma)) * ic
 
     # generate a bunch of numbers for central occupation
     # do we have centrals?
-    mask_cents = maskedhalos['randoms'] < ps 
+    mask_cents = maskedhalos[15] < ps 
 
     # generate central los velocity
-    extra_vlos = np.random.normal(loc = 0, scale = abs(alpha_c)*maskedhalos['vrms']/1.7320508076)
+    extra_vlos = np.random.normal(loc = 0, scale = abs(alpha_c)*maskedhalos[7]/1.7320508076)
 
     # compile the centrals
-    x_cents = maskedhalos['x'][mask_cents]
+    x_cents = maskedhalos[1][mask_cents]
     # print(x_cents)
-    y_cents = maskedhalos['y'][mask_cents]
-    z_cents = maskedhalos['z'][mask_cents]
-    vx_cents = maskedhalos['vx'][mask_cents]
-    vy_cents = maskedhalos['vy'][mask_cents]
-    vz_cents = maskedhalos['vz'][mask_cents]
+    y_cents = maskedhalos[2][mask_cents]
+    z_cents = maskedhalos[3][mask_cents]
+    vx_cents = maskedhalos[4][mask_cents]
+    vy_cents = maskedhalos[5][mask_cents]
+    vz_cents = maskedhalos[6][mask_cents]
     vz_cents += extra_vlos[mask_cents] # add on velocity bias
-    mass_cents = maskedhalos['mass'][mask_cents]
-    ids_cents = maskedhalos['id'][mask_cents]
+    mass_cents = maskedhalos[8][mask_cents]
+    ids_cents = maskedhalos[0][mask_cents]
 
     # rsd
     if rsd:
@@ -260,10 +260,10 @@ def gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, Mp
     decorations_array[5], decorations_array[6], decorations_array[7]
 
     # expected number of galaxies for each particle 
-    Nsat_exp = n_sat(subsample['hmass'], design_array) / subsample['Np'] / subsample['subsample'] * ic
+    Nsat_exp = n_sat(subsample[6], design_array) / subsample[8] / subsample[9] * ic
 
     # random_list = np.random.random(len(Nsat_exp))
-    satmask = subsample['randoms'] < Nsat_exp
+    satmask = subsample[10] < Nsat_exp
 
     return satmask
 
@@ -349,9 +349,9 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
         params['Mpart'], whatseed = whatseed + whichchunk)
     print("generating mask took ", time.time() - start)
     start = time.time()
-    newarray = np.concatenate((subsample['x'][satmask, None], subsample['y'][satmask, None], subsample['z'][satmask, None], 
-        subsample['vx'][satmask, None], subsample['vy'][satmask, None], subsample['vz'][satmask, None], 
-        subsample['hmass'][satmask, None], subsample['hid'][satmask, None]), axis = 1)
+    newarray = np.concatenate((subsample[0][satmask, None], subsample[1][satmask, None], subsample[2][satmask, None], 
+        subsample[3][satmask, None], subsample[4][satmask, None], subsample[5][satmask, None], 
+        subsample[6][satmask, None], subsample[7][satmask, None]), axis = 1)
     # satellite rsd
     if rsd:
         newarray[:,2] = (newarray[:,2] + newarray[:,5]/velz2kms) % lbox

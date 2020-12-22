@@ -106,11 +106,11 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         halo_multi = maskedhalos['multi_halos']
         halo_submask = np.array(maskedhalos['mask_subsample'], dtype = bool)
         halo_randoms = maskedhalos['randoms']
-        halo_table = Table([halo_ids, halo_pos[:, 0], halo_pos[:, 1], halo_pos[:, 2], 
+        halo_table = [halo_ids, halo_pos[:, 0], halo_pos[:, 1], halo_pos[:, 2], 
             halo_vels[:, 0], halo_vels[:, 1], halo_vels[:, 2], halo_vrms, halo_mass, halo_deltac, 
-            halo_fenv, halo_pstart, halo_pnum, halo_multi, halo_submask, halo_randoms], 
-            names=('id', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'vrms', 'mass', 'deltac', 'fenv', 
-            'pstart', 'pnum', 'multi', 'submask', 'randoms'))
+            halo_fenv, halo_pstart, halo_pnum, halo_multi, halo_submask, halo_randoms]
+            # names=('id', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'vrms', 'mass', 'deltac', 'fenv', 
+            # 'pstart', 'pnum', 'multi', 'submask', 'randoms'))
         halo_data += [halo_table]
 
         # extract particle data that we need
@@ -123,10 +123,10 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         part_Np = subsample['Np'] # number of particles that end up in the halo
         part_subsample = subsample['downsample_halo']
         part_randoms = subsample['randoms']
-        part_table = Table([part_pos[:, 0], part_pos[:, 1], part_pos[:, 2], 
+        part_table = [part_pos[:, 0], part_pos[:, 1], part_pos[:, 2], 
             part_vel[:, 0], part_vel[:, 1], part_vel[:, 2], part_halomass, 
-            part_haloid, part_Np, part_subsample, part_randoms],
-            names = ('x', 'y', 'z', 'vx', 'vy', 'vz', 'hmass', 'hid', 'Np', 'subsample', 'randoms'))
+            part_haloid, part_Np, part_subsample, part_randoms]
+            # names = ('x', 'y', 'z', 'vx', 'vy', 'vz', 'hmass', 'hid', 'Np', 'subsample', 'randoms'))
 
         # if want_ranks:
         #     part_ranks = subsample['ranks']
