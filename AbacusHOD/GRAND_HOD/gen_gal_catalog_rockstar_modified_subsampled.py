@@ -21,7 +21,7 @@ from math import erfc
 import h5py
 from scipy import special
 
-from numba import jit
+from numba import njit, prange
 
 def n_cen(M_in, design_array, m_cutoff = 1e12): 
     """
@@ -89,6 +89,52 @@ def n_sat(M_in, design_array, m_cutoff = 1e12):
 
     return ((M_in - kappa*M_cut)/M1)**alpha*0.5*special.erfc(np.log(M_cut/M_in)/(2**.5*sigma))
 
+# @njit(fastmath = True, parallel = True)
+# def n_sat_numba(M_in, design_array, Np, subsampling, ic): 
+#     """
+#     Computes the expected number of satellite galaxies given a halo mass and 
+#     the HOD design. 
+
+#     Parameters
+#     ----------
+
+#     M_in : float
+#         Halo mass in solar mass.
+
+#     design : dict
+#         Dictionary containing the five HOD parameters. 
+    
+#     Returns
+#     -------
+
+#     n_sat : float
+#         Expected number of satellite galaxies for the said halo.
+
+#     """
+
+#     # if M_in < m_cutoff: # this cutoff ignores halos with less than 100 particles
+#     #     return 0
+
+#     M_cut, M1, sigma, alpha, kappa = \
+#     design_array[0], design_array[1], design_array[2], design_array[3], design_array[4]
+#     kappaMcut = kappa*M_cut
+#     logMcut = np.log(M_cut)
+#     twosqrtsigma_inv = 1/(2**.5*sigma)
+
+#     len_m = len(M_in)
+#     Nsat_exp = np.zeros(len_m,  dtype = M_in.dtype)
+
+#     Nthread = 2
+#     Mstart = np.rint(np.linspace(0, len_m, Nthread + 1)) # starting index of each thread
+
+#     for tid in prange(Nthread):
+#         for i in range(Mstart[tid], Mstart[tid + 1]):
+#             Mnew = M_in[i]
+#             Nsat_exp[i] = ((Mnew - kappaMcut)/M1)**alpha*0.5*erfc((logMcut - np.log(Mnew))*twosqrtsigma_inv) / Np[i] / subsampling[i] * ic
+
+#     return Nsat_exp
+
+
 # generate central galaxy given a halo
 # @jit(nopython = True)
 def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox, whatseed = 0):
@@ -155,8 +201,8 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
     # do we have centrals?
     mask_cents = maskedhalos[15] < ps 
 
-    # generate central los velocity
-    extra_vlos = np.random.normal(loc = 0, scale = abs(alpha_c)*maskedhalos[7]/1.7320508076)
+    # generate central velocity bias
+    # extra_vlos = np.random.normal(loc = 0, scale = abs(alpha_c)*maskedhalos[7]/1.7320508076)
 
     # compile the centrals
     x_cents = maskedhalos[1][mask_cents]
@@ -166,7 +212,7 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
     vx_cents = maskedhalos[4][mask_cents]
     vy_cents = maskedhalos[5][mask_cents]
     vz_cents = maskedhalos[6][mask_cents]
-    vz_cents += extra_vlos[mask_cents] # add on velocity bias
+    # vz_cents += extra_vlos[mask_cents] # add on velocity bias
     mass_cents = maskedhalos[8][mask_cents]
     ids_cents = maskedhalos[0][mask_cents]
 
@@ -177,7 +223,7 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
     # output to file
     newarray = np.concatenate((x_cents[:, None], y_cents[:, None], z_cents[:, None], 
         vx_cents[:, None], vy_cents[:, None], vz_cents[:, None], 
-        ids_cents[:, None], mass_cents[:, None]), axis = 1)
+        ids_cents[:, None], mass_cents[:, None]), axis = 1) # this is actually quite cheap, 0.002 sec
     print("number of centrals ", len(newarray))
     newarray.tofile(fcent)
     # for i in range(len(pos_cents)):
@@ -190,7 +236,7 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
 
 
 # @jit(nopython = True)
-def gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, Mpart, whatseed = 0):
+def gen_sats(subsample, design_array, decorations_array, rsd, fsats, velz2kms, lbox, Mpart, whatseed = 0):
 
     """
     Function that generates satellite galaxies and their positions and 
@@ -260,12 +306,28 @@ def gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, Mp
     decorations_array[5], decorations_array[6], decorations_array[7]
 
     # expected number of galaxies for each particle 
-    Nsat_exp = n_sat(subsample[6], design_array) / subsample[8] / subsample[9] * ic
+    print(len(subsample[6]))
+    Nsat_exp = n_sat(subsample[6], design_array) / subsample[8] / subsample[9] * ic # most expensive step, 0.3 sec
+    # accelerate this with numba
+    # Nsat_exp = n_sat_numba(subsample[6], design_array, subsample[8], subsample[9], ic)
 
     # random_list = np.random.random(len(Nsat_exp))
     satmask = subsample[10] < Nsat_exp
 
-    return satmask
+    newarray = np.concatenate((subsample[0][satmask, None], subsample[1][satmask, None], subsample[2][satmask, None], 
+        subsample[3][satmask, None], subsample[4][satmask, None], subsample[5][satmask, None], 
+        subsample[6][satmask, None], subsample[7][satmask, None]), axis = 1) # 0.05 sec, second most expensive 
+    # satellite rsd
+    # start = time.time()
+    if rsd:
+        newarray[:,2] = (newarray[:,2] + newarray[:,5]/velz2kms) % lbox # rsd is cheap, 1e-6 sec
+    # print("compute rsd took time ", time.time() - start)
+
+    # subsample[satmask, 0:8].tofile(fsats)
+    newarray.tofile(fsats) # cheap, 1e-4 sec
+    print("number of satellites", len(newarray))
+
+    # return satmask
 
 
 def gen_gals(whichchunk, maskedhalos, subsample, design, decorations, 
@@ -303,7 +365,6 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
 
 
     """
-
     M_cut, M1, sigma, alpha, kappa = map(design.get, ('M_cut', 
                                                       'M1', 
                                                       'sigma', 
@@ -345,20 +406,10 @@ def gen_gals(whichchunk, maskedhalos, subsample, design, decorations,
     start = time.time()
     # for each halo, generate satellites and output to file
     # print(len(halo_ids), sum(halo_submask))
-    satmask = gen_sats(subsample, design_array, decorations_array, rsd, velz2kms, lbox, 
+    gen_sats(subsample, design_array, decorations_array, rsd, fsats, velz2kms, lbox, 
         params['Mpart'], whatseed = whatseed + whichchunk)
-    print("generating mask took ", time.time() - start)
-    start = time.time()
-    newarray = np.concatenate((subsample[0][satmask, None], subsample[1][satmask, None], subsample[2][satmask, None], 
-        subsample[3][satmask, None], subsample[4][satmask, None], subsample[5][satmask, None], 
-        subsample[6][satmask, None], subsample[7][satmask, None]), axis = 1)
-    # satellite rsd
-    if rsd:
-        newarray[:,2] = (newarray[:,2] + newarray[:,5]/velz2kms) % lbox
+    print("generating satellites took ", time.time() - start)
 
-    # subsample[satmask, 0:8].tofile(fsats)
-    newarray.tofile(fsats)
-    print("outputting satellites took ", time.time() - start, "number of satellites", len(newarray))
 
 
 def gen_gal_cat(whichchunk, halo_data, particle_data, design, decorations, params, savedir, 

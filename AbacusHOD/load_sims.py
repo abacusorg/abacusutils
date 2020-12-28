@@ -30,7 +30,7 @@ def subsample_halos(m):
 def subsample_particles(m):
     x = np.log10(m)
     # return 1.0/(1.0 + np.exp(-(x - 13.5)*3))
-    return 0.1/(4.0 + np.exp(-(x - 13.8)*5)) * 4 
+    return 4/(200.0 + np.exp(-(x - 13.5)*6))
 
 
 def load_chunk(i):
@@ -130,6 +130,7 @@ def load_chunk(i):
             submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
             # updating the particles' masks, downsample factors, halo mass
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask
+            # print(j, halos_pstart, halos_pnum, p_halos, downsample_parts)
             downsample_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = p_halos[j]
             Mh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['N'][j]*Mpart # in msun / h
             Np_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = np.sum(submask)
