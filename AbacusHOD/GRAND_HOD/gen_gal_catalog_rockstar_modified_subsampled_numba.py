@@ -25,6 +25,7 @@ from scipy import special
 
 import numba
 from numba import njit
+numba.set_num_threads(64)
 
 @njit(fastmath=True)
 def n_cen(M_in, M_cut, sigma, m_cutoff = 1e12): 
@@ -102,8 +103,8 @@ def wrap(x, L):
     return x
 
 
-@njit(parallel=True,fastmath=True)
-def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, inv_velz2kms, lbox):
+@njit(parallel=True, fastmath=True)
+def gen_cent(pos, vel, mass, ids, multis, randoms, design_array, ic, rsd, inv_velz2kms, lbox):
     """
     Function that generates central galaxies and its position and velocity 
     given a halo catalog and HOD designs and decorations. The generated 
@@ -153,7 +154,7 @@ def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, inv_velz2kms, 
     # figuring out the number of halos kept for each thread
     for tid in numba.prange(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
-            if n_cen(mass[i], M_cut, sigma) * ic > randoms[i]:
+            if n_cen(mass[i], M_cut, sigma) * ic * multis[i] > randoms[i]:
                 Nout[tid, 0] += 1 # counting
                 keep[i] = 1
             else:
@@ -229,7 +230,7 @@ def gen_cent(pos, vel, mass, ids, randoms, design_array, ic, rsd, inv_velz2kms, 
     # #     newline.tofile(fcent)
 
 
-@njit(parallel = True)
+@njit(parallel = True, fastmath = True)
 def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_array, decorations_array, rsd, inv_velz2kms, lbox, Mpart):
 
     """
@@ -406,9 +407,8 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
     lbox = params['Lbox']
     # for each halo, generate central galaxies and output to file
     cent_pos, cent_vel, cent_mass, cent_id = \
-    gen_cent(halos_array[0], halos_array[1], halos_array[2], halos_array[3],
-     halos_array[4], design_array, ic, rsd, 1/velz2kms, lbox)
-
+    gen_cent(halos_array[0], halos_array[1], halos_array[2], halos_array[3], halos_array[4], 
+     halos_array[5], design_array, ic, rsd, 1/velz2kms, lbox)
     print("generating centrals took ", time.time() - start)
     # open particle file
     # part_pos = subsample[0]

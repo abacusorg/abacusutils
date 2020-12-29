@@ -91,7 +91,9 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
     for echunk in range(params['numchunks']):
 
         newfile = h5py.File(subsample_dir / ('halos_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
-        maskedhalos = newfile['halos']
+        allhalos = newfile['halos']
+        mask = np.array(allhalos['mask_subsample'], dtype = bool)
+        maskedhalos = allhalos[mask]
 
         # extracting the halo properties that we need
         halo_ids = np.array(maskedhalos["id"], dtype = int) # halo IDs
@@ -232,14 +234,14 @@ if __name__ == "__main__":
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
-    start = time.time()
     # run_onebox(0)
     #gen_gal_onesim_onehod(0, halo_data, particle_data, newdesign, newdecor, save_dir, newseed, params)
     # multiprocess
     p = multiprocessing.Pool(12)
+    start = time.time()
     p.map(run_onebox, range(params['numchunks']))
+    print("Done ", time.time() - start)
     #p.map(gen_gal_onesim_onehod, zip((i, halo_data[i], particle_data[i], newdesign, newdecor, save_dir, newseed, params) for i in range(params['numchunks'])))
     # p.starmap(gen_gal_onesim_onehod, zip(range(params['numchunks']), repeat(halo_data), repeat(particle_data), repeat(newdesign), repeat(newdecor), repeat(save_dir), repeat(newseed), repeat(params)))
     #p.close()
     #p.join()
-    print("Done ", time.time() - start)

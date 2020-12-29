@@ -27,12 +27,12 @@ savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname
 # the subsampling curve for halos
 def subsample_halos(m):
     x = np.log10(m)
-    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*7))
+    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5))
 
 def subsample_particles(m):
     x = np.log10(m)
     # return 1.0/(1.0 + np.exp(-(x - 13.5)*3))
-    return 0.4/(200.0 + np.exp(-(x - 13.5)*4))
+    return 4/(200.0 + np.exp(-(x - 13.7)*8))
 
 
 def n_cen(M_in, design_array, m_cutoff = 1e12): 
@@ -102,11 +102,12 @@ if __name__ == "__main__":
     pl.xscale('log')
     pl.ylabel('$N_g$')
     pl.yscale('log')
-    pl.ylim(1e-6, 1e6)
+    pl.ylim(1e-4, 1e6)
 
     pl.plot(Ms, n_cen(Ms, design_array), label = 'cent')
     pl.plot(Ms, n_sat(Ms, design_array), label = 'sat')
-    pl.plot(Ms, Ms / 3131059264.330557 * halos_subsampling * particle_subsampling, 'k', label = 'Np eff')
+    pl.plot(Ms, Ms / 3131059264.330557 * halos_subsampling * particle_subsampling, 'k-', label = 'Np eff')
+    pl.plot(Ms, halos_subsampling, 'k--', label = 'halo subsampling')
 
     pl.legend(loc = 'best')
     pl.tight_layout()

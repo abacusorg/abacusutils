@@ -192,9 +192,12 @@ def gen_cent(maskedhalos, design_array, alpha_c, ic, rsd, fcent, velz2kms, lbox,
 
     # # there is a cutoff mass 
     # m_cutoff = 1e12
+    # filter the halos
+    multis = maskedhalos[13]
+
 
     # form the probability array
-    ps = n_cen(maskedhalos[8], design_array) * ic
+    ps = n_cen(maskedhalos[8], design_array) * ic * multis
     # ps = 0.5*special.erfc(np.log(M_cut/halo_mass)/(2**.5*sigma)) * ic
 
     # generate a bunch of numbers for central occupation
@@ -306,7 +309,6 @@ def gen_sats(subsample, design_array, decorations_array, rsd, fsats, velz2kms, l
     decorations_array[5], decorations_array[6], decorations_array[7]
 
     # expected number of galaxies for each particle 
-    print(len(subsample[6]))
     Nsat_exp = n_sat(subsample[6], design_array) / subsample[8] / subsample[9] * ic # most expensive step, 0.3 sec
     # accelerate this with numba
     # Nsat_exp = n_sat_numba(subsample[6], design_array, subsample[8], subsample[9], ic)
@@ -326,8 +328,6 @@ def gen_sats(subsample, design_array, decorations_array, rsd, fsats, velz2kms, l
     # subsample[satmask, 0:8].tofile(fsats)
     newarray.tofile(fsats) # cheap, 1e-4 sec
     print("number of satellites", len(newarray))
-
-    # return satmask
 
 
 def gen_gals(whichchunk, maskedhalos, subsample, design, decorations, 

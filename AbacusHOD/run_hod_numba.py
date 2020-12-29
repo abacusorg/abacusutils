@@ -11,6 +11,7 @@ $ ./run_hod.py --help
 import os
 import glob
 import time
+import timeit
 from pathlib import Path
 
 import numpy as np
@@ -89,6 +90,7 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
     hvel = np.empty((1, 3))
     hmass = np.array([])
     hid = np.array([])
+    hmultis = np.array([])
     hrandoms = np.array([])
 
     ppos = np.empty((1, 3))
@@ -102,9 +104,12 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
     # B.H. make into ASDF
     # load all the halo and particle data we need
     for echunk in range(params['numchunks']):
+        print(echunk)
 
         newfile = h5py.File(subsample_dir / ('halos_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
-        maskedhalos = newfile['halos']
+        allhalos = newfile['halos']
+        mask = np.array(allhalos['mask_subsample'], dtype = bool)
+        maskedhalos = allhalos[mask]
 
         # extracting the halo properties that we need
         halo_ids = np.array(maskedhalos["id"], dtype = int) # halo IDs
@@ -129,6 +134,7 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         hvel = np.concatenate((hvel, halo_vels))
         hmass = np.concatenate((hmass, halo_mass))
         hid = np.concatenate((hid, halo_ids))
+        hmultis = np.concatenate((hmultis, halo_multi))
         hrandoms = np.concatenate((hrandoms, halo_randoms))
 
         # extract particle data that we need
@@ -159,14 +165,16 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         pNp = np.concatenate((pNp, part_Np))
         psubsampling = np.concatenate((psubsampling, part_subsample))
         prandoms = np.concatenate((prandoms, part_randoms))
+        print(echunk, len(halo_pos), len(part_pos))
 
     hpos = hpos[1:]
     hvel = hvel[1:]
     ppos = ppos[1:]
     pvel = pvel[1:]
 
-    halo_data = [hpos, hvel, hmass, hid, hrandoms]
+    halo_data = [hpos, hvel, hmass, hid, hmultis, hrandoms]
     particle_data = [ppos, pvel, phmass, phid, pNp, psubsampling, prandoms]
+    print(len(hpos), len(ppos))
     return halo_data, particle_data, params, mock_dir
 
 
@@ -257,11 +265,16 @@ if __name__ == "__main__":
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
-    start = time.time()
-    # run_onebox(0)
+    # throw away run for jit to compile
     galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
         write_to_disk = True, savedir = save_dir)
-    # print(len(cent_table), len(sat_table))
+
+    # run the fit 10 times for timing 
+    for i in range(10):
+        start = time.time()
+        galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
+        write_to_disk = True, savedir = save_dir)
+        print("Done iteration ", i, "took time ", time.time() - start)
     # multiprocess
     # p = multiprocessing.Pool(17)
     # p.map(run_onebox, range(params['numchunks']))
@@ -269,4 +282,3 @@ if __name__ == "__main__":
     # p.starmap(gen_gal_onesim_onehod, zip(range(params['numchunks']), repeat(halo_data), repeat(particle_data), repeat(newdesign), repeat(newdecor), repeat(save_dir), repeat(newseed), repeat(params)))
     #p.close()
     #p.join()
-    print("Done ", time.time() - start)
