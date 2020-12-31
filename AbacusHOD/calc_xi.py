@@ -94,7 +94,10 @@ pi_bin_size = 5
 ximin = 0.02
 ximax = 100
 
-def calc_xi_mock_natural(design, decorations, rpbins, params, newseed, rsd = rsd):
+def calc_xirppi_fast(pos_full, rpbins, pimax, pi_bin_size):  # all r assumed to be in h-1 mpc units. 
+
+
+def calc_xirppi(design, decorations, rpbins, params, newseed, rsd = rsd):
 
     M_cut, M1, sigma, alpha, kappa = map(design.get, ('M_cut', 'M1', 'sigma', 'alpha', 'kappa'))
     s, s_v, alpha_c, s_p, s_r, A, Ae = map(decorations.get, ('s', 's_v', 'alpha_c', 's_p', 's_r', 'A', 'Ae'))
@@ -365,134 +368,12 @@ def plot_wp(design, decorations, rps, params, newseeds, rsd = rsd):
     fig.savefig("./plots/plot_wp_reseeded"+decorator+".png", dpi=720)
     np.savez("./data/data_wp_reseeded"+decorator, wp = wp_avg, rp = rps)
 
-def compare_to_boss(design, decorations, rpbins, params, newseeds, rsd = rsd):
-
-    # load mock
-    M_cut, M1, sigma, alpha, kappa = map(newdesign.get, ('M_cut', 'M1', 'sigma', 'alpha', 'kappa'))
-    s, s_v, alpha_c, s_p, s_r, A, Ae = map(newdecor.get, ('s', 's_v', 'alpha_c', 's_p', 's_r', 'A', 'Ae'))
-
-    xi_sum = 0
-    for eseed in newseeds:
-        savedir = cdatadir+"/rockstar_"\
-        +str(np.log10(M_cut))[0:10]+"_"+str(np.log10(M1))[0:10]+"_"+str(sigma)[0:6]+"_"+str(alpha)[0:6]+"_"+str(kappa)[0:6]\
-        +"_decor_"+str(s)+"_"+str(s_v)+"_"+str(alpha_c)+"_"+str(s_p)+"_"+str(s_r)+"_"+str(A)+"_"+str(Ae)
-        if rsd:
-            savedir = savedir+"_rsd"
-        if not eseed == 0:
-            savedir = savedir+"_"+str(eseed)
-
-        fname = savedir+"/data_xirppi_natural"
-        newxi = np.load(fname+".npz")['xi']
-        xi_sum += newxi
-
-    xi_avg = xi_sum/len(newseeds)
-    # covariance matrix 
-    xicov = np.load("./data/data_xi_cov.npz")['xicov']
-    xicov_inv = np.linalg.inv(xicov)
-    xi_errs = np.sqrt(1/np.diag(np.linalg.inv(xicov))).reshape(np.shape(xi_avg))
-
-    # load boss
-    xi_boss = np.loadtxt("./hong_data/newbins/xip_cmass_z0.46-0.6")
-    # print(np.shape(xi_avg), np.shape(xi_boss))
-    delta_xi = xi_avg - xi_boss
-    delta_xi_norm = (xi_avg - xi_boss)/xi_errs
-    delta_xi[0] = 0
-    delta_xi_norm[0] = 0
-
-    zmin2 = -10 # np.min(delta_xi) # -3
-    zmax2 = 10 # np.max(delta_xi) # 9.5
-    mycmap2 = cm.get_cmap('bwr')
-
-    # (xi_mock - xi_boss) / err
-    fig = pl.figure(figsize=(5, 4))
-    pim = 30
-    pl.imshow(delta_xi_norm.T, interpolation = 'nearest', origin = 'lower', aspect = 'auto',
-        extent = [np.log10(np.min(rpbins)), np.log10(np.max(rpbins)), 0, pim], 
-        cmap = mycmap2, norm=MidpointNormalize(midpoint=0,vmin=zmin2, vmax=zmax2))
-    cbar = pl.colorbar()
-    cbar.set_label('$(\\xi_{\\rm{mock}}-\\xi_{\\rm{BOSS}})/\sigma(\\xi)$', rotation = 270, labelpad = 20)
-    # pl.xscale('log')
-    pl.xlabel('$\log r_\perp$ ($h^{-1}$Mpc)')
-    pl.ylabel('$\pi$ ($h^{-1}$Mpc)')
-    pl.tight_layout()
-    plotname = "./plots/plot_delta_xirppi_mock_boss"+decorator
-    fig.savefig(plotname+".png", dpi = 300)
-
-    # (xi_mock - xi_boss) / xi_mock
-    fig = pl.figure(figsize=(5, 4))
-    pim = 30
-    delta_xi_byxi = delta_xi / xi_avg
-    print(np.min(delta_xi_byxi), np.max(delta_xi_byxi))
-    pl.imshow(delta_xi_byxi.T, interpolation = 'nearest', origin = 'lower', aspect = 'auto',
-        extent = [np.log10(np.min(rpbins)), np.log10(np.max(rpbins)), 0, pim], 
-        cmap = mycmap2, norm=MidpointNormalize(midpoint=0,vmin=-0.25, vmax=0.25))
-    cbar = pl.colorbar()
-    cbar.set_label('$(\\xi_{\\rm{mock}}-\\xi_{\\rm{BOSS}})/\\xi_{\\rm{mock}}$', rotation = 270, labelpad = 20)
-    pl.xlabel('$\log r_\perp$ ($h^{-1}$Mpc)')
-    pl.ylabel('$\pi$ ($h^{-1}$Mpc)')
-    pl.tight_layout()
-    plotname = "./plots/plot_delta_xirppi_mock_boss_byxi"+decorator
-    fig.savefig(plotname+".png", dpi = 300)
-
-    # make a triple plot, xi, delta xi, chi2
-    fig = pl.figure(figsize=(13, 5))
-    gs = gridspec.GridSpec(ncols = 3, nrows = 2, width_ratios = [1, 1, 1], height_ratios = [1, 12]) 
-
-    # plot 1
-    ax1 = fig.add_subplot(gs[3])
-    ax1.set_xlabel('$\log r_\perp$ ($h^{-1} \mathrm{Mpc}$)')
-    ax1.set_ylabel('$\pi$ ($h^{-1} \mathrm{Mpc}$)')
-    # ax1.set_xscale('log')
-    col1 = ax1.imshow(xi_avg.T, interpolation = 'nearest', origin = 'lower', aspect = 'auto',
-        extent = [np.log10(np.min(rpbins)), np.log10(np.max(rpbins)), 0, pim], 
-        cmap = cm.viridis, norm=colors.LogNorm(vmin = ximin, vmax = ximax))
-
-    ax0 = fig.add_subplot(gs[0])
-    cbar = pl.colorbar(col1, cax = ax0, orientation="horizontal")
-    cbar.set_label('$\\xi(r_\perp, \pi)$', labelpad = 10)
-    cbar.ax.xaxis.set_label_position('top')
-
-    # plot 2
-    ax2 = fig.add_subplot(gs[4])
-    ax2.set_xlabel('$\log r_\perp$ ($h^{-1} \mathrm{Mpc}$)')
-    ax2.set_ylabel('$\pi$ ($h^{-1} \mathrm{Mpc}$)')
-    # ax2.set_xscale('log')
-    col2 = ax2.imshow(delta_xi_norm.T, interpolation = 'nearest', origin = 'lower', aspect = 'auto',
-        extent = [np.log10(np.min(rpbins)), np.log10(np.max(rpbins)), 0, pim], 
-        cmap = mycmap2, norm=MidpointNormalize(midpoint=0,vmin=zmin2, vmax=zmax2))
-
-    ax3 = fig.add_subplot(gs[1])
-    cbar = pl.colorbar(col2, cax = ax3, orientation="horizontal")
-    cbar.set_label("$(\\xi_{\\rm{mock}}-\\xi_{\\rm{BOSS}})/\sigma(\\xi)$", labelpad = 10)
-    cbar.ax.xaxis.set_label_position('top')
-    # cbar.set_ticks(np.linspace(-1, 1, num = 5))
-
-    # plot 3
-    chi2s = (delta_xi.flatten() * np.dot(xicov_inv, delta_xi.flatten())).reshape(np.shape(delta_xi))
-    ax2 = fig.add_subplot(gs[5])
-    ax2.set_xlabel('$\log r_\perp$ ($h^{-1} \mathrm{Mpc}$)')
-    ax2.set_ylabel('$\pi$ ($h^{-1} \mathrm{Mpc}$)')
-    col2 = ax2.imshow(chi2s.T, interpolation = 'nearest', origin = 'lower', aspect = 'auto',
-        extent = [np.log10(np.min(rpbins)), np.log10(np.max(rpbins)), 0, pim], 
-        cmap = mycmap2, norm=MidpointNormalize(midpoint=0,vmin=-100, vmax=100))
-
-    ax3 = fig.add_subplot(gs[2])
-    cbar = pl.colorbar(col2, cax = ax3, orientation="horizontal")
-    cbar.set_label("$X^2$", labelpad = 10)
-    cbar.ax.xaxis.set_label_position('top')
-    # cbar.set_ticks(np.linspace(-1, 1, num = 5))
-
-    pl.subplots_adjust(wspace=20)
-    pl.tight_layout()
-    fig.savefig("./plots/plot_xi_mock_diff_2plot"+decorator+".png", dpi=720)
-
-
 if __name__ == "__main__":
 
     newseeds = [0]
     for eseed in newseeds:
         # calc_wp(newdesign, newdecor, rp_bins, params, eseed, rsd = rsd)
-        calc_xi_mock_natural(newdesign, newdecor, rp_bins_course, params, eseed, rsd = rsd)
+        calc_xirppi(newdesign, newdecor, rp_bins_course, params, eseed, rsd = rsd)
         # calc_xir(newdesign, newdecor, rs_bins_ext, params, eseed, rsd = rsd)
 
     plot_xi(newdesign, newdecor, rp_bins_course, params, newseeds, rsd = rsd)

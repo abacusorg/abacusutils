@@ -235,8 +235,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
 
 @njit(parallel = True, fastmath = True)
-def gen_sats(ppos, pvel, hvel, hmass, hid, inv_Np, 
-    inv_subsampling, randoms, hdeltac, hfenv, 
+def gen_sats(ppos, pvel, hvel, hmass, hid, Np, 
+    subsampling, randoms, hdeltac, hfenv, 
     enable_ranks, ranks, ranksv, ranksp, ranksr, 
     design_array, decorations_array, rsd, inv_velz2kms, lbox, Mpart):
 
@@ -324,7 +324,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, inv_Np,
             M1_temp = np.exp(logM1 + As * hdeltac[i] + Bs * hfenv[i])
             logM_cut_temp = logM_cut + Ac * hdeltac[i] + Bc * hfenv[i]
             base_p = n_sat(hmass[i], logM_cut_temp, np.exp(logM_cut_temp), M1_temp, sigma, alpha, kappa)\
-             * inv_Np[i] * inv_subsampling[i] * ic
+             / Np[i] / subsampling[i] * ic
             if enable_ranks:
                 decorator = 1 + s * ranks[i] + s_v * ranksv[i] + s_p * ranksp[i] + s_r * ranksr[i]
                 exp_sat = base_p * decorator
@@ -432,15 +432,11 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params, enable_ra
     # part_vel = subsample[1]
     # part_halomass = subsample[2]
     # part_haloid = subsample[3]
-    # part_Np = subsample[4]
-    # part_subsample = subsample[5]
-    # part_randoms = subsample[6]
-    # part_ranks = subsample[:, 6]
-    # part_ranksv = subsample[:, 7]
-    # part_ranksp = subsample[:, 8]
 
-    inv_Np = 1/subsample[5]
-    inv_subsampling = 1/subsample[6]
+    # start = time.time()
+    # inv_Np = 1/subsample[5]
+    # inv_subsampling = 1/subsample[6]
+    # print("intermediate processing took time ", time.time() - start)
     inv_velz2kms = 1/velz2kms
     numparts = len(subsample[5])
     if enable_ranks:
@@ -453,10 +449,11 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params, enable_ra
         ranksv = np.zeros(numparts)
         ranksp = np.zeros(numparts)
         ranksr = np.zeros(numparts)
+
     start = time.time()
     sat_pos, sat_vel, sat_mass, sat_id = \
-    gen_sats(subsample[0], subsample[1], subsample[2], subsample[3], subsample[4], inv_Np,  
-        inv_subsampling, subsample[7], subsample[8], subsample[9], 
+    gen_sats(subsample[0], subsample[1], subsample[2], subsample[3], subsample[4], subsample[5],  
+        subsample[6], subsample[7], subsample[8], subsample[9], 
         enable_ranks, ranks, ranksv, ranksp, ranksr,
         design_array, decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'])
 
@@ -525,7 +522,7 @@ def gen_gal_cat(halo_data, particle_data, design, decorations, params, enable_ra
     cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id \
      = gen_gals(halo_data, particle_data, design, decorations, rsd, params, enable_ranks)
 
-    print("generated ", np.shape(cent_pos), " centrals and ", np.shape(sat_pos), " satellites.")
+    print("generated ", np.shape(cent_pos)[0], " centrals and ", np.shape(sat_pos)[0], " satellites.")
     if write_to_disk:
         print("outputting galaxies to disk")
 

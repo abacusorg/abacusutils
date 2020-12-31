@@ -24,6 +24,7 @@ from multiprocessing import Pool
 from itertools import repeat
 
 from GRAND_HOD import gen_gal_catalog_rockstar_modified_subsampled_numba as galcat
+from calc_xi import calc_xirppi
 
 DEFAULTS = {}
 DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
@@ -52,7 +53,7 @@ DEFAULTS['Bsat'] = 0
 DEFAULTS['ic'] = 0.97
 
 
-def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, want_ranks=False):
+def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, want_ranks=False):
     
     # flag for redshift space distortions
     if want_rsd:
@@ -234,7 +235,7 @@ if __name__ == "__main__":
 
     # preload the simulation
     print("preloading simulation")
-    halo_data, particle_data, params, mock_dir = main(**args)
+    halo_data, particle_data, params, mock_dir = staging(**args)
     print("finished loading the data into memory")
 
     # B.H. I think the HOD parameters could be read from a yaml file or something
@@ -275,6 +276,7 @@ if __name__ == "__main__":
 
 
     # throw away run for jit to compile
+    cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id = \
     galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, enable_ranks = args['want_ranks'], 
         rsd = args['want_rsd'], write_to_disk = True, savedir = mock_dir)
 
