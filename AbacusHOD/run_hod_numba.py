@@ -80,8 +80,8 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
     params = {}
     params['z'] = z_mock
     params['h'] = header['H0']/100.
-    params['Lbox'] = header['BoxSize']/params['h'] # Mpc, box size
-    params['Mpart'] = header['ParticleMassHMsun']/params['h']  # Msun, mass of each particle
+    params['Lbox'] = header['BoxSize'] # Mpc / h, box size
+    params['Mpart'] = header['ParticleMassHMsun']  # Msun / h, mass of each particle
     params['velz2kms'] = header['VelZSpace_to_kms']/params['Lbox']
     params['numchunks'] = len(halo_info_fns)
     params['rsd'] = want_rsd
@@ -129,10 +129,10 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
 
         # extracting the halo properties that we need
         halo_ids = np.array(maskedhalos["id"], dtype = int) # halo IDs
-        halo_pos = maskedhalos["x_com"]/params['h'] # halo positions, Mpc
+        halo_pos = maskedhalos["x_com"] # halo positions, Mpc / h
         halo_vels = maskedhalos['v_com'] # halo velocities, km/s
         halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
-        halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun, 200b
+        halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
         halo_deltac = maskedhalos['deltac_rank'] # halo concentration
         halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
         halo_pstart = np.array(maskedhalos['npstartA'], dtype = int) # starting index of particles
@@ -159,10 +159,10 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
         # extract particle data that we need
         newpart = h5py.File(subsample_dir / ('particles_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
         subsample = newpart['particles']
-        part_pos = subsample['pos'] / params['h']
+        part_pos = subsample['pos']
         part_vel = subsample['vel']
         part_hvel = subsample['halo_vel']
-        part_halomass = subsample['halo_mass'] / params['h'] # msun
+        part_halomass = subsample['halo_mass'] # msun / h
         part_haloid = np.array(subsample['halo_id'], dtype = int)
         part_Np = subsample['Np'] # number of particles that end up in the halo
         part_subsample = subsample['downsample_halo']
@@ -203,7 +203,8 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
     pvel = pvel[1:]
 
     halo_data = [hpos, hvel, hmass, hid, hmultis, hrandoms, hveldev, hdeltac, hfenv]
-    particle_data = [ppos, pvel, phvel, phmass, phid, pNp, psubsampling, prandoms, pdeltac, pfenv]
+    pweights = 1/pNp/psubsampling
+    particle_data = [ppos, pvel, phvel, phmass, phid, pweights, prandoms, pdeltac, pfenv]
     if want_ranks:
         particle_data += [p_ranks, p_ranksv, p_ranksp, p_ranksr]
 
@@ -279,6 +280,7 @@ if __name__ == "__main__":
     cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id = \
     galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, enable_ranks = args['want_ranks'], 
         rsd = args['want_rsd'], write_to_disk = True, savedir = mock_dir)
+    print(cent_pos[100], sat_pos[100])
 
     # run the fit 10 times for timing 
     for i in range(10):

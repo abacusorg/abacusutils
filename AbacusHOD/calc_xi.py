@@ -95,7 +95,7 @@ ximin = 0.02
 ximax = 100
 
 def calc_xirppi_fast(pos_full, rpbins, pimax, pi_bin_size):  # all r assumed to be in h-1 mpc units. 
-
+    return 0
 
 def calc_xirppi(design, decorations, rpbins, params, newseed, rsd = rsd):
 
