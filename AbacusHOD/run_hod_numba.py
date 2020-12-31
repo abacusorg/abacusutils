@@ -32,21 +32,23 @@ DEFAULTS['scratch_dir'] = "/mnt/marvin1/syuan/scratch"
 DEFAULTS['subsample_dir'] = "/mnt/marvin1/syuan/scratch/data_summit/"
 DEFAULTS['sim_dir'] = "/mnt/gosling2/bigsims/"
 
-DEFAULTS['newseed'] = 0
-
 DEFAULTS['logM_cut'] = 13.3
 DEFAULTS['logM1'] = 14.4
 DEFAULTS['sigma'] = 0.8
 DEFAULTS['alpha'] = 1.0
 DEFAULTS['kappa'] = 0.4
 
+DEFAULTS['alpha_c'] = 0
+DEFAULTS['alpha_s'] = 1
+
 DEFAULTS['s'] = 0
 DEFAULTS['s_v'] = 0
-DEFAULTS['alpha_c'] = 0
 DEFAULTS['s_p'] = 0
 DEFAULTS['s_r'] = 0
-DEFAULTS['A'] = 0
-DEFAULTS['Ae'] = 0
+DEFAULTS['Acent'] = 0
+DEFAULTS['Asat'] = 0
+DEFAULTS['Bcent'] = 0
+DEFAULTS['Bsat'] = 0
 DEFAULTS['ic'] = 0.97
 
 
@@ -92,14 +94,27 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
     hid = np.array([])
     hmultis = np.array([])
     hrandoms = np.array([])
+    hveldev = np.array([])
+    hdeltac = np.array([])
+    hfenv = np.array([])
 
     ppos = np.empty((1, 3))
     pvel = np.empty((1, 3))
+    phvel = np.empty((1, 3))
     phmass = np.array([])
     phid = np.array([])
     pNp = np.array([])
     psubsampling = np.array([])
     prandoms = np.array([])
+    pdeltac = np.array([])
+    pfenv = np.array([])
+
+    # ranks
+    if want_ranks:
+        p_ranks = np.array([])
+        p_ranksv = np.array([])
+        p_ranksp = np.array([])
+        p_ranksr = np.array([])
 
     # B.H. make into ASDF
     # load all the halo and particle data we need
@@ -115,10 +130,10 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         halo_ids = np.array(maskedhalos["id"], dtype = int) # halo IDs
         halo_pos = maskedhalos["x_com"]/params['h'] # halo positions, Mpc
         halo_vels = maskedhalos['v_com'] # halo velocities, km/s
-        halo_vrms = maskedhalos["sigmav3d_com"] # halo velocity dispersions, km/s
+        halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
         halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun, 200b
-        halo_deltac = maskedhalos['deltac'] # halo concentration
-        halo_fenv = maskedhalos['fenv_binnorm'] # halo velocities, km/s
+        halo_deltac = maskedhalos['deltac_rank'] # halo concentration
+        halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
         halo_pstart = np.array(maskedhalos['npstartA'], dtype = int) # starting index of particles
         halo_pnum = np.array(maskedhalos['npoutA'], dtype = int) # number of particles 
         halo_multi = maskedhalos['multi_halos']
@@ -136,45 +151,61 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         hid = np.concatenate((hid, halo_ids))
         hmultis = np.concatenate((hmultis, halo_multi))
         hrandoms = np.concatenate((hrandoms, halo_randoms))
+        hveldev = np.concatenate((hveldev, halo_vel_dev))
+        hdeltac = np.concatenate((hdeltac, halo_deltac))
+        hfenv = np.concatenate((hfenv, halo_fenv))
 
         # extract particle data that we need
         newpart = h5py.File(subsample_dir / ('particles_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
         subsample = newpart['particles']
         part_pos = subsample['pos'] / params['h']
         part_vel = subsample['vel']
+        part_hvel = subsample['halo_vel']
         part_halomass = subsample['halo_mass'] / params['h'] # msun
         part_haloid = np.array(subsample['halo_id'], dtype = int)
         part_Np = subsample['Np'] # number of particles that end up in the halo
         part_subsample = subsample['downsample_halo']
         part_randoms = subsample['randoms']
+        part_deltac = subsample['halo_deltac']
+        part_fenv = subsample['halo_fenv']
         # new_part_table = Table([part_pos[:, 0], part_pos[:, 1], part_pos[:, 2], 
         #     part_vel[:, 0], part_vel[:, 1], part_vel[:, 2], part_halomass, 
         #     part_haloid, part_Np, part_subsample, part_randoms],
         #     names = ('x', 'y', 'z', 'vx', 'vy', 'vz', 'hmass', 'hid', 'Np', 'subsample', 'randoms'))
 
-        # # if want_ranks:
-        # #     part_ranks = subsample['ranks']
-        # #     part_ranksv = subsample['ranksv']
-        # #     part_ranksr = subsample['ranksr']
+        if want_ranks:
+            part_ranks = subsample['ranks']
+            part_ranksv = subsample['ranksv']
+            part_ranksp = subsample['ranksp']
+            part_ranksr = subsample['ranksr']
+            p_ranks = np.concatenate((p_ranks, part_ranks))
+            p_ranksv = np.concatenate((p_ranksv, part_ranksv))
+            p_ranksp = np.concatenate((p_ranksp, part_ranksp))
+            p_ranksr = np.concatenate((p_ranksr, part_ranksr))
+
         # #     part_data_chunk += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
         # particle_data = vstack([particle_data, new_part_table])
         ppos = np.concatenate((ppos, part_pos))
         pvel = np.concatenate((pvel, part_vel))
+        phvel = np.concatenate((phvel, part_hvel))
         phmass = np.concatenate((phmass, part_halomass))
         phid = np.concatenate((phid, part_haloid))
         pNp = np.concatenate((pNp, part_Np))
         psubsampling = np.concatenate((psubsampling, part_subsample))
         prandoms = np.concatenate((prandoms, part_randoms))
-        print(echunk, len(halo_pos), len(part_pos))
+        pdeltac = np.concatenate((pdeltac, part_deltac))
+        pfenv = np.concatenate((pfenv, part_fenv))
 
     hpos = hpos[1:]
     hvel = hvel[1:]
     ppos = ppos[1:]
     pvel = pvel[1:]
 
-    halo_data = [hpos, hvel, hmass, hid, hmultis, hrandoms]
-    particle_data = [ppos, pvel, phmass, phid, pNp, psubsampling, prandoms]
-    print(len(hpos), len(ppos))
+    halo_data = [hpos, hvel, hmass, hid, hmultis, hrandoms, hveldev, hdeltac, hfenv]
+    particle_data = [ppos, pvel, phvel, phmass, phid, pNp, psubsampling, prandoms, pdeltac, pfenv]
+    if want_ranks:
+        particle_data += [p_ranks, p_ranksv, p_ranksp, p_ranksr]
+
     return halo_data, particle_data, params, mock_dir
 
 
@@ -198,7 +229,7 @@ if __name__ == "__main__":
     parser.add_argument('--subsample_dir', help='Particle subsample directory', default=DEFAULTS['subsample_dir'])
     parser.add_argument('--sim_dir', help='Simulation directory', default=DEFAULTS['sim_dir'])
     parser.add_argument('--want_rsd', help='Want redshift space distortions', action='store_true')
-    parser.add_argument('--want_ranks', help='Want velocity bias parameters', action='store_true')
+    parser.add_argument('--want_ranks', help='Want extended satellite parameters', action='store_true')
     args = vars(parser.parse_args())
 
     # preload the simulation
@@ -207,20 +238,22 @@ if __name__ == "__main__":
     print("finished loading the data into memory")
 
     # B.H. I think the HOD parameters could be read from a yaml file or something
-    parser.add_argument('--newseed', help='Random seed for generating the mock', type=int, default=DEFAULTS['newseed'])
-    parser.add_argument('--logM_cut', help='HOD parameter', type=float, default=DEFAULTS['logM_cut'])
-    parser.add_argument('--logM1', help='HOD parameter', type=float, default=DEFAULTS['logM1'])
-    parser.add_argument('--sigma', help='HOD parameter', type=float, default=DEFAULTS['sigma'])
-    parser.add_argument('--alpha', help='HOD parameter', type=float, default=DEFAULTS['alpha'])
-    parser.add_argument('--kappa', help='HOD parameter', type=float, default=DEFAULTS['kappa'])
-    parser.add_argument('--s', help='Extra HOD parameter', type=float, default=DEFAULTS['s'])
-    parser.add_argument('--s_v', help='Extra HOD parameter', type=float, default=DEFAULTS['s_v'])
-    parser.add_argument('--s_p', help='Extra HOD parameter', type=float, default=DEFAULTS['s_p'])
-    parser.add_argument('--s_r', help='Extra HOD parameter', type=float, default=DEFAULTS['s_r'])
-    parser.add_argument('--alpha_c', help='Extra HOD parameter', type=float, default=DEFAULTS['alpha_c'])
-    parser.add_argument('--A', help='Extra HOD parameter', type=float, default=DEFAULTS['A'])
-    parser.add_argument('--Ae', help='Extra HOD parameter', type=float, default=DEFAULTS['Ae'])
-    parser.add_argument('--ic', help='Extra HOD parameter', type=float, default=DEFAULTS['ic'])
+    parser.add_argument('--logM_cut', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['logM_cut'])
+    parser.add_argument('--logM1', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['logM1'])
+    parser.add_argument('--sigma', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['sigma'])
+    parser.add_argument('--alpha', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['alpha'])
+    parser.add_argument('--kappa', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['kappa'])
+    parser.add_argument('--alpha_c', help='central velocity bias parameter', type=float, default=DEFAULTS['alpha_c'])
+    parser.add_argument('--alpha_s', help='satellite velocity bias parameter', type=float, default=DEFAULTS['alpha_s'])
+    parser.add_argument('--s', help='satellite distribution parameter', type=float, default=DEFAULTS['s'])
+    parser.add_argument('--s_v', help='satellite distribution parameter', type=float, default=DEFAULTS['s_v'])
+    parser.add_argument('--s_p', help='satellite distribution parameter', type=float, default=DEFAULTS['s_p'])
+    parser.add_argument('--s_r', help='satellite distribution parameter', type=float, default=DEFAULTS['s_r'])
+    parser.add_argument('--Acent', help='Assembly bias parameter for centrals', type=float, default=DEFAULTS['Acent'])
+    parser.add_argument('--Asat', help='Assembly bias parameter for satellites', type=float, default=DEFAULTS['Asat'])
+    parser.add_argument('--Bcent', help='Environmental bias parameter for centrals', type=float, default=DEFAULTS['Bcent'])
+    parser.add_argument('--Bsat', help='Environmental bias parameter for satellites', type=float, default=DEFAULTS['Bsat'])
+    parser.add_argument('--ic', help='incompleteness factor', type=float, default=DEFAULTS['ic'])
     args = vars(parser.parse_args())
     
     newdesign = {'M_cut': 10.**args['logM_cut'],
@@ -228,52 +261,28 @@ if __name__ == "__main__":
                  'sigma': args['sigma'],
                  'alpha': args['alpha'],
                  'kappa': args['kappa']}
-    newdecor = {'s': args['s'],
+    newdecor = {'alpha_c': args['alpha_c'],
+                'alpha_s': args['alpha_s'],
+                's': args['s'],
                 's_v': args['s_v'],
                 's_p': args['s_p'],
                 's_r': args['s_r'],
-                'alpha_c': args['alpha_c'],
-                'A': args['A'],
-                'Ae': args['Ae'],
+                'Acent': args['Acent'],
+                'Asat': args['Asat'],
+                'Bcent': args['Bcent'],
+                'Bsat': args['Bsat'],
                 'ic': args['ic']}
 
-    # seeding for this run
-    newseed = args['newseed']
-    if newseed != 0:
-        seed_string = "_%d"%newseed
-    else:
-        seed_string = ""
 
-    if params['rsd']:
-        rsd_string = "_rsd"
-    else:
-        rsd_string = ""
-
-    # B.H. I think we don't need this (just put into header and have model_number)
-    # only do this if this has not been done before (B.H. not sure what this means)
-    M_cutn, M1n, sigman, alphan, kappan = map(newdesign.get, ('M_cut', 'M1', 'sigma', 'alpha', 'kappa'))
-    sn, s_vn, alpha_cn, s_pn, s_rn, An, Aen = map(newdecor.get, ('s', 's_v', 'alpha_c', 's_p', 's_r', 'A', 'Ae'))    
-
-    # B.H. does the naming need to be so convoluted? Can't we just put into a header?
-    save_dir = mock_dir / ("rockstar_"+str(np.log10(M_cutn))[0:10]+
-    "_"+str(np.log10(M1n))[0:10]+"_"+str(sigman)[0:6]+"_"+
-    str(alphan)[0:6]+"_"+str(kappan)[0:6]+"_decor_"+str(sn)+
-    "_"+str(s_vn)+"_"+str(alpha_cn)+"_"+str(s_pn)+"_"+str(s_rn)+
-    "_"+str(An)+"_"+str(Aen)+rsd_string+seed_string)
-
-    # create directories if not existing
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    
     # throw away run for jit to compile
-    galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
-        write_to_disk = True, savedir = save_dir)
+    galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, enable_ranks = args['want_ranks'], 
+        rsd = args['want_rsd'], write_to_disk = True, savedir = mock_dir)
 
     # run the fit 10 times for timing 
     for i in range(10):
         start = time.time()
-        galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
-        write_to_disk = True, savedir = save_dir)
+        galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, enable_ranks = args['want_ranks'], 
+            rsd = args['want_rsd'], write_to_disk = False)
         print("Done iteration ", i, "took time ", time.time() - start)
     # multiprocess
     # p = multiprocessing.Pool(17)

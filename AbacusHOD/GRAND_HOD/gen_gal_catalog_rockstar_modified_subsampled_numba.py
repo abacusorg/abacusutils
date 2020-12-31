@@ -28,7 +28,7 @@ from numba import njit
 numba.set_num_threads(64)
 
 @njit(fastmath=True)
-def n_cen(M_in, M_cut, sigma, m_cutoff = 1e12): 
+def n_cen(M_in, logM_cut, sigma): 
     """
     Computes the expected number of central galaxies given a halo mass and 
     the HOD design. 
@@ -55,10 +55,10 @@ def n_cen(M_in, M_cut, sigma, m_cutoff = 1e12):
 
     #return 0.5*math.erfc(np.log(M_cut/M_in)/(2**.5*sigma))
     # log seems faster than division
-    return 0.5*math.erfc((np.log(M_cut) - np.log(M_in))/(2**.5*sigma))
+    return 0.5*math.erfc((logM_cut - np.log(M_in))/(2**.5*sigma))
 
 @njit(fastmath=True)
-def n_sat(M_in, M_cut, M1, sigma, alpha, kappa, m_cutoff = 1e12): 
+def n_sat(M_in, logM_cut, M_cut, M1, sigma, alpha, kappa): 
     """
     Computes the expected number of satellite galaxies given a halo mass and 
     the HOD design. 
@@ -89,7 +89,7 @@ def n_sat(M_in, M_cut, M1, sigma, alpha, kappa, m_cutoff = 1e12):
     # if M_in < kappa*M_cut:
     #     return 0
 
-    return ((M_in - kappa*M_cut)/M1)**alpha*0.5*math.erfc((np.log(M_cut) - np.log(M_in))/(2**.5*sigma))
+    return ((M_in - kappa*M_cut)/M1)**alpha*0.5*math.erfc((logM_cut - np.log(M_in))/(2**.5*sigma))
 
 
 @njit(fastmath=True)
@@ -104,7 +104,8 @@ def wrap(x, L):
 
 
 @njit(parallel=True, fastmath=True)
-def gen_cent(pos, vel, mass, ids, multis, randoms, design_array, ic, rsd, inv_velz2kms, lbox):
+def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, 
+    design_array, ic, alpha_c, Ac, Bc, rsd, inv_velz2kms, lbox):
     """
     Function that generates central galaxies and its position and velocity 
     given a halo catalog and HOD designs and decorations. The generated 
@@ -140,7 +141,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, design_array, ic, rsd, inv_ve
     """
 
     # parse out the hod parameters 
-    M_cut, M1, sigma, alpha, kappa = \
+    logM_cut, M1, sigma, alpha, kappa = \
     design_array[0], design_array[1], design_array[2], design_array[3], design_array[4]
 
     H = len(mass)
@@ -154,7 +155,9 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, design_array, ic, rsd, inv_ve
     # figuring out the number of halos kept for each thread
     for tid in numba.prange(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
-            if n_cen(mass[i], M_cut, sigma) * ic * multis[i] > randoms[i]:
+            # do assembly bias and secondary bias
+            logM_cut_temp = logM_cut + Ac * deltac[i] + Bc * fenv[i]
+            if n_cen(mass[i], logM_cut_temp, sigma) * ic * multis[i] > randoms[i]:
                 Nout[tid, 0] += 1 # counting
                 keep[i] = 1
             else:
@@ -176,12 +179,13 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, design_array, ic, rsd, inv_ve
         j = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i]:
+                # loop thru three directions to assign galaxy velocities and positions
                 for k in range(3):
-                    if rsd:
-                        gpos[j,k] = wrap(pos[i,k] + vel[i,k] * inv_velz2kms, lbox)
-                    else:
-                        gpos[j,k] = pos[i,k]
-                    gvel[j,k] = vel[i,k] # need to extend to include vel bias 
+                    gpos[j,k] = pos[i,k]
+                    gvel[j,k] = vel[i,k] + alpha_c * vdev[i] # velocity bias
+                # rsd only applies to the z direction
+                if rsd:
+                    gpos[j,2] = wrap(pos[i,2] + gvel[j,2] * inv_velz2kms, lbox)
                 gmass[j] = mass[i]
                 gid[j] = ids[i]
                 j += 1
@@ -231,7 +235,10 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, design_array, ic, rsd, inv_ve
 
 
 @njit(parallel = True, fastmath = True)
-def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_array, decorations_array, rsd, inv_velz2kms, lbox, Mpart):
+def gen_sats(ppos, pvel, hvel, hmass, hid, inv_Np, 
+    inv_subsampling, randoms, hdeltac, hfenv, 
+    enable_ranks, ranks, ranksv, ranksp, ranksr, 
+    design_array, decorations_array, rsd, inv_velz2kms, lbox, Mpart):
 
     """
     Function that generates satellite galaxies and their positions and 
@@ -293,11 +300,14 @@ def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_ar
     """
 
     # standard hod design
-    M_cut, M1, sigma, alpha, kappa = \
+    logM_cut, M1, sigma, alpha, kappa = \
     design_array[0], design_array[1], design_array[2], design_array[3], design_array[4]
-    s, s_v, alpha_c, s_p, s_r, A, Ae, ic = decorations_array[0], \
+    M_cut = np.exp(logM_cut)
+    logM1 = np.log(M1)
+    alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic = \
     decorations_array[1], decorations_array[2], decorations_array[3], decorations_array[4], \
-    decorations_array[5], decorations_array[6], decorations_array[7]
+    decorations_array[5], decorations_array[6], decorations_array[7], decorations_array[8], \
+    decorations_array[9], decorations_array[10]
 
     H = len(hmass) # num of particles
 
@@ -308,9 +318,19 @@ def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_ar
     keep = np.empty(H, dtype = np.int8) # mask array tracking which halos to keep
 
     # figuring out the number of particles kept for each thread
-    for tid in numba.prange(Nthread):
+    for tid in numba.prange(Nthread): #numba.prange(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
-            if n_sat(hmass[i], M_cut, M1, sigma, alpha, kappa) * inv_Np[i] * inv_subsampling[i] * ic > randoms[i]:
+            # print(logM1, As, hdeltac[i], Bs, hfenv[i])
+            M1_temp = np.exp(logM1 + As * hdeltac[i] + Bs * hfenv[i])
+            logM_cut_temp = logM_cut + Ac * hdeltac[i] + Bc * hfenv[i]
+            base_p = n_sat(hmass[i], logM_cut_temp, np.exp(logM_cut_temp), M1_temp, sigma, alpha, kappa)\
+             * inv_Np[i] * inv_subsampling[i] * ic
+            if enable_ranks:
+                decorator = 1 + s * ranks[i] + s_v * ranksv[i] + s_p * ranksp[i] + s_r * ranksr[i]
+                exp_sat = base_p * decorator
+            else:
+                exp_sat = base_p
+            if exp_sat > randoms[i]:
                 Nout[tid, 0] += 1 # counting
                 keep[i] = 1
             else:
@@ -333,11 +353,10 @@ def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_ar
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i]:
                 for k in range(3):
-                    if rsd:
-                        gpos[j, k] = wrap(ppos[i, k] + pvel[i, k] * inv_velz2kms, lbox)
-                    else:
-                        gpos[j, k] = ppos[i, k]
-                gvel[j] = pvel[i] # need to extend to include vel bias 
+                    gpos[j, k] = ppos[i, k]
+                    gvel[j, k] = hvel[i, k] + alpha_s * (pvel[i, k] - hvel[i, k]) # velocity bias
+                if rsd:
+                    gpos[j, 2] = wrap(gpos[i, 2] + gvel[i, 2] * inv_velz2kms, lbox)
                 gmass[j] = hmass[i]
                 gid[j] = hid[i]
                 j += 1
@@ -345,17 +364,10 @@ def gen_sats(ppos, pvel, hmass, hid, inv_Np, inv_subsampling, randoms, design_ar
 
     return gpos, gvel, gmass, gid 
 
-    # # expected number of galaxies for each particle 
-    # Nsat_exp = n_sat(hmass, design_array) / Np / subsampling * ic
-
-    # # random_list = np.random.random(len(Nsat_exp))
-    # satmask = subsample['randoms'] < Nsat_exp
-
-    # return satmask
 
 
 
-def gen_gals(halos_array, subsample, design, decorations, rsd, params):
+def gen_gals(halos_array, subsample, design, decorations, rsd, params, enable_ranks):
     """
     parse hod parameters, pass them on to central and satellite generators 
     and then format the results 
@@ -389,17 +401,20 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
                                                       'sigma', 
                                                       'alpha', 
                                                       'kappa'))
-    design_array = np.array([M_cut, M1, sigma, alpha, kappa])
+    design_array = np.array([np.log(M_cut), M1, sigma, alpha, kappa])
 
-    s, s_v, alpha_c, s_p, s_r, A, Ae, ic = map(decorations.get, ('s', 
+    alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic = map(decorations.get, ('alpha_c', 
+                                                    'alpha_c',  
+                                                    's', 
                                                     's_v', 
-                                                    'alpha_c', 
                                                     's_p', 
                                                     's_r',
-                                                    'A',
-                                                    'Ae',
+                                                    'Acent',
+                                                    'Asat',
+                                                    'Bcent',
+                                                    'Bsat',
                                                     'ic'))
-    decorations_array = np.array([s, s_v, alpha_c, s_p, s_r, A, Ae, ic])
+    decorations_array = np.array([alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic])
 
     start = time.time()
 
@@ -408,8 +423,10 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
     # for each halo, generate central galaxies and output to file
     cent_pos, cent_vel, cent_mass, cent_id = \
     gen_cent(halos_array[0], halos_array[1], halos_array[2], halos_array[3], halos_array[4], 
-     halos_array[5], design_array, ic, rsd, 1/velz2kms, lbox)
-    print("generating centrals took ", time.time() - start)
+     halos_array[5], halos_array[6], halos_array[7], halos_array[8], 
+     design_array, ic, alpha_c, Ac, Bc, rsd, 1/velz2kms, lbox)
+    print("generating centrals took ", time.time() - start, "number of centrals ", len(cent_mass))
+
     # open particle file
     # part_pos = subsample[0]
     # part_vel = subsample[1]
@@ -421,16 +438,28 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
     # part_ranks = subsample[:, 6]
     # part_ranksv = subsample[:, 7]
     # part_ranksp = subsample[:, 8]
-    # part_ranksr = subsample[:, 9]
 
-    inv_Np = 1/subsample[4]
-    inv_subsampling = 1/subsample[5]
+    inv_Np = 1/subsample[5]
+    inv_subsampling = 1/subsample[6]
     inv_velz2kms = 1/velz2kms
+    numparts = len(subsample[5])
+    if enable_ranks:
+        ranks = subsample[10]
+        ranksv = subsample[11]
+        ranksp = subsample[12]
+        ranksr = subsample[13]
+    else:
+        ranks = np.zeros(numparts)
+        ranksv = np.zeros(numparts)
+        ranksp = np.zeros(numparts)
+        ranksr = np.zeros(numparts)
     start = time.time()
     sat_pos, sat_vel, sat_mass, sat_id = \
-    gen_sats(subsample[0], subsample[1], subsample[2], subsample[3], 
-        inv_Np,  inv_subsampling,  subsample[6], 
+    gen_sats(subsample[0], subsample[1], subsample[2], subsample[3], subsample[4], inv_Np,  
+        inv_subsampling, subsample[7], subsample[8], subsample[9], 
+        enable_ranks, ranks, ranksv, ranksp, ranksr,
         design_array, decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'])
+
     print("generating satellites took ", time.time() - start)
 
     # start = time.time()
@@ -449,8 +478,8 @@ def gen_gals(halos_array, subsample, design, decorations, rsd, params):
     return cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id
 
 
-def gen_gal_cat(halo_data, particle_data, design, decorations, params, 
-                rsd = True, write_to_disk = False, savedir = "./"):
+def gen_gal_cat(halo_data, particle_data, design, decorations, params, enable_ranks = False,
+                rsd = True, write_to_disk = False, savedir = ("./")):
     """
     takes in data, do some checks, call the gen_gal functions, and then take care of outputs
 
@@ -494,23 +523,41 @@ def gen_gal_cat(halo_data, particle_data, design, decorations, params,
 
     # # find the halos, populate them with galaxies and write them to files
     cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id \
-     = gen_gals(halo_data, particle_data, design, decorations, rsd, params)
+     = gen_gals(halo_data, particle_data, design, decorations, rsd, params, enable_ranks)
 
-    print(np.shape(cent_pos), np.shape(sat_pos))
-    # # close the files in the end
-    # if write_to_disk:
-    #     start = time.time()
-    #     ascii.write(cent_table, output = savedir / ("halos_gal_cent_full.dat"), overwrite = True)
-    #     ascii.write(sat_table, output = savedir / ("halos_gal_sat_full.dat"), overwrite = True)
-    #     print("Done writing to disk, time ", time.time() - start)
-    # return cent_table, sat_table
+    print("generated ", np.shape(cent_pos), " centrals and ", np.shape(sat_pos), " satellites.")
+    if write_to_disk:
+        print("outputting galaxies to disk")
 
-    # fcent = open(savedir / ("halos_gal_cent_full"),'wb')
-    # fsats = open(savedir / ("halos_gal_sats_full"),'wb')
+        M_cutn, M1n, sigman, alphan, kappan \
+        = map(design.get, ('M_cut', 'M1', 'sigma', 'alpha', 'kappa'))
+        alpha_cn, alpha_sn, sn, s_vn, s_pn, s_rn, Acn, Asn, Bcn, Bsn \
+        = map(decorations.get, 
+        ('alpha_c', 'alpha_s', 's', 's_v', 's_p', 's_r', 'Acent', 'Asat', 'Bcent', 'Bsat'))    
+    
+        if params['rsd']:
+            rsd_string = "_rsd"
+        else:
+            rsd_string = ""
 
-    # fcent.close()
-    # fsats.close()
-    # print("Galaxy Catalogs Done. chunk: ", whichchunk)
+        outdir = savedir / ("rockstar_"+str(np.log10(M_cutn))[0:10]+\
+        "_"+str(np.log10(M1n))[0:10]+"_"+str(sigman)[0:6]+"_"+\
+        str(alphan)[0:6]+"_"+str(kappan)[0:6]+"_decor_"+str(alpha_cn)+"_"+str(alpha_sn)\
+        +"_"+str(sn)+"_"+str(s_vn)+"_"+str(s_pn)+"_"+str(s_rn)+\
+        "_"+str(Acn)+"_"+str(Asn)+"_"+str(Bcn)+"_"+str(Bsn)+rsd_string)
 
+        # create directories if not existing
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
 
+        # save to file 
+        ascii.write([cent_pos[:, 0], cent_pos[:, 1], cent_pos[:, 2], 
+            cent_vel[:, 0], cent_vel[:, 1], cent_vel[:, 2], cent_mass, cent_id], 
+            outdir / ("gals_cent.dat"), names = ['x_gal', 'y_gal', 'z_gal', 
+            'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], overwrite = True)
+        ascii.write([sat_pos[:, 0], sat_pos[:, 1], sat_pos[:, 2], 
+            sat_vel[:, 0], sat_vel[:, 1], sat_vel[:, 2], sat_mass, sat_id], 
+            outdir / ("gals_sat.dat"), names = ['x_gal', 'y_gal', 'z_gal', 
+            'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], overwrite = True)
+    return cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id
 

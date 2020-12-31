@@ -101,8 +101,8 @@ def main(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, 
         halo_vels = maskedhalos['v_com'] # halo velocities, km/s
         halo_vrms = maskedhalos["sigmav3d_com"] # halo velocity dispersions, km/s
         halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun, 200b
-        halo_deltac = maskedhalos['deltac'] # halo concentration
-        halo_fenv = maskedhalos['fenv_binnorm'] # halo velocities, km/s
+        halo_deltac = maskedhalos['deltac_rank'] # halo concentration
+        halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
         halo_pstart = np.array(maskedhalos['npstartA'], dtype = int) # starting index of particles
         halo_pnum = np.array(maskedhalos['npoutA'], dtype = int) # number of particles 
         halo_multi = maskedhalos['multi_halos']
