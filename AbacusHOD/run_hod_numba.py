@@ -24,7 +24,7 @@ from multiprocessing import Pool
 from itertools import repeat
 
 from GRAND_HOD import gen_gal_catalog_rockstar_modified_subsampled_numba as galcat
-from calc_xi import calc_xirppi
+from calc_xi import calc_xirppi_fast
 
 DEFAULTS = {}
 DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
@@ -68,6 +68,7 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
     # all paths relevant for mock generation
     scratch_dir = Path(scratch_dir)
     mock_dir = scratch_dir / scratch_name
+    print(mock_dir)
     subsample_dir = Path(subsample_dir) / sim_name
     sim_dir = Path(sim_dir)
 
@@ -258,6 +259,7 @@ if __name__ == "__main__":
     parser.add_argument('--ic', help='incompleteness factor', type=float, default=DEFAULTS['ic'])
     args = vars(parser.parse_args())
     
+    # setting up the hod dictionary
     newdesign = {'M_cut': 10.**args['logM_cut'],
                  'M1': 10.**args['logM1'],
                  'sigma': args['sigma'],
@@ -276,18 +278,28 @@ if __name__ == "__main__":
                 'ic': args['ic']}
 
 
-    # throw away run for jit to compile
+    # throw away run for jit to compile, write to disk
     cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id = \
-    galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, enable_ranks = args['want_ranks'], 
-        rsd = args['want_rsd'], write_to_disk = True, savedir = mock_dir)
-    print(cent_pos[100], sat_pos[100])
+    galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
+    enable_ranks = args['want_ranks'], rsd = args['want_rsd'], write_to_disk = True, savedir = mock_dir)
 
+    # rpbins and pi bins for benchmarking xirppi code
+    rpbins = np.logspace(-1, 1.5, 9)
+    pimax = 30
+    pi_bin_size = 5
     # run the fit 10 times for timing 
     for i in range(10):
         start = time.time()
-        galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, enable_ranks = args['want_ranks'], 
-            rsd = args['want_rsd'], write_to_disk = False)
+        cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id = \
+        galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
+            enable_ranks = args['want_ranks'], rsd = args['want_rsd'], write_to_disk = False)
         print("Done iteration ", i, "took time ", time.time() - start)
+        
+        start = time.time()
+        pos_full = np.concatenate((cent_pos, sat_pos), axis = 0)
+        xi = calc_xirppi_fast(pos_full[:, 0], pos_full[:, 1], pos_full[:, 2], rpbins, pimax, pi_bin_size, params['Lbox'], 64)
+        print("xi took time ", time.time() - start)
+
     # multiprocess
     # p = multiprocessing.Pool(17)
     # p.map(run_onebox, range(params['numchunks']))
