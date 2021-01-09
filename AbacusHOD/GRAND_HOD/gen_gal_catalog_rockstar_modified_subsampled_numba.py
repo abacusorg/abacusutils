@@ -355,7 +355,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                     gpos[j, k] = ppos[i, k]
                     gvel[j, k] = hvel[i, k] + alpha_s * (pvel[i, k] - hvel[i, k]) # velocity bias
                 if rsd:
-                    gpos[j, 2] = wrap(gpos[i, 2] + gvel[i, 2] * inv_velz2kms, lbox)
+                    gpos[j, 2] = wrap(gpos[j, 2] + gvel[j, 2] * inv_velz2kms, lbox)
                 gmass[j] = hmass[i]
                 gid[j] = hid[i]
                 j += 1

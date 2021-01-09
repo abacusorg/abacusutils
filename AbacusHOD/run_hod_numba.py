@@ -28,7 +28,7 @@ from calc_xi import calc_xirppi_fast
 
 DEFAULTS = {}
 DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
-DEFAULTS['z_mock'] = 0.5
+DEFAULTS['z_mock'] = 0.8
 DEFAULTS['scratch_dir'] = "/mnt/marvin1/syuan/scratch"
 DEFAULTS['subsample_dir'] = "/mnt/marvin1/syuan/scratch/data_summit/"
 DEFAULTS['sim_dir'] = "/mnt/gosling2/bigsims/"
@@ -54,7 +54,6 @@ DEFAULTS['ic'] = 0.97
 
 
 def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, want_ranks=False):
-    
     # flag for redshift space distortions
     if want_rsd:
         rsd_string = "_rsd"
@@ -67,9 +66,11 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
 
     # all paths relevant for mock generation
     scratch_dir = Path(scratch_dir)
-    mock_dir = scratch_dir / scratch_name
-    print(mock_dir)
-    subsample_dir = Path(subsample_dir) / sim_name
+    mock_dir = scratch_dir / scratch_name / sim_name / ('z%4.3f'%z_mock)
+    # create mock_dir if not created
+    if not mock_dir.exists():
+        mock_dir.mkdir(parents = True)
+    subsample_dir = Path(subsample_dir) / sim_name / ('z%4.3f'%z_mock)
     sim_dir = Path(sim_dir)
 
     # load header to read parameters
@@ -231,8 +232,8 @@ if __name__ == "__main__":
     parser.add_argument('--scratch_dir', help='Scratch directory', default=DEFAULTS['scratch_dir'])
     parser.add_argument('--subsample_dir', help='Particle subsample directory', default=DEFAULTS['subsample_dir'])
     parser.add_argument('--sim_dir', help='Simulation directory', default=DEFAULTS['sim_dir'])
-    parser.add_argument('--want_rsd', help='Want redshift space distortions', action='store_true')
-    parser.add_argument('--want_ranks', help='Want extended satellite parameters', action='store_true')
+    parser.add_argument('--want_rsd', help='Want redshift space distortions', default=True)
+    parser.add_argument('--want_ranks', help='Want extended satellite parameters', default=False)
     args = vars(parser.parse_args())
 
     # preload the simulation

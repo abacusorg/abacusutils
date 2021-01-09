@@ -15,13 +15,15 @@ import multiprocessing
 from multiprocessing import Pool
 
 simname = "/AbacusSummit_base_c000_ph006"
-savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname
+z_mock = 0.800
+savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname+"/z"+str(z_mock).ljust(5, '0')
 
 newseed = 600
 
 if not os.path.exists(savedir):
     os.makedirs(savedir)
 
+# https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
 # the subsampling curve for halos
 def subsample_halos(m):
     x = np.log10(m)
@@ -43,7 +45,7 @@ def load_chunk(i):
     # load the halo catalog chunk
     print("loading catalog")
     cat = AbacusHaloCatalog(
-        '/mnt/store2/bigsims/AbacusSummit'+simname+'/halos/z0.500/halo_info/halo_info_'\
+        '/mnt/store2/bigsims/AbacusSummit'+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
         +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv')
     halos = cat.halos
     parts = cat.subsamples

@@ -27,12 +27,12 @@ savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname
 # the subsampling curve for halos
 def subsample_halos(m):
     x = np.log10(m)
-    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5))
+    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*4))
 
 def subsample_particles(m):
     x = np.log10(m)
     # return 1.0/(1.0 + np.exp(-(x - 13.5)*3))
-    return 4/(200.0 + np.exp(-(x - 13.7)*8))
+    return 4/(200.0 + np.exp(-(x - 13.7)*6))
 
 
 def n_cen(M_in, design_array, m_cutoff = 1e12): 
