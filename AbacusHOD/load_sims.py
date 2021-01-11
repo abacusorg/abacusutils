@@ -27,12 +27,15 @@ if not os.path.exists(savedir):
 # the subsampling curve for halos
 def subsample_halos(m):
     x = np.log10(m)
-    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5))
+    # return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5)) # LRG only
+    return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
+
 
 def subsample_particles(m):
     x = np.log10(m)
-    # return 1.0/(1.0 + np.exp(-(x - 13.5)*3))
-    return 4/(200.0 + np.exp(-(x - 13.7)*8))
+    # return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
+    return 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
+
 
 
 def load_chunk(i):
@@ -240,7 +243,7 @@ def load_chunk(i):
 
     # output halo file 
     print("outputting new halo file ")
-    output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod.h5'
+    output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT.h5'
     if os.path.exists(output_dir):
         os.remove(output_dir)
     newfile = h5py.File(output_dir, 'w')
@@ -267,7 +270,7 @@ def load_chunk(i):
     print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0), 
         np.sum(parts['halo_mass'] < 0))
     print("outputting new particle file ")
-    output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod.h5'
+    output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT.h5'
     if os.path.exists(output_dir):
         os.remove(output_dir)
     newfile = h5py.File(output_dir, 'w')
@@ -280,7 +283,7 @@ def load_chunk(i):
 # load_chunk(0)
 
 # do further subsampling 
-p = multiprocessing.Pool(7)
+p = multiprocessing.Pool(5)
 p.map(load_chunk, range(34))
 p.close()
 p.join()

@@ -19,6 +19,7 @@ from matplotlib import rc, rcParams
 rcParams.update({'font.size': 10})
 
 from abacus_halo_catalog import AbacusHaloCatalog
+import tracers.tracer_fun as MT
 
 simname = "/AbacusSummit_base_c000_ph006"
 savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname
@@ -27,12 +28,12 @@ savedir = "/mnt/marvin1/syuan/scratch/data_summit"+simname
 # the subsampling curve for halos
 def subsample_halos(m):
     x = np.log10(m)
-    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*4))
+    return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
 
 def subsample_particles(m):
     x = np.log10(m)
     # return 1.0/(1.0 + np.exp(-(x - 13.5)*3))
-    return 4/(200.0 + np.exp(-(x - 13.7)*6))
+    return 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
 
 
 def n_cen(M_in, design_array, m_cutoff = 1e12): 
@@ -89,10 +90,32 @@ def Ng_exp(design_array):
 
 if __name__ == "__main__":
 
-    design_array = [10**13.3, 10**14.4, 0.8, 1.0, 0.4]
-    print(design_array)
+    # lrg
+    LRG_design = [10**13.3, 10**14.4, 0.8, 1.0, 0.4]
 
-    Ms = np.logspace(12, 16, 100)
+    # elg
+    p_max = 0.33;
+    Q = 100.;
+    M_cut = 10.**11.75;
+    kappa = 1.;
+    sigma = 0.58;
+    M_1 = 10.**13.53;
+    alpha = 1.;
+    gamma = 4.12;
+    A_s = 1.
+    ELG_design = {
+        'p_max': p_max,
+        'Q': Q,
+        'M_cut': M_cut,
+        'kappa': kappa,
+        'sigma': sigma,
+        'M_1': M_1,
+        'alpha': alpha,
+        'gamma': gamma,
+        'A_s': A_s
+    }
+
+    Ms = np.logspace(11, 16, 100)
 
     halos_subsampling = subsample_halos(Ms)
     particle_subsampling = subsample_particles(Ms)
@@ -104,10 +127,12 @@ if __name__ == "__main__":
     pl.yscale('log')
     pl.ylim(1e-4, 1e6)
 
-    pl.plot(Ms, n_cen(Ms, design_array), label = 'cent')
-    pl.plot(Ms, n_sat(Ms, design_array), label = 'sat')
-    pl.plot(Ms, Ms / 3131059264.330557 * halos_subsampling * particle_subsampling, 'k-', label = 'Np eff')
-    pl.plot(Ms, halos_subsampling, 'k--', label = 'halo subsampling')
+    pl.plot(Ms, n_cen(Ms, LRG_design), 'r-', label = 'LRG cent')
+    pl.plot(Ms, n_sat(Ms, LRG_design), 'r--', label = 'LRG sat')
+    pl.plot(Ms, MT.N_cen_ELG_v1(Ms, **ELG_design), 'b-', label = 'ELG cent')
+    pl.plot(Ms, MT.N_sat(Ms, **ELG_design), 'b--', label = 'ELG sat')
+    pl.plot(Ms, halos_subsampling, 'k-', label = 'halo subsampling')
+    pl.plot(Ms, Ms / 3131059264.330557 * halos_subsampling * particle_subsampling, 'k--', label = 'Np eff')
 
     pl.legend(loc = 'best')
     pl.tight_layout()
@@ -116,5 +141,5 @@ if __name__ == "__main__":
     # compute mass function
     # nM()
 
-    # expected number of galaxies per chunk
-    Ng_exp(design_array)
+    # # expected number of galaxies per chunk
+    # Ng_exp(design_array)

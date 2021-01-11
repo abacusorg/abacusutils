@@ -32,28 +32,58 @@ DEFAULTS['z_mock'] = 0.8
 DEFAULTS['scratch_dir'] = "/mnt/marvin1/syuan/scratch"
 DEFAULTS['subsample_dir'] = "/mnt/marvin1/syuan/scratch/data_summit/"
 DEFAULTS['sim_dir'] = "/mnt/gosling2/bigsims/"
+DEFAULTS['want_rsd'] = True
+DEFAULTS['want_ranks'] = False
+DEFAULTS['want_LRG'] = True
+DEFAULTS['want_ELG'] = True
+DEFAULTS['want_QSO'] = False
 
-DEFAULTS['logM_cut'] = 13.3
-DEFAULTS['logM1'] = 14.4
-DEFAULTS['sigma'] = 0.8
-DEFAULTS['alpha'] = 1.0
-DEFAULTS['kappa'] = 0.4
+# LRG HOD
+LRG_HOD = {}
+LRG_HOD['logM_cut'] = 13.3
+LRG_HOD['logM1'] = 14.3
+LRG_HOD['sigma'] = 0.3
+LRG_HOD['alpha'] = 1.0
+LRG_HOD['kappa'] = 0.4
+# velocity bias
+LRG_HOD['alpha_c'] = 0
+LRG_HOD['alpha_s'] = 1
+# satellite extensions, assembly bias, and incompleteness
+LRG_HOD['s'] = 0
+LRG_HOD['s_v'] = 0
+LRG_HOD['s_p'] = 0
+LRG_HOD['s_r'] = 0
+LRG_HOD['Acent'] = 0
+LRG_HOD['Asat'] = 0
+LRG_HOD['Bcent'] = 0
+LRG_HOD['Bsat'] = 0
+LRG_HOD['ic'] = 0.97
 
-DEFAULTS['alpha_c'] = 0
-DEFAULTS['alpha_s'] = 1
+# ELG HOD
+ELG_HOD = {}
+ELG_HOD['p_max'] = 0.33
+ELG_HOD['Q'] = 100.
+ELG_HOD['logM_cut'] = 11.75
+ELG_HOD['kappa'] = 1.
+ELG_HOD['sigma'] = 0.58
+ELG_HOD['logM1'] = 13.53
+ELG_HOD['alpha'] = 1.
+ELG_HOD['gamma'] = 4.12
+ELG_HOD['A_s'] = 1.
 
-DEFAULTS['s'] = 0
-DEFAULTS['s_v'] = 0
-DEFAULTS['s_p'] = 0
-DEFAULTS['s_r'] = 0
-DEFAULTS['Acent'] = 0
-DEFAULTS['Asat'] = 0
-DEFAULTS['Bcent'] = 0
-DEFAULTS['Bsat'] = 0
-DEFAULTS['ic'] = 0.97
+# QSO HOD
+QSO_HOD = {}
+QSO_HOD['p_max'] = 0.33
+QSO_HOD['logM_cut'] = 12.21
+QSO_HOD['kappa'] = 1.0
+QSO_HOD['sigma'] = 0.56
+QSO_HOD['logM1'] = 13.94
+QSO_HOD['alpha'] = 0.4
+QSO_HOD['A_s'] = 1.
 
 
-def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, want_ranks=False):
+def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, want_ranks=False, 
+    want_LRG = True, want_ELG = False, want_QSO = False):
     # flag for redshift space distortions
     if want_rsd:
         rsd_string = "_rsd"
@@ -123,8 +153,14 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
     # load all the halo and particle data we need
     for echunk in range(params['numchunks']):
         print(echunk)
+        if (not want_ELG) & (not want_QSO):
+            halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod.h5'%echunk)
+            particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod.h5'%echunk)
+        else:
+            halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushodMT.h5'%echunk)
+            particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushodMT.h5'%echunk)            
 
-        newfile = h5py.File(subsample_dir / ('halos_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
+        newfile = h5py.File(halofilename, 'r')
         allhalos = newfile['halos']
         mask = np.array(allhalos['mask_subsample'], dtype = bool)
         maskedhalos = allhalos[mask]
@@ -159,7 +195,7 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
         hfenv = np.concatenate((hfenv, halo_fenv))
 
         # extract particle data that we need
-        newpart = h5py.File(subsample_dir / ('particles_xcom_%d_seed600_abacushod.h5'%echunk), 'r')
+        newpart = h5py.File(particlefilename, 'r')
         subsample = newpart['particles']
         part_pos = subsample['pos']
         part_vel = subsample['vel']
@@ -204,12 +240,36 @@ def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=Fals
     ppos = ppos[1:]
     pvel = pvel[1:]
 
-    halo_data = [hpos, hvel, hmass, hid, hmultis, hrandoms, hveldev, hdeltac, hfenv]
+    halo_data = {"hpos": hpos, 
+                 "hvel": hvel, 
+                 "hmass": hmass, 
+                 "hid": hid, 
+                 "hmultis": hmultis, 
+                 "hrandoms": hrandoms, 
+                 "hveldev": hveldev, 
+                 "hdeltac": hdeltac, 
+                 "hfenv": hfenv}
     pweights = 1/pNp/psubsampling
-    particle_data = [ppos, pvel, phvel, phmass, phid, pweights, prandoms, pdeltac, pfenv]
+    particle_data = {"ppos": ppos, 
+                     "pvel": pvel, 
+                     "phvel": phvel, 
+                     "phmass": phmass, 
+                     "phid": phid, 
+                     "pweights": pweights, 
+                     "prandoms": prandoms, 
+                     "pdeltac": pdeltac, 
+                     "pfenv": pfenv}
     if want_ranks:
-        particle_data += [p_ranks, p_ranksv, p_ranksp, p_ranksr]
-
+        particle_data['pranks'] = p_ranks
+        particle_data['pranksv'] = p_ranksv
+        particle_data['pranksp'] = p_ranksp
+        particle_data['pranksr'] = p_ranksr
+    else:
+        particle_data['pranks'] = np.ones(len(phmass))
+        particle_data['pranksv'] =  np.ones(len(phmass))
+        particle_data['pranksp'] =  np.ones(len(phmass))
+        particle_data['pranksr'] =  np.ones(len(phmass))
+        
     return halo_data, particle_data, params, mock_dir
 
 
@@ -232,8 +292,11 @@ if __name__ == "__main__":
     parser.add_argument('--scratch_dir', help='Scratch directory', default=DEFAULTS['scratch_dir'])
     parser.add_argument('--subsample_dir', help='Particle subsample directory', default=DEFAULTS['subsample_dir'])
     parser.add_argument('--sim_dir', help='Simulation directory', default=DEFAULTS['sim_dir'])
-    parser.add_argument('--want_rsd', help='Want redshift space distortions', default=True)
-    parser.add_argument('--want_ranks', help='Want extended satellite parameters', default=False)
+    parser.add_argument('--want_rsd', help='Want redshift space distortions', default=DEFAULTS['want_rsd'])
+    parser.add_argument('--want_ranks', help='Want extended satellite parameters', default=DEFAULTS['want_ranks'])
+    parser.add_argument('--want_LRG', help='Want LRGs', default=DEFAULTS['want_LRG'])
+    parser.add_argument('--want_ELG', help='Want ELGs', default=DEFAULTS['want_ELG'])
+    parser.add_argument('--want_QSO', help='Want QSOs', default=DEFAULTS['want_QSO'])
     args = vars(parser.parse_args())
 
     # preload the simulation
@@ -241,49 +304,52 @@ if __name__ == "__main__":
     halo_data, particle_data, params, mock_dir = staging(**args)
     print("finished loading the data into memory")
 
-    # B.H. I think the HOD parameters could be read from a yaml file or something
-    parser.add_argument('--logM_cut', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['logM_cut'])
-    parser.add_argument('--logM1', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['logM1'])
-    parser.add_argument('--sigma', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['sigma'])
-    parser.add_argument('--alpha', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['alpha'])
-    parser.add_argument('--kappa', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['kappa'])
-    parser.add_argument('--alpha_c', help='central velocity bias parameter', type=float, default=DEFAULTS['alpha_c'])
-    parser.add_argument('--alpha_s', help='satellite velocity bias parameter', type=float, default=DEFAULTS['alpha_s'])
-    parser.add_argument('--s', help='satellite distribution parameter', type=float, default=DEFAULTS['s'])
-    parser.add_argument('--s_v', help='satellite distribution parameter', type=float, default=DEFAULTS['s_v'])
-    parser.add_argument('--s_p', help='satellite distribution parameter', type=float, default=DEFAULTS['s_p'])
-    parser.add_argument('--s_r', help='satellite distribution parameter', type=float, default=DEFAULTS['s_r'])
-    parser.add_argument('--Acent', help='Assembly bias parameter for centrals', type=float, default=DEFAULTS['Acent'])
-    parser.add_argument('--Asat', help='Assembly bias parameter for satellites', type=float, default=DEFAULTS['Asat'])
-    parser.add_argument('--Bcent', help='Environmental bias parameter for centrals', type=float, default=DEFAULTS['Bcent'])
-    parser.add_argument('--Bsat', help='Environmental bias parameter for satellites', type=float, default=DEFAULTS['Bsat'])
-    parser.add_argument('--ic', help='incompleteness factor', type=float, default=DEFAULTS['ic'])
-    args = vars(parser.parse_args())
+    # # B.H. I think the HOD parameters could be read from a yaml file or something
+    # parser.add_argument('--logM_cut', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['logM_cut'])
+    # parser.add_argument('--logM1', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['logM1'])
+    # parser.add_argument('--sigma', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['sigma'])
+    # parser.add_argument('--alpha', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['alpha'])
+    # parser.add_argument('--kappa', help='base HOD parameter (Zheng+2007)', type=float, default=DEFAULTS['kappa'])
+    # parser.add_argument('--alpha_c', help='central velocity bias parameter', type=float, default=DEFAULTS['alpha_c'])
+    # parser.add_argument('--alpha_s', help='satellite velocity bias parameter', type=float, default=DEFAULTS['alpha_s'])
+    # parser.add_argument('--s', help='satellite distribution parameter', type=float, default=DEFAULTS['s'])
+    # parser.add_argument('--s_v', help='satellite distribution parameter', type=float, default=DEFAULTS['s_v'])
+    # parser.add_argument('--s_p', help='satellite distribution parameter', type=float, default=DEFAULTS['s_p'])
+    # parser.add_argument('--s_r', help='satellite distribution parameter', type=float, default=DEFAULTS['s_r'])
+    # parser.add_argument('--Acent', help='Assembly bias parameter for centrals', type=float, default=DEFAULTS['Acent'])
+    # parser.add_argument('--Asat', help='Assembly bias parameter for satellites', type=float, default=DEFAULTS['Asat'])
+    # parser.add_argument('--Bcent', help='Environmental bias parameter for centrals', type=float, default=DEFAULTS['Bcent'])
+    # parser.add_argument('--Bsat', help='Environmental bias parameter for satellites', type=float, default=DEFAULTS['Bsat'])
+    # parser.add_argument('--ic', help='incompleteness factor', type=float, default=DEFAULTS['ic'])
+    # args = vars(parser.parse_args())
     
-    # setting up the hod dictionary
-    newdesign = {'M_cut': 10.**args['logM_cut'],
-                 'M1': 10.**args['logM1'],
-                 'sigma': args['sigma'],
-                 'alpha': args['alpha'],
-                 'kappa': args['kappa']}
-    newdecor = {'alpha_c': args['alpha_c'],
-                'alpha_s': args['alpha_s'],
-                's': args['s'],
-                's_v': args['s_v'],
-                's_p': args['s_p'],
-                's_r': args['s_r'],
-                'Acent': args['Acent'],
-                'Asat': args['Asat'],
-                'Bcent': args['Bcent'],
-                'Bsat': args['Bsat'],
-                'ic': args['ic']}
+    # # setting up the hod dictionary
+    # LRGdesign = {'M_cut': 10.**LRG_HOD['logM_cut'],
+    #              'M1': 10.**LRG_HOD['logM1'],
+    #              'sigma': LRG_HOD['sigma'],
+    #              'alpha': LRG_HOD['alpha'],
+    #              'kappa': LRG_HOD['kappa']}
+    # LRGdecor = {'alpha_c': LRG_HOD['alpha_c'],
+    #             'alpha_s': LRG_HOD['alpha_s'],
+    #             's': LRG_HOD['s'],
+    #             's_v': LRG_HOD['s_v'],
+    #             's_p': LRG_HOD['s_p'],
+    #             's_r': LRG_HOD['s_r'],
+    #             'Acent': LRG_HOD['Acent'],
+    #             'Asat': LRG_HOD['Asat'],
+    #             'Bcent': LRG_HOD['Bcent'],
+    #             'Bsat': LRG_HOD['Bsat'],
+    #             'ic': LRG_HOD['ic']}
 
+    # ELG_design 
 
     # throw away run for jit to compile, write to disk
-    cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id = \
-    galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
-    enable_ranks = args['want_ranks'], rsd = args['want_rsd'], write_to_disk = True, savedir = mock_dir)
-
+    cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type = \
+    galcat.gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
+        params, enable_ranks = args['want_ranks'], rsd = args['want_rsd'], 
+        want_LRG = args['want_LRG'], want_ELG = args['want_ELG'], want_QSO = args['want_QSO'],
+        write_to_disk = True, savedir = mock_dir)
+    print(np.sum(cent_type == 1), np.sum(cent_type == 2), np.sum(sat_type == 1), np.sum(sat_type == 2))
     # rpbins and pi bins for benchmarking xirppi code
     rpbins = np.logspace(-1, 1.5, 9)
     pimax = 30
@@ -291,9 +357,11 @@ if __name__ == "__main__":
     # run the fit 10 times for timing 
     for i in range(10):
         start = time.time()
-        cent_pos, cent_vel, cent_mass, cent_id, sat_pos, sat_vel, sat_mass, sat_id = \
-        galcat.gen_gal_cat(halo_data, particle_data, newdesign, newdecor, params, 
-            enable_ranks = args['want_ranks'], rsd = args['want_rsd'], write_to_disk = False)
+        cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type = \
+        galcat.gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
+            params, enable_ranks = args['want_ranks'], rsd = args['want_rsd'], 
+            want_LRG = args['want_LRG'], want_ELG = args['want_ELG'], want_QSO = args['want_QSO'],
+            write_to_disk = False)
         print("Done iteration ", i, "took time ", time.time() - start)
         
         start = time.time()

@@ -79,6 +79,7 @@ def A_fun(p_max, Q, phi, Phi):
     """
     Aiding function for N_cen_ELG_v1().
     """
+    print(2.*phi*Phi, np.max(2.*phi*Phi))
     A = (p_max-1./Q)/np.max(2.*phi*Phi)
     return A
     
