@@ -226,7 +226,7 @@ except:
     # Note: this is a temporary solution until blosc is integrated into ASDF, or until we package a pluggable decompressor
     exit('Error: your ASDF installation does not support Blosc compression.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
 
-from .bitpacked import unpack_rvint, unpack_pids, AUXPID
+from . import bitpacked
 
 # Default to 4 decompression threads, or fewer if fewer cores are available
 DEFAULT_BLOSC_THREADS = 4
@@ -284,11 +284,13 @@ class CompaSOHaloCatalog:
 
             #TODO: above velocity units right?
 
-        unpack_bits: bool, optional
+        unpack_bits: bool, or list of str, optional
             Extract information from the PID field of each subsample particle
-            info about its Lagrangian position, whether it is tagged,  and its
+            info about its Lagrangian position, whether it is tagged, and its
             current local density.  If False, only the particle ID part will
-            be extracted.
+            be extracted.  Note that this per-particle information can be large.
+            Can be a list of str, in which case only those fields will be unpacked.
+            Field names are: ('pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx').
             Default: False.
 
         fields: str or list of str, optional
@@ -373,6 +375,17 @@ class CompaSOHaloCatalog:
                 self.load_pidrv = ['pid','rv']
         del load_subsamples  # use the parsed values
 
+        # validate unpack_bits
+        if type(unpack_bits) is str:
+            unpack_bits = [unpack_bits]
+        if unpack_bits not in (True,False):
+            try:
+                for _f in unpack_bits:
+                    assert _f in bitpacked.PID_FIELDS
+            except:
+                raise ValueError(f'`unpack_bits` must be True, False, or one of: "{bitpacked.PID_FIELDS}"')
+        
+        # End parameter parsing, begin opening files
 
         # Open the first file, just to grab the header
         with asdf.open(halo_fns[0], lazy_load=True, copy_arrays=False) as af:
@@ -704,7 +717,7 @@ class CompaSOHaloCatalog:
         for i,af in enumerate(pid_AB_afs):
             thisnp = np_per_file[i]
             if not unpack_bits:
-                pids_AB[start:start+thisnp] = af[self.data_key]['packedpid'] & AUXPID
+                pids_AB[start:start+thisnp] = af[self.data_key]['packedpid'] & bitpacked.AUXPID
             else:
                 pids_AB[start:start+thisnp] = af[self.data_key]['packedpid']
             start += thisnp
@@ -712,19 +725,24 @@ class CompaSOHaloCatalog:
         # Could be expensive!  Off by default.  Probably faster ways to implement this.
         if check_pids:
             assert len(np.unique(pids_AB)) == len(pids_AB)
-
-        if unpack_bits:
+            
+        if unpack_bits:  # anything to unpack?
+            # TODO: eventually, unpacking could be done on each file to save memory, as we do with the rvint
+            if unpack_bits is True:
+                unpack_which = {_f:True for _f in bitpacked.PID_FIELDS}
+            else:  # truthy but not True, like a list
+                unpack_which = {_f:True for _f in unpack_bits}
+                
             # unpack_pids will do unit conversion if requested
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
-            justpid, lagr_pos, tagged, density = unpack_pids(pids_AB, unpackbox, self.header['ppd'])
-            self.subsamples.add_column(lagr_pos, name='lagr_pos', copy=False)
-            self.subsamples.add_column(tagged, name='tagged', copy=False)
-            self.subsamples.add_column(density, name='density', copy=False)
-            self.subsamples.add_column(justpid, name='pid', copy=False)
-            #self.subsamples.add_column(pids_AB, name='packedpid', copy=False)
+            
+            unpacked_arrays = bitpacked.unpack_pids(pids_AB, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
+            
+            for name in unpacked_arrays:
+                self.subsamples.add_column(unpacked_arrays[name], name=name, copy=False)
         else:
             self.subsamples.add_column(pids_AB, name='pid', copy=False)
-        
+            
             
     def _load_RVs(self, N_halo_per_file):
         
@@ -738,7 +756,7 @@ class CompaSOHaloCatalog:
             particles_AB[start:start+thisnp] = af[self.data_key]['rvint']
             start += thisnp
         unpackbox = self.header['BoxSize'] if self.convert_units else 1.
-        ppos_AB, pvel_AB = unpack_rvint(particles_AB, unpackbox)
+        ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB, unpackbox)
 
         self.subsamples.add_column(ppos_AB, name='pos', copy=False)
         self.subsamples.add_column(pvel_AB, name='vel', copy=False)
