@@ -162,11 +162,19 @@ and a unique particle id, the last of which encodes the Lagrangian particle coor
 
 These are described in more detail on the :doc:`AbacusSummit Data Model page <summit:data-products>`.
 
+Use the ``unpack_bits`` argument of the ``CompaSOHaloCatalog`` constructor to specify
+which PID bit fields you want unpacked.  Be aware that some of them might use a lot of
+memory; e.g. the Lagrangian positions are three 4-byte floats per subsample particle.
+Also be aware that some of the returned arrays use narrow int dtypes to save memory,
+such as the ``lagr_idx`` field using ``int16``.  It is easy to silently overflow such
+narrow int types; make sure your operations stay within the type width and cast
+if necessary.
+
 Field Subset Loading
 ====================
 Because the ASDF files are column-oriented, it is possible to load just one or a few
 columns (halo catalog fields) rather than the whole file.  This can save huge amounts
-of IO, memory, and CPU time (due to the decompression).  Use the `fields` argument
+of IO, memory, and CPU time (due to the decompression).  Use the ``fields`` argument
 to the ``CompaSOHaloCatalog`` constructor to specify the list of columns you want.
 
 In detail, some columns are stored as ratios to other columns.  For example, ``r90``
