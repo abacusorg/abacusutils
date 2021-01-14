@@ -35,7 +35,7 @@ DEFAULTS['sim_dir'] = "/mnt/gosling2/bigsims/"
 DEFAULTS['want_rsd'] = True
 DEFAULTS['want_ranks'] = False
 DEFAULTS['want_LRG'] = True
-DEFAULTS['want_ELG'] = True
+DEFAULTS['want_ELG'] = False
 DEFAULTS['want_QSO'] = False
 
 # LRG HOD

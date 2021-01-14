@@ -127,8 +127,9 @@ def wrap(x, L):
 
 @njit(parallel=True, fastmath=True)
 def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, 
-    LRG_design_array, ELG_design_array, QSO_design_array, ic, alpha_c, Ac, Bc, rsd, inv_velz2kms, lbox,
-    want_LRG, want_ELG, want_QSO):
+    LRG_design_array, LRG_decorations_array, ELG_design_array, 
+    ELG_decorations_array, QSO_design_array, QSO_decorations_array, 
+    rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO):
     """
     Function that generates central galaxies and its position and velocity 
     given a halo catalog and HOD designs and decorations. The generated 
@@ -166,14 +167,18 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     # parse out the hod parameters 
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
     LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
+    ic_L, alpha_c_L, Ac_L, Bc_L = LRG_decorations_array[10], LRG_decorations_array[0], \
+    LRG_decorations_array[6], LRG_decorations_array[8]
 
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, As_E = \
     ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
     ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+    alpha_c_E, Ac_E, Bc_E = ELG_decorations_array[0], ELG_decorations_array[6], ELG_decorations_array[8]
 
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, As_Q = \
     QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
     QSO_design_array[5], QSO_design_array[6]
+    alpha_c_Q, Ac_Q, Bc_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8]
 
     H = len(mass)
 
@@ -190,13 +195,15 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             LRG_marker = 0
             if want_LRG:
                 # do assembly bias and secondary bias
-                logM_cut_L_temp = logM_cut_L + Ac * deltac[i] + Bc * fenv[i]
-                LRG_marker += n_cen_LRG(mass[i], logM_cut_L_temp, sigma_L) * ic * multis[i]
+                logM_cut_L_temp = logM_cut_L + Ac_L * deltac[i] + Bc_L * fenv[i]
+                LRG_marker += n_cen_LRG(mass[i], logM_cut_L_temp, sigma_L) * ic_L * multis[i]
             ELG_marker = LRG_marker
             if want_ELG:
-                ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E, sigma_E, gamma_E) * multis[i]
+                logM_cut_E_temp = logM_cut_E + Ac_E * deltac[i] + Bc_E * fenv[i]
+                ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E_temp, sigma_E, gamma_E) * multis[i]
             QSO_marker = ELG_marker
             if want_QSO:
+                logM_cut_Q_temp = logM_cut_Q + Ac_Q * deltac[i] + Bc_Q * fenv[i]
                 QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q)
 
             if randoms[i] <= LRG_marker:
@@ -258,11 +265,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             if keep[i] == 1:
                 # loop thru three directions to assign galaxy velocities and positions
                 lrg_x[j1] = pos[i,0]
-                lrg_vx[j1] = vel[i,0] + alpha_c * vdev[i] # velocity bias
+                lrg_vx[j1] = vel[i,0] + alpha_c_L * vdev[i] # velocity bias
                 lrg_y[j1] = pos[i,1]
-                lrg_vy[j1] = vel[i,1] + alpha_c * vdev[i] # velocity bias
+                lrg_vy[j1] = vel[i,1] + alpha_c_L * vdev[i] # velocity bias
                 lrg_z[j1] = pos[i,2]
-                lrg_vz[j1] = vel[i,2] + alpha_c * vdev[i] # velocity bias
+                lrg_vz[j1] = vel[i,2] + alpha_c_L * vdev[i] # velocity bias
                 # rsd only applies to the z direction
                 if rsd:
                     lrg_z[j1] = wrap(pos[i,2] + lrg_vz[j1] * inv_velz2kms, lbox)
@@ -272,11 +279,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             elif keep[i] == 2:
                 # loop thru three directions to assign galaxy velocities and positions
                 elg_x[j2] = pos[i,0]
-                elg_vx[j2] = vel[i,0] + alpha_c * vdev[i] # velocity bias
+                elg_vx[j2] = vel[i,0] + alpha_c_E * vdev[i] # velocity bias
                 elg_y[j2] = pos[i,1]
-                elg_vy[j2] = vel[i,1] + alpha_c * vdev[i] # velocity bias
+                elg_vy[j2] = vel[i,1] + alpha_c_E * vdev[i] # velocity bias
                 elg_z[j2] = pos[i,2]
-                elg_vz[j2] = vel[i,2] + alpha_c * vdev[i] # velocity bias
+                elg_vz[j2] = vel[i,2] + alpha_c_E * vdev[i] # velocity bias
                 # rsd only applies to the z direction
                 if rsd:
                     elg_z[j2] = wrap(pos[i,2] + elg_vz[j2] * inv_velz2kms, lbox)
@@ -286,11 +293,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             elif keep[i] == 3:
                 # loop thru three directions to assign galaxy velocities and positions
                 qso_x[j3] = pos[i,0]
-                qso_vx[j3] = vel[i,0] + alpha_c * vdev[i] # velocity bias
+                qso_vx[j3] = vel[i,0] + alpha_c_Q * vdev[i] # velocity bias
                 qso_y[j3] = pos[i,1]
-                qso_vy[j3] = vel[i,1] + alpha_c * vdev[i] # velocity bias
+                qso_vy[j3] = vel[i,1] + alpha_c_Q * vdev[i] # velocity bias
                 qso_z[j3] = pos[i,2]
-                qso_vz[j3] = vel[i,2] + alpha_c * vdev[i] # velocity bias
+                qso_vz[j3] = vel[i,2] + alpha_c_Q * vdev[i] # velocity bias
                 # rsd only applies to the z direction
                 if rsd:
                     qso_z[j3] = wrap(pos[i,2] + qso_vz[j3] * inv_velz2kms, lbox)
@@ -334,7 +341,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 @njit(parallel = True, fastmath = True)
 def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, 
     enable_ranks, ranks, ranksv, ranksp, ranksr, 
-    LRG_design_array, LRG_decorations_array, ELG_design_array, QSO_design_array, 
+    LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
+    QSO_design_array, QSO_decorations_array,
     rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO):
 
     """
@@ -399,7 +407,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     # standard hod design
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
     LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
-    alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic = \
+    alpha_s_L, s_L, s_v_L, s_p_L, s_r_L, Ac_L, As_L, Bc_L, Bs_L, ic_L = \
     LRG_decorations_array[1], LRG_decorations_array[2], LRG_decorations_array[3], LRG_decorations_array[4], \
     LRG_decorations_array[5], LRG_decorations_array[6], LRG_decorations_array[7], LRG_decorations_array[8], \
     LRG_decorations_array[9], LRG_decorations_array[10]
@@ -407,10 +415,18 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, As_E = \
     ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
     ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
+    ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
+    ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
+    ELG_decorations_array[9]
 
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, As_Q = \
     QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
     QSO_design_array[5], QSO_design_array[6]
+    alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q = \
+    QSO_decorations_array[1], QSO_decorations_array[2], QSO_decorations_array[3], QSO_decorations_array[4], \
+    QSO_decorations_array[5], QSO_decorations_array[6], QSO_decorations_array[7], QSO_decorations_array[8], \
+    QSO_decorations_array[9]
 
     H = len(hmass) # num of particles
 
@@ -426,22 +442,38 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
             # print(logM1, As, hdeltac[i], Bs, hfenv[i])
             LRG_marker = 0
             if want_LRG:
-                M1_L_temp = 10**(logM1_L + As * hdeltac[i] + Bs * hfenv[i])
-                logM_cut_L_temp = logM_cut_L + Ac * hdeltac[i] + Bc * hfenv[i]
-                base_p = n_sat_LRG_modified(hmass[i], logM_cut_L_temp, 10**logM_cut_L_temp, M1_L_temp, sigma_L, alpha_L, kappa_L)\
-                 * weights[i] * ic
+                M1_L_temp = 10**(logM1_L + As_L * hdeltac[i] + Bs_L * hfenv[i])
+                logM_cut_L_temp = logM_cut_L + Ac_L * hdeltac[i] + Bc_L * hfenv[i]
+                base_p_L = n_sat_LRG_modified(hmass[i], logM_cut_L_temp, 10**logM_cut_L_temp, M1_L_temp, sigma_L, alpha_L, kappa_L)\
+                 * weights[i] * ic_L
                 if enable_ranks:
-                    decorator = 1 + s * ranks[i] + s_v * ranksv[i] + s_p * ranksp[i] + s_r * ranksr[i]
-                    exp_sat = base_p * decorator
+                    decorator_L = 1 + s_L * ranks[i] + s_v_L * ranksv[i] + s_p_L * ranksp[i] + s_r_L * ranksr[i]
+                    exp_sat = base_p_L * decorator_L
                 else:
-                    exp_sat = base_p
+                    exp_sat = base_p_L
                 LRG_marker += exp_sat
             ELG_marker = LRG_marker
             if want_ELG:
-                ELG_marker += N_sat_generic(hmass[i], 10**logM_cut_E, kappa_E, 10**logM1_E, alpha_E, As_E) * weights[i]
+                M1_E_temp = 10**(logM1_E + As_E * hdeltac[i] + Bs_E * hfenv[i])
+                logM_cut_E_temp = logM_cut_E + Ac_E * hdeltac[i] + Bc_E * hfenv[i]
+                base_p_E = N_sat_generic(hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E, As_E) * weights[i]
+                if enable_ranks:
+                    decorator_E = 1 + s_E * ranks[i] + s_v_E * ranksv[i] + s_p_E * ranksp[i] + s_r_E * ranksr[i]
+                    exp_sat = base_p_E * decorator_E
+                else:
+                    exp_sat = base_p_E
+                ELG_marker += exp_sat
             QSO_marker = ELG_marker
             if want_QSO:
-                QSO_marker += N_sat_generic(hmass[i], 10**logM_cut_Q, kappa_Q, 10**logM1_Q, alpha_Q, As_Q) * weights[i]
+                M1_Q_temp = 10**(logM1_Q + As_Q * hdeltac[i] + Bs_Q * hfenv[i])
+                logM_cut_Q_temp = logM_cut_Q + Ac_Q * hdeltac[i] + Bc_Q * hfenv[i]
+                base_p_Q = N_sat_generic(hmass[i], 10**logM_cut_Q_temp, kappa_Q, M1_Q_temp, alpha_Q, As_Q) * weights[i]
+                if enable_ranks:
+                    decorator_Q = 1 + s_Q * ranks[i] + s_v_Q * ranksv[i] + s_p_Q * ranksp[i] + s_r_Q * ranksr[i]
+                    exp_sat = base_p_Q * decorator_Q
+                else:
+                    exp_sat = base_p_Q
+                QSO_marker += exp_sat
 
             if randoms[i] <= LRG_marker:
                 Nout[tid, 0, 0] += 1 # counting
@@ -501,11 +533,11 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i] == 1:
                 lrg_x[j1] = ppos[i, 0]
-                lrg_vx[j1] = hvel[i, 0] + alpha_s * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                lrg_vx[j1] = hvel[i, 0] + alpha_s_L * (pvel[i, 0] - hvel[i, 0]) # velocity bias
                 lrg_y[j1] = ppos[i, 1]
-                lrg_vy[j1] = hvel[i, 1] + alpha_s * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                lrg_vy[j1] = hvel[i, 1] + alpha_s_L * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 lrg_z[j1] = ppos[i, 2]
-                lrg_vz[j1] = hvel[i, 2] + alpha_s * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                lrg_vz[j1] = hvel[i, 2] + alpha_s_L * (pvel[i, 2] - hvel[i, 2]) # velocity bias
                 if rsd:
                     lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
                 lrg_mass[j1] = hmass[i]
@@ -513,11 +545,11 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 j1 += 1
             elif keep[i] == 2:
                 elg_x[j2] = ppos[i, 0]
-                elg_vx[j2] = hvel[i, 0] + alpha_s * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                elg_vx[j2] = hvel[i, 0] + alpha_s_E * (pvel[i, 0] - hvel[i, 0]) # velocity bias
                 elg_y[j2] = ppos[i, 1]
-                elg_vy[j2] = hvel[i, 1] + alpha_s * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                elg_vy[j2] = hvel[i, 1] + alpha_s_E * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 elg_z[j2] = ppos[i, 2]
-                elg_vz[j2] = hvel[i, 2] + alpha_s * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                elg_vz[j2] = hvel[i, 2] + alpha_s_E * (pvel[i, 2] - hvel[i, 2]) # velocity bias
                 if rsd:
                     elg_z[j2] = wrap(elg_z[j2] + elg_vz[j2] * inv_velz2kms, lbox)
                 elg_mass[j2] = hmass[i]
@@ -525,11 +557,11 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 j2 += 1
             elif keep[i] == 3:
                 qso_x[j3] = ppos[i, 0]
-                qso_vx[j3] = hvel[i, 0] + alpha_s * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                qso_vx[j3] = hvel[i, 0] + alpha_s_Q * (pvel[i, 0] - hvel[i, 0]) # velocity bias
                 qso_y[j3] = ppos[i, 1]
-                qso_vy[j3] = hvel[i, 1] + alpha_s * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                qso_vy[j3] = hvel[i, 1] + alpha_s_Q * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 qso_z[j3] = ppos[i, 2]
-                qso_vz[j3] = hvel[i, 2] + alpha_s * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                qso_vz[j3] = hvel[i, 2] + alpha_s_Q * (pvel[i, 2] - hvel[i, 2]) # velocity bias
                 if rsd:
                     qso_z[j3] = wrap(qso_z[j3] + qso_vz[j3] * inv_velz2kms, lbox)
                 qso_mass[j3] = hmass[i]
@@ -635,6 +667,18 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
                     'gamma',
                     'A_s'))
     ELG_design_array = np.array([pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, As_E])
+    alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
+    map(ELG_HOD.get, ('alpha_c', 
+                    'alpha_c',  
+                    's', 
+                    's_v', 
+                    's_p', 
+                    's_r',
+                    'Acent',
+                    'Asat',
+                    'Bcent',
+                    'Bsat'))
+    ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E])
 
     # QSO desig
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, As_Q = \
@@ -646,7 +690,18 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
                     'alpha',
                     'A_s'))
     QSO_design_array = np.array([pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, As_Q])
-
+    alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_EQ, Bc_Q, Bs_Q = \
+    map(QSO_HOD.get, ('alpha_c', 
+                    'alpha_c',  
+                    's', 
+                    's_v', 
+                    's_p', 
+                    's_r',
+                    'Acent',
+                    'Asat',
+                    'Bcent',
+                    'Bsat'))
+    QSO_decorations_array = np.array([alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q])
     start = time.time()
 
     velz2kms = params['velz2kms']
@@ -656,8 +711,8 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
      halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
-     LRG_design_array, ELG_design_array, QSO_design_array, ic, alpha_c, Ac, Bc, rsd, inv_velz2kms, lbox,
-     want_LRG, want_ELG, want_QSO)
+     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
+     QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO)
     print("generating centrals took ", time.time() - start, "number of centrals ", 
         len(LRG_dict_cent['mass'])+len(ELG_dict_cent['mass'])+len(QSO_dict_cent['mass']))
 
@@ -667,7 +722,8 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'], 
         subsample['pweights'], subsample['prandoms'], subsample['pdeltac'], subsample['pfenv'], 
         enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'],
-        LRG_design_array, LRG_decorations_array, ELG_design_array, QSO_design_array, rsd, inv_velz2kms, lbox, params['Mpart'],
+        LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
+        QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
         want_LRG, want_ELG, want_QSO)
 
     print("generating satellites took ", time.time() - start)
