@@ -24,9 +24,10 @@ import h5py
 from scipy import special
 
 import numba
-from numba import njit
+from numba import njit, types
+from numba.typed import Dict
 numba.set_num_threads(64)
-
+float_array = types.float64[:]
 
 @njit(fastmath=True)
 def n_sat_LRG_modified(M_h, logM_cut, M_cut, M_1, sigma, alpha, kappa): 
@@ -177,7 +178,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     H = len(mass)
 
     Nthread = numba.get_num_threads()
-    Nout = np.zeros((Nthread, 8), dtype = np.int64)
+    Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
 
     keep = np.empty(H, dtype = np.int8) # mask array tracking which halos to keep
@@ -199,48 +200,135 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                 QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q)
 
             if randoms[i] <= LRG_marker:
-                Nout[tid, 0] += 1 # counting
+                Nout[tid, 0, 0] += 1 # counting
                 keep[i] = 1
             elif randoms[i] <= ELG_marker:
-                Nout[tid, 0] += 1 # counting
+                Nout[tid, 1, 0] += 1 # counting
                 keep[i] = 2
             elif randoms[i] <= QSO_marker:
-                Nout[tid, 0] += 1 # counting
+                Nout[tid, 2, 0] += 1 # counting
                 keep[i] = 3
             else:
                 keep[i] = 0
 
     # compose galaxy array, first create array of galaxy starting indices for the threads
-    gstart = np.empty(Nthread + 1, dtype = np.int64)
-    gstart[0] = 0
-    gstart[1:] = Nout[:, 0].cumsum()
+    gstart = np.empty((Nthread + 1, 3), dtype = np.int64)
+    gstart[0, :] = 0
+    gstart[1:, 0] = Nout[:, 0, 0].cumsum()
+    gstart[1:, 1] = Nout[:, 1, 0].cumsum()
+    gstart[1:, 2] = Nout[:, 2, 0].cumsum()
 
     # galaxy arrays
-    gpos = np.empty((gstart[-1], 3), dtype = pos.dtype)
-    gvel = np.empty((gstart[-1], 3), dtype = vel.dtype)
-    gmass = np.empty(gstart[-1], dtype = mass.dtype)
-    gid = np.empty(gstart[-1], dtype = ids.dtype)
-    gtype = np.empty(gstart[-1], dtype = ids.dtype)
+    N_lrg = gstart[-1, 0]
+    lrg_x = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_y = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_z = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_vx = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_vy = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_vz = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_mass = np.empty(N_lrg, dtype = mass.dtype)
+    lrg_id = np.empty(N_lrg, dtype = ids.dtype)
+
+    # galaxy arrays
+    N_elg = gstart[-1, 1]
+    elg_x = np.empty(N_elg, dtype = mass.dtype)
+    elg_y = np.empty(N_elg, dtype = mass.dtype)
+    elg_z = np.empty(N_elg, dtype = mass.dtype)
+    elg_vx = np.empty(N_elg, dtype = mass.dtype)
+    elg_vy = np.empty(N_elg, dtype = mass.dtype)
+    elg_vz = np.empty(N_elg, dtype = mass.dtype)
+    elg_mass = np.empty(N_elg, dtype = mass.dtype)
+    elg_id = np.empty(N_elg, dtype = ids.dtype)
+
+    # galaxy arrays
+    N_qso = gstart[-1, 2]
+    qso_x = np.empty(N_qso, dtype = mass.dtype)
+    qso_y = np.empty(N_qso, dtype = mass.dtype)
+    qso_z = np.empty(N_qso, dtype = mass.dtype)
+    qso_vx = np.empty(N_qso, dtype = mass.dtype)
+    qso_vy = np.empty(N_qso, dtype = mass.dtype)
+    qso_vz = np.empty(N_qso, dtype = mass.dtype)
+    qso_mass = np.empty(N_lrg, dtype = mass.dtype)
+    qso_id = np.empty(N_qso, dtype = ids.dtype)
 
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
-        j = gstart[tid]
+        j1, j2, j3 = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
-            if keep[i]:
+            if keep[i] == 1:
                 # loop thru three directions to assign galaxy velocities and positions
-                for k in range(3):
-                    gpos[j,k] = pos[i,k]
-                    gvel[j,k] = vel[i,k] + alpha_c * vdev[i] # velocity bias
+                lrg_x[j1] = pos[i,0]
+                lrg_vx[j1] = vel[i,0] + alpha_c * vdev[i] # velocity bias
+                lrg_y[j1] = pos[i,1]
+                lrg_vy[j1] = vel[i,1] + alpha_c * vdev[i] # velocity bias
+                lrg_z[j1] = pos[i,2]
+                lrg_vz[j1] = vel[i,2] + alpha_c * vdev[i] # velocity bias
                 # rsd only applies to the z direction
                 if rsd:
-                    gpos[j,2] = wrap(pos[i,2] + gvel[j,2] * inv_velz2kms, lbox)
-                gmass[j] = mass[i]
-                gid[j] = ids[i]
-                gtype[j] = keep[i]
-                j += 1
+                    lrg_z[j1] = wrap(pos[i,2] + lrg_vz[j1] * inv_velz2kms, lbox)
+                lrg_mass[j1] = mass[i]
+                lrg_id[j1] = ids[i]
+                j1 += 1
+            elif keep[i] == 2:
+                # loop thru three directions to assign galaxy velocities and positions
+                elg_x[j2] = pos[i,0]
+                elg_vx[j2] = vel[i,0] + alpha_c * vdev[i] # velocity bias
+                elg_y[j2] = pos[i,1]
+                elg_vy[j2] = vel[i,1] + alpha_c * vdev[i] # velocity bias
+                elg_z[j2] = pos[i,2]
+                elg_vz[j2] = vel[i,2] + alpha_c * vdev[i] # velocity bias
+                # rsd only applies to the z direction
+                if rsd:
+                    elg_z[j2] = wrap(pos[i,2] + elg_vz[j2] * inv_velz2kms, lbox)
+                elg_mass[j2] = mass[i]
+                elg_id[j2] = ids[i]
+                j2 += 1
+            elif keep[i] == 3:
+                # loop thru three directions to assign galaxy velocities and positions
+                qso_x[j3] = pos[i,0]
+                qso_vx[j3] = vel[i,0] + alpha_c * vdev[i] # velocity bias
+                qso_y[j3] = pos[i,1]
+                qso_vy[j3] = vel[i,1] + alpha_c * vdev[i] # velocity bias
+                qso_z[j3] = pos[i,2]
+                qso_vz[j3] = vel[i,2] + alpha_c * vdev[i] # velocity bias
+                # rsd only applies to the z direction
+                if rsd:
+                    qso_z[j3] = wrap(pos[i,2] + qso_vz[j3] * inv_velz2kms, lbox)
+                qso_mass[j3] = mass[i]
+                qso_id[j3] = ids[i]
+                j3 += 1
         # assert j == gstart[tid + 1]
 
-    return gpos, gvel, gmass, gid, gtype
+    LRG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    ELG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    QSO_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    LRG_dict['x'] = lrg_x
+    LRG_dict['y'] = lrg_y
+    LRG_dict['z'] = lrg_z
+    LRG_dict['vx'] = lrg_vx
+    LRG_dict['vy'] = lrg_vy
+    LRG_dict['vz'] = lrg_vz
+    LRG_dict['mass'] = lrg_mass
+    LRG_dict['id'] = lrg_id.astype(np.float64)
+
+    ELG_dict['x'] = elg_x
+    ELG_dict['y'] = elg_y
+    ELG_dict['z'] = elg_z
+    ELG_dict['vx'] = elg_vx
+    ELG_dict['vy'] = elg_vy
+    ELG_dict['vz'] = elg_vz
+    ELG_dict['mass'] = elg_mass
+    ELG_dict['id'] = elg_id.astype(np.float64)
+
+    QSO_dict['x'] = qso_x
+    QSO_dict['y'] = qso_y
+    QSO_dict['z'] = qso_z
+    QSO_dict['vx'] = qso_vx
+    QSO_dict['vy'] = qso_vy
+    QSO_dict['vz'] = qso_vz
+    QSO_dict['mass'] = qso_mass
+    QSO_dict['id'] = qso_id.astype(np.float64)
+    return LRG_dict, ELG_dict, QSO_dict
 
 
 @njit(parallel = True, fastmath = True)
@@ -327,7 +415,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     H = len(hmass) # num of particles
 
     Nthread = numba.get_num_threads()
-    Nout = np.zeros((Nthread, 8), dtype = np.int64)
+    Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
 
     keep = np.empty(H, dtype = np.int8) # mask array tracking which halos to keep
@@ -356,47 +444,129 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 QSO_marker += N_sat_generic(hmass[i], 10**logM_cut_Q, kappa_Q, 10**logM1_Q, alpha_Q, As_Q) * weights[i]
 
             if randoms[i] <= LRG_marker:
-                Nout[tid, 0] += 1 # counting
+                Nout[tid, 0, 0] += 1 # counting
                 keep[i] = 1
             elif randoms[i] <= ELG_marker:
-                Nout[tid, 0] += 1 # counting
+                Nout[tid, 1, 0] += 1 # counting
                 keep[i] = 2
             elif randoms[i] <= QSO_marker:
-                Nout[tid, 0] += 1 # counting
+                Nout[tid, 2, 0] += 1 # counting
                 keep[i] = 3    
             else:
                 keep[i] = 0
 
     # compose galaxy array, first create array of galaxy starting indices for the threads
-    gstart = np.empty(Nthread + 1, dtype = np.int64)
-    gstart[0] = 0
-    gstart[1:] = Nout[:, 0].cumsum()
+    gstart = np.empty((Nthread + 1, 3), dtype = np.int64)
+    gstart[0, :] = 0
+    gstart[1:, 0] = Nout[:, 0, 0].cumsum()
+    gstart[1:, 1] = Nout[:, 1, 0].cumsum()
+    gstart[1:, 2] = Nout[:, 2, 0].cumsum()
 
     # galaxy arrays
-    gpos = np.empty((gstart[-1], 3), dtype = ppos.dtype)
-    gvel = np.empty((gstart[-1], 3), dtype = pvel.dtype)
-    gmass = np.empty(gstart[-1], dtype = hmass.dtype)
-    gid = np.empty(gstart[-1], dtype = hid.dtype)
-    gtype = np.empty(gstart[-1], dtype = hid.dtype)
+    N_lrg = gstart[-1, 0]
+    lrg_x = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_y = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_z = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_vx = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_vy = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_vz = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_mass = np.empty(N_lrg, dtype = hmass.dtype)
+    lrg_id = np.empty(N_lrg, dtype = hid.dtype)
+
+    # galaxy arrays
+    N_elg = gstart[-1, 1]
+    elg_x = np.empty(N_elg, dtype = hmass.dtype)
+    elg_y = np.empty(N_elg, dtype = hmass.dtype)
+    elg_z = np.empty(N_elg, dtype = hmass.dtype)
+    elg_vx = np.empty(N_elg, dtype = hmass.dtype)
+    elg_vy = np.empty(N_elg, dtype = hmass.dtype)
+    elg_vz = np.empty(N_elg, dtype = hmass.dtype)
+    elg_mass = np.empty(N_elg, dtype = hmass.dtype)
+    elg_id = np.empty(N_elg, dtype = hid.dtype)
+
+    # galaxy arrays
+    N_qso = gstart[-1, 2]
+    qso_x = np.empty(N_qso, dtype = hmass.dtype)
+    qso_y = np.empty(N_qso, dtype = hmass.dtype)
+    qso_z = np.empty(N_qso, dtype = hmass.dtype)
+    qso_vx = np.empty(N_qso, dtype = hmass.dtype)
+    qso_vy = np.empty(N_qso, dtype = hmass.dtype)
+    qso_vz = np.empty(N_qso, dtype = hmass.dtype)
+    qso_mass = np.empty(N_lrg, dtype = hmass.dtype)
+    qso_id = np.empty(N_qso, dtype = hid.dtype)
 
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
-        j = gstart[tid]
+        j1, j2, j3 = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
-            if keep[i]:
-                for k in range(3):
-                    gpos[j, k] = ppos[i, k]
-                    gvel[j, k] = hvel[i, k] + alpha_s * (pvel[i, k] - hvel[i, k]) # velocity bias
+            if keep[i] == 1:
+                lrg_x[j1] = ppos[i, 0]
+                lrg_vx[j1] = hvel[i, 0] + alpha_s * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                lrg_y[j1] = ppos[i, 1]
+                lrg_vy[j1] = hvel[i, 1] + alpha_s * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                lrg_z[j1] = ppos[i, 2]
+                lrg_vz[j1] = hvel[i, 2] + alpha_s * (pvel[i, 2] - hvel[i, 2]) # velocity bias
                 if rsd:
-                    gpos[j, 2] = wrap(gpos[j, 2] + gvel[j, 2] * inv_velz2kms, lbox)
-                gmass[j] = hmass[i]
-                gid[j] = hid[i]
-                gtype[j] = keep[i]
-                j += 1
+                    lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
+                lrg_mass[j1] = hmass[i]
+                lrg_id[j1] = hid[i]
+                j1 += 1
+            elif keep[i] == 2:
+                elg_x[j2] = ppos[i, 0]
+                elg_vx[j2] = hvel[i, 0] + alpha_s * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                elg_y[j2] = ppos[i, 1]
+                elg_vy[j2] = hvel[i, 1] + alpha_s * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                elg_z[j2] = ppos[i, 2]
+                elg_vz[j2] = hvel[i, 2] + alpha_s * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                if rsd:
+                    elg_z[j2] = wrap(elg_z[j2] + elg_vz[j2] * inv_velz2kms, lbox)
+                elg_mass[j2] = hmass[i]
+                elg_id[j2] = hid[i]
+                j2 += 1
+            elif keep[i] == 3:
+                qso_x[j3] = ppos[i, 0]
+                qso_vx[j3] = hvel[i, 0] + alpha_s * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                qso_y[j3] = ppos[i, 1]
+                qso_vy[j3] = hvel[i, 1] + alpha_s * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                qso_z[j3] = ppos[i, 2]
+                qso_vz[j3] = hvel[i, 2] + alpha_s * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                if rsd:
+                    qso_z[j3] = wrap(qso_z[j3] + qso_vz[j3] * inv_velz2kms, lbox)
+                qso_mass[j3] = hmass[i]
+                qso_id[j3] = hid[i]
+                j3 += 1
         # assert j == gstart[tid + 1]
 
-    return gpos, gvel, gmass, gid, gtype
+    LRG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    ELG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    QSO_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    LRG_dict['x'] = lrg_x
+    LRG_dict['y'] = lrg_y
+    LRG_dict['z'] = lrg_z
+    LRG_dict['vx'] = lrg_vx
+    LRG_dict['vy'] = lrg_vy
+    LRG_dict['vz'] = lrg_vz
+    LRG_dict['mass'] = lrg_mass
+    LRG_dict['id'] = lrg_id.astype(np.float64)
 
+    ELG_dict['x'] = elg_x
+    ELG_dict['y'] = elg_y
+    ELG_dict['z'] = elg_z
+    ELG_dict['vx'] = elg_vx
+    ELG_dict['vy'] = elg_vy
+    ELG_dict['vz'] = elg_vz
+    ELG_dict['mass'] = elg_mass
+    ELG_dict['id'] = elg_id.astype(np.float64)
+
+    QSO_dict['x'] = qso_x
+    QSO_dict['y'] = qso_y
+    QSO_dict['z'] = qso_z
+    QSO_dict['vx'] = qso_vx
+    QSO_dict['vy'] = qso_vy
+    QSO_dict['vz'] = qso_vz
+    QSO_dict['mass'] = qso_mass
+    QSO_dict['id'] = qso_id.astype(np.float64)
+    return LRG_dict, ELG_dict, QSO_dict
 
 
 
@@ -483,16 +653,17 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
     inv_velz2kms = 1/velz2kms
     lbox = params['Lbox']
     # for each halo, generate central galaxies and output to file
-    cent_pos, cent_vel, cent_mass, cent_id, cent_type = \
+    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
      halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
      LRG_design_array, ELG_design_array, QSO_design_array, ic, alpha_c, Ac, Bc, rsd, inv_velz2kms, lbox,
      want_LRG, want_ELG, want_QSO)
-    print("generating centrals took ", time.time() - start, "number of centrals ", len(cent_mass))
+    print("generating centrals took ", time.time() - start, "number of centrals ", 
+        len(LRG_dict_cent['mass'])+len(ELG_dict_cent['mass'])+len(QSO_dict_cent['mass']))
 
 
     start = time.time()
-    sat_pos, sat_vel, sat_mass, sat_id, sat_type = \
+    LRG_dict_sat, ELG_dict_sat, QSO_dict_sat = \
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'], 
         subsample['pweights'], subsample['prandoms'], subsample['pdeltac'], subsample['pfenv'], 
         enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'],
@@ -501,20 +672,40 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
 
     print("generating satellites took ", time.time() - start)
 
+    # # reorganize outputs
     # start = time.time()
-    # sat_table = Table([subsample['x'][satmask], subsample['y'][satmask], subsample['z'][satmask], 
-    #     subsample['vx'][satmask], subsample['vy'][satmask], subsample['vz'][satmask],
-    #     subsample['hid'][satmask], subsample['hmass'][satmask]], 
-    #     names = ('x', 'y', 'z', 'vx', 'vy', 'vz', 'halo_id', 'halo_mass'))
-    # # satellite rsd
-    # if rsd:
-    #     sat_table['z'] = (sat_table['z'] + sat_table['vz']/velz2kms) % lbox
-
-    # subsample[satmask, 0:8].tofile(fsats)
-    # newarray.tofile(fsats)
-    # print("outputting satellites took ", time.time() - start, "number of satellites", len(sat_table))
-
-    return cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type
+    # LRG_mask_cent = cent_type == 1
+    # LRG_mask_sat = sat_type == 1
+    # LRG_dict = {'cent_pos' : cent_pos[LRG_mask_cent],
+    #                'sat_pos' : sat_pos[LRG_mask_sat],
+    #                'cent_vel' : cent_vel[LRG_mask_cent],
+    #                'sat_vel' : sat_vel[LRG_mask_sat],
+    #                'cent_mass' : cent_mass[LRG_mask_cent],
+    #                'sat_mass' : sat_mass[LRG_mask_sat],
+    #                'cent_id' : cent_id[LRG_mask_cent],
+    #                'sat_id' : sat_id[LRG_mask_sat]}
+    # ELG_mask_cent = cent_type == 2
+    # ELG_mask_sat = sat_type == 2
+    # ELG_dict = {'cent_pos' : cent_pos[ELG_mask_cent],
+    #                'sat_pos' : sat_pos[ELG_mask_sat],
+    #                'cent_vel' : cent_vel[ELG_mask_cent],
+    #                'sat_vel' : sat_vel[ELG_mask_sat],
+    #                'cent_mass' : cent_mass[ELG_mask_cent],
+    #                'sat_mass' : sat_mass[ELG_mask_sat],
+    #                'cent_id' : cent_id[ELG_mask_cent],
+    #                'sat_id' : sat_id[ELG_mask_sat]}
+    # QSO_mask_cent = cent_type == 3
+    # QSO_mask_sat = sat_type == 3
+    # QSO_dict = {'cent_pos' : cent_pos[QSO_mask_cent],
+    #                'sat_pos' : sat_pos[QSO_mask_sat],
+    #                'cent_vel' : cent_vel[QSO_mask_cent],
+    #                'sat_vel' : sat_vel[QSO_mask_sat],
+    #                'cent_mass' : cent_mass[QSO_mask_cent],
+    #                'sat_mass' : sat_mass[QSO_mask_sat],
+    #                'cent_id' : cent_id[QSO_mask_cent],
+    #                'sat_id' : sat_id[QSO_mask_sat]}
+    # print("time for organizing outputs", time.time() - start)
+    return LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat
 
 
 def gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD,
@@ -563,11 +754,11 @@ def gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD,
 
 
     # # find the halos, populate them with galaxies and write them to files
-    cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type \
+    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat \
      = gen_gals(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
         params, enable_ranks, rsd, want_LRG, want_ELG, want_QSO)
 
-    print("generated ", np.shape(cent_pos)[0], " centrals and ", np.shape(sat_pos)[0], " satellites.")
+    print("generated ", np.shape(LRG_dict_cent['x']), " centrals and ", np.shape(LRG_dict_sat['x']), " satellites.")
     if write_to_disk:
         print("outputting galaxies to disk")
 
@@ -593,13 +784,14 @@ def gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD,
             os.makedirs(outdir)
 
         # save to file 
-        ascii.write([cent_pos[:, 0], cent_pos[:, 1], cent_pos[:, 2], 
-            cent_vel[:, 0], cent_vel[:, 1], cent_vel[:, 2], cent_mass, cent_id], 
-            outdir / ("gals_cent.dat"), names = ['x_gal', 'y_gal', 'z_gal', 
-            'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], overwrite = True)
-        ascii.write([sat_pos[:, 0], sat_pos[:, 1], sat_pos[:, 2], 
-            sat_vel[:, 0], sat_vel[:, 1], sat_vel[:, 2], sat_mass, sat_id], 
+        ascii.write([LRG_dict_cent['x'], LRG_dict_cent['y'], LRG_dict_cent['z'], 
+            LRG_dict_cent['vx'], LRG_dict_cent['vy'], LRG_dict_cent['vz'], 
+            LRG_dict_cent['mass'], LRG_dict_cent['id']], outdir / ("gals_cent.dat"), 
+            names = ['x_gal', 'y_gal', 'z_gal', 'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], 
+            overwrite = True)
+        ascii.write([LRG_dict_sat['x'], LRG_dict_sat['y'], LRG_dict_sat['z'], 
+            LRG_dict_sat['vx'], LRG_dict_sat['vy'], LRG_dict_sat['vz'], LRG_dict_sat['mass'], LRG_dict_sat['id']], 
             outdir / ("gals_sat.dat"), names = ['x_gal', 'y_gal', 'z_gal', 
             'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], overwrite = True)
-    return cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type
+    return LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat
 

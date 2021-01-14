@@ -70,6 +70,18 @@ ELG_HOD['logM1'] = 13.53
 ELG_HOD['alpha'] = 1.
 ELG_HOD['gamma'] = 4.12
 ELG_HOD['A_s'] = 1.
+# velocity bias
+ELG_HOD['alpha_c'] = 0
+ELG_HOD['alpha_s'] = 1
+# satellite extensions, assembly bias, and incompleteness
+ELG_HOD['s'] = 0
+ELG_HOD['s_v'] = 0
+ELG_HOD['s_p'] = 0
+ELG_HOD['s_r'] = 0
+ELG_HOD['Acent'] = 0
+ELG_HOD['Asat'] = 0
+ELG_HOD['Bcent'] = 0
+ELG_HOD['Bsat'] = 0
 
 # QSO HOD
 QSO_HOD = {}
@@ -80,7 +92,18 @@ QSO_HOD['sigma'] = 0.56
 QSO_HOD['logM1'] = 13.94
 QSO_HOD['alpha'] = 0.4
 QSO_HOD['A_s'] = 1.
-
+# velocity bias
+QSO_HOD['alpha_c'] = 0
+QSO_HOD['alpha_s'] = 1
+# satellite extensions, assembly bias, and incompleteness
+QSO_HOD['s'] = 0
+QSO_HOD['s_v'] = 0
+QSO_HOD['s_p'] = 0
+QSO_HOD['s_r'] = 0
+QSO_HOD['Acent'] = 0
+QSO_HOD['Asat'] = 0
+QSO_HOD['Bcent'] = 0
+QSO_HOD['Bsat'] = 0
 
 def staging(sim_name, z_mock, scratch_dir, subsample_dir, sim_dir, want_rsd=False, want_ranks=False, 
     want_LRG = True, want_ELG = False, want_QSO = False):
@@ -344,12 +367,11 @@ if __name__ == "__main__":
     # ELG_design 
 
     # throw away run for jit to compile, write to disk
-    cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type = \
+    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat = \
     galcat.gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
         params, enable_ranks = args['want_ranks'], rsd = args['want_rsd'], 
         want_LRG = args['want_LRG'], want_ELG = args['want_ELG'], want_QSO = args['want_QSO'],
         write_to_disk = True, savedir = mock_dir)
-    print(np.sum(cent_type == 1), np.sum(cent_type == 2), np.sum(sat_type == 1), np.sum(sat_type == 2))
     # rpbins and pi bins for benchmarking xirppi code
     rpbins = np.logspace(-1, 1.5, 9)
     pimax = 30
@@ -357,16 +379,16 @@ if __name__ == "__main__":
     # run the fit 10 times for timing 
     for i in range(10):
         start = time.time()
-        cent_pos, cent_vel, cent_mass, cent_id, cent_type, sat_pos, sat_vel, sat_mass, sat_id, sat_type = \
+        LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat = \
         galcat.gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
             params, enable_ranks = args['want_ranks'], rsd = args['want_rsd'], 
             want_LRG = args['want_LRG'], want_ELG = args['want_ELG'], want_QSO = args['want_QSO'],
             write_to_disk = False)
         print("Done iteration ", i, "took time ", time.time() - start)
         
-        start = time.time()
-        pos_full = np.concatenate((cent_pos, sat_pos), axis = 0)
-        xi = calc_xirppi_fast(pos_full[:, 0], pos_full[:, 1], pos_full[:, 2], rpbins, pimax, pi_bin_size, params['Lbox'], 64)
+        # start = time.time()
+        # pos_full = np.concatenate((cent_pos, sat_pos), axis = 0)
+        # xi = calc_xirppi_fast(pos_full[:, 0], pos_full[:, 1], pos_full[:, 2], rpbins, pimax, pi_bin_size, params['Lbox'], 64)
         print("xi took time ", time.time() - start)
 
     # multiprocess
