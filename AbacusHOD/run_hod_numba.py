@@ -367,7 +367,7 @@ if __name__ == "__main__":
     # ELG_design 
 
     # throw away run for jit to compile, write to disk
-    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat = \
+    LRG_dict, ELG_dict, QSO_dict = \
     galcat.gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
         params, enable_ranks = args['want_ranks'], rsd = args['want_rsd'], 
         want_LRG = args['want_LRG'], want_ELG = args['want_ELG'], want_QSO = args['want_QSO'],
@@ -379,7 +379,7 @@ if __name__ == "__main__":
     # run the fit 10 times for timing 
     for i in range(10):
         start = time.time()
-        LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat = \
+        LRG_dict, ELG_dict, QSO_dict = \
         galcat.gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
             params, enable_ranks = args['want_ranks'], rsd = args['want_rsd'], 
             want_LRG = args['want_LRG'], want_ELG = args['want_ELG'], want_QSO = args['want_QSO'],

@@ -14,19 +14,16 @@ import sys
 import time
 from pathlib import Path
 import math
+from math import erfc
 
 import numpy as np
-import random
 from astropy.table import Table
 from astropy.io import ascii
-from math import erfc
-import h5py
-from scipy import special
 
 import numba
 from numba import njit, types
 from numba.typed import Dict
-numba.set_num_threads(64)
+numba.set_num_threads(8)
 float_array = types.float64[:]
 
 @njit(fastmath=True)
@@ -601,6 +598,32 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     return LRG_dict, ELG_dict, QSO_dict
 
 
+@njit(parallel = True, fastmath = True)
+def fast_concatenate(array1, array2):
+    N1 = len(array1)
+    N2 = len(array2)
+    if N1 == 0:
+        return array2
+    elif N2 == 0:
+        return array1
+
+    Nthread = numba.get_num_threads()
+
+    Nthread1 = int(np.floor(Nthread * N1 / (N1 + N2)))
+    Nthread2 = Nthread - Nthread1
+    hstart1 = np.rint(np.linspace(0, N1, Nthread1 + 1))
+    hstart2 = np.rint(np.linspace(0, N2, Nthread2 + 1)) + N1
+
+    final_array = np.empty(N1 + N2, dtype = array1.dtype)
+    for tid in numba.prange(Nthread): #numba.prange(Nthread):
+        if tid < Nthread1:
+            for i in range(hstart1[tid], hstart1[tid + 1]):
+                final_array[i] = array1[i]
+        else:
+            for i in range(hstart2[tid - Nthread1], hstart2[tid + 1 - Nthread1]):
+                final_array[i] = array2[i - N1]
+    # final_array = np.concatenate((array1, array2))
+    return final_array
 
 def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_ranks, rsd,
     want_LRG, want_ELG, want_QSO):
@@ -728,40 +751,40 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
 
     print("generating satellites took ", time.time() - start)
 
-    # # reorganize outputs
-    # start = time.time()
-    # LRG_mask_cent = cent_type == 1
-    # LRG_mask_sat = sat_type == 1
-    # LRG_dict = {'cent_pos' : cent_pos[LRG_mask_cent],
-    #                'sat_pos' : sat_pos[LRG_mask_sat],
-    #                'cent_vel' : cent_vel[LRG_mask_cent],
-    #                'sat_vel' : sat_vel[LRG_mask_sat],
-    #                'cent_mass' : cent_mass[LRG_mask_cent],
-    #                'sat_mass' : sat_mass[LRG_mask_sat],
-    #                'cent_id' : cent_id[LRG_mask_cent],
-    #                'sat_id' : sat_id[LRG_mask_sat]}
-    # ELG_mask_cent = cent_type == 2
-    # ELG_mask_sat = sat_type == 2
-    # ELG_dict = {'cent_pos' : cent_pos[ELG_mask_cent],
-    #                'sat_pos' : sat_pos[ELG_mask_sat],
-    #                'cent_vel' : cent_vel[ELG_mask_cent],
-    #                'sat_vel' : sat_vel[ELG_mask_sat],
-    #                'cent_mass' : cent_mass[ELG_mask_cent],
-    #                'sat_mass' : sat_mass[ELG_mask_sat],
-    #                'cent_id' : cent_id[ELG_mask_cent],
-    #                'sat_id' : sat_id[ELG_mask_sat]}
-    # QSO_mask_cent = cent_type == 3
-    # QSO_mask_sat = sat_type == 3
-    # QSO_dict = {'cent_pos' : cent_pos[QSO_mask_cent],
-    #                'sat_pos' : sat_pos[QSO_mask_sat],
-    #                'cent_vel' : cent_vel[QSO_mask_cent],
-    #                'sat_vel' : sat_vel[QSO_mask_sat],
-    #                'cent_mass' : cent_mass[QSO_mask_cent],
-    #                'sat_mass' : sat_mass[QSO_mask_sat],
-    #                'cent_id' : cent_id[QSO_mask_cent],
-    #                'sat_id' : sat_id[QSO_mask_sat]}
-    # print("time for organizing outputs", time.time() - start)
-    return LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat
+    # do a concatenate in numba parallel 
+    start = time.time()
+    LRG_dict = {
+    'x': fast_concatenate(LRG_dict_cent['x'], LRG_dict_sat['x']),
+    'y': fast_concatenate(LRG_dict_cent['y'], LRG_dict_sat['y']),
+    'z': fast_concatenate(LRG_dict_cent['z'], LRG_dict_sat['z']),
+    'vx': fast_concatenate(LRG_dict_cent['vx'], LRG_dict_sat['vx']),
+    'vy': fast_concatenate(LRG_dict_cent['vy'], LRG_dict_sat['vy']),
+    'vz': fast_concatenate(LRG_dict_cent['vz'], LRG_dict_sat['vz']),
+    'mass': fast_concatenate(LRG_dict_cent['mass'], LRG_dict_sat['mass']),
+    'id': fast_concatenate(LRG_dict_cent['id'], LRG_dict_sat['id'])
+    }
+    ELG_dict = {
+    'x': fast_concatenate(ELG_dict_cent['x'], ELG_dict_sat['x']),
+    'y': fast_concatenate(ELG_dict_cent['y'], ELG_dict_sat['y']),
+    'z': fast_concatenate(ELG_dict_cent['z'], ELG_dict_sat['z']),
+    'vx': fast_concatenate(ELG_dict_cent['vx'], ELG_dict_sat['vx']),
+    'vy': fast_concatenate(ELG_dict_cent['vy'], ELG_dict_sat['vy']),
+    'vz': fast_concatenate(ELG_dict_cent['vz'], ELG_dict_sat['vz']),
+    'mass': fast_concatenate(ELG_dict_cent['mass'], ELG_dict_sat['mass']),
+    'id': fast_concatenate(ELG_dict_cent['id'], ELG_dict_sat['id'])
+    }
+    QSO_dict = {
+    'x': fast_concatenate(QSO_dict_cent['x'], QSO_dict_sat['x']),
+    'y': fast_concatenate(QSO_dict_cent['y'], QSO_dict_sat['y']),
+    'z': fast_concatenate(QSO_dict_cent['z'], QSO_dict_sat['z']),
+    'vx': fast_concatenate(QSO_dict_cent['vx'], QSO_dict_sat['vx']),
+    'vy': fast_concatenate(QSO_dict_cent['vy'], QSO_dict_sat['vy']),
+    'vz': fast_concatenate(QSO_dict_cent['vz'], QSO_dict_sat['vz']),
+    'mass': fast_concatenate(QSO_dict_cent['mass'], QSO_dict_sat['mass']),
+    'id': fast_concatenate(QSO_dict_cent['id'], QSO_dict_sat['id'])
+    }
+    print("organizing outputs took ", time.time() - start)
+    return LRG_dict, len(LRG_dict_cent['x']), ELG_dict, len(ELG_dict_cent['x']), QSO_dict, len(QSO_dict_cent['x'])
 
 
 def gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD,
@@ -810,44 +833,34 @@ def gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD,
 
 
     # # find the halos, populate them with galaxies and write them to files
-    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat \
-     = gen_gals(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
+    LRG_dict, Ncent_LRG, ELG_dict, Ncent_ELG, QSO_dict, Ncent_QSO = gen_gals(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD, 
         params, enable_ranks, rsd, want_LRG, want_ELG, want_QSO)
 
-    print("generated ", np.shape(LRG_dict_cent['x']), " centrals and ", np.shape(LRG_dict_sat['x']), " satellites.")
+    print("generated LRG:", len(LRG_dict['x']), " and ELG:", len(ELG_dict['x']), ", and QSO:", len(QSO_dict['x']))
     if write_to_disk:
         print("outputting galaxies to disk")
 
-        logM_cutn, logM1n, sigman, alphan, kappan \
-        = map(LRG_HOD.get, ('logM_cut', 'logM1', 'sigma', 'alpha', 'kappa'))
-        alpha_cn, alpha_sn, sn, s_vn, s_pn, s_rn, Acn, Asn, Bcn, Bsn \
-        = map(LRG_HOD.get, 
-        ('alpha_c', 'alpha_s', 's', 's_v', 's_p', 's_r', 'Acent', 'Asat', 'Bcent', 'Bsat'))    
-    
         if params['rsd']:
             rsd_string = "_rsd"
         else:
             rsd_string = ""
 
-        outdir = savedir / ("galaxies_"+str(logM_cutn)[0:10]+\
-        "_"+str(logM1n)[0:10]+"_"+str(sigman)[0:6]+"_"+\
-        str(alphan)[0:6]+"_"+str(kappan)[0:6]+"_decor_"+str(alpha_cn)+"_"+str(alpha_sn)\
-        +"_"+str(sn)+"_"+str(s_vn)+"_"+str(s_pn)+"_"+str(s_rn)+\
-        "_"+str(Acn)+"_"+str(Asn)+"_"+str(Bcn)+"_"+str(Bsn)+rsd_string)
+        outdir = savedir / ("galaxies"+rsd_string)
 
         # create directories if not existing
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
+
         # save to file 
-        ascii.write([LRG_dict_cent['x'], LRG_dict_cent['y'], LRG_dict_cent['z'], 
-            LRG_dict_cent['vx'], LRG_dict_cent['vy'], LRG_dict_cent['vz'], 
-            LRG_dict_cent['mass'], LRG_dict_cent['id']], outdir / ("gals_cent.dat"), 
-            names = ['x_gal', 'y_gal', 'z_gal', 'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], 
-            overwrite = True)
-        ascii.write([LRG_dict_sat['x'], LRG_dict_sat['y'], LRG_dict_sat['z'], 
-            LRG_dict_sat['vx'], LRG_dict_sat['vy'], LRG_dict_sat['vz'], LRG_dict_sat['mass'], LRG_dict_sat['id']], 
-            outdir / ("gals_sat.dat"), names = ['x_gal', 'y_gal', 'z_gal', 
-            'vx_gal', 'vy_gal', 'vz_gal', 'mass_halo', 'id_halo'], overwrite = True)
-    return LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, LRG_dict_sat, ELG_dict_sat, QSO_dict_sat
+        if want_LRG:
+            LRG_table = Table(LRG_dict, meta = {'Ncent': Ncent_LRG, 'Gal_type': 'LRG', **LRG_HOD})
+            ascii.write(LRG_table, outdir / ("LRGs.dat"), overwrite = True, format = 'ecsv')
+        if want_ELG:
+            ELG_table = Table(ELG_dict, meta = {'Ncent': Ncent_ELG, 'Gal_type': 'ELG', **ELG_HOD})
+            ascii.write(ELG_table, outdir / ("ELGs.dat"), overwrite = True, format = 'ecsv')
+        if want_QSO:
+            QSO_table = Table(QSO_dict, meta = {'Ncent': Ncent_QSO, 'Gal_type': 'QSO', **QSO_HOD})
+            ascii.write(QSO_table, outdir / ("QSOs.dat"), overwrite = True, format = 'ecsv')
+    return LRG_dict, ELG_dict, QSO_dict
 
