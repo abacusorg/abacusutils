@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 '''
-This is a script for generating `vanilla' HOD mock catalogs.
+This is a script for generating HOD mock catalogs.
 
 Usage
 -----
-$ ./run_hod.py --help
+$ ./run_hod_numba.py --help
 '''
 
 
@@ -28,7 +28,7 @@ from calc_xi import calc_xirppi_fast
 
 DEFAULTS = {}
 DEFAULTS['sim_name'] = "AbacusSummit_base_c000_ph006"
-DEFAULTS['z_mock'] = 0.8
+DEFAULTS['z_mock'] = 0.5
 DEFAULTS['scratch_dir'] = "/mnt/marvin1/syuan/scratch"
 DEFAULTS['subsample_dir'] = "/mnt/marvin1/syuan/scratch/data_summit/"
 DEFAULTS['sim_dir'] = "/mnt/gosling2/bigsims/"

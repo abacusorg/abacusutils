@@ -749,7 +749,8 @@ def gen_gals(halos_array, subsample, LRG_HOD, ELG_HOD, QSO_HOD, params, enable_r
         QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
         want_LRG, want_ELG, want_QSO)
 
-    print("generating satellites took ", time.time() - start)
+    print("generating satellites took ", time.time() - start, "number of satellites ", 
+        len(LRG_dict_sat['mass'])+len(ELG_dict_sat['mass'])+len(QSO_dict_sat['mass']))
 
     # do a concatenate in numba parallel 
     start = time.time()
@@ -840,7 +841,7 @@ def gen_gal_cat(halo_data, particle_data, LRG_HOD, ELG_HOD, QSO_HOD,
     if write_to_disk:
         print("outputting galaxies to disk")
 
-        if params['rsd']:
+        if rsd:
             rsd_string = "_rsd"
         else:
             rsd_string = ""
