@@ -22,7 +22,7 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 def main(path2config):
 
-    # tuks
+    # load the yaml parameters
     config = yaml.load(open(path2config))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
@@ -32,12 +32,15 @@ def main(path2config):
     newBall = AbacusHOD(sim_params, HOD_params, power_params)
 
     # throw away run for jit to compile, write to disk
-    HOD_dict = newBall.run_hod()
-
+    HOD_dict = newBall.run_hod(newBall.tracers)
+    
     # run the fit 10 times for timing
     for i in range(10):
+        # example for sandy
+        newBall.tracers['LRG']['alpha'] += 0.1
+        print("alpha = ",newBall.tracers['LRG']['alpha'])
         start = time.time()
-        HOD_dict = newBall.run_hod()
+        HOD_dict = newBall.run_hod(HOD_params)
         print("Done iteration ", i, "took time ", time.time() - start)
         
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):

@@ -35,20 +35,21 @@ class AbacusHOD:
         self.z_mock = sim_params['z_mock']
         self.scratch_dir = sim_params['scratch_dir']
 
-        # HOD parameter choices
-        self.want_ranks = HOD_params['want_ranks']
-        self.want_rsd = HOD_params['want_rsd']
-        self.write_to_disk = HOD_params['write_to_disk']
-        tracer_flags = HOD_params['tracer_flags']
-
         # power spectrum parameters
         self.bin_params = power_params['bin_params']
-        
+
+        # tracers
+        tracer_flags = HOD_params['tracer_flags']
         tracers = {}
         for key in tracer_flags.keys():
             if tracer_flags[key]:
                 tracers[key] = HOD_params[key+'_params']
         self.tracers = tracers
+
+        # HOD parameter choices
+        self.want_ranks = HOD_params['want_ranks']
+        self.want_rsd = HOD_params['want_rsd']
+        self.write_to_disk = HOD_params['write_to_disk']
         
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
 
@@ -228,8 +229,8 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self):
-
+    def run_hod(self, tracers):
+        
         HOD_dict = galcat.gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, enable_ranks = self.want_ranks, rsd = self.want_rsd, write_to_disk = self.write_to_disk, savedir = self.mock_dir)
 
         return HOD_dict
