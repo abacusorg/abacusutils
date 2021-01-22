@@ -8,13 +8,10 @@ import time
 from astropy.table import Table
 import h5py
 from scipy.ndimage import gaussian_filter
-from sklearn.neighbors import KDTree
+from scipy.interpolate import NearestNDInterpolator
+from itertools import repeat
 
-import importlib
-MODULE_PATH = "../abacusnbody/data"
-
-from abacus_halo_catalog import AbacusHaloCatalog
-# from abacus_halo_catalog import CompaSOHaloCatalog
+from ..data.compaso_halo_catalog import CompaSOHaloCatalog
 
 import multiprocessing
 from multiprocessing import Pool
@@ -30,7 +27,6 @@ savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5
 tracer_flags = config['HOD_params']['tracer_flags']
 newseed = 600
 N_dim = 1024
-smo_scale = 3
 
 if not os.path.exists(savedir):
     os.makedirs(savedir)
@@ -56,43 +52,33 @@ def subsample_particles_LRG(m):
     return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
 def get_smo_density_onechunk(i):
-    print("start", i)
-    cat = AbacusHaloCatalog(
+    cat = CompaSOHaloCatalog(
     simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-    +str(i).zfill(3)+'.asdf')
+    +str(i).zfill(3)+'.asdf', fields = ['N', 'x_com'])
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
-    print(i, np.max(halos['x_com'][:, 0]), np.min(halos['x_com'][:, 0]), 
-        np.max(halos['x_com'][:, 1]), np.min(halos['x_com'][:, 1]), 
-        np.max(halos['x_com'][:, 2]), np.min(halos['x_com'][:, 2]))       
+    # print(i, np.max(halos['x_com'][:, 0]), np.min(halos['x_com'][:, 0]), 
+    #     np.max(halos['x_com'][:, 1]), np.min(halos['x_com'][:, 1]), 
+    #     np.max(halos['x_com'][:, 2]), np.min(halos['x_com'][:, 2]))       
     # total number of objects                                                                                                      
     N_g = np.sum(halos['N'])   
-    print("start histogram")                                                                                                           
     # get a 3d histogram with number of objects in each cell                                                                       
     D, edges = np.histogramdd(halos['x_com'], weights = halos['N'],
         bins = N_dim, range = [[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2]])   
-    print("done", i)
-    print(D)
     return D
 
 
-# def get_smo_density():   
-#     Dtot = []
-#     # for i in range(34):
-#     #     print(i)
-#     #     D = get_smo_density_onechunk(i)   
-#     #     Dtot += D
-#     #     print("histogram took", time.time() - start)                                                              
-#     p = multiprocessing.Pool(5)
-#     results = p.map(get_smo_density_onechunk, range(5))
-#     print(results)
+def get_smo_density(smo_scale):   
+    Dtot = 0
+    for i in range(34):
+        Dtot += get_smo_density_onechunk(i)   
 
-#     # gaussian smoothing 
-#     Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
+    # gaussian smoothing 
+    Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
 
-#     # average number of particles per cell                                                                                         
-#     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
-#     return D / D_avg - 1
+    # average number of particles per cell                                                                                         
+    D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
+    return Dtot / D_avg - 1
 
 def load_chunk(i):
     np.random.seed(newseed + i)
@@ -102,55 +88,85 @@ def load_chunk(i):
     #     return 0
 
     # load the halo catalog chunk
-    cat = AbacusHaloCatalog(
+    print("loading halo catalog ")
+    start = time.time()
+    cat = CompaSOHaloCatalog(
         simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv')
+        +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv', fields = ['N', 
+        'x_com', 'v_com', 'r90_com', 'r25_com', 'npstartA', 'npoutA', 'id', 'sigmav3d_com'])
     halos = cat.halos
     parts = cat.subsamples
     header = cat.header
+    Lbox = cat.header['BoxSizeHMpc']
     Mpart = header['ParticleMassHMsun'] # msun / h 
     H0 = header['H0']
     h = H0/100.0
-
+    print("finished loading halo catalog", time.time() - start)
+    print("number of halos ", len(halos), "max halo mass", np.max(halos['N']) * Mpart,
+        "min halo mass", np.min(halos['N']) * Mpart, "particle mass ", Mpart)
     # # form a halo table of the columns i care about 
     # creating a mask of which halos to keep, which halos to drop
     p_halos = subsample_halos_MT(halos['N']*Mpart)
     mask_halos = np.random.random(len(halos)) < p_halos
+    print("total number of halos, ", len(halos), "keeping ", np.sum(mask_halos))
 
     halos['mask_subsample'] = mask_halos
     halos['multi_halos'] = 1.0 / p_halos
 
-    # compute fenv around center of mass
-    print("finding pairs")
-    allpos = halos['x_com']
-    allmasses = halos['N']*Mpart
-    allpos_tree = KDTree(allpos)
-    allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_com'])
-    allinds_outer = allpos_tree.query_radius(allpos, r = 5)
-    print("computng m stacks")
-    starttime = time.time()
-    Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
-        for ind in np.arange(len(halos))])
-    # Menv mean by mass bin 
+    # # compute fenv around center of mass
+    # print("finding pairs")
+    # allpos = halos['x_com']
+    # allmasses = halos['N']*Mpart
+    # allpos_tree = KDTree(allpos)
+    # allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_com'])
+    # allinds_outer = allpos_tree.query_radius(allpos, r = 5)
+    # print("computng m stacks")
+    # starttime = time.time()
+    # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
+    #     for ind in np.arange(len(halos))])
+    # # Menv mean by mass bin 
+    # nbins = 100
+    # mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
+    # fenv_rank = np.zeros(len(Menv))
+    # for ibin in range(nbins):
+    #     mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
+    #     if np.sum(mmask) > 0:
+    #         if np.sum(mmask) == 1:
+    #             fenv_rank[mmask] = 0
+    #         else:
+    #             Menv_mean = np.mean(Menv[mmask])
+    #             newfenv = Menv[mmask] / Menv_mean
+    #             new_fenv_rank = newfenv.argsort().argsort()
+    #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+
+    # fenv = Menv / np.mean(Menv)
+
+    # halos['fenv'] = fenv
+    # halos['fenv_rank'] = fenv_rank
     nbins = 100
     mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
-    fenv_rank = np.zeros(len(Menv))
+
+    print("computing density rank")
+    start = time.time()
+    dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
+    ixs = np.floor((np.array(halos['x_com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int)
+    halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]] # np.array([dens_grid[newind[0], newind[1], newind[2]] for newind in ixs])
+    print("done overdensity array")
+    fenv_rank = np.zeros(len(halos))
     for ibin in range(nbins):
         mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
         if np.sum(mmask) > 0:
             if np.sum(mmask) == 1:
                 fenv_rank[mmask] = 0
             else:
-                Menv_mean = np.mean(Menv[mmask])
-                newfenv = Menv[mmask] / Menv_mean
-                new_fenv_rank = newfenv.argsort().argsort()
+                new_fenv_rank = halos_overdens[mmask].argsort().argsort()
                 fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-
-    fenv = Menv / np.mean(Menv)
-    halos['fenv'] = fenv
     halos['fenv_rank'] = fenv_rank
+    print("finished density rank", time.time() - start)
 
     # compute delta concentration
+    print("computing c rank")
+    start = time.time()
     halos_c = halos['r90_com']/halos['r25_com']
     deltac_rank = np.zeros(len(halos))
     for ibin in range(nbins):
@@ -163,6 +179,7 @@ def load_chunk(i):
                 new_deltac_rank = new_deltac.argsort().argsort()
                 deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
     halos['deltac_rank'] = deltac_rank
+    print("finished delta c", time.time() - start)
 
     # the new particle start, len, and multiplier
     halos_pstart = halos['npstartA']
@@ -187,8 +204,13 @@ def load_chunk(i):
     deltach_parts = -np.ones((len_old))
     fenvh_parts = -np.ones((len_old))
 
+    print("compiling particle subsamples")
     start_tracker = 0
+    print(np.arange(len(halos)))
     for j in np.arange(len(halos)):
+        print(j)
+        if j % 10000 == 0:
+            print(j)
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
             subsample_factor = subsample_particles_MT(halos['N'][j] * Mpart)
@@ -325,16 +347,21 @@ def load_chunk(i):
 if __name__ == "__main__":
 
     print("reading sim ", simname, "redshift ", z_mock)
-    # dens_grid = get_smo_density()
-    p = multiprocessing.Pool(5)
-    results = p.map(get_smo_density_onechunk, range(5))
-    print(results)
+    start = time.time()
+    if not os.path.exists(savedir+"/density_field.h5"):
+        dens_grid = get_smo_density(3)
+        print("Generating density field took ", time.time() - start)
+        # np.savez(savedir+"/density_field", dens = dens_grid)
+        newfile = h5py.File(savedir+"/density_field.h5", 'w')
+        dataset = newfile.create_dataset('dens', data = dens_grid)
+        newfile.close()
 
     # do further subsampling 
-    p = multiprocessing.Pool(5)
-    p.map(load_chunk, range(34))
-    p.close()
-    p.join()
+    load_chunk(0)
+    # p = multiprocessing.Pool(5)
+    # p.map(load_chunk, range(34))
+    # p.close()
+    # p.join()
 
 
 
