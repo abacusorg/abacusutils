@@ -18,6 +18,9 @@ AUXZPID = 0x7fff00000000 #bits 32-46
 AUXPID = AUXXPID | AUXYPID | AUXZPID # all of the above bits
 AUXTAGGED = 48 # tagged bit is 48
 
+# The names of the bit-packed PID fields that the user can request
+PID_FIELDS=['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx']
+
 
 def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=None):
     '''
@@ -107,30 +110,87 @@ def _unpack_rvint(intdata, boxsize, posout, velout):
             posout[i] = (intdata[i]&pmask)*posscale
         if lenv > 0:
             velout[i] = ((intdata[i]&vmask) - 2048)*velscale
+            
 
+def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=False, density=False, lagr_idx=False, float_dtype=np.float32):
+    '''
+    Extract fields from bit-packed PIDs.
+    
+    Parameters
+    ----------
+    packed: ndarray of np.int64, shape (N,)
+        The packed PIDs
+    box: float
+        The box size, used for `lagr_pos`
+    ppd: int
+        The particles-per-dimension, used for `lagr_pos`
+    pid, lagr_pos, tagged, density, lagr_idx: bool, optional
+        Whether the given field should be unpacked.
+        A few array will be constructed and returned.
+    float_dtype: np.dtype, optional
+        The dtype in which to store float arrays.
+        Default: np.float32
+        
+    Returns
+    -------
+    unpacked_arrays: dict of ndarray
+        A dictionary of all fields that were unpacked
+    '''
+    
+    if lagr_pos is not False:
+        if box is None:
+            raise ValueError('Must supply `box` if requesting `lagr_pos`')
+        if ppd is None:
+            raise ValueError('Must supply `ppd` if requesting `lagr_pos`')
+            
+    N = len(packed)
+    if ppd != int(ppd):
+        raise ValueError(f'ppd "{ppd}" not valid int?')
+    
+    arr = {}
+    if pid is True:
+        arr['pid'] = np.empty(N, dtype=np.int64)
+    if lagr_pos is True:
+        arr['lagr_pos'] = np.empty((N,3), dtype=float_dtype)
+    if lagr_idx is True:
+        arr['lagr_idx'] = np.empty((N,3), dtype=np.int16)
+    if tagged is True:
+        arr['tagged'] = np.empty(N, dtype=np.bool8)
+    if density is True:
+        arr['density'] = np.empty(N, dtype=float_dtype)
+        
+    _unpack_pids(packed, box, ppd, float_dtype=float_dtype, **arr)
+        
+    return arr
+    
 
 @nb.njit
-def unpack_pids(packed, box, ppd, float_dtype=np.float32):
-    '''extract the Lagrangian position, tagged info, and
+def _unpack_pids(packed, box, ppd, pid=None, lagr_pos=None, tagged=None, density=None, lagr_idx=None, float_dtype=np.float32):
+    '''Helper to extract the Lagrangian position, tagged info, and
     density from the ids of the particles
     '''
 
     N = len(packed)
-    
-    justpid = np.empty(N, dtype=np.int64)
-    lagr_pos = np.empty((N,3), dtype=float_dtype)
-    tagged = np.empty(N, dtype=np.bool8)
-    density = np.empty(N, dtype=float_dtype)
+    box = np.float64(box)
+    inv_ppd = float_dtype(box/ppd)
+    half = float_dtype(box/2)
 
     for i in range(N):
-        lagr_pos[i,0] = ((packed[i] & AUXXPID)/ppd - 0.5)*box
-        lagr_pos[i,1] = (((packed[i] & AUXYPID) >> 16)/ppd - 0.5)*box
-        lagr_pos[i,2] = (((packed[i] & AUXZPID) >> 32)/ppd - 0.5)*box
+        if lagr_idx is not None:
+            lagr_idx[i,0] =  packed[i] & AUXXPID
+            lagr_idx[i,1] = (packed[i] & AUXYPID) >> 16
+            lagr_idx[i,2] = (packed[i] & AUXZPID) >> 32
+            
+        if lagr_pos is not None:
+            lagr_pos[i,0] = (packed[i] & AUXXPID)*inv_ppd - half
+            lagr_pos[i,1] = ((packed[i] & AUXYPID) >> 16)*inv_ppd - half
+            lagr_pos[i,2] = ((packed[i] & AUXZPID) >> 32)*inv_ppd - half
 
-        tagged[i] = (packed[i] >> AUXTAGGED) & 1
+        if tagged is not None:
+            tagged[i] = (packed[i] >> AUXTAGGED) & 1
 
-        density[i] = ((packed[i] & AUXDENS) >> ZERODEN)**2  # max is 2**10, squaring gets to 2**20
+        if density is not None:
+            density[i] = ((packed[i] & AUXDENS) >> ZERODEN)**2  # max is 2**10, squaring gets to 2**20
 
-        justpid[i] = packed[i] & AUXPID
-    
-    return justpid, lagr_pos, tagged, density
+        if pid is not None:
+            pid[i] = packed[i] & AUXPID

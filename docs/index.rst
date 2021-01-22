@@ -38,6 +38,7 @@ and new performance opportunities identified.
    :caption: API Documentation
 
    modules
+   CHANGES
 
 
 Indices and tables
