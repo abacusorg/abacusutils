@@ -37,7 +37,7 @@ def main(path2config):
     # run the fit 10 times for timing
     for i in range(10):
         # example for sandy
-        newBall.tracers['LRG']['alpha'] += 0.1
+        newBall.tracers['LRG']['alpha'] += 0
         print("alpha = ",newBall.tracers['LRG']['alpha'])
         start = time.time()
         HOD_dict = newBall.run_hod(HOD_params)
