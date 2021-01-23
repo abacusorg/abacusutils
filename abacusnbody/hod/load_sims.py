@@ -150,7 +150,7 @@ def load_chunk(i):
     start = time.time()
     dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
     ixs = np.floor((np.array(halos['x_com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int)
-    halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]] # np.array([dens_grid[newind[0], newind[1], newind[2]] for newind in ixs])
+    halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
     print("done overdensity array")
     fenv_rank = np.zeros(len(halos))
     for ibin in range(nbins):
@@ -206,9 +206,7 @@ def load_chunk(i):
 
     print("compiling particle subsamples")
     start_tracker = 0
-    print(np.arange(len(halos)))
     for j in np.arange(len(halos)):
-        print(j)
         if j % 10000 == 0:
             print(j)
         if mask_halos[j]:
@@ -232,12 +230,14 @@ def load_chunk(i):
             start_tracker += np.sum(submask)
 
             # make the rankings
-            theseparts = parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
+            theseparts = parts[
+                halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
             theseparts_pos = theseparts['pos']
             theseparts_vel = theseparts['vel']
             theseparts_halo_pos = halos['x_com'][j]
             theseparts_halo_vel = halos['v_com'][j]
-            indices_parts = np.arange(halos_pstart[j], halos_pstart[j] + halos_pnum[j])[submask.astype(bool)]
+            indices_parts = np.arange(
+                halos_pstart[j], halos_pstart[j] + halos_pnum[j])[submask.astype(bool)]
             indices_parts = indices_parts.astype(int)
             if np.sum(submask) == 1:
                 ranks_parts[indices_parts] = 0
@@ -304,11 +304,12 @@ def load_chunk(i):
     halos['npstartA'] = halos_pstart_new
     halos['npoutA'] = halos_pnum_new
     halos['randoms'] = np.random.random(len(halos)) # attaching random numbers
-    halos['randoms_gaus_vrms'] = np.random.normal(loc = 0, scale = halos["sigmav3d_com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
+    halos['randoms_gaus_vrms'] = np.random.normal(loc = 0, 
+    scale = halos["sigmav3d_com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
 
     # output halo file 
     print("outputting new halo file ")
-    output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT.h5'
+    output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
     if os.path.exists(output_dir):
         os.remove(output_dir)
     newfile = h5py.File(output_dir, 'w')
@@ -335,7 +336,7 @@ def load_chunk(i):
     print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0), 
         np.sum(parts['halo_mass'] < 0))
     print("outputting new particle file ")
-    output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT.h5'
+    output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
     if os.path.exists(output_dir):
         os.remove(output_dir)
     newfile = h5py.File(output_dir, 'w')
@@ -357,11 +358,11 @@ if __name__ == "__main__":
         newfile.close()
 
     # do further subsampling 
-    load_chunk(0)
-    # p = multiprocessing.Pool(5)
-    # p.map(load_chunk, range(34))
-    # p.close()
-    # p.join()
+    # load_chunk(0)
+    p = multiprocessing.Pool(12)
+    p.map(load_chunk, range(34))
+    p.close()
+    p.join()
 
 
 
