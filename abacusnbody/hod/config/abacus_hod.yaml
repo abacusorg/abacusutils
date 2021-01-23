@@ -3,9 +3,11 @@
 
 # Power spectrum parameters
 power_params:
+#    power_type: 'wp'
+    power_type: 'xirppi'
     bin_params:
-        logmin: -1.
-        logmax: 1.5
+        logmin: -0.7728787904780005
+        logmax: 1.4771212597864314
         nbins: 9
     pimax: 30
     pi_bin_size: 5
@@ -17,6 +19,18 @@ sim_params:
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'
     z_mock: 0.5
+
+data_params:
+    tracer_combos:
+        LRG_LRG:    
+            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
+            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
+#       LRG_ELG:    
+#            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
+#            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
+#        ELG_ELG:
+#            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
+#            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
 
 HOD_params:
     want_ranks: False
@@ -89,20 +103,19 @@ HOD_params:
         Bsat: 0
 
 # Parameters to be fitted in MCMC
-# [mapping_index, mean, min, max, std]
+# [mapping_index, mean, min, max, std, tr_type]
 fit_params:
-    f_0: [0, 1., -5.0, 5.0, 0.00]
-    f_1: [1, 1., -10.0, 10.0, 0.1]
-    f_2: [2, 1., -10.0, 10.0, 0.1]
-    f_3: [3, 1., -10.0, 10.0, 0.1]
-    f_4: [4, 1., -10.0, 10.0, 0.1]
+    logM_cut: [0, 13.3, 13.0, 13.8, 0.05, 'LRG']
+    logM1: [1, 14.3, 13.7, 14.8, 0.05, 'LRG']
+    sigma: [2, 0.3, 0.1, 0.5, 0.05, 'LRG']
+
 
 # Configuration parameters for emcee
 ch_config_params:
-    path2output: ~/HOD/
+    path2output: chains/test
     chainsPrefix: test
-    use_mpi: 1
-    rerun: 1
+    use_mpi: 0
+    rerun: 0
     walkersRatio: 4
     burninIterations: 2000
     sampleIterations: 40000

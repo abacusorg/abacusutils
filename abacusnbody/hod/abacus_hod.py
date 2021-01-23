@@ -19,11 +19,8 @@ from multiprocessing import Pool
 from itertools import repeat
 
 from GRAND_HOD import gen_gal_catalog_rockstar_modified_subsampled_numba as galcat
-from calc_xi import calc_xirppi_fast
-# TODO B.H.: add power spectrum calculation
+from calc_xi import calc_xirppi_fast, calc_wp_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
-# TODO B.H.: hook to emcee: need data
-# TODO B.H.: returns dictionary with keys ELG, LRG, QSO
 
 class AbacusHOD:
     def __init__(self, sim_params, HOD_params, power_params):
@@ -34,10 +31,7 @@ class AbacusHOD:
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
         self.scratch_dir = sim_params['scratch_dir']
-
-        # power spectrum parameters
-        self.bin_params = power_params['bin_params']
-
+        
         # tracers
         tracer_flags = HOD_params['tracer_flags']
         tracers = {}
@@ -49,8 +43,15 @@ class AbacusHOD:
         # HOD parameter choices
         self.want_ranks = HOD_params['want_ranks']
         self.want_rsd = HOD_params['want_rsd']
-        self.write_to_disk = HOD_params['write_to_disk']
         
+        # power spectrum parameters
+        self.pimax = power_params['pimax']
+        self.pi_bin_size = power_params['pi_bin_size']
+        bin_params = power_params['bin_params']
+        self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
+        self.power_type = power_params['power_type']
+                
+        # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
 
 
@@ -81,7 +82,8 @@ class AbacusHOD:
         params['Mpart'] = header['ParticleMassHMsun']  # Msun / h, mass of each particle
         params['velz2kms'] = header['VelZSpace_to_kms']/params['Lbox']
         params['numchunks'] = len(halo_info_fns)
-
+        self.lbox = header['BoxSize']
+        
         # list holding individual chunks
         # halo_data = Table()
         # particle_data = Table()
@@ -229,8 +231,47 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self, tracers):
+    def run_hod(self, tracers, want_rsd, write_to_disk = False):
         
-        HOD_dict = galcat.gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, enable_ranks = self.want_ranks, rsd = self.want_rsd, write_to_disk = self.write_to_disk, savedir = self.mock_dir)
+        mock_dict = galcat.gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
 
-        return HOD_dict
+        return mock_dict
+
+    def compute_power(self, mock_dict, *args, **kwargs):
+        if self.power_type == 'xirppi':
+            power = self.compute_xirppi(mock_dict, *args, **kwargs)
+        elif self.power_type == 'wp':
+            power = self.compute_wp(mock_dict, *args, **kwargs)
+        return power
+    
+    def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
+
+        power_spectra = {}
+        for i1, tr1 in enumerate(mock_dict.keys()):
+            x1 = mock_dict[tr1]['x']
+            y1 = mock_dict[tr1]['y']
+            z1 = mock_dict[tr1]['z']
+            for i2, tr2 in enumerate(mock_dict.keys()):
+                if i1 > i2: continue # cross-correlations are symmetric
+                x2 = mock_dict[tr2]['x']
+                y2 = mock_dict[tr2]['y']
+                z2 = mock_dict[tr2]['z']
+                power_spectra[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                if i1 != i2: power_spectra[tr1+'_'+tr2] = power_spectra[tr2+'_'+tr1]
+        return power_spectra
+
+    def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
+
+        power_spectra = {}
+        for i1, tr1 in enumerate(mock_dict.keys()):
+            x1 = mock_dict[tr1]['x']
+            y1 = mock_dict[tr1]['y']
+            z1 = mock_dict[tr1]['z']
+            for i2, tr2 in enumerate(mock_dict.keys()):
+                if i1 > i2: continue # cross-correlations are symmetric
+                x2 = mock_dict[tr2]['x']
+                y2 = mock_dict[tr2]['y']
+                z2 = mock_dict[tr2]['z']
+                power_spectra[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                if i1 != i2: power_spectra[tr1+'_'+tr2] = power_spectra[tr2+'_'+tr1]
+        return power_spectra
