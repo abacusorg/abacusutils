@@ -25,31 +25,34 @@ z_mock = config['sim_params']['z_mock']
 savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
 #  "/mnt/marvin1/syuan/scratch/data_summit"+simname+"/z"+str(z_mock).ljust(5, '0')
 tracer_flags = config['HOD_params']['tracer_flags']
+MT = False
+if tracer_flags['ELG'] or tracer_flags['QSO']:
+    MT = True
+
 newseed = 600
-N_dim = 1024
+N_dim = config['HOD_params']['Ndim']
 
 if not os.path.exists(savedir):
     os.makedirs(savedir)
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
 # the subsampling curve for halos
-def subsample_halos_LRG(m):
+def subsample_halos(m):
     x = np.log10(m)
-    return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5)) # LRG only
+    if MT:
+        return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
+    else:
+        return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5)) # LRG only
 
-def subsample_halos_MT(m):
-    x = np.log10(m)
-    return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
 
 
-def subsample_particles_MT(m):
+def subsample_particles(m):
     x = np.log10(m)
     # return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
-    return 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
-
-def subsample_particles_LRG(m):
-    x = np.log10(m)
-    return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
+    if MT:
+        return 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
+    else:
+        return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
 def get_smo_density_onechunk(i):
     cat = CompaSOHaloCatalog(
@@ -81,11 +84,19 @@ def get_smo_density(smo_scale):
     return Dtot / D_avg - 1
 
 def load_chunk(i):
+    outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
+    outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
+    if MT:
+        outfilename_halos += '_MT'
+        outfilename_particles += '_MT'
+    outfilename_particles += '.h5'
+    outfilename_halos += '.5'
+
     np.random.seed(newseed + i)
-    # # if file already exists, just skip
-    # if os.path.exists(savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod.h5') \
-    # and os.path.exists(savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod.h5'):
-    #     return 0
+    # if file already exists, just skip
+    if os.path.exists(outfilename_halos) \
+    and os.path.exists(outfilename_particles):
+        return 0
 
     # load the halo catalog chunk
     print("loading halo catalog ")
@@ -106,7 +117,7 @@ def load_chunk(i):
         "min halo mass", np.min(halos['N']) * Mpart, "particle mass ", Mpart)
     # # form a halo table of the columns i care about 
     # creating a mask of which halos to keep, which halos to drop
-    p_halos = subsample_halos_MT(halos['N']*Mpart)
+    p_halos = subsample_halos(halos['N']*Mpart)
     mask_halos = np.random.random(len(halos)) < p_halos
     print("total number of halos, ", len(halos), "keeping ", np.sum(mask_halos))
 
@@ -211,7 +222,7 @@ def load_chunk(i):
             print(j)
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
-            subsample_factor = subsample_particles_MT(halos['N'][j] * Mpart)
+            subsample_factor = subsample_particles(halos['N'][j] * Mpart)
             submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
             # updating the particles' masks, downsample factors, halo mass
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask
@@ -309,10 +320,10 @@ def load_chunk(i):
 
     # output halo file 
     print("outputting new halo file ")
-    output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
-    if os.path.exists(output_dir):
-        os.remove(output_dir)
-    newfile = h5py.File(output_dir, 'w')
+    # output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
+    if os.path.exists(outfilename_halos):
+        os.remove(outfilename_halos)
+    newfile = h5py.File(outfilename_halos, 'w')
     dataset = newfile.create_dataset('halos', data = halos)
     newfile.close()
 
@@ -336,10 +347,10 @@ def load_chunk(i):
     print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0), 
         np.sum(parts['halo_mass'] < 0))
     print("outputting new particle file ")
-    output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
-    if os.path.exists(output_dir):
-        os.remove(output_dir)
-    newfile = h5py.File(output_dir, 'w')
+    # output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
+    if os.path.exists(outfilename_particles):
+        os.remove(outfilename_particles)
+    newfile = h5py.File(outfilename_particles, 'w')
     dataset = newfile.create_dataset('particles', data = parts)
     newfile.close()
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
@@ -350,7 +361,7 @@ if __name__ == "__main__":
     print("reading sim ", simname, "redshift ", z_mock)
     start = time.time()
     if not os.path.exists(savedir+"/density_field.h5"):
-        dens_grid = get_smo_density(3)
+        dens_grid = get_smo_density(config['HOD_params']['density_sigma'])
         print("Generating density field took ", time.time() - start)
         # np.savez(savedir+"/density_field", dens = dens_grid)
         newfile = h5py.File(savedir+"/density_field.h5", 'w')
@@ -359,8 +370,13 @@ if __name__ == "__main__":
 
     # do further subsampling 
     # load_chunk(0)
-    p = multiprocessing.Pool(12)
-    p.map(load_chunk, range(34))
+    halo_info_fns = \
+    list((simdir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
+
+    numchunks = len(halo_info_fns)
+
+    p = multiprocessing.Pool(config['HOD_params']['Nthread_load'])
+    p.map(load_chunk, range(numchunks))
     p.close()
     p.join()
 

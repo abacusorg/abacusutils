@@ -23,7 +23,10 @@ from astropy.io import ascii
 import numba
 from numba import njit, types
 from numba.typed import Dict
-numba.set_num_threads(8)
+
+import yaml
+config = yaml.load(open('config/abacus_hod.yaml'))
+numba.set_num_threads(config['HOD_params']['Nthread_hod'])
 float_array = types.float64[:]
 
 @njit(fastmath=True)

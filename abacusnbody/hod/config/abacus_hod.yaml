@@ -34,6 +34,10 @@ data_params:
 
 HOD_params:
     want_ranks: False
+    Ndim: 1024
+    Nthread_load: 12
+    Nthread_hod: 16
+    density_sigma: 3
     tracer_flags:
         LRG: True
         ELG: False
