@@ -28,7 +28,7 @@ tracer_flags = config['HOD_params']['tracer_flags']
 MT = False
 if tracer_flags['ELG'] or tracer_flags['QSO']:
     MT = True
-
+want_ranks = config['HOD_params']['want_ranks']
 newseed = 600
 N_dim = config['HOD_params']['Ndim']
 
@@ -43,8 +43,6 @@ def subsample_halos(m):
         return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
     else:
         return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5)) # LRG only
-
-
 
 def subsample_particles(m):
     x = np.log10(m)
@@ -87,10 +85,10 @@ def load_chunk(i):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     if MT:
-        outfilename_halos += '_MT'
-        outfilename_particles += '_MT'
-    outfilename_particles += '.h5'
-    outfilename_halos += '.5'
+        outfilename_halos += 'MT'
+        outfilename_particles += 'MT'
+    outfilename_particles += '_new.h5'
+    outfilename_halos += '_new.5'
 
     np.random.seed(newseed + i)
     # if file already exists, just skip
@@ -160,7 +158,7 @@ def load_chunk(i):
     print("computing density rank")
     start = time.time()
     dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
-    ixs = np.floor((np.array(halos['x_com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int)
+    ixs = np.floor((np.array(halos['x_com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
     halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
     print("done overdensity array")
     fenv_rank = np.zeros(len(halos))
@@ -240,73 +238,74 @@ def load_chunk(i):
             halos_pnum_new[j] = np.sum(submask)
             start_tracker += np.sum(submask)
 
-            # make the rankings
-            theseparts = parts[
-                halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
-            theseparts_pos = theseparts['pos']
-            theseparts_vel = theseparts['vel']
-            theseparts_halo_pos = halos['x_com'][j]
-            theseparts_halo_vel = halos['v_com'][j]
-            indices_parts = np.arange(
-                halos_pstart[j], halos_pstart[j] + halos_pnum[j])[submask.astype(bool)]
-            indices_parts = indices_parts.astype(int)
-            if np.sum(submask) == 1:
-                ranks_parts[indices_parts] = 0
-                ranksv_parts[indices_parts] = 0
-                ranksp_parts[indices_parts] = 0
-                ranksr_parts[indices_parts] = 0
+            if want_ranks:
+                # make the rankings
+                theseparts = parts[
+                    halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
+                theseparts_pos = theseparts['pos']
+                theseparts_vel = theseparts['vel']
+                theseparts_halo_pos = halos['x_com'][j]
+                theseparts_halo_vel = halos['v_com'][j]
+                indices_parts = np.arange(
+                    halos_pstart[j], halos_pstart[j] + halos_pnum[j])[submask.astype(bool)]
+                indices_parts = indices_parts.astype(int)
+                if np.sum(submask) == 1:
+                    ranks_parts[indices_parts] = 0
+                    ranksv_parts[indices_parts] = 0
+                    ranksp_parts[indices_parts] = 0
+                    ranksr_parts[indices_parts] = 0
 
-            else:
-                dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
-                newranks = dist2_rel.argsort().argsort() 
-                ranks_parts[indices_parts] = (newranks - np.mean(newranks)) / np.mean(newranks)
+                else:
+                    dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
+                    newranks = dist2_rel.argsort().argsort() 
+                    ranks_parts[indices_parts] = (newranks - np.mean(newranks)) / np.mean(newranks)
 
-                v2_rel = np.sum((theseparts_vel - theseparts_halo_vel)**2, axis = 1)
-                newranksv = v2_rel.argsort().argsort() 
-                ranksv_parts[indices_parts] = (newranksv - np.mean(newranksv)) / np.mean(newranksv)
+                    v2_rel = np.sum((theseparts_vel - theseparts_halo_vel)**2, axis = 1)
+                    newranksv = v2_rel.argsort().argsort() 
+                    ranksv_parts[indices_parts] = (newranksv - np.mean(newranksv)) / np.mean(newranksv)
 
-                # get rps
-                # calc relative positions
-                r_rel = theseparts_pos - theseparts_halo_pos 
-                r0 = np.sqrt(np.sum(r_rel**2, axis = 1))
-                r_rel_norm = r_rel/r0[:, None]
+                    # get rps
+                    # calc relative positions
+                    r_rel = theseparts_pos - theseparts_halo_pos 
+                    r0 = np.sqrt(np.sum(r_rel**2, axis = 1))
+                    r_rel_norm = r_rel/r0[:, None]
 
-                # list of peculiar velocities of the particles
-                vels_rel = theseparts_vel - theseparts_halo_vel # velocity km/s
-                # relative speed to halo center squared
-                v_rel2 = np.sum(vels_rel**2, axis = 1) 
+                    # list of peculiar velocities of the particles
+                    vels_rel = theseparts_vel - theseparts_halo_vel # velocity km/s
+                    # relative speed to halo center squared
+                    v_rel2 = np.sum(vels_rel**2, axis = 1) 
 
-                # calculate radial and tangential peculiar velocity
-                vel_rad = np.sum(vels_rel*r_rel_norm, axis = 1)
-                newranksr = vel_rad.argsort().argsort() 
-                ranksr_parts[indices_parts] = (newranksr - np.mean(newranksr)) / np.mean(newranksr)
+                    # calculate radial and tangential peculiar velocity
+                    vel_rad = np.sum(vels_rel*r_rel_norm, axis = 1)
+                    newranksr = vel_rad.argsort().argsort() 
+                    ranksr_parts[indices_parts] = (newranksr - np.mean(newranksr)) / np.mean(newranksr)
 
-                # radial component
-                v_rad2 = vel_rad**2 # speed
-                # tangential component
-                v_tan2 = v_rel2 - v_rad2
+                    # radial component
+                    v_rad2 = vel_rad**2 # speed
+                    # tangential component
+                    v_tan2 = v_rel2 - v_rad2
 
-                # compute the perihelion distance for NFW profile
-                m = halos['N'][j]*Mpart / h # in kg
-                rs = halos['r25_com'][j]
-                c = halos['r90_com'][j]/rs
-                r0_kpc = r0*1000 # kpc
-                alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
+                    # compute the perihelion distance for NFW profile
+                    m = halos['N'][j]*Mpart / h # in kg
+                    rs = halos['r25_com'][j]
+                    c = halos['r90_com'][j]/rs
+                    r0_kpc = r0*1000 # kpc
+                    alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
 
-                # iterate a few times to solve for rp
-                x2 = v_tan2/(v_tan2+v_rad2)
+                    # iterate a few times to solve for rp
+                    x2 = v_tan2/(v_tan2+v_rad2)
 
-                num_iters = 20 # how many iterations do we want
-                factorA = v_tan2 + v_rad2
-                factorB = np.log(1+r0_kpc/rs)
-                for it in range(num_iters):
-                    oldx = np.sqrt(x2)
-                    x2 = v_tan2/(factorA + alpha*(np.log(1+oldx*r0_kpc/rs)/oldx - factorB))
-                x2[np.isnan(x2)] = 1
-                # final perihelion distance 
-                rp2 = r0_kpc**2*x2
-                newranksp = rp2.argsort().argsort() 
-                ranksp_parts[indices_parts] = (newranksp - np.mean(newranksp)) / np.mean(newranksp)
+                    num_iters = 20 # how many iterations do we want
+                    factorA = v_tan2 + v_rad2
+                    factorB = np.log(1+r0_kpc/rs)
+                    for it in range(num_iters):
+                        oldx = np.sqrt(x2)
+                        x2 = v_tan2/(factorA + alpha*(np.log(1+oldx*r0_kpc/rs)/oldx - factorB))
+                    x2[np.isnan(x2)] = 1
+                    # final perihelion distance 
+                    rp2 = r0_kpc**2*x2
+                    newranksp = rp2.argsort().argsort() 
+                    ranksp_parts[indices_parts] = (newranksp - np.mean(newranksp)) / np.mean(newranksp)
 
         else:
             halos_pstart_new[j] = -1
@@ -331,10 +330,11 @@ def load_chunk(i):
     print("adding rank fields to particle data ")
     parts = parts[mask_parts.astype(bool)]
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
-    parts['ranks'] = ranks_parts[mask_parts.astype(bool)]
-    parts['ranksv'] = ranksv_parts[mask_parts.astype(bool)]
-    parts['ranksr'] = ranksr_parts[mask_parts.astype(bool)]
-    parts['ranksp'] = ranksp_parts[mask_parts.astype(bool)]
+    if want_ranks:
+        parts['ranks'] = ranks_parts[mask_parts.astype(bool)]
+        parts['ranksv'] = ranksv_parts[mask_parts.astype(bool)]
+        parts['ranksr'] = ranksr_parts[mask_parts.astype(bool)]
+        parts['ranksp'] = ranksp_parts[mask_parts.astype(bool)]
     parts['downsample_halo'] = downsample_parts[mask_parts.astype(bool)]
     parts['halo_vel'] = hvel_parts[mask_parts.astype(bool)]
     parts['halo_mass'] = Mh_parts[mask_parts.astype(bool)]
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     # do further subsampling 
     # load_chunk(0)
     halo_info_fns = \
-    list((simdir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
+    list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
 
     numchunks = len(halo_info_fns)
 
