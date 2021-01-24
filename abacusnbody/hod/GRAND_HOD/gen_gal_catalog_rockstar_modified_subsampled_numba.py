@@ -647,7 +647,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
         ELG_decorations_array = np.zeros(10)
         want_ELG = False
         
-    if 'ELG' in tracers.keys():
+    if 'QSO' in tracers.keys():
         # QSO design
         want_QSO = True
         pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, As_Q = \
@@ -724,7 +724,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
             'vz': fast_concatenate(HOD_dict_cent[tracer]['vz'], HOD_dict_sat[tracer]['vz']),
             'mass': fast_concatenate(HOD_dict_cent[tracer]['mass'], HOD_dict_sat[tracer]['mass']),
             'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id']),
-            'Ncent' = len(HOD_dict_cent[tracer]['x'])
+            'Ncent': len(HOD_dict_cent[tracer]['x'])
         }
         HOD_dict[tracer] = tracer_dict
     print("organizing outputs took ", time.time() - start)
