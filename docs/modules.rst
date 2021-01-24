@@ -5,4 +5,3 @@ abacusnbody API
    :maxdepth: 4
 
    abacusnbody.data
-   abacusnbody.hod

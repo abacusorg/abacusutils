@@ -1,7 +1,7 @@
 AbacusHOD
 =========
 
-.. automodule:: abacusnbody.hod.abacus_hod
+.. automodule:: abacusnbody.hod.AbacusHOD.abacus_hod
    :members:
    :undoc-members:
    :show-inheritance:

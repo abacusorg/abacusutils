@@ -25,9 +25,9 @@ import numba
 from numba import njit, types
 from numba.typed import Dict
 
-import yaml
-config = yaml.load(open('config/abacus_hod.yaml'))
-numba.set_num_threads(config['HOD_params']['Nthread_hod'])
+# import yaml
+# config = yaml.load(open('config/abacus_hod.yaml'))
+numba.set_num_threads(16)
 float_array = types.float64[:]
 
 @njit(fastmath=True)
