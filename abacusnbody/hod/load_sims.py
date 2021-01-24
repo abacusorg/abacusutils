@@ -90,7 +90,7 @@ def load_chunk(i):
     if want_ranks:
         outfilename_particles += '_withranks'
     outfilename_particles += '_new.h5'
-    outfilename_halos += '_new.5'
+    outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
     # if file already exists, just skip
@@ -381,12 +381,12 @@ if __name__ == "__main__":
 
     numchunks = len(halo_info_fns)
 
+    for i in range(numchunks):
+        load_chunk(i)
     p = multiprocessing.Pool(config['HOD_params']['Nthread_load'])
     p.map(load_chunk, range(numchunks))
     p.close()
     p.join()
 
-
-
-print("done")
+    print("done, took time ", time.time() - start)
 

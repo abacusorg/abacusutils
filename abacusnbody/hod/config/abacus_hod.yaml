@@ -35,7 +35,7 @@ data_params:
 HOD_params:
     want_ranks: True
     Ndim: 1024
-    Nthread_load: 8
+    Nthread_load: 7
     Nthread_hod: 16
     density_sigma: 3
     tracer_flags:

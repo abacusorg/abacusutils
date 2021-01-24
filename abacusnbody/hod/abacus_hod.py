@@ -10,16 +10,15 @@ import timeit
 from pathlib import Path
 
 import numpy as np
-from astropy.table import Table, vstack
 import h5py
 import asdf
 import argparse
 import multiprocessing
 from multiprocessing import Pool
-from itertools import repeat
+
 
 from GRAND_HOD import gen_gal_catalog_rockstar_modified_subsampled_numba as galcat
-from calc_xi import calc_xirppi_fast, calc_wp_fast
+from tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 class AbacusHOD:
@@ -85,8 +84,6 @@ class AbacusHOD:
         self.lbox = header['BoxSize']
         
         # list holding individual chunks
-        # halo_data = Table()
-        # particle_data = Table()
         hpos = np.empty((1, 3))
         hvel = np.empty((1, 3))
         hmass = np.array([])
