@@ -33,14 +33,14 @@ data_params:
 #            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
 
 HOD_params:
-    want_ranks: False
+    want_ranks: True
     Ndim: 1024
     Nthread_load: 8
     Nthread_hod: 16
     density_sigma: 3
     tracer_flags:
         LRG: True
-        ELG: False
+        ELG: True
         QSO: False
     want_rsd: True
     write_to_disk: False

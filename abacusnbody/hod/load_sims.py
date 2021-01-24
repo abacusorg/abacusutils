@@ -85,8 +85,10 @@ def load_chunk(i):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     if MT:
-        outfilename_halos += 'MT'
-        outfilename_particles += 'MT'
+        outfilename_halos += '_MT'
+        outfilename_particles += '_MT'
+    if want_ranks:
+        outfilename_particles += '_withranks'
     outfilename_particles += '_new.h5'
     outfilename_halos += '_new.5'
 
@@ -239,13 +241,9 @@ def load_chunk(i):
             start_tracker += np.sum(submask)
 
             if want_ranks:
-                # make the rankings
-                theseparts = parts[
-                    halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
-                theseparts_pos = theseparts['pos']
-                theseparts_vel = theseparts['vel']
-                theseparts_halo_pos = halos['x_com'][j]
-                theseparts_halo_vel = halos['v_com'][j]
+                if np.sum(submask) == 0:
+                    continue
+                # extract particle index
                 indices_parts = np.arange(
                     halos_pstart[j], halos_pstart[j] + halos_pnum[j])[submask.astype(bool)]
                 indices_parts = indices_parts.astype(int)
@@ -254,58 +252,66 @@ def load_chunk(i):
                     ranksv_parts[indices_parts] = 0
                     ranksp_parts[indices_parts] = 0
                     ranksr_parts[indices_parts] = 0
+                    continue
+                
+                # make the rankings
+                theseparts = parts[
+                    halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
+                theseparts_pos = theseparts['pos']
+                theseparts_vel = theseparts['vel']
+                theseparts_halo_pos = halos['x_com'][j]
+                theseparts_halo_vel = halos['v_com'][j]
 
-                else:
-                    dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
-                    newranks = dist2_rel.argsort().argsort() 
-                    ranks_parts[indices_parts] = (newranks - np.mean(newranks)) / np.mean(newranks)
+                dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
+                newranks = dist2_rel.argsort().argsort() 
+                ranks_parts[indices_parts] = (newranks - np.mean(newranks)) / np.mean(newranks)
 
-                    v2_rel = np.sum((theseparts_vel - theseparts_halo_vel)**2, axis = 1)
-                    newranksv = v2_rel.argsort().argsort() 
-                    ranksv_parts[indices_parts] = (newranksv - np.mean(newranksv)) / np.mean(newranksv)
+                v2_rel = np.sum((theseparts_vel - theseparts_halo_vel)**2, axis = 1)
+                newranksv = v2_rel.argsort().argsort() 
+                ranksv_parts[indices_parts] = (newranksv - np.mean(newranksv)) / np.mean(newranksv)
 
-                    # get rps
-                    # calc relative positions
-                    r_rel = theseparts_pos - theseparts_halo_pos 
-                    r0 = np.sqrt(np.sum(r_rel**2, axis = 1))
-                    r_rel_norm = r_rel/r0[:, None]
+                # get rps
+                # calc relative positions
+                r_rel = theseparts_pos - theseparts_halo_pos 
+                r0 = np.sqrt(np.sum(r_rel**2, axis = 1))
+                r_rel_norm = r_rel/r0[:, None]
 
-                    # list of peculiar velocities of the particles
-                    vels_rel = theseparts_vel - theseparts_halo_vel # velocity km/s
-                    # relative speed to halo center squared
-                    v_rel2 = np.sum(vels_rel**2, axis = 1) 
+                # list of peculiar velocities of the particles
+                vels_rel = theseparts_vel - theseparts_halo_vel # velocity km/s
+                # relative speed to halo center squared
+                v_rel2 = np.sum(vels_rel**2, axis = 1) 
 
-                    # calculate radial and tangential peculiar velocity
-                    vel_rad = np.sum(vels_rel*r_rel_norm, axis = 1)
-                    newranksr = vel_rad.argsort().argsort() 
-                    ranksr_parts[indices_parts] = (newranksr - np.mean(newranksr)) / np.mean(newranksr)
+                # calculate radial and tangential peculiar velocity
+                vel_rad = np.sum(vels_rel*r_rel_norm, axis = 1)
+                newranksr = vel_rad.argsort().argsort() 
+                ranksr_parts[indices_parts] = (newranksr - np.mean(newranksr)) / np.mean(newranksr)
 
-                    # radial component
-                    v_rad2 = vel_rad**2 # speed
-                    # tangential component
-                    v_tan2 = v_rel2 - v_rad2
+                # radial component
+                v_rad2 = vel_rad**2 # speed
+                # tangential component
+                v_tan2 = v_rel2 - v_rad2
 
-                    # compute the perihelion distance for NFW profile
-                    m = halos['N'][j]*Mpart / h # in kg
-                    rs = halos['r25_com'][j]
-                    c = halos['r90_com'][j]/rs
-                    r0_kpc = r0*1000 # kpc
-                    alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
+                # compute the perihelion distance for NFW profile
+                m = halos['N'][j]*Mpart / h # in kg
+                rs = halos['r25_com'][j]
+                c = halos['r90_com'][j]/rs
+                r0_kpc = r0*1000 # kpc
+                alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
 
-                    # iterate a few times to solve for rp
-                    x2 = v_tan2/(v_tan2+v_rad2)
+                # iterate a few times to solve for rp
+                x2 = v_tan2/(v_tan2+v_rad2)
 
-                    num_iters = 20 # how many iterations do we want
-                    factorA = v_tan2 + v_rad2
-                    factorB = np.log(1+r0_kpc/rs)
-                    for it in range(num_iters):
-                        oldx = np.sqrt(x2)
-                        x2 = v_tan2/(factorA + alpha*(np.log(1+oldx*r0_kpc/rs)/oldx - factorB))
-                    x2[np.isnan(x2)] = 1
-                    # final perihelion distance 
-                    rp2 = r0_kpc**2*x2
-                    newranksp = rp2.argsort().argsort() 
-                    ranksp_parts[indices_parts] = (newranksp - np.mean(newranksp)) / np.mean(newranksp)
+                num_iters = 20 # how many iterations do we want
+                factorA = v_tan2 + v_rad2
+                factorB = np.log(1+r0_kpc/rs)
+                for it in range(num_iters):
+                    oldx = np.sqrt(x2)
+                    x2 = v_tan2/(factorA + alpha*(np.log(1+oldx*r0_kpc/rs)/oldx - factorB))
+                x2[np.isnan(x2)] = 1
+                # final perihelion distance 
+                rp2 = r0_kpc**2*x2
+                newranksp = rp2.argsort().argsort() 
+                ranksp_parts[indices_parts] = (newranksp - np.mean(newranksp)) / np.mean(newranksp)
 
         else:
             halos_pstart_new[j] = -1
