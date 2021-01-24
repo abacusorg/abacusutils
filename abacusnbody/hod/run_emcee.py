@@ -10,7 +10,7 @@ import emcee
 import yaml
 
 from likelihood import PowerData
-from abacus_hod import AbacusHOD
+from AbacusHOD.abacus_hod import AbacusHOD
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
