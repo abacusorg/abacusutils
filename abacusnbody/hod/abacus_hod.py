@@ -223,8 +223,8 @@ import multiprocessing
 from multiprocessing import Pool
 
 
-from GRAND_HOD import gen_gal_catalog_rockstar_modified_subsampled_numba as galcat
-from tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast
+from .GRAND_HOD import gen_gal_cat
+from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 class AbacusHOD:
@@ -441,7 +441,7 @@ class AbacusHOD:
     
     def run_hod(self, tracers, want_rsd, write_to_disk = False):
         
-        mock_dict = galcat.gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
+        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
 
         return mock_dict
 
