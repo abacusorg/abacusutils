@@ -31,6 +31,7 @@ and new performance opportunities identified.
    :caption: Interfaces
 
    compaso
+   hod
    pipes
 
 .. toctree::
