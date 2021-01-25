@@ -1,24 +1,14 @@
 # Comment out the probes you don't need
 # CAREFUL: yaml is super sensitive to spaces - don't use tabs
 
-# Power spectrum parameters
-power_params:
-#    power_type: 'wp'
-    power_type: 'xirppi'
-    bin_params:
-        logmin: -0.7728787904780005
-        logmax: 1.4771212597864314
-        nbins: 9
-    pimax: 30
-    pi_bin_size: 5
 
 # Simulation parameters
 sim_params:
-    sim_name: 'AbacusSummit_base_c000_ph006'
-    sim_dir: '/mnt/gosling2/bigsims/'
-    scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'
-    subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'
-    z_mock: 0.5
+    sim_name: 'AbacusSummit_base_c000_ph006'                                 # which simulation 
+    sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
+    scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
+    subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
+    z_mock: 0.5                                                              # which redshift slice
 
 data_params:
     tracer_combos:
@@ -32,17 +22,17 @@ data_params:
 #            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
 #            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
 
+# HOD parameters
 HOD_params:
-    want_ranks: True
-    Ndim: 1024
-    Nthread_load: 7
-    Nthread_hod: 64
-    density_sigma: 3
-    tracer_flags:
+    Nthread_load: 7                # number of thread for organizing simulation outputs (load_sims)
+    want_ranks: True               # want to implement satellite profile flexiblities?
+    Ndim: 1024                     # grid density for computing local environment
+    density_sigma: 3               # scale radius in Mpc / h for local density calculation
+    tracer_flags:                  # which tracer do we want?
         LRG: True
         ELG: False
         QSO: False
-    want_rsd: True
+    want_rsd: True                 # want RSD? 
     write_to_disk: False
 
     # parameters for setting up the HOD of LRGs
@@ -105,6 +95,17 @@ HOD_params:
         Asat: 0
         Bcent: 0
         Bsat: 0
+
+# Power spectrum parameters
+power_params:
+#    power_type: 'wp'
+    power_type: 'xirppi'
+    bin_params:
+        logmin: -0.7728787904780005
+        logmax: 1.4771212597864314
+        nbins: 9
+    pimax: 30
+    pi_bin_size: 5
 
 # Parameters to be fitted in MCMC
 # [mapping_index, mean, min, max, std, tr_type]

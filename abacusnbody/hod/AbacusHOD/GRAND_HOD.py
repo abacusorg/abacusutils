@@ -27,7 +27,7 @@ from numba.typed import Dict
 
 # import yaml
 # config = yaml.load(open('config/abacus_hod.yaml'))
-numba.set_num_threads(16)
+# numba.set_num_threads(16)
 float_array = types.float64[:]
 
 @njit(fastmath=True)
@@ -130,7 +130,7 @@ def wrap(x, L):
 def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, 
     LRG_design_array, LRG_decorations_array, ELG_design_array, 
     ELG_decorations_array, QSO_design_array, QSO_decorations_array, 
-    rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO):
+    rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread):
     """
     Generate central galaxies in place in memory with a two pass numba parallel implementation. 
     """
@@ -153,7 +153,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
     H = len(mass)
 
-    Nthread = numba.get_num_threads()
+    # Nthread = numba.get_num_threads()
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
 
@@ -314,7 +314,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     enable_ranks, ranks, ranksv, ranksp, ranksr, 
     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
     QSO_design_array, QSO_decorations_array,
-    rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO):
+    rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO, Nthread):
 
     """
     Generate satellite galaxies in place in memory with a two pass numba parallel implementation. 
@@ -346,7 +346,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
 
     H = len(hmass) # num of particles
 
-    Nthread = numba.get_num_threads()
+    # Nthread = numba.get_num_threads()
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
 
@@ -519,7 +519,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     return LRG_dict, ELG_dict, QSO_dict
 
 @njit(parallel = True, fastmath = True)
-def fast_concatenate(array1, array2):
+def fast_concatenate(array1, array2, Nthread):
     ''' Fast concatenate with numba parallel'''
 
     N1 = len(array1)
@@ -528,8 +528,6 @@ def fast_concatenate(array1, array2):
         return array2
     elif N2 == 0:
         return array1
-
-    Nthread = numba.get_num_threads()
 
     Nthread1 = int(np.floor(Nthread * N1 / (N1 + N2)))
     Nthread2 = Nthread - Nthread1
@@ -547,7 +545,7 @@ def fast_concatenate(array1, array2):
     # final_array = np.concatenate((array1, array2))
     return final_array
 
-def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
+def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd):
     """
     parse hod parameters, pass them on to central and satellite generators 
     and then format the results 
@@ -691,7 +689,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
              halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
-             QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO)
+             QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread)
     print("generating centrals took ", time.time() - start)
 
 
@@ -702,7 +700,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
              enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'],
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
-             want_LRG, want_ELG, want_QSO)
+             want_LRG, want_ELG, want_QSO, Nthread)
 
     print("generating satellites took ", time.time() - start)
 
@@ -715,14 +713,14 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
     HOD_dict = {}
     for tracer in tracers.keys():
         tracer_dict = {
-            'x': fast_concatenate(HOD_dict_cent[tracer]['x'], HOD_dict_sat[tracer]['x']),
-            'y': fast_concatenate(HOD_dict_cent[tracer]['y'], HOD_dict_sat[tracer]['y']),
-            'z': fast_concatenate(HOD_dict_cent[tracer]['z'], HOD_dict_sat[tracer]['z']),
-            'vx': fast_concatenate(HOD_dict_cent[tracer]['vx'], HOD_dict_sat[tracer]['vx']),
-            'vy': fast_concatenate(HOD_dict_cent[tracer]['vy'], HOD_dict_sat[tracer]['vy']),
-            'vz': fast_concatenate(HOD_dict_cent[tracer]['vz'], HOD_dict_sat[tracer]['vz']),
-            'mass': fast_concatenate(HOD_dict_cent[tracer]['mass'], HOD_dict_sat[tracer]['mass']),
-            'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id']),
+            'x': fast_concatenate(HOD_dict_cent[tracer]['x'], HOD_dict_sat[tracer]['x'], Nthread),
+            'y': fast_concatenate(HOD_dict_cent[tracer]['y'], HOD_dict_sat[tracer]['y'], Nthread),
+            'z': fast_concatenate(HOD_dict_cent[tracer]['z'], HOD_dict_sat[tracer]['z'], Nthread),
+            'vx': fast_concatenate(HOD_dict_cent[tracer]['vx'], HOD_dict_sat[tracer]['vx'], Nthread),
+            'vy': fast_concatenate(HOD_dict_cent[tracer]['vy'], HOD_dict_sat[tracer]['vy'], Nthread),
+            'vz': fast_concatenate(HOD_dict_cent[tracer]['vz'], HOD_dict_sat[tracer]['vz'], Nthread),
+            'mass': fast_concatenate(HOD_dict_cent[tracer]['mass'], HOD_dict_sat[tracer]['mass'], Nthread),
+            'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id'], Nthread),
             'Ncent': len(HOD_dict_cent[tracer]['x'])
         }
         HOD_dict[tracer] = tracer_dict
@@ -730,7 +728,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
     return HOD_dict
 
 
-def gen_gal_cat(halo_data, particle_data, tracers, params, 
+def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     enable_ranks = False, rsd = True, write_to_disk = False, savedir = ("./")):
     """
     pass on inputs to the gen_gals function and takes care of I/O
@@ -775,7 +773,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params,
         print("Error: rsd has to be a boolean.")
 
     # find the halos, populate them with galaxies and write them to files
-    HOD_dict = gen_gals(halo_data, particle_data, tracers, params, enable_ranks, rsd)
+    HOD_dict = gen_gals(halo_data, particle_data, tracers, params, Nthread, enable_ranks, rsd)
     
     # how many galaxies were generated and write them to disk
     for tracer in tracers.keys():

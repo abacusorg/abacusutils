@@ -11,7 +11,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.interpolate import NearestNDInterpolator
 from itertools import repeat
 
-from ..data.compaso_halo_catalog import CompaSOHaloCatalog
+from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
 import multiprocessing
 from multiprocessing import Pool

@@ -1,7 +1,20 @@
 """
 The AbacusHOD module loads halo catalogs from the AbacusSummit 
 simulations and outputs multi-tracer mock galaxy catalogs.  
-The module defines one class, ``AbacusHOD``, hose constructor 
+The code is highly efficient and contains a large set of HOD
+extensions such as secondary biases (assembly biases),
+velocity biases, and satellite profile flexibilities. The baseline 
+HODs are based on those from `Zheng et al. 2007 <https://arxiv.org/abs/astro-ph/0703457>`_ 
+and `Alam et al. 2020 <http://arxiv.org/abs/1910.05095>`_. 
+The HOD extensions are first explained in `Yuan et al. 2018 <https://arxiv.org/abs/1802.10115>`_, and more 
+recently summarized in `Yuan et al. 2020b <https://arxiv.org/abs/2010.04182>`_ . 
+This HOD code also supports RSD and incompleteness. The module also
+provides efficient correlation function and power spectrum calculators.
+This module is particularly suited for efficiently sampling HOD parameter
+space. We provide examples of docking it onto ``emcee`` and ``dynesty``
+samplers. 
+
+The module defines one class, ``AbacusHOD``, whose constructor 
 takes the path to the simulation volume, and a set of HOD 
 parameters, and runs the ``staging`` function to compile the 
 simulation halo catalog as a set of arrays that are saved on
@@ -15,8 +28,8 @@ Each subdictionary contains all the mock galaxies of that
 tracer type, recording their properties with keys ``x``, ``y``
 , ``z``, ``vx``, ``vy``, ``vz``, ``mass``, ``id``, ``Ncent``.
 The coordinates are in Mpc/h, and the velocities are in km/s.
-The mass refers to host halo mass and is in units of Msun/h.
-The id refers to halo id, and the Ncent key refers to number of
+The ``mass`` refers to host halo mass and is in units of Msun/h.
+The ``id`` refers to halo id, and the ``Ncent`` key refers to number of
 central galaxies for that tracer. The first ``Ncent`` galaxies 
 in the catalog are always centrals and the rest are satellites. 
 
@@ -25,192 +38,144 @@ The galaxies can be written to disk by setting the
 ``run_hod``. However, the I/O is slow and the``write_to_disk`` 
 flag defaults to ``False``.
 
-Beyond just loading the halo catalog files into memory, this
-module performs a few other manipulations.  Many of the halo
-catalog columns are stored in bit-packed formats (e.g.
-floats are scaled to a ratio from 0 to 1 then packed in 16-bit
-ints), so these columns are unpacked as they are loaded.
+The core of the AbacusHOD code is a two-pass memory-in-place algorithm.
+The first pass of the halo+particle subsample computes the number
+of galaxies generated in total. Then an empty array for these galaxies 
+is allocated in memory, which is then filled on the second pass of 
+the halos+particles. Each pass is accelerated with numba parallel.
+The default threading is set to 16. 
 
-Furthermore, the halo catalogs for big simulations are divided
-across a few dozen files.  These files are transparently loaded
-into one monolithic Astropy table if one passes a directory
-to ``CompaSOHaloCatalog``; to save memory by loading only one file,
-pass just that file as the argument to ``CompaSOHaloCatalog``.
 
-Importantly, because ASDF and Astropy tables are both column-
-oriented, it can be much faster to load only the subset of
-halo catalog columns that one needs, rather than all 60-odd
-columns.  Use the ``fields`` argument to the ``CompaSOHaloCatalog``
-constructor to specify a subset of fields to load.  Similarly, the
-particles can be quite large, and one can use the ``load_subsamples``
-argument to restrict the particles to the subset one needs.
+Theory
+======
+The baseline HOD for LRGs comes from Zheng et al. 2007:
 
-Some brief examples and technical details about the halo catalog
+.. math:: \\bar{n}_{\\mathrm{cent}}(M) = \\frac{1}{2}\\mathrm{erfc} \\left[\\frac{\\ln(M_{\\mathrm{cut}}/M)}{\\sqrt{2}\\sigma}\\right],
+.. math:: \\bar{n}_{\\textrm{sat}}(M) = \\left[\\frac{M-\\kappa M_{\\textrm{cut}}}{M_1}\\right]^{\\alpha}\\bar{n}_{\\mathrm{cent}}(M),
+
+The baseline HOD for ELGs and QSOs 
+comes from Alam et al. 2020. The actual calculation
+is complex and we refer the readers 
+to section 3 of `said paper <http://arxiv.org/abs/1910.05095>`_ for details. 
+
+In the baseline implementation, the central galaxy is assigned to the center 
+of mass of the halo, with the velocity vector also set to that of the center 
+of mass of the halo. Satellite galaxies are assigned to particles of the 
+halo with equal weights. When multiple tracers are enabled, each halo/particle
+can only host a single tracer type. However, we have not yet implemented any
+prescription of conformity. 
+
+The secondary bias (assembly bias) extensions follow the recipes described in 
+`Xu et al. 2020 <https://arxiv.org/abs/2007.05545>`_ , where the secondary halo
+property (concentration or local overdensity) is directly tied to the mass 
+parameters in the baseline HOD (:math:`M_{\\mathrm{cut}}` and :math:`M_1`):
+
+.. math:: \\log_{10} M_{\\mathrm{cut}}^{\\mathrm{mod}} = \\log_{10} M_{\\mathrm{cut}} + A_c(c^{\\mathrm{rank}} - 0.5) + B_c(\\delta^{\\mathrm{rank}} - 0.5)
+.. math:: \\log_{10} M_{1}^{\\mathrm{mod}} = \\log_{10} M_{1} + A_s(c^{\\mathrm{rank}} - 0.5) + B_s(\\delta^{\\mathrm{rank}} - 0.5)
+
+where :math:`c` and :math:`\\delta` represent the halo concentration and local 
+overdensity, respectively. These secondary properties are ranked within narrow
+halo mass bins, and the rank are normalized to range from 0 to 1, as noted by 
+the :math:`\\mathrm{rank}` superscript. :math:`(A_c, B_c, A_s, B_s)` form the 
+four parameters describing secondary biases in the HOD model. The default for
+these parameters are 0. 
+
+The velocity bias extension follows the common prescription as described in 
+`Guo et al. 2015 <https://arxiv.org/abs/1407.4811>`_ . 
+
+.. math:: \\sigma_c = \\alpha_c \\sigma_h
+.. math:: v_s - v_h = \\alpha_s (v_p - v_h)
+
+where the central velocity bias parameter :math:`\\alpha_c` sets the ratio of
+central velocity dispersion vs. halo velocity dispersion. The satellite 
+velocity bias parameter :math:`\\alpha_c` sets the ratio between the satellite
+peculiar velocity to the particle peculiar velocity. The default for these two
+parameters are 1. 
+
+We additionaly introduce a set of satellite profile parameters 
+:math:`(s, s_v, s_p, s_r)` that allow for flexibilities in how satellite 
+galaxies are distributed within a halo. They respecctively allow the galaxy
+weight per particle to depend on radial position (:math:`s`), peculair velocity
+(:math:`s_v`), perihelion distance of the particle orbit (:math:`s_p`), and
+the radial velocity (:math:`s_v`). The default values for these parameters are
+0. A detailed description of these parameters are available in 
+`Yuan et al. 2018 <https://arxiv.org/abs/1802.10115>`_, and more 
+recently in `Yuan et al. 2020b <https://arxiv.org/abs/2010.04182>`_ . 
+
+
+Some brief examples and technical details about the module
 layout are presented below, followed by the full module API.
-Examples of using this module to work with AbacusSummit data can
-be found on the AbacusSummit website here:
-https://abacussummit.readthedocs.io
 
 
 Short Example
 =============
->>> from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
->>> # Load the RVs and PIDs for particle subsample A
->>> cat = CompaSOHaloCatalog('/storage/AbacusSummit/AbacusSummit_base_c000_ph000/halos/z0.100', load_subsamples='A_all')
->>> print(cat.halos[:5])  # cat.halos is an Astropy Table, print the first 5 rows
-   id    npstartA npstartB ... sigmavrad_L2com sigmavtan_L2com rvcirc_max_L2com
--------- -------- -------- ... --------------- --------------- ----------------
-25000000        0        2 ...       0.9473971      0.96568024      0.042019103
-25000001       11       12 ...      0.86480814       0.8435805      0.046611086
-48000000       18       15 ...      0.66734606      0.68342227      0.033434115
-58000000       31       18 ...      0.52170926       0.5387341      0.042292822
-58001000       38       23 ...       0.4689916      0.40759262      0.034498636
->>> print(cat.halos['N','x_com'][:5])  # print the position and mass of the first 5 halos
-  N         x_com [3]        
---- ------------------------
-278 -998.88525 .. -972.95404
- 45  -998.9751 .. -972.88416
-101   -999.7485 .. -947.8377
- 82    -998.904 .. -937.6313
- 43   -999.3252 .. -937.5813
->>> # Examine the particle subsamples associated with the 5th halo
->>> h5 = cat.halos[4]
->>> print(cat.subsamples['pos'][h5['npstartA']:h5['npstartA'] + h5['npoutA']])
-        pos [3]         
-------------------------
-  -999.3019 .. -937.5229
- -999.33435 .. -937.5515
--999.38965 .. -937.58777
->>> # At a glance, the pos fields match that of the 5th halo above, so it appears we have indexed correctly!
 
+The first step is to create the configuration file: ``config/abacus_hod.yaml``,
+which provides the full customizability of the HOD code. It should be in your 
+current work directory under a subdirectory ``./config``. A template with 
+default settings are provided under ``abacusnbody/hod/config``. 
 
-Catalog Structure
-=================
-The catalogs are stored in a directory structure that looks like:
+With the first use, you should define which simulation box, which redshift,
+the path to simulation data, the path to output datasets, the various HOD 
+flags and an initial set of HOD parameters. Other decisions that need to be 
+made initially (you can always re-do this but it would take some time) include:
+do you only want LRGs or do you want other tracers as well? 
+Do you want to enable satellite profile flexibilities (the :math:`s, s_v, s_p, s_r`
+parameters)? If so, you need to turn on ``want_ranks`` flag in the config file. 
+If you want to enable secondary bias based on local environment, what scale 
+radius do you want the environment do be defined in, this is set by the 
+``density_sigma`` flag in Mpc/h. The default value is 3. Related, the ``Ndim``
+parameter sets the grid size used to compute local density, and it should be set
+to be larger than Lbox/sigma_density. 
 
-.. code-block:: none
+Now you need to run the ``load_sims`` script, this extracts the simulation outputs
+and organizes them into formats that are suited for the HOD code. This code can take 
+a few hours depending on your configuration settings and system capabilities. 
+We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_20)``.
+You can run ``load_sims`` on command line with ::
+    python /path/to/load_sims.py
 
-    - SimulationName/
-        - halos/
-            - z0.100/
-                - halo_info/
-                    halo_info_000.asdf
-                    halo_info_001.asdf
-                    ...
-                - halo_rv_A/
-                    halo_rv_A_000.asdf
-                    halo_rv_A_001.asdf
-                    ...
-                - <field & halo, rv & PID, subsample A & B directories>
-            - <other redshift directories, some with particle subsamples, others without>
+Once that is finished, you can construct the ``AbacusHOD`` object and run fast 
+HOD chains. A code template is given in ``abacusnbody/hod/run_hod.py`` for 
+running a few example HODs and ``abacusnbody/hod/run_emcee.py`` for integrating 
+with ``emcee`` sampler. Here we provide a code snippet
 
-The file numbering roughly corresponds to a planar chunk of the simulation
-(all y and z for some range of x).  The matching of the halo_info file numbering
-to the particle file numbering is important; halo_info files index into the
-corresponding particle files.
-
-The halo catalogs are stored on disk in ASDF files (https://asdf.readthedocs.io/).
-The ASDF files start with a human-readable header that describes
-the data present in the file and metadata about the simulation
-from which it came (redshift, cosmology, etc).  The rest of
-the file is binary blobs, each representing a column (i.e.
-a halo property).
-
-Internally, the ASDF binary portions are usually compressed.  This should
-be transparent to users, although you may be prompted to install the
-blosc package if it is not present.  Decompression should be fast,
-at least 500 MB/s per core.
-
-
-Particle Subsamples
-===================
-We define two disjoint sets of "subsample" particles, called "subsample A" and
-"subsample B".  Subsample A is a few percent of all particles, with subsample B
-a few times larger than that.  Particles membership in each group is a function
-of PID and is thus consistent across redshift.
-
-At most redshifts, we only output halo catalogs and halo subsample particle PIDs.
-This aids with construction of merger trees.  At a few redshifts, we provide
-subsample particle positions as well as PIDs, for both halo particles and
-non-halo particles, called "field" particles.
-
-
-Halo File Types
-===============
-Each file type (for halos, particles, etc) is grouped into a subdirectory.
-These subdirectories are:
-
-- ``halo_info/``
-    The primary halo catalog files.  Contains stats like
-    CoM positions and velocities and moments of the particles.
-    Also indicates the index and count of subsampled particles in the
-    ``halo_pid_A/B`` and ``halo_rv_A/B`` files.
-
-- ``halo_pid_A/`` and ``halo_pid_B/``
-    The 64-bit particle IDs of particle subsamples A and B.  The PIDs
-    contain information about the Lagrangian position of the particles,
-    whether they are tagged, and their local density.
-
-The following subdirectories are only present for the redshifts for which
-we output particle subsamples and not just halo catalogs:
-    
-- ``halo_rv_A/`` and ``halo_rv_B/``
-    The positions and velocities of the halo subsample particles, in "RVint"
-    format. The halo associations are recoverable with the indices in the
-    ``halo_info`` files.
-
-- ``field_rv_A/`` and ``field_rv_B/``
-    Same as ``halo_rv_<A|B>/``, but only for the field (non-halo) particles.
-
-- ``field_pid_A/`` and ``field_pid_B/``
-    Same as ``halo_pid_<A|B>/``, but only for the field (non-halo) particles.
-
-
-Bit-packed Formats
-==================
-The "RVint" format packs six fields (x,y,z, and vx,vy,vz) into three ints (12 bytes).
-Positions are stored to 20 bits (global), and velocities 12 bits (max 6000 km/s).
-
-The PIDs are 8 bytes and encode a local density estimate, tag bits for merger trees,
-and a unique particle id, the last of which encodes the Lagrangian particle coordinate.
-
-These are described in more detail on the :doc:`AbacusSummit Data Model page <summit:data-products>`.
-
-Use the ``unpack_bits`` argument of the ``CompaSOHaloCatalog`` constructor to specify
-which PID bit fields you want unpacked.  Be aware that some of them might use a lot of
-memory; e.g. the Lagrangian positions are three 4-byte floats per subsample particle.
-Also be aware that some of the returned arrays use narrow int dtypes to save memory,
-such as the ``lagr_idx`` field using ``int16``.  It is easy to silently overflow such
-narrow int types; make sure your operations stay within the type width and cast
-if necessary.
-
-Field Subset Loading
-====================
-Because the ASDF files are column-oriented, it is possible to load just one or a few
-columns (halo catalog fields) rather than the whole file.  This can save huge amounts
-of IO, memory, and CPU time (due to the decompression).  Use the ``fields`` argument
-to the ``CompaSOHaloCatalog`` constructor to specify the list of columns you want.
-
-In detail, some columns are stored as ratios to other columns.  For example, ``r90``
-is stored as a ratio relative to ``r100``.  So to properly unpack
-``r90``, the ``r100`` column must also be read.  ``CompaSOHaloCatalog`` knows about
-these dependencies and will load the minimum set necessary to return the requested
-columns to the user.  However, this may result in more IO than expected.  The ``verbose``
-constructor flag or the ``dependency_info`` field of the ``CompaSOHaloCatalog``
-object may be useful for diagnosing exactly what data is being loaded.
-
-Despite the potential extra IO and CPU time, the extra memory usage is granular
-at the level of individual files.  In other words, when loading multiple files,
-the concatenated array will never be constructed for columns that only exist for
-dependency purposes.
-
-Multi-threaded Decompression
-============================
-The Blosc compression we use inside the ASDF files supports multi-threaded
-decompression.  We have packed AbacusSummit files with 4 Blosc blocks (each ~few MB)
-per ASDF block, so 4 Blosc threads is probably the optimal value.  This is the
-default value, unless fewer cores are available (as determined by the process
-affinity mask).
+>>> import os
+>>> import glob
+>>> import time
+>>> 
+>>> import yaml
+>>> import numpy as np
+>>> import argparse
+>>> 
+>>> from abacusnbody.hod.AbacusHOD.abacus_hod import AbacusHOD
+>>> 
+>>> path2config = 'config/abacus_hod.yaml' # path to config file
+>>> 
+>>> 
+>>> # load the config file and parse in relevant parameters
+>>> config = yaml.load(open(path2config))
+>>> sim_params = config['sim_params']
+>>> HOD_params = config['HOD_params']
+>>> power_params = config['power_params']
+>>> 
+>>> # additional parameter choices
+>>> want_rsd = HOD_params['want_rsd']
+>>> write_to_disk = HOD_params['write_to_disk']
+>>> 
+>>> # create a new AbacusHOD object
+>>> newBall = AbacusHOD(sim_params, HOD_params, power_params)
+>>>     
+>>> # first hod run, slow due to compiling jit, write to disk
+>>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+>>> 
+>>> # run the 10 different HODs for timing
+>>> for i in range(10):
+>>>     newBall.tracers['LRG']['alpha'] += 0.01
+>>>     print("alpha = ",newBall.tracers['LRG']['alpha'])
+>>>     start = time.time()
+>>>     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False)
+>>>     print("Done iteration ", i, "took time ", time.time() - start)
 
 .. note::
 
@@ -453,9 +418,10 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self, tracers, want_rsd, write_to_disk = False):
+    def run_hod(self, tracers, want_rsd, write_to_disk = False, Nthread = 16):
         
-        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
+        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, Nthread,
+            enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
 
         return mock_dict
 
