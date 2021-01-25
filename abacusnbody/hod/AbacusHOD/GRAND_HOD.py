@@ -692,8 +692,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
              halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO)
-    print("generating centrals took ", time.time() - start, "number of centrals ", 
-          len(LRG_dict_cent['mass'])+len(ELG_dict_cent['mass'])+len(QSO_dict_cent['mass']))
+    print("generating centrals took ", time.time() - start)
 
 
     start = time.time()
@@ -705,8 +704,7 @@ def gen_gals(halos_array, subsample, tracers, params, enable_ranks, rsd):
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
              want_LRG, want_ELG, want_QSO)
 
-    print("generating satellites took ", time.time() - start, "number of satellites ", 
-          len(LRG_dict_sat['mass'])+len(ELG_dict_sat['mass'])+len(QSO_dict_sat['mass']))
+    print("generating satellites took ", time.time() - start)
 
     # B.H. TODO: need a for loop above so we don't need to do this by hand
     HOD_dict_sat = {'LRG': LRG_dict_sat, 'ELG': ELG_dict_sat, 'QSO': QSO_dict_sat}
@@ -783,7 +781,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params,
     for tracer in tracers.keys():
         Ncent = HOD_dict[tracer]['Ncent']
         print("generated %ss:"%tracer, len(HOD_dict[tracer]['x']), 
-            "satellite fraction ", Ncent / len(HOD_dict[tracer]['x']))
+            "satellite fraction ", 1 - Ncent/len(HOD_dict[tracer]['x']))
         
         if write_to_disk:
             print("outputting galaxies to disk")
