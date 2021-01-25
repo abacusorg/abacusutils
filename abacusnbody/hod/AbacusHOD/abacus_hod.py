@@ -8,7 +8,18 @@ simulation halo catalog as a set of arrays that are saved on
 memory. The ``run_hod`` function can then be called to 
 generate galaxy catalogs. 
 
-The output 
+The output takes the format of a dictionary of dictionaries,
+where each subdictionary corresponds to a different tracer. 
+Currently, we have enabled tracer types: LRG, ELG, and QSO.
+Each subdictionary contains all the mock galaxies of that 
+tracer type, recording their properties with keys ``x``, ``y``
+, ``z``, ``vx``, ``vy``, ``vz``, ``mass``, ``id``, ``Ncent``.
+The coordinates are in Mpc/h, and the velocities are in km/s.
+The mass refers to host halo mass and is in units of Msun/h.
+The id refers to halo id, and the Ncent key refers to number of
+central galaxies for that tracer. The first ``Ncent`` galaxies 
+in the catalog are always centrals and the rest are satellites. 
+
 The galaxies can be written to disk by setting the 
 ``write_to_disk`` flag to ``True`` in the argument of 
 ``run_hod``. However, the I/O is slow and the``write_to_disk`` 
