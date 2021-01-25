@@ -1,15 +1,18 @@
 """
-The ``compaso_halo_catalog`` module loads halo catalogs from CompaSO, Abacus's
-on-the-fly halo finder.  The module defines one class, ``CompaSOHaloCatalog``,
-whose constructor takes the path to a halo catalog as an argument.
-Users should use this class as the primary interface to load
-and manipulate halo catalogs.
+The AbacusHOD module loads halo catalogs from the AbacusSummit 
+simulations and outputs multi-tracer mock galaxy catalogs.  
+The module defines one class, ``AbacusHOD``, hose constructor 
+takes the path to the simulation volume, and a set of HOD 
+parameters, and runs the ``staging`` function to compile the 
+simulation halo catalog as a set of arrays that are saved on
+memory. The ``run_hod`` function can then be called to 
+generate galaxy catalogs. 
 
-The halo catalogs and particle subsamples are stored on disk in
-ASDF files and are loaded into memory as Astropy tables.  Each
-column of an Astropy table is essentially a Numpy array and can
-be accessed with familiar Numpy-like syntax.  More on Astropy
-tables here: http://docs.astropy.org/en/stable/table/
+The output 
+The galaxies can be written to disk by setting the 
+``write_to_disk`` flag to ``True`` in the argument of 
+``run_hod``. However, the I/O is slow and the``write_to_disk`` 
+flag defaults to ``False``.
 
 Beyond just loading the halo catalog files into memory, this
 module performs a few other manipulations.  Many of the halo
