@@ -468,7 +468,7 @@ class AbacusHOD:
                 y2 = mock_dict[tr2]['y']
                 z2 = mock_dict[tr2]['z']
                 power_spectra[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                if i1 != i2: power_spectra[tr1+'_'+tr2] = power_spectra[tr2+'_'+tr1]
+                if i1 != i2: power_spectra[tr2+'_'+tr1] = power_spectra[tr1+'_'+tr2]
         return power_spectra
 
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
@@ -484,5 +484,5 @@ class AbacusHOD:
                 y2 = mock_dict[tr2]['y']
                 z2 = mock_dict[tr2]['z']
                 power_spectra[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                if i1 != i2: power_spectra[tr1+'_'+tr2] = power_spectra[tr2+'_'+tr1]
+                if i1 != i2: power_spectra[tr2+'_'+tr1] = power_spectra[tr1+'_'+tr2]
         return power_spectra
