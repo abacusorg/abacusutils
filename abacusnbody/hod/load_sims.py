@@ -55,16 +55,14 @@ def subsample_particles(m):
 def get_smo_density_onechunk(i):
     cat = CompaSOHaloCatalog(
     simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-    +str(i).zfill(3)+'.asdf', fields = ['N', 'x_com'])
+    +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'])
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
-    # print(i, np.max(halos['x_com'][:, 0]), np.min(halos['x_com'][:, 0]), 
-    #     np.max(halos['x_com'][:, 1]), np.min(halos['x_com'][:, 1]), 
-    #     np.max(halos['x_com'][:, 2]), np.min(halos['x_com'][:, 2]))       
+      
     # total number of objects                                                                                                      
     N_g = np.sum(halos['N'])   
     # get a 3d histogram with number of objects in each cell                                                                       
-    D, edges = np.histogramdd(halos['x_com'], weights = halos['N'],
+    D, edges = np.histogramdd(halos['x_L2com'], weights = halos['N'],
         bins = N_dim, range = [[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2]])   
     return D
 
@@ -104,7 +102,7 @@ def load_chunk(i):
     cat = CompaSOHaloCatalog(
         simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
         +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv', fields = ['N', 
-        'x_com', 'v_com', 'r90_com', 'r25_com', 'npstartA', 'npoutA', 'id', 'sigmav3d_com'])
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'])
     halos = cat.halos
     parts = cat.subsamples
     header = cat.header
@@ -124,43 +122,13 @@ def load_chunk(i):
     halos['mask_subsample'] = mask_halos
     halos['multi_halos'] = 1.0 / p_halos
 
-    # # compute fenv around center of mass
-    # print("finding pairs")
-    # allpos = halos['x_com']
-    # allmasses = halos['N']*Mpart
-    # allpos_tree = KDTree(allpos)
-    # allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_com'])
-    # allinds_outer = allpos_tree.query_radius(allpos, r = 5)
-    # print("computng m stacks")
-    # starttime = time.time()
-    # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
-    #     for ind in np.arange(len(halos))])
-    # # Menv mean by mass bin 
-    # nbins = 100
-    # mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
-    # fenv_rank = np.zeros(len(Menv))
-    # for ibin in range(nbins):
-    #     mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
-    #     if np.sum(mmask) > 0:
-    #         if np.sum(mmask) == 1:
-    #             fenv_rank[mmask] = 0
-    #         else:
-    #             Menv_mean = np.mean(Menv[mmask])
-    #             newfenv = Menv[mmask] / Menv_mean
-    #             new_fenv_rank = newfenv.argsort().argsort()
-    #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-
-    # fenv = Menv / np.mean(Menv)
-
-    # halos['fenv'] = fenv
-    # halos['fenv_rank'] = fenv_rank
     nbins = 100
     mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
 
     print("computing density rank")
     start = time.time()
     dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
-    ixs = np.floor((np.array(halos['x_com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
+    ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
     halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
     print("done overdensity array")
     fenv_rank = np.zeros(len(halos))
@@ -178,7 +146,7 @@ def load_chunk(i):
     # compute delta concentration
     print("computing c rank")
     start = time.time()
-    halos_c = halos['r90_com']/halos['r25_com']
+    halos_c = halos['r90_L2com']/halos['r25_L2com']
     deltac_rank = np.zeros(len(halos))
     for ibin in range(nbins):
         mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
@@ -228,7 +196,7 @@ def load_chunk(i):
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask
             # print(j, halos_pstart, halos_pnum, p_halos, downsample_parts)
             downsample_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = p_halos[j]
-            hvel_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['v_com'][j]
+            hvel_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['v_L2com'][j]
             Mh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['N'][j] * Mpart # in msun / h
             Np_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = np.sum(submask)
             idh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['id'][j]
@@ -259,8 +227,8 @@ def load_chunk(i):
                     halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
                 theseparts_pos = theseparts['pos']
                 theseparts_vel = theseparts['vel']
-                theseparts_halo_pos = halos['x_com'][j]
-                theseparts_halo_vel = halos['v_com'][j]
+                theseparts_halo_pos = halos['x_L2com'][j]
+                theseparts_halo_vel = halos['v_L2com'][j]
 
                 dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
                 newranks = dist2_rel.argsort().argsort() 
@@ -293,8 +261,8 @@ def load_chunk(i):
 
                 # compute the perihelion distance for NFW profile
                 m = halos['N'][j]*Mpart / h # in kg
-                rs = halos['r25_com'][j]
-                c = halos['r90_com'][j]/rs
+                rs = halos['r25_L2com'][j]
+                c = halos['r90_L2com'][j]/rs
                 r0_kpc = r0*1000 # kpc
                 alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
 
@@ -321,7 +289,7 @@ def load_chunk(i):
     halos['npoutA'] = halos_pnum_new
     halos['randoms'] = np.random.random(len(halos)) # attaching random numbers
     halos['randoms_gaus_vrms'] = np.random.normal(loc = 0, 
-    scale = halos["sigmav3d_com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
+    scale = halos["sigmav3d_L2com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
 
     # output halo file 
     print("outputting new halo file ")
