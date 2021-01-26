@@ -8,7 +8,9 @@ HODs are based on those from `Zheng et al. 2007 <https://arxiv.org/abs/astro-ph/
 and `Alam et al. 2020 <http://arxiv.org/abs/1910.05095>`_. 
 The HOD extensions are first explained in `Yuan et al. 2018 <https://arxiv.org/abs/1802.10115>`_, and more 
 recently summarized in `Yuan et al. 2020b <https://arxiv.org/abs/2010.04182>`_ . 
-This HOD code also supports RSD and incompleteness. The module also
+This HOD code also supports RSD and incompleteness. The code is fast, 
+completeling a :math:`(2Gpc/h)^3` volume in 80ms per tracer on a 32 core
+desktop system, and the performance should be scalable. The module also
 provides efficient correlation function and power spectrum calculators.
 This module is particularly suited for efficiently sampling HOD parameter
 space. We provide examples of docking it onto ``emcee`` and ``dynesty``
