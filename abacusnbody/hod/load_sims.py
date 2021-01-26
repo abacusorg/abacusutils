@@ -383,7 +383,7 @@ if __name__ == "__main__":
 
     for i in range(numchunks):
         load_chunk(i)
-    p = multiprocessing.Pool(config['HOD_params']['Nthread_load'])
+    p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
     p.map(load_chunk, range(numchunks))
     p.close()
     p.join()

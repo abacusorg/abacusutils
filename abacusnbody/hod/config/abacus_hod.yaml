@@ -9,6 +9,7 @@ sim_params:
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
     z_mock: 0.5                                                              # which redshift slice
+    Nthread_load: 7                                                          # number of thread for organizing simulation outputs (load_sims)
 
 data_params:
     tracer_combos:
@@ -24,7 +25,6 @@ data_params:
 
 # HOD parameters
 HOD_params:
-    Nthread_load: 7                # number of thread for organizing simulation outputs (load_sims)
     want_ranks: True               # want to implement satellite profile flexiblities?
     Ndim: 1024                     # grid density for computing local environment
     density_sigma: 3               # scale radius in Mpc / h for local density calculation

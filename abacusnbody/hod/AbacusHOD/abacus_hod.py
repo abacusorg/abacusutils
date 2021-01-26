@@ -138,7 +138,7 @@ You can run ``load_sims`` on command line with ::
 Once that is finished, you can construct the ``AbacusHOD`` object and run fast 
 HOD chains. A code template is given in ``abacusnbody/hod/run_hod.py`` for 
 running a few example HODs and ``abacusnbody/hod/run_emcee.py`` for integrating 
-with ``emcee`` sampler. Here we provide a code snippet
+with the ``emcee`` sampler. Here we provide a code snippet
 
 >>> import os
 >>> import glob
@@ -151,7 +151,6 @@ with ``emcee`` sampler. Here we provide a code snippet
 >>> from abacusnbody.hod.AbacusHOD.abacus_hod import AbacusHOD
 >>> 
 >>> path2config = 'config/abacus_hod.yaml' # path to config file
->>> 
 >>> 
 >>> # load the config file and parse in relevant parameters
 >>> config = yaml.load(open(path2config))
@@ -177,16 +176,18 @@ with ``emcee`` sampler. Here we provide a code snippet
 >>>     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False)
 >>>     print("Done iteration ", i, "took time ", time.time() - start)
 
-.. note::
+The class also provides fast 2PCF calculators. For example to compute the 
+redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`):
 
-    Loading a CompaSOHaloCatalog will use 4 decompression threads by default.
+>>> # load the rp pi binning from the config file
+>>> bin_params = power_params['bin_params']
+>>> rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
+>>> pimax = power_params['pimax']
+>>> pi_bin_size = power_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
+>>> 
+>>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+>>> xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
-You can control the number of decompression threads with:
-
-.. code-block:: python
-
-    import asdf.compression
-    asdf.compression.set_decompression_options(nthreads=N)
 """
 import os
 import glob
@@ -207,8 +208,55 @@ from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 class AbacusHOD:
+    """
+    A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
+    """
     def __init__(self, sim_params, HOD_params, power_params):
+        """
+        Loads simulation. The ``sim_params`` dictionary specifies which simulation
+        volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
+        configurations. The ``power_params`` specifies the summary statistics 
+        configurations. The ``HOD_params`` and ``power_params`` can be set to their
+        default values in the ``config/abacus_hod.yaml`` file and changed later. 
+        The ``sim_params`` cannot be changed once the ``AbacusHOD`` object is created. 
 
+        Parameters
+        ----------
+        sim_params: dict
+            Dictionary of simulation parameters. Load from ``config/abacus_hod.yaml``. The dictionary should contain the following keys:
+                * ``sim_name``: str, name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'. 
+                * ``sim_dir``: str, the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
+                * ``scratch_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
+                * ``subsample_dir``: str, where to save halo+particle subsample, e.g. '/my/output/subsamples/'. 
+                * ``z_mock``: float, which redshift slice, e.g. 0.5.    
+                * ``Nthread_load``: int, how many threads to use to load the simulation data, default 7. 
+
+        HOD_params: dict 
+            HOD parameters and tracer configurations. Load from ``config/abacus_hod.yaml``. It contains the following keys:
+                * ``tracer_flags``: dict, which tracers is enabled: 
+                    * ``LRG``: bool, default ``True``. 
+                    * ``ELG``: bool, default ``False``. 
+                    * ``QSO``: bool, default ``False``. 
+                * ``want_ranks``: bool, enable satellite profile flexibilities. If ``False``, satellite profile follows the DM, default ``True``. 
+                * ``want_rsd``: bool, enable RSD? default ``True``.                 # want RSD? 
+                * ``Ndim``: int, grid density for computing local environment, default 1024.
+                * ``density_sigma``: float, scale radius in Mpc / h for local density definition, default 3.
+                * ``write_to_disk``: bool, output to disk? default ``False``. Setting to ``True`` decreases performance. 
+                * ``LRG_params``: dict, HOD parameter values for LRGs. Default values are given in config file. 
+                * ``ELG_params``: dict, HOD parameter values for ELGs. Default values are given in config file. 
+                * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file. 
+
+        power_params: dict
+            Sumamry statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
+                * ``power_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
+                * ``bin_params``: dict, transverse scale binning. 
+                    * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}} in Mpc/h.
+                    * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}} in Mpc/h.
+                    * ``nbins``: int, number of bins.
+                * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`. 
+                * ``pi_bin_size``: int, size of bins along of the line of sight. Need to be divisor of ``pimax``.
+
+        """
         # simulation details
         self.sim_name = sim_params['sim_name']
         self.sim_dir = sim_params['sim_dir']
@@ -240,7 +288,9 @@ class AbacusHOD:
 
 
     def staging(self):
-
+        """
+        Constructor call this function to load the halo+particle subsamples onto memory. 
+        """
         # all paths relevant for mock generation
         scratch_dir = Path(self.scratch_dir)
         simname = Path(self.sim_name)
@@ -419,13 +469,71 @@ class AbacusHOD:
 
     
     def run_hod(self, tracers, want_rsd, write_to_disk = False, Nthread = 16):
+        """
+        Runs a custom HOD.
+
+        Parameters
+        ----------
+        ``tracers``: dict
+            dictionary of multi-tracer HOD. ``tracers['LRG']`` is the dictionary of LRG HOD parameters,
+            overwrites the ``LRG_params`` argument in the constructor.
+            Same for keys ``'ELG'`` and ``'QSO'``.
         
+        ``want_rsd``: bool 
+            enable RSD? default ``True``.
+
+        ``write_to_disk``: bool 
+            output to disk? default ``False``. Setting to ``True`` decreases performance. 
+
+        ``Ntread``: int
+            Number of threads in the HOD run. Default 16. 
+
+        Returns
+        -------
+        mock_dict: dict
+            dictionary of galaxy outputs. Contains keys ``'LRG'``, ``'ELG'``, and ``'QSO'``. Each
+            tracer key corresponds to a sub-dictionary that contains the galaxy properties with keys 
+            ``'x'``, ``'y'``, ``'z'``, ``'vx'``, ``'vy'``, ``'vz'``, ``'mass'``, ``'id'``, ``Ncent'``.
+            The coordinates are in Mpc/h, and the velocities are in km/s.
+            The ``'mass'`` refers to host halo mass and is in units of Msun/h.
+            The ``'id'`` refers to halo id, and the ``'Ncent'`` key refers to number of
+            central galaxies for that tracer. The first ``'Ncent'`` galaxies 
+            in the catalog are always centrals and the rest are satellites. 
+
+        """
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, self.tracers, self.params, Nthread,
             enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
 
         return mock_dict
 
     def compute_power(self, mock_dict, *args, **kwargs):
+        """
+        Computes summary statistics, currently enabling ``wp`` and ``xirppi``.
+
+        Parameters
+        ----------
+        ``mock_dict``: dict
+            dictionary of tracer positions. Output of ``run_hod``. 
+
+        ``Ntread``: int
+            number of threads in the HOD run. Default 16. 
+
+        ``rpbins``: np.array
+            array of transverse bins in Mpc/h.
+
+        ``pimax``: int
+            maximum bin edge along the line of sight direction, in Mpc/h. 
+
+        ``pi_bin_size``: int
+            size of bin along the line of sight. Currently, we only support linear binning along the line of sight. 
+
+        Returns
+        -------
+        power: dict
+            dicionary of summary statistics. Auto-correlations/spectra can be
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
+            accessed with keys such as ``'LRG_ELG'``. 
+        """
         if self.power_type == 'xirppi':
             power = self.compute_xirppi(mock_dict, *args, **kwargs)
         elif self.power_type == 'wp':
@@ -433,7 +541,33 @@ class AbacusHOD:
         return power
     
     def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
+        """
+        Computes :math:`\\xi(r_p, \\pi)`.
 
+        Parameters
+        ----------
+        ``mock_dict``: dict
+            dictionary of tracer positions. Output of ``run_hod``. 
+
+        ``Ntread``: int
+            number of threads in the HOD run. Default 16. 
+
+        ``rpbins``: np.array
+            array of transverse bins in Mpc/h.
+
+        ``pimax``: int
+            maximum bin edge along the line of sight direction, in Mpc/h. 
+
+        ``pi_bin_size``: int
+            size of bin along the line of sight. Currently, we only support linear binning along the line of sight. 
+
+        Returns
+        -------
+        power: dict
+            dicionary of summary statistics. Auto-correlations/spectra can be
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
+            accessed with keys such as ``'LRG_ELG'``. 
+        """
         power_spectra = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
@@ -444,12 +578,39 @@ class AbacusHOD:
                 x2 = mock_dict[tr2]['x']
                 y2 = mock_dict[tr2]['y']
                 z2 = mock_dict[tr2]['z']
-                power_spectra[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                power_spectra[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
+                    self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
                 if i1 != i2: power_spectra[tr2+'_'+tr1] = power_spectra[tr1+'_'+tr2]
         return power_spectra
 
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
+        """
+        Computes :math:`w_p`.
 
+        Parameters
+        ----------
+        ``mock_dict``: dict
+            dictionary of tracer positions. Output of ``run_hod``. 
+
+        ``Ntread``: int
+            number of threads in the HOD run. Default 16. 
+
+        ``rpbins``: np.array
+            array of transverse bins in Mpc/h.
+
+        ``pimax``: int
+            maximum bin edge along the line of sight direction, in Mpc/h. 
+
+        ``pi_bin_size``: int
+            size of bin along the line of sight. Currently, we only support linear binning along the line of sight. 
+
+        Returns
+        -------
+        power: dict
+            dicionary of summary statistics. Auto-correlations/spectra can be
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
+            accessed with keys such as ``'LRG_ELG'``. 
+        """
         power_spectra = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
