@@ -40,17 +40,17 @@ def main(path2config):
     newBall = AbacusHOD(sim_params, HOD_params, power_params)
     
     # throw away run for jit to compile, write to disk
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
-    xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True)
+    # xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
-    # run the fit 10 times for timing
-    for i in range(10):
-        # example for sandy
-        newBall.tracers['LRG']['alpha'] += 0
-        print("alpha = ",newBall.tracers['LRG']['alpha'])
-        start = time.time()
-        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
-        print("Done iteration ", i, "took time ", time.time() - start)
+    # # run the fit 10 times for timing
+    # for i in range(10):
+    #     # example for sandy
+    #     newBall.tracers['LRG']['alpha'] += 0
+    #     print("alpha = ",newBall.tracers['LRG']['alpha'])
+    #     start = time.time()
+    #     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+    #     print("Done iteration ", i, "took time ", time.time() - start)
         
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass

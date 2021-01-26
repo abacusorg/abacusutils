@@ -796,6 +796,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
                 os.makedirs(outdir)
 
             # save to file 
+            outdict = HOD_dict[tracer].pop('Ncent', None)
             table = Table(HOD_dict[tracer], meta = {'Ncent': Ncent, 'Gal_type': tracer, **tracers[tracer]})
             ascii.write(table, outdir / ("%ss.dat"%tracer), overwrite = True, format = 'ecsv')
 
