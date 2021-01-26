@@ -23,7 +23,11 @@ simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
 simdir = config['sim_params']['sim_dir']
 z_mock = config['sim_params']['z_mock']
 savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
-#  "/mnt/marvin1/syuan/scratch/data_summit"+simname+"/z"+str(z_mock).ljust(5, '0')
+
+halo_info_fns = \
+list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
+numchunks = len(halo_info_fns)
+
 tracer_flags = config['HOD_params']['tracer_flags']
 MT = False
 if tracer_flags['ELG'] or tracer_flags['QSO']:
@@ -69,7 +73,7 @@ def get_smo_density_onechunk(i):
 
 def get_smo_density(smo_scale):   
     Dtot = 0
-    for i in range(34):
+    for i in range(numchunks):
         Dtot += get_smo_density_onechunk(i)   
 
     # gaussian smoothing 
@@ -91,10 +95,10 @@ def load_chunk(i):
     outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
-    # if file already exists, just skip
-    if os.path.exists(outfilename_halos) \
-    and os.path.exists(outfilename_particles):
-        return 0
+    # # if file already exists, just skip
+    # if os.path.exists(outfilename_halos) \
+    # and os.path.exists(outfilename_particles):
+    #     return 0
 
     # load the halo catalog chunk
     print("loading halo catalog ")
@@ -187,7 +191,8 @@ def load_chunk(i):
     start_tracker = 0
     for j in np.arange(len(halos)):
         if j % 10000 == 0:
-            print(j)
+            print("halo id", j, end = '\r')
+            time.sleep(0.1)
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
             subsample_factor = subsample_particles(halos['N'][j] * Mpart)
@@ -342,15 +347,7 @@ if __name__ == "__main__":
         dataset = newfile.create_dataset('dens', data = dens_grid)
         newfile.close()
 
-    # do further subsampling 
-    # load_chunk(0)
-    halo_info_fns = \
-    list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
-
-    numchunks = len(halo_info_fns)
-
-    for i in range(numchunks):
-        load_chunk(i)
+    # create subsamples
     p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
     p.map(load_chunk, range(numchunks))
     p.close()
