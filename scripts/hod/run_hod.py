@@ -4,7 +4,7 @@ This is a script for generating HOD mock catalogs.
 
 Usage
 -----
-$ ./run_hod.py --help
+$ python ./run_hod.py --help
 '''
 
 import os

@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+'''
+This is a script for loading simulation data and generating subsamples.
+
+Usage
+-----
+$ python -m abacusnbody.hod.AbacusHOD.load_sims
+'''
+
 import os
 from pathlib import Path
 import yaml
@@ -10,14 +19,17 @@ import h5py
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import NearestNDInterpolator
 from itertools import repeat
+import argparse
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
 import multiprocessing
 from multiprocessing import Pool
 
-path2config = 'config/abacus_hod.yaml'
-config = yaml.load(open(path2config))
+DEFAULTS = {}
+DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
+
+config = yaml.load(open(DEFAULTS['path2config']))
 
 simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
 simdir = config['sim_params']['sim_dir']
@@ -333,9 +345,7 @@ def load_chunk(i):
     newfile.close()
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-
-if __name__ == "__main__":
-
+def main(path2config):
     print("reading sim ", simname, "redshift ", z_mock)
     start = time.time()
     if not os.path.exists(savedir+"/density_field.h5"):
@@ -354,3 +364,13 @@ if __name__ == "__main__":
 
     print("done, took time ", time.time() - start)
 
+class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+    pass
+
+if __name__ == "__main__":
+
+    # parsing arguments
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
+    parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
+    args = vars(parser.parse_args())
+    main(**args)

@@ -112,10 +112,10 @@ layout are presented below, followed by the full module API.
 Short Example
 =============
 
-The first step is to create the configuration file: ``config/abacus_hod.yaml``,
-which provides the full customizability of the HOD code. It should be in your 
+The first step is to create the configuration file such as ``config/abacus_hod.yaml``,
+which provides the full customizability of the HOD code. By default, it lives in your 
 current work directory under a subdirectory ``./config``. A template with 
-default settings are provided under ``abacusnbody/hod/config``. 
+default settings are provided under ``abacusutils/scripts/config``.
 
 With the first use, you should define which simulation box, which redshift,
 the path to simulation data, the path to output datasets, the various HOD 
@@ -135,8 +135,10 @@ and organizes them into formats that are suited for the HOD code. This code can 
 a few hours depending on your configuration settings and system capabilities. 
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_20)``.
 You can run ``load_sims`` on command line with ::
-    python -m abacusnbody.hod.AbacusHOD.load_sims
+    python -m abacusnbody.hod.AbacusHOD.load_sims --path2config PATH2CONFIG
 
+If your config file lives in the default location, i.e. ``./config``, then you 
+can ignore the ``-path2config`` flag. 
 Once that is finished, you can construct the ``AbacusHOD`` object and run fast 
 HOD chains. A code template is given in ``abacusnbody/hod/run_hod.py`` for 
 running a few example HODs and ``abacusnbody/hod/run_emcee.py`` for integrating 
