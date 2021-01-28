@@ -135,7 +135,7 @@ and organizes them into formats that are suited for the HOD code. This code can 
 a few hours depending on your configuration settings and system capabilities. 
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_20)``.
 You can run ``load_sims`` on command line with ::
-    python /path/to/load_sims.py
+    python -m abacusnbody.hod.AbacusHOD.load_sims
 
 Once that is finished, you can construct the ``AbacusHOD`` object and run fast 
 HOD chains. A code template is given in ``abacusnbody/hod/run_hod.py`` for 
@@ -299,8 +299,7 @@ class AbacusHOD:
         sim_dir = Path(self.sim_dir)
         mock_dir = scratch_dir / simname / ('z%4.3f'%self.z_mock)
         # create mock_dir if not created
-        if not mock_dir.exists():
-            mock_dir.mkdir(parents = True)
+        mock_dir.mkdir(parents = True, exist_ok = True)
         subsample_dir = \
         Path(self.subsample_dir) / simname / ('z%4.3f'%self.z_mock)
 
@@ -317,10 +316,10 @@ class AbacusHOD:
         params['Lbox'] = header['BoxSize'] # Mpc / h, box size
         params['Mpart'] = header['ParticleMassHMsun']  # Msun / h, mass of each particle
         params['velz2kms'] = header['VelZSpace_to_kms']/params['Lbox']
-        params['numchunks'] = len(halo_info_fns)
+        params['numslabs'] = len(halo_info_fns)
         self.lbox = header['BoxSize']
         
-        # list holding individual chunks
+        # list holding individual slabs
         hpos = np.empty((1, 3))
         hvel = np.empty((1, 3))
         hmass = np.array([])
@@ -351,15 +350,15 @@ class AbacusHOD:
 
         # B.H. make into ASDF
         # load all the halo and particle data we need
-        for echunk in range(params['numchunks']):
-            print("Loading simulation by chunk, ", echunk)
+        for eslab in range(params['numslabs']):
+            print("Loading simulation by slab, ", eslab)
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%echunk)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%echunk)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%echunk)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%echunk)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -419,7 +418,7 @@ class AbacusHOD:
                 p_ranksp = np.concatenate((p_ranksp, part_ranksp))
                 p_ranksr = np.concatenate((p_ranksr, part_ranksr))
 
-            # #     part_data_chunk += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
+            # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
             # particle_data = vstack([particle_data, new_part_table])
             ppos = np.concatenate((ppos, part_pos))
             pvel = np.concatenate((pvel, part_vel))

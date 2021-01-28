@@ -1,14 +1,3 @@
-#!/usr/bin/env python
-
-"""
-Module implementation of a generalized and differentiable Halo Occupation 
-Distribution (HOD)for N-body cosmological simulations. 
-
-Add to .bashrc:
-export PYTHONPATH="/path/to/GRAND-HOD:$PYTHONPATH"
-
-"""
-
 import os
 import sys
 import time
@@ -153,7 +142,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
     H = len(mass)
 
-    # Nthread = numba.get_num_threads()
+    numba.set_num_threads(Nthread)
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
 
@@ -346,7 +335,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
 
     H = len(hmass) # num of particles
 
-    # Nthread = numba.get_num_threads()
+    numba.set_num_threads(Nthread)
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
 
@@ -529,6 +518,7 @@ def fast_concatenate(array1, array2, Nthread):
     elif N2 == 0:
         return array1
 
+    numba.set_num_threads(Nthread)
     Nthread1 = int(np.floor(Nthread * N1 / (N1 + N2)))
     Nthread2 = Nthread - Nthread1
     hstart1 = np.rint(np.linspace(0, N1, Nthread1 + 1))
@@ -729,7 +719,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
 
 
 def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
-    enable_ranks = False, rsd = True, write_to_disk = False, savedir = ("./")):
+    enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./"):
     """
     pass on inputs to the gen_gals function and takes care of I/O
 
@@ -754,7 +744,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     write_to_disk : boolean
         Flag of whether to output to disk. 
 
-    savedir : Path
+    savedir : str
         where to save the output if write_to_disk == True. 
 
     params : dict
@@ -770,7 +760,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     """
 
     if not type(rsd) is bool:
-        print("Error: rsd has to be a boolean.")
+        raise ValueError("Error: rsd has to be a boolean")
 
     # find the halos, populate them with galaxies and write them to files
     HOD_dict = gen_gals(halo_data, particle_data, tracers, params, Nthread, enable_ranks, rsd)
@@ -789,11 +779,10 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
             else:
                 rsd_string = ""
 
-            outdir = savedir / ("galaxies"+rsd_string)
+            outdir = (savedir) / ("galaxies"+rsd_string)
 
             # create directories if not existing
-            if not os.path.exists(outdir):
-                os.makedirs(outdir)
+            os.makedirs(outdir, exist_ok = True)
 
             # save to file 
             outdict = HOD_dict[tracer].pop('Ncent', None)

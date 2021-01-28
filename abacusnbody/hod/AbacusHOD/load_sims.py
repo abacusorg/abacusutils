@@ -36,8 +36,7 @@ want_ranks = config['HOD_params']['want_ranks']
 newseed = 600
 N_dim = config['HOD_params']['Ndim']
 
-if not os.path.exists(savedir):
-    os.makedirs(savedir)
+os.makedirs(savedir, exist_ok = True)
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
 # the subsampling curve for halos
@@ -95,10 +94,10 @@ def load_chunk(i):
     outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
-    # # if file already exists, just skip
-    # if os.path.exists(outfilename_halos) \
-    # and os.path.exists(outfilename_particles):
-    #     return 0
+    # if file already exists, just skip
+    if os.path.exists(outfilename_halos) \
+    and os.path.exists(outfilename_particles):
+        return 0
 
     # load the halo catalog chunk
     print("loading halo catalog ")

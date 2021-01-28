@@ -15,7 +15,7 @@ import yaml
 import numpy as np
 import argparse
 
-from AbacusHOD.abacus_hod import AbacusHOD
+from abacusnbody.hod.AbacusHOD.abacus_hod import AbacusHOD
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
