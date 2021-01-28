@@ -29,37 +29,17 @@ from multiprocessing import Pool
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
-config = yaml.load(open(DEFAULTS['path2config']))
-
-simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
-simdir = config['sim_params']['sim_dir']
-z_mock = config['sim_params']['z_mock']
-savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
-
-halo_info_fns = \
-list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
-numchunks = len(halo_info_fns)
-
-tracer_flags = config['HOD_params']['tracer_flags']
-MT = False
-if tracer_flags['ELG'] or tracer_flags['QSO']:
-    MT = True
-want_ranks = config['HOD_params']['want_ranks']
-newseed = 600
-N_dim = config['HOD_params']['Ndim']
-
-os.makedirs(savedir, exist_ok = True)
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
 # the subsampling curve for halos
-def subsample_halos(m):
+def subsample_halos(m, MT):
     x = np.log10(m)
     if MT:
         return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
     else:
         return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5)) # LRG only
 
-def subsample_particles(m):
+def subsample_particles(m, MT):
     x = np.log10(m)
     # return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
     if MT:
@@ -67,7 +47,7 @@ def subsample_particles(m):
     else:
         return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
-def get_smo_density_onechunk(i):
+def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim):
     cat = CompaSOHaloCatalog(
     simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
     +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'])
@@ -82,10 +62,10 @@ def get_smo_density_onechunk(i):
     return D
 
 
-def get_smo_density(smo_scale):   
+def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim):   
     Dtot = 0
-    for i in range(numchunks):
-        Dtot += get_smo_density_onechunk(i)   
+    for i in range(numslabs):
+        Dtot += get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim)   
 
     # gaussian smoothing 
     Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
@@ -94,7 +74,7 @@ def get_smo_density(smo_scale):
     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
     return Dtot / D_avg - 1
 
-def load_chunk(i):
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, N_dim, newseed):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     if MT:
@@ -106,12 +86,12 @@ def load_chunk(i):
     outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
-    # if file already exists, just skip
-    if os.path.exists(outfilename_halos) \
-    and os.path.exists(outfilename_particles):
-        return 0
+    # # if file already exists, just skip
+    # if os.path.exists(outfilename_halos) \
+    # and os.path.exists(outfilename_particles):
+    #     return 0
 
-    # load the halo catalog chunk
+    # load the halo catalog slab
     print("loading halo catalog ")
     start = time.time()
     cat = CompaSOHaloCatalog(
@@ -130,7 +110,7 @@ def load_chunk(i):
         "min halo mass", np.min(halos['N']) * Mpart, "particle mass ", Mpart)
     # # form a halo table of the columns i care about 
     # creating a mask of which halos to keep, which halos to drop
-    p_halos = subsample_halos(halos['N']*Mpart)
+    p_halos = subsample_halos(halos['N']*Mpart, MT)
     mask_halos = np.random.random(len(halos)) < p_halos
     print("total number of halos, ", len(halos), "keeping ", np.sum(mask_halos))
 
@@ -206,7 +186,7 @@ def load_chunk(i):
             time.sleep(0.1)
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
-            subsample_factor = subsample_particles(halos['N'][j] * Mpart)
+            subsample_factor = subsample_particles(halos['N'][j] * Mpart, MT)
             submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
             # updating the particles' masks, downsample factors, halo mass
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask
@@ -345,11 +325,37 @@ def load_chunk(i):
     newfile.close()
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config):
+def main(path2config, params = None):
+    config = yaml.load(open(DEFAULTS['path2config']))
+    # update params if needed
+    if params is None:
+        params = {}
+    config.update(params)
+    
+    simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
+    simdir = config['sim_params']['sim_dir']
+    z_mock = config['sim_params']['z_mock']
+    savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
+
+    halo_info_fns = \
+    list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
+    numslabs = len(halo_info_fns)
+
+    tracer_flags = config['HOD_params']['tracer_flags']
+    MT = False
+    if tracer_flags['ELG'] or tracer_flags['QSO']:
+        MT = True
+    want_ranks = config['HOD_params']['want_ranks']
+    newseed = 600
+    N_dim = config['HOD_params']['Ndim']
+
+    os.makedirs(savedir, exist_ok = True)
+
     print("reading sim ", simname, "redshift ", z_mock)
     start = time.time()
     if not os.path.exists(savedir+"/density_field.h5"):
-        dens_grid = get_smo_density(config['HOD_params']['density_sigma'])
+        dens_grid = get_smo_density(config['HOD_params']['density_sigma'],
+             numslabs, simdir, simname, z_mock, N_dim)
         print("Generating density field took ", time.time() - start)
         # np.savez(savedir+"/density_field", dens = dens_grid)
         newfile = h5py.File(savedir+"/density_field.h5", 'w')
@@ -358,10 +364,12 @@ def main(path2config):
 
     # create subsamples
     p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
-    p.map(load_chunk, range(numchunks))
+    p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
+        repeat(simdir), repeat(simname), repeat(z_mock), 
+        repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
+        repeat(N_dim), repeat(newseed)))
     p.close()
     p.join()
-
     print("done, took time ", time.time() - start)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):

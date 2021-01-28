@@ -1,0 +1,126 @@
+# Comment out the probes you don't need
+# CAREFUL: yaml is super sensitive to spaces - don't use tabs
+
+
+# Simulation parameters
+sim_params:
+    sim_name: 'Mini_N64_L32'                                 # which simulation 
+    sim_dir: './'                                        # where is the simulation
+    scratch_dir: './data_mocks_summit_new'          # where to output galaxy mocks
+    subsample_dir: './data_summit/'                 # where to output subsample data
+    z_mock: 0.0                                                              # which redshift slice
+    Nthread_load: 7                                                          # number of thread for organizing simulation outputs (load_sims)
+
+data_params:
+    tracer_combos:
+        LRG_LRG:    
+            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
+            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
+#       LRG_ELG:    
+#            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
+#            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
+#        ELG_ELG:
+#            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
+#            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
+
+# HOD parameters
+HOD_params:
+    want_ranks: False               # want to implement satellite profile flexiblities?
+    Ndim: 1024                     # grid density for computing local environment
+    density_sigma: 3               # scale radius in Mpc / h for local density calculation
+    tracer_flags:                  # which tracer do we want?
+        LRG: True
+        ELG: False
+        QSO: False
+    want_rsd: True                 # want RSD? 
+    write_to_disk: False
+
+    # parameters for setting up the HOD of LRGs
+    LRG_params:
+        logM_cut: 13.3
+        logM1: 14.3
+        sigma: 0.3
+        alpha: 1.0
+        kappa: 0.4
+        alpha_c: 0
+        alpha_s: 1
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: 0
+        Asat: 0
+        Bcent: 0
+        Bsat: 0
+        ic: 0.97
+
+    # parameters for setting up the HOD of ELGs
+    ELG_params:
+        p_max: 0.33
+        Q: 100.
+        logM_cut: 11.75
+        kappa: 1.
+        sigma: 0.58
+        logM1: 13.53
+        alpha: 1.
+        gamma: 4.12
+        A_s: 1.
+        alpha_c: 0
+        alpha_s: 1
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: 0
+        Asat: 0
+        Bcent: 0
+        Bsat: 0
+
+    # parameters for setting up the HOD of ELGs
+    QSO_params:
+        p_max: 0.33
+        logM_cut: 12.21
+        kappa: 1.0
+        sigma: 0.56
+        logM1: 13.94
+        alpha: 0.4
+        A_s: 1.
+        alpha_c: 0
+        alpha_s: 1
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: 0
+        Asat: 0
+        Bcent: 0
+        Bsat: 0
+
+# Power spectrum parameters
+power_params:
+#    power_type: 'wp'
+    power_type: 'xirppi'
+    bin_params:
+        logmin: -0.7728787904780005
+        logmax: 1.4771212597864314
+        nbins: 9
+    pimax: 30
+    pi_bin_size: 5
+
+# Parameters to be fitted in MCMC
+# [mapping_index, mean, min, max, std, tr_type]
+fit_params:
+    logM_cut: [0, 13.3, 13.0, 13.8, 0.05, 'LRG']
+    logM1: [1, 14.3, 13.7, 14.8, 0.05, 'LRG']
+    sigma: [2, 0.3, 0.1, 0.5, 0.05, 'LRG']
+
+
+# Configuration parameters for emcee
+ch_config_params:
+    path2output: chains/test
+    chainsPrefix: test
+    use_mpi: 0
+    rerun: 0
+    walkersRatio: 4
+    burninIterations: 2000
+    sampleIterations: 40000
