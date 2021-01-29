@@ -86,10 +86,10 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
-    # # if file already exists, just skip
-    # if os.path.exists(outfilename_halos) \
-    # and os.path.exists(outfilename_particles):
-    #     return 0
+    # if file already exists, just skip
+    if os.path.exists(outfilename_halos) \
+    and os.path.exists(outfilename_particles):
+        return 0
 
     # load the halo catalog slab
     print("loading halo catalog ")

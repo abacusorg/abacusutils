@@ -130,12 +130,17 @@ radius do you want the environment do be defined in, this is set by the
 parameter sets the grid size used to compute local density, and it should be set
 to be larger than Lbox/sigma_density. 
 
-Now you need to run the ``load_sims`` script, this extracts the simulation outputs
+Now you need to run the ``prepare_sim`` script, this extracts the simulation outputs
 and organizes them into formats that are suited for the HOD code. This code can take 
-a few hours depending on your configuration settings and system capabilities. 
+approximately an hour depending on your configuration settings and system capabilities. 
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_20)``.
 You can run ``load_sims`` on command line with ::
-    python -m abacusnbody.hod.AbacusHOD.load_sims --path2config PATH2CONFIG
+    python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
+
+Within Python, you can run the same script with
+
+>>> from abacusnbody.hod import prepare_sim
+>>> prepare_sim.main(/path/to/config.yaml)
 
 If your config file lives in the default location, i.e. ``./config``, then you 
 can ignore the ``-path2config`` flag. 
@@ -152,7 +157,7 @@ with the ``emcee`` sampler. Here we provide a code snippet
 >>> import numpy as np
 >>> import argparse
 >>> 
->>> from abacusnbody.hod.AbacusHOD.abacus_hod import AbacusHOD
+>>> from abacusnbody.hod.abacus_hod import AbacusHOD
 >>> 
 >>> path2config = 'config/abacus_hod.yaml' # path to config file
 >>> 
