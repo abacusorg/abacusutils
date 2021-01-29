@@ -67,5 +67,5 @@ def test_loading(tmp_path):
     data = ascii.read(EXAMPLE_GALS)
     data1 = ascii.read(savedir_gal)
     for ekey in data.keys():
-        assert abs(np.sum(data[ekey] - data1[ekey])) < 1e-16
+        assert np.allclose(data[ekey], data1[ekey])
 
