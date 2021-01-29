@@ -445,7 +445,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 lrg_vy[j1] = hvel[i, 1] + alpha_s_L * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 lrg_z[j1] = ppos[i, 2]
                 lrg_vz[j1] = hvel[i, 2] + alpha_s_L * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                print("1", lrg_vz[j1], hvel[i, 2], alpha_s_L, pvel[i, 2])
+                print("1", i, lrg_vz[j1], hvel[i, 2], alpha_s_L, pvel[i, 2])
                 if rsd:
                     lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
                 print("2", lrg_z[j1],lrg_vz[j1] , inv_velz2kms, lbox)
