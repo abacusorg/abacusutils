@@ -61,7 +61,7 @@ def test_loading(tmp_path):
     newBall = AbacusHOD(sim_params, HOD_params, power_params)
     
     # throw away run for jit to compile, write to disk
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 1)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
     savedir_gal = config['sim_params']['scratch_dir']\
     +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
     data = ascii.read(EXAMPLE_GALS)

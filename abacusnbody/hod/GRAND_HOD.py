@@ -298,7 +298,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     return LRG_dict, ELG_dict, QSO_dict
 
 
-@njit(parallel = True, fastmath = True)
+# @njit(parallel = True, fastmath = True)
 def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, 
     enable_ranks, ranks, ranksv, ranksp, ranksr, 
     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
@@ -343,7 +343,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
 
     # figuring out the number of particles kept for each thread
     for tid in numba.prange(Nthread): #numba.prange(Nthread):
-        for i in range(hstart[tid], hstart[tid + 1]):
+        for i in range(int(hstart[int(tid)]), int(hstart[int(tid) + 1])):
             # print(logM1, As, hdeltac[i], Bs, hfenv[i])
             LRG_marker = 0
             if want_LRG:
@@ -437,7 +437,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
         j1, j2, j3 = gstart[tid]
-        for i in range(hstart[tid], hstart[tid + 1]):
+        for i in range(int(hstart[tid]), int(hstart[tid + 1])):
             if keep[i] == 1:
                 lrg_x[j1] = ppos[i, 0]
                 lrg_vx[j1] = hvel[i, 0] + alpha_s_L * (pvel[i, 0] - hvel[i, 0]) # velocity bias
@@ -445,8 +445,10 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 lrg_vy[j1] = hvel[i, 1] + alpha_s_L * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 lrg_z[j1] = ppos[i, 2]
                 lrg_vz[j1] = hvel[i, 2] + alpha_s_L * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                print("1", lrg_vz[j1], hvel[i, 2], alpha_s_L, pvel[i, 2])
                 if rsd:
                     lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
+                print("2", lrg_z[j1],lrg_vz[j1] , inv_velz2kms, lbox)
                 lrg_mass[j1] = hmass[i]
                 lrg_id[j1] = hid[i]
                 j1 += 1
@@ -519,6 +521,7 @@ def fast_concatenate(array1, array2, Nthread):
         return array1
 
     final_array = np.empty(N1 + N2, dtype = array1.dtype)
+    # if one thread, then no need to parallel
     if Nthread == 1:
         for i in range(N1):
             final_array[i] = array1[i]
@@ -720,7 +723,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
             'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id'], Nthread),
             'Ncent': len(HOD_dict_cent[tracer]['x'])
         }
-        print(tracer_dict['x'])
+        print(LRG_dict_cent['z'], LRG_dict_sat['z'])
         HOD_dict[tracer] = tracer_dict
     print("organizing outputs took ", time.time() - start)
     return HOD_dict
