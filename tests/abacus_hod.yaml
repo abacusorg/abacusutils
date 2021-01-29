@@ -9,7 +9,7 @@ sim_params:
     scratch_dir: './tests/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: './tests/data_summit/'                 # where to output subsample data
     z_mock: 0.0                                                              # which redshift slice
-    Nthread_load: 7                                                          # number of thread for organizing simulation outputs (load_sims)
+    Nthread_load: 2                                                          # number of thread for organizing simulation outputs (load_sims)
 
 data_params:
     tracer_combos:
