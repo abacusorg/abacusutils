@@ -8,6 +8,8 @@ import numpy as np
 from astropy.io import ascii
 
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
+EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
+print(EXAMPLE_SIM)
 EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__), 
     'halos_xcom_2_seed600_abacushod_new.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
@@ -22,7 +24,7 @@ def test_loading(tmp_path):
     from abacusnbody.hod import prepare_sim
     from abacusnbody.hod.abacus_hod import AbacusHOD
 
-    config = yaml.load(open(path2config))
+    config = yaml.load(open(EXAMPLE_CONFIG))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     power_params = config['power_params']
@@ -30,17 +32,19 @@ def test_loading(tmp_path):
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
     z_mock = config['sim_params']['z_mock']
-    savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
+    config['sim_params']['subsample_dir'] = str(tmp_path) + "/data_subs/"
+    config['sim_params']['scratch_dir'] = str(tmp_path) + "/data_gals/"
+    savedir = config['sim_params']['subsample_dir'] + simname+"/z"+str(z_mock).ljust(5, '0')
 
     # check subsample file match
-    prepare_sim.main(path2config)
+    prepare_sim.main(EXAMPLE_CONFIG, params = config)
 
     newhalos = h5py.File(savedir+'/halos_xcom_2_seed600_abacushod_new.h5', 'r')['halos']
-    temphalos = h5py.File('halos_xcom_2_seed600_abacushod_new.h5', 'r')['halos']
+    temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
     for i in range(len(newhalos)):
         assert newhalos[i] == temphalos[i]
-    newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_new.h5', 'r')['particles']
-    tempparticles = h5py.File('particles_xcom_2_seed600_abacushod_new.h5', 'r')['particles']
+    newparticles = h5py.File(savedir+'particles_xcom_2_seed600_abacushod_new.h5', 'r')['particles']
+    tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
     for i in range(len(newparticles)):
         assert newparticles[i] == tempparticles[i]
 

@@ -292,6 +292,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     # output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
     if os.path.exists(outfilename_halos):
         os.remove(outfilename_halos)
+    print(outfilename_halos, outfilename_particles)
     newfile = h5py.File(outfilename_halos, 'w')
     dataset = newfile.create_dataset('halos', data = halos)
     newfile.close()
@@ -326,12 +327,12 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
 def main(path2config, params = None):
-    config = yaml.load(open(DEFAULTS['path2config']))
+    config = yaml.load(open(path2config))
     # update params if needed
     if params is None:
         params = {}
     config.update(params)
-    
+
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
     z_mock = config['sim_params']['z_mock']

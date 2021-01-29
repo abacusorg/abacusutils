@@ -4,7 +4,7 @@
 
 # Simulation parameters
 sim_params:
-    sim_name: 'AbacusSummit_base_c105_ph000'                                 # which simulation 
+    sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation 
     sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
