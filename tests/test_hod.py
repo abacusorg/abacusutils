@@ -9,13 +9,12 @@ from astropy.io import ascii
 
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
 EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
-print(EXAMPLE_SIM)
 EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__), 
     'halos_xcom_2_seed600_abacushod_new.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
     'particles_xcom_2_seed600_abacushod_new.h5')
 EXAMPLE_GALS = os.path.join(os.path.dirname(__file__), 'LRGs.dat')
-path2config = 'config/abacus_hod.yaml'
+path2config = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
 
 def test_loading(tmp_path):
     '''Test loading a halo catalog
@@ -42,11 +41,13 @@ def test_loading(tmp_path):
     newhalos = h5py.File(savedir+'/halos_xcom_2_seed600_abacushod_new.h5', 'r')['halos']
     temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
     for i in range(len(newhalos)):
-        assert newhalos[i] == temphalos[i]
-    newparticles = h5py.File(savedir+'particles_xcom_2_seed600_abacushod_new.h5', 'r')['particles']
+        for j in range(len(newhalos[i])):
+            assert np.array_equal(newhalos[i][j], temphalos[i][j])
+    newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_new.h5', 'r')['particles']
     tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
     for i in range(len(newparticles)):
-        assert newparticles[i] == tempparticles[i]
+        for j in range(len(newparticles[i])):
+            assert np.array_equal(newparticles[i][j], tempparticles[i][j])
 
     # additional parameter choices
     want_rsd = HOD_params['want_rsd']
@@ -63,7 +64,7 @@ def test_loading(tmp_path):
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True)
     savedir_gal = config['sim_params']['scratch_dir']\
     +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
-    data = ascii.read("LRGs.dat")
+    data = ascii.read(EXAMPLE_GALS)
     data1 = ascii.read(savedir_gal)
     for ekey in data.keys():
         assert abs(np.sum(data[ekey] - data1[ekey])) < 1e-16
