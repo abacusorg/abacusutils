@@ -518,13 +518,20 @@ def fast_concatenate(array1, array2, Nthread):
     elif N2 == 0:
         return array1
 
+    final_array = np.empty(N1 + N2, dtype = array1.dtype)
+    if Nthread == 1:
+        for i in range(N1):
+            final_array[i] = array1[i]
+        for j in range(N2):
+            final_array[j + N1] = array2[j]
+        return final_array
+
     numba.set_num_threads(Nthread)
     Nthread1 = int(np.floor(Nthread * N1 / (N1 + N2)))
     Nthread2 = Nthread - Nthread1
     hstart1 = np.rint(np.linspace(0, N1, Nthread1 + 1))
     hstart2 = np.rint(np.linspace(0, N2, Nthread2 + 1)) + N1
 
-    final_array = np.empty(N1 + N2, dtype = array1.dtype)
     for tid in numba.prange(Nthread): #numba.prange(Nthread):
         if tid < Nthread1:
             for i in range(hstart1[tid], hstart1[tid + 1]):
@@ -713,6 +720,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
             'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id'], Nthread),
             'Ncent': len(HOD_dict_cent[tracer]['x'])
         }
+        print(tracer_dict['x'])
         HOD_dict[tracer] = tracer_dict
     print("organizing outputs took ", time.time() - start)
     return HOD_dict
