@@ -298,13 +298,12 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     return LRG_dict, ELG_dict, QSO_dict
 
 
-# @njit(parallel = True, fastmath = True)
+@njit(parallel = True, fastmath = True)
 def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, 
     enable_ranks, ranks, ranksv, ranksp, ranksr, 
     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
     QSO_design_array, QSO_decorations_array,
     rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO, Nthread):
-    print(hvel[0])
 
     """
     Generate satellite galaxies in place in memory with a two pass numba parallel implementation. 
@@ -344,7 +343,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
 
     # figuring out the number of particles kept for each thread
     for tid in numba.prange(Nthread): #numba.prange(Nthread):
-        for i in range(int(hstart[int(tid)]), int(hstart[int(tid) + 1])):
+        for i in range(hstart[tid], hstart[tid + 1]):
             # print(logM1, As, hdeltac[i], Bs, hfenv[i])
             LRG_marker = 0
             if want_LRG:
@@ -438,7 +437,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
         j1, j2, j3 = gstart[tid]
-        for i in range(int(hstart[tid]), int(hstart[tid + 1])):
+        for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i] == 1:
                 lrg_x[j1] = ppos[i, 0]
                 lrg_vx[j1] = hvel[i, 0] + alpha_s_L * (pvel[i, 0] - hvel[i, 0]) # velocity bias
@@ -446,10 +445,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 lrg_vy[j1] = hvel[i, 1] + alpha_s_L * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 lrg_z[j1] = ppos[i, 2]
                 lrg_vz[j1] = hvel[i, 2] + alpha_s_L * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                print("1", i, lrg_vz[j1], hvel[i, 2], alpha_s_L, pvel[i, 2])
                 if rsd:
                     lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
-                print("2", lrg_z[j1],lrg_vz[j1] , inv_velz2kms, lbox)
                 lrg_mass[j1] = hmass[i]
                 lrg_id[j1] = hid[i]
                 j1 += 1
@@ -596,7 +593,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
 
         alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic = \
         map(LRG_HOD.get, ('alpha_c', 
-                        'alpha_c',  
+                        'alpha_s',  
                         's', 
                         's_v', 
                         's_p', 
@@ -630,7 +627,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
             [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, As_E])
         alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
         map(ELG_HOD.get, ('alpha_c', 
-                        'alpha_c',  
+                        'alpha_s',  
                         's', 
                         's_v', 
                         's_p', 
@@ -663,7 +660,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
             [pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, As_Q])
         alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_EQ, Bc_Q, Bs_Q = \
         map(QSO_HOD.get, ('alpha_c', 
-                        'alpha_c',  
+                        'alpha_s',  
                         's', 
                         's_v', 
                         's_p', 

@@ -442,6 +442,7 @@ class AbacusHOD:
         hvel = hvel[1:]
         ppos = ppos[1:]
         pvel = pvel[1:]
+        phvel = phvel[1:]
 
         halo_data = {"hpos": hpos, 
                      "hvel": hvel, 
