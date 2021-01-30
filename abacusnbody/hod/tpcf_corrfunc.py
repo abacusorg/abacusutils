@@ -25,7 +25,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
 
     # RR_counts_new = np.zeros((len(rpbins) - 1, int(pimax/pi_bin_size)))
     RR_counts_new = np.pi*(rpbins[1:]**2 - rpbins[:-1]**2)*pi_bin_size / lbox**3 * ND1 * ND2 * 2
-    xirppi = DD_counts_new / RR_counts_new - 1
+    xirppi = DD_counts_new / RR_counts_new[:, None] - 1
 
     return xirppi
 
@@ -46,7 +46,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     # RR_counts = np.zeros((len(rpbins) - 1, int(pimax)))
     # for i in range(len(rpbins) - 1):
     RR_counts = np.pi*(rpbins[1:]**2 - rpbins[:-1]**2) / lbox**3 * ND1 * ND2 * 2
-    xirppi = DD_counts / RR_counts - 1
+    xirppi = DD_counts / RR_counts[:, None] - 1
 
     return 2*np.sum(xirppi, axis = 1)
 

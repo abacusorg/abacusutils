@@ -4,7 +4,7 @@
 
 # Simulation parameters
 sim_params:
-    sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation 
+    sim_name: 'AbacusSummit_base_c113_ph000'                                 # which simulation 
     sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
@@ -101,11 +101,11 @@ power_params:
 #    power_type: 'wp'
     power_type: 'xirppi'
     bin_params:
-        logmin: -0.7728787904780005
-        logmax: 1.4771212597864314
-        nbins: 9
-    pimax: 30
-    pi_bin_size: 5
+        logmin: 0
+        logmax: 2
+        nbins: 20
+    pimax: 40
+    pi_bin_size: 2
 
 # Parameters to be fitted in MCMC
 # [mapping_index, mean, min, max, std, tr_type]

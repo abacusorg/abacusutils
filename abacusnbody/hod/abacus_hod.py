@@ -210,6 +210,7 @@ import asdf
 import argparse
 import multiprocessing
 from multiprocessing import Pool
+from astropy.io import ascii
 
 
 from .GRAND_HOD import gen_gal_cat
@@ -633,3 +634,63 @@ class AbacusHOD:
                 power_spectra[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
                 if i1 != i2: power_spectra[tr2+'_'+tr1] = power_spectra[tr1+'_'+tr2]
         return power_spectra
+
+    def gal_reader(self, scratch_dir = None, simname = None, 
+        sim_dir = None, z_mock = None, want_rsd = None, tracers = None):
+        """
+        Loads galaxy data given directory and return a ``mock_dict`` dictionary.  
+
+        Parameters
+        ----------
+        ``sim_name``: str
+            name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'. 
+
+        ``sim_dir``: str
+            the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
+
+        ``scratch_dir``: str
+            the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
+
+        ``z_mock``: floa
+             which redshift slice, e.g. 0.5.    
+
+        ``want_rsd``: bool
+            RSD?
+
+        ``tracers``: dict
+            dictionary of tracer types to load, e.g. `{'LRG', 'ELG'}`.
+
+        Returns
+        -------
+        ``mock_dict``: dict
+            dictionary of tracer positions. Output of ``run_hod``. 
+
+        """
+
+        if scratch_dir == None:
+            scratch_dir = Path(self.scratch_dir)
+        if simname == None:
+            simname = Path(self.sim_name)
+        if sim_dir == None:
+            sim_dir = Path(self.sim_dir)
+        if z_mock == None:
+            z_mock = self.z_mock
+        if want_rsd == None:
+            want_rsd = self.want_rsd
+        if tracers == None:
+            tracers = self.tracers.keys()
+        mock_dir = scratch_dir / simname / ('z%4.3f'%self.z_mock)
+
+        if want_rsd:
+            rsd_string = "_rsd"
+        else:
+            rsd_string = ""
+
+        outdir = (self.mock_dir) / ("galaxies"+rsd_string)
+
+        mockdict = {}
+        for tracer in tracers:
+            mockdict[tracer] = ascii.read(outdir/(tracer+'s.dat'))
+        return mockdict
+
+

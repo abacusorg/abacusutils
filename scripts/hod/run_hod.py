@@ -41,7 +41,11 @@ def main(path2config):
     
     # throw away run for jit to compile, write to disk
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 1)
+    # mock_dict = newBall.gal_reader()
     # xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
+    # print(xirppi)
+    # wp = newBall.compute_wp(mock_dict, rpbins, pimax, pi_bin_size)
+    # print(wp)
 
     # # run the fit 10 times for timing
     # for i in range(10):
