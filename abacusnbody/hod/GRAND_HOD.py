@@ -46,7 +46,7 @@ def N_cen_ELG_v1(M_h, p_max, Q, logM_cut, sigma, gamma):
     """
     HOD function for ELG centrals taken from arXiv:1910.05095.
     """
-    logM_h = np.log(M_h)
+    logM_h = np.log10(M_h)
     phi = phi_fun(logM_h, logM_cut, sigma)
     Phi = Phi_fun(logM_h, logM_cut, sigma, gamma)
     A = A_fun(p_max, Q, phi, Phi)
@@ -721,7 +721,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
             'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id'], Nthread),
             'Ncent': len(HOD_dict_cent[tracer]['x'])
         }
-        print(LRG_dict_cent['z'], LRG_dict_sat['z'])
+        print(tracer, len(tracer_dict['x']), len(HOD_dict_cent[tracer]['x']), len(HOD_dict_sat[tracer]['x']))
         HOD_dict[tracer] = tracer_dict
     print("organizing outputs took ", time.time() - start)
     return HOD_dict

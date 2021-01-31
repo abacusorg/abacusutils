@@ -4,11 +4,11 @@
 
 # Simulation parameters
 sim_params:
-    sim_name: 'AbacusSummit_base_c113_ph000'                                 # which simulation 
+    sim_name: 'AbacusSummit_base_c000_ph006'                                 # which simulation 
     sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
-    z_mock: 0.5                                                              # which redshift slice
+    z_mock: 0.8                                                              # which redshift slice
     Nthread_load: 7                                                          # number of thread for organizing simulation outputs (load_sims)
 
 data_params:
@@ -29,8 +29,8 @@ HOD_params:
     Ndim: 1024                     # grid density for computing local environment
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
-        LRG: True
-        ELG: False
+        LRG: False 
+        ELG: True
         QSO: False
     want_rsd: True                 # want RSD? 
     write_to_disk: False
@@ -56,13 +56,13 @@ HOD_params:
 
     # parameters for setting up the HOD of ELGs
     ELG_params:
-        p_max: 0.33
-        Q: 100.
-        logM_cut: 11.75
+        p_max: 0.53
+        Q: 10.
+        logM_cut: 12.6
         kappa: 1.
         sigma: 0.58
-        logM1: 13.53
-        alpha: 1.
+        logM1: 13.23
+        alpha: 0.9
         gamma: 4.12
         A_s: 1.
         alpha_c: 0
