@@ -58,10 +58,10 @@ HOD_params:
     ELG_params:
         p_max: 0.53
         Q: 10.
-        logM_cut: 12.6
+        logM_cut: 12.3
         kappa: 1.
         sigma: 0.58
-        logM1: 13.23
+        logM1: 13.53
         alpha: 0.9
         gamma: 4.12
         A_s: 1.
