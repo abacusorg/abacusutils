@@ -324,6 +324,16 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     newfile = h5py.File(outfilename_particles, 'w')
     dataset = newfile.create_dataset('particles', data = parts)
     newfile.close()
+
+    # updating the number file
+    numfile_name = savedir+"/num_halos_parts" 
+    if MT:
+        numfile_name += "_MT"
+    numfile_name += ".txt"
+    fnum = open(numfile_name, 'a')
+    fnum.write("{} {} {} \n".format(i, np.sum(mask_halos), len(parts)))
+    fnum.close()
+    
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
 def main(path2config, params = None):
@@ -369,6 +379,15 @@ def main(path2config, params = None):
     #     prepare_slab(i, savedir, simdir, simname, z_mock,        tracer_flags, MT, want_ranks, 
     #     N_dim, newseed)
 
+    # create a text file that records the number of halos and particles per chunk 
+    numfile_name = savedir+"/num_halos_parts" 
+    if MT:
+        numfile_name == "_MT"
+    numfile_name += ".txt"
+    if os.path.exists(numfile_name):
+        os.remove(numfile_name)
+    open(numfile_name, 'w').close()
+
     p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
         repeat(simdir), repeat(simname), repeat(z_mock), 
@@ -376,6 +395,7 @@ def main(path2config, params = None):
         repeat(N_dim), repeat(newseed)))
     p.close()
     p.join()
+
     print("done, took time ", time.time() - start)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):

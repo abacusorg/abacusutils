@@ -327,37 +327,52 @@ class AbacusHOD:
         params['numslabs'] = len(halo_info_fns)
         self.lbox = header['BoxSize']
         
-        # list holding individual slabs
-        hpos = np.empty((1, 3))
-        hvel = np.empty((1, 3))
-        hmass = np.array([])
-        hid = np.array([])
-        hmultis = np.array([])
-        hrandoms = np.array([])
-        hveldev = np.array([])
-        hdeltac = np.array([])
-        hfenv = np.array([])
+        # figure out number of halos and particles
+        if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
+            numfile_name = subsample_dir / ("num_halos_parts.txt")
+        else:
+            numfile_name = subsample_dir / ("num_halos_parts_MT.txt")
+        fnum = np.loadtxt(numfile_name)
+        fnum = np.array(sorted(fnum, key=lambda x : x[0])).astype(int)
+        ichunks = fnum[:, 0]
+        Nhalos = fnum[:, 1]
+        Nparts = fnum[:, 2]
+        Nhalos_tot = np.sum(Nhalos)
+        Nparts_tot = np.sum(Nparts)
 
-        ppos = np.empty((1, 3))
-        pvel = np.empty((1, 3))
-        phvel = np.empty((1, 3))
-        phmass = np.array([])
-        phid = np.array([])
-        pNp = np.array([])
-        psubsampling = np.array([])
-        prandoms = np.array([])
-        pdeltac = np.array([])
-        pfenv = np.array([])
+        # list holding individual slabs
+        hpos = np.empty((Nhalos_tot, 3))
+        hvel = np.empty((Nhalos_tot, 3))
+        hmass = np.empty([Nhalos_tot])
+        hid = np.empty([Nhalos_tot])
+        hmultis = np.empty([Nhalos_tot])
+        hrandoms = np.empty([Nhalos_tot])
+        hveldev = np.empty([Nhalos_tot])
+        hdeltac = np.empty([Nhalos_tot])
+        hfenv = np.empty([Nhalos_tot])
+
+        ppos = np.empty((Nparts_tot, 3))
+        pvel = np.empty((Nparts_tot, 3))
+        phvel = np.empty((Nparts_tot, 3))
+        phmass = np.empty([Nparts_tot])
+        phid = np.empty([Nparts_tot])
+        pNp = np.empty([Nparts_tot])
+        psubsampling = np.empty([Nparts_tot])
+        prandoms = np.empty([Nparts_tot])
+        pdeltac = np.empty([Nparts_tot])
+        pfenv = np.empty([Nparts_tot])
 
         # ranks
         if self.want_ranks:
-            p_ranks = np.array([])
-            p_ranksv = np.array([])
-            p_ranksp = np.array([])
-            p_ranksr = np.array([])
+            p_ranks = np.empty([Nparts_tot])
+            p_ranksv = np.empty([Nparts_tot])
+            p_ranksp = np.empty([Nparts_tot])
+            p_ranksr = np.empty([Nparts_tot])
 
         # B.H. make into ASDF
         # load all the halo and particle data we need
+        halo_ticker = 0
+        parts_ticker = 0
         for eslab in range(params['numslabs']):
             print("Loading simulation by slab, ", eslab)
             
@@ -373,6 +388,7 @@ class AbacusHOD:
             halofilename = str(halofilename) + '_new.h5'
             particlefilename = str(particlefilename) + '_new.h5'
 
+            start = time.time()
             newfile = h5py.File(halofilename, 'r')
             allhalos = newfile['halos']
             mask = np.array(allhalos['mask_subsample'], dtype = bool)
@@ -391,17 +407,22 @@ class AbacusHOD:
             halo_multi = maskedhalos['multi_halos']
             halo_submask = np.array(maskedhalos['mask_subsample'], dtype = bool)
             halo_randoms = maskedhalos['randoms']
-    
-            hpos = np.concatenate((hpos, halo_pos))
-            hvel = np.concatenate((hvel, halo_vels))
-            hmass = np.concatenate((hmass, halo_mass))
-            hid = np.concatenate((hid, halo_ids))
-            hmultis = np.concatenate((hmultis, halo_multi))
-            hrandoms = np.concatenate((hrandoms, halo_randoms))
-            hveldev = np.concatenate((hveldev, halo_vel_dev))
-            hdeltac = np.concatenate((hdeltac, halo_deltac))
-            hfenv = np.concatenate((hfenv, halo_fenv))
+            print("loading halos took ", time.time() - start)
 
+            start = time.time()
+            hpos[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_pos
+            hvel[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vels
+            hmass[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_mass
+            hid[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_ids
+            hmultis[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_multi
+            hrandoms[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_randoms
+            hveldev[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vel_dev
+            hdeltac[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_deltac
+            hfenv[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_fenv
+            halo_ticker += Nhalos[eslab]
+            print("concatenate halos took ", time.time() - start)
+
+            start = time.time()
             # extract particle data that we need
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
@@ -415,35 +436,33 @@ class AbacusHOD:
             part_randoms = subsample['randoms']
             part_deltac = subsample['halo_deltac']
             part_fenv = subsample['halo_fenv']
+            print("loading particles took ", time.time() - start)
 
+            start = time.time()
             if self.want_ranks:
                 part_ranks = subsample['ranks']
                 part_ranksv = subsample['ranksv']
                 part_ranksp = subsample['ranksp']
                 part_ranksr = subsample['ranksr']
-                p_ranks = np.concatenate((p_ranks, part_ranks))
-                p_ranksv = np.concatenate((p_ranksv, part_ranksv))
-                p_ranksp = np.concatenate((p_ranksp, part_ranksp))
-                p_ranksr = np.concatenate((p_ranksr, part_ranksr))
+                p_ranks[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranks
+                p_ranksv[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranksv
+                p_ranksp[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranksp
+                p_ranksr[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranksr
 
             # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
             # particle_data = vstack([particle_data, new_part_table])
-            ppos = np.concatenate((ppos, part_pos))
-            pvel = np.concatenate((pvel, part_vel))
-            phvel = np.concatenate((phvel, part_hvel))
-            phmass = np.concatenate((phmass, part_halomass))
-            phid = np.concatenate((phid, part_haloid))
-            pNp = np.concatenate((pNp, part_Np))
-            psubsampling = np.concatenate((psubsampling, part_subsample))
-            prandoms = np.concatenate((prandoms, part_randoms))
-            pdeltac = np.concatenate((pdeltac, part_deltac))
-            pfenv = np.concatenate((pfenv, part_fenv))
-
-        hpos = hpos[1:]
-        hvel = hvel[1:]
-        ppos = ppos[1:]
-        pvel = pvel[1:]
-        phvel = phvel[1:]
+            ppos[parts_ticker: parts_ticker + Nparts[eslab]] = part_pos
+            pvel[parts_ticker: parts_ticker + Nparts[eslab]] = part_vel
+            phvel[parts_ticker: parts_ticker + Nparts[eslab]] =  part_hvel
+            phmass[parts_ticker: parts_ticker + Nparts[eslab]] = part_halomass
+            phid[parts_ticker: parts_ticker + Nparts[eslab]] =  part_haloid
+            pNp[parts_ticker: parts_ticker + Nparts[eslab]] = part_Np
+            psubsampling[parts_ticker: parts_ticker + Nparts[eslab]] = part_subsample
+            prandoms[parts_ticker: parts_ticker + Nparts[eslab]] = part_randoms
+            pdeltac[parts_ticker: parts_ticker + Nparts[eslab]] = part_deltac
+            pfenv[parts_ticker: parts_ticker + Nparts[eslab]] = part_fenv
+            parts_ticker += Nparts[eslab]
+            print("concatenate particles took ", time.time() - start)
 
         halo_data = {"hpos": hpos, 
                      "hvel": hvel, 
@@ -470,10 +489,10 @@ class AbacusHOD:
             particle_data['pranksp'] = p_ranksp
             particle_data['pranksr'] = p_ranksr
         else:
-            particle_data['pranks'] = np.ones(len(phmass))
-            particle_data['pranksv'] =  np.ones(len(phmass))
-            particle_data['pranksp'] =  np.ones(len(phmass))
-            particle_data['pranksr'] =  np.ones(len(phmass))
+            particle_data['pranks'] = np.ones(Nparts_tot)
+            particle_data['pranksv'] =  np.ones(Nparts_tot)
+            particle_data['pranksp'] =  np.ones(Nparts_tot)
+            particle_data['pranksr'] =  np.ones(Nparts_tot)
             
         return halo_data, particle_data, params, mock_dir
 
