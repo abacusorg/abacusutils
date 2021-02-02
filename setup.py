@@ -18,6 +18,6 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
     python_requires='>=3.6',
-    install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','Corrfunc','emcee'],
+    install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','Corrfunc','emcee', 'schwimmbad'],
     entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main']}
 )

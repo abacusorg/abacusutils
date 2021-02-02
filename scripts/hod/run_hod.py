@@ -47,15 +47,15 @@ def main(path2config):
     # wp = newBall.compute_wp(mock_dict, rpbins, pimax, pi_bin_size)
     # print(wp)
 
-    # # run the fit 10 times for timing
-    # for i in range(10):
-    #     print(i)
-    #     # example for sandy
-    #     newBall.tracers['']['alpha'] += 0.01
-    #     print("alpha = ",newBall.tracers['']['alpha'])
-    #     start = time.time()
-    #     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
-    #     print("Done iteration ", i, "took time ", time.time() - start)
+    # run the fit 10 times for timing
+    for i in range(10):
+        print(i)
+        # example for sandy
+        newBall.tracers['LRG']['alpha'] += 0.01
+        print("alpha = ",newBall.tracers['LRG']['alpha'])
+        start = time.time()
+        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
+        print("Done iteration ", i, "took time ", time.time() - start)
         
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass

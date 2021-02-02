@@ -316,11 +316,11 @@ class AbacusHOD:
         # create mock_dir if not created
         mock_dir.mkdir(parents = True, exist_ok = True)
         subsample_dir = \
-        Path(self.subsample_dir) / simname / ('z%4.3f'%self.z_mock)
+            Path(self.subsample_dir) / simname / ('z%4.3f'%self.z_mock)
 
         # load header to read parameters
         halo_info_fns = \
-        list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
+            list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
         f = asdf.open(halo_info_fns[0], lazy_load=True, copy_arrays=False)
         header = f['header']
 
@@ -498,7 +498,7 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self, tracers, want_rsd, write_to_disk = False, Nthread = 16):
+    def run_hod(self, tracers, want_rsd = True, write_to_disk = False, Nthread = 16):
         """
         Runs a custom HOD.
 
@@ -515,7 +515,7 @@ class AbacusHOD:
         ``write_to_disk``: bool 
             output to disk? default ``False``. Setting to ``True`` decreases performance. 
 
-        ``Ntread``: int
+        ``Nthread``: int
             Number of threads in the HOD run. Default 16. 
 
         Returns

@@ -50,7 +50,7 @@ def subsample_particles(m, MT):
 def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim):
     cat = CompaSOHaloCatalog(
     simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-    +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'])
+        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'])
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
       
@@ -164,26 +164,25 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     # particle arrays for ranks and mask 
     mask_parts = np.zeros(len(parts))
     len_old = len(parts)
-    ranks_parts = -np.ones(len(parts))
-    ranksv_parts = -np.ones(len(parts))
-    ranksr_parts = -np.ones(len(parts))
-    ranksp_parts = -np.ones(len(parts))
-    pos_parts = -np.ones((len_old, 3))
-    vel_parts = -np.ones((len_old, 3))
-    hvel_parts = -np.ones((len_old, 3))
-    Mh_parts = -np.ones(len_old)
-    Np_parts = -np.ones(len_old)
-    downsample_parts = -np.ones((len_old))
-    idh_parts = -np.ones((len_old))
-    deltach_parts = -np.ones((len_old))
-    fenvh_parts = -np.ones((len_old))
+    ranks_parts = np.full(len_old, -1)
+    ranksv_parts = np.full(len_old, -1)
+    ranksr_parts = np.full(len_old, -1)
+    ranksp_parts = np.full(len_old, -1)
+    pos_parts = np.full((len_old, 3), -1)
+    vel_parts = np.full((len_old, 3), -1)
+    hvel_parts = np.full((len_old, 3), -1)
+    Mh_parts = np.full(len_old, -1)
+    Np_parts = np.full(len_old, -1)
+    downsample_parts = np.full(len_old, -1)
+    idh_parts = np.full(len_old, -1)
+    deltach_parts = np.full(len_old, -1)
+    fenvh_parts = np.full(len_old, -1)
 
     print("compiling particle subsamples")
     start_tracker = 0
     for j in np.arange(len(halos)):
         if j % 10000 == 0:
             print("halo id", j, end = '\r')
-            time.sleep(0.1)
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
             subsample_factor = subsample_particles(halos['N'][j] * Mpart, MT)
@@ -285,7 +284,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     halos['npoutA'] = halos_pnum_new
     halos['randoms'] = np.random.random(len(halos)) # attaching random numbers
     halos['randoms_gaus_vrms'] = np.random.normal(loc = 0, 
-    scale = halos["sigmav3d_L2com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
+        scale = halos["sigmav3d_L2com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
 
     # output halo file 
     print("outputting new halo file ")
@@ -299,21 +298,22 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     # output the new particle file
     print("adding rank fields to particle data ")
-    parts = parts[mask_parts.astype(bool)]
+    mask_parts = mask_parts.astype(bool)
+    parts = parts[mask_parts]
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
     if want_ranks:
-        parts['ranks'] = ranks_parts[mask_parts.astype(bool)]
-        parts['ranksv'] = ranksv_parts[mask_parts.astype(bool)]
-        parts['ranksr'] = ranksr_parts[mask_parts.astype(bool)]
-        parts['ranksp'] = ranksp_parts[mask_parts.astype(bool)]
-    parts['downsample_halo'] = downsample_parts[mask_parts.astype(bool)]
-    parts['halo_vel'] = hvel_parts[mask_parts.astype(bool)]
-    parts['halo_mass'] = Mh_parts[mask_parts.astype(bool)]
-    parts['Np'] = Np_parts[mask_parts.astype(bool)]
-    parts['halo_id'] = idh_parts[mask_parts.astype(bool)]
+        parts['ranks'] = ranks_parts[mask_parts]
+        parts['ranksv'] = ranksv_parts[mask_parts]
+        parts['ranksr'] = ranksr_parts[mask_parts]
+        parts['ranksp'] = ranksp_parts[mask_parts]
+    parts['downsample_halo'] = downsample_parts[mask_parts]
+    parts['halo_vel'] = hvel_parts[mask_parts]
+    parts['halo_mass'] = Mh_parts[mask_parts]
+    parts['Np'] = Np_parts[mask_parts]
+    parts['halo_id'] = idh_parts[mask_parts]
     parts['randoms'] = np.random.random(len(parts))
-    parts['halo_deltac'] = deltach_parts[mask_parts.astype(bool)]
-    parts['halo_fenv'] = fenvh_parts[mask_parts.astype(bool)]
+    parts['halo_deltac'] = deltach_parts[mask_parts]
+    parts['halo_fenv'] = fenvh_parts[mask_parts]
 
     print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0), 
         np.sum(parts['halo_mass'] < 0))
@@ -333,7 +333,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     fnum = open(numfile_name, 'a')
     fnum.write("{} {} {} \n".format(i, np.sum(mask_halos), len(parts)))
     fnum.close()
-    
+
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
 def main(path2config, params = None):

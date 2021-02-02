@@ -130,18 +130,18 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
     # parse out the hod parameters 
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
-    LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
+        LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
     ic_L, alpha_c_L, Ac_L, Bc_L = LRG_decorations_array[10], LRG_decorations_array[0], \
-    LRG_decorations_array[6], LRG_decorations_array[8]
+        LRG_decorations_array[6], LRG_decorations_array[8]
 
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
-    ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
-    ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+        ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
+        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
     alpha_c_E, Ac_E, Bc_E = ELG_decorations_array[0], ELG_decorations_array[6], ELG_decorations_array[8]
 
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
-    QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
-    QSO_design_array[5], QSO_design_array[6]
+        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
+        QSO_design_array[5], QSO_design_array[6]
     alpha_c_Q, Ac_Q, Bc_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8]
 
     H = len(mass)
@@ -315,27 +315,27 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
 
     # standard hod design
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
-    LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
+        LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
     alpha_s_L, s_L, s_v_L, s_p_L, s_r_L, Ac_L, As_L, Bc_L, Bs_L, ic_L = \
-    LRG_decorations_array[1], LRG_decorations_array[2], LRG_decorations_array[3], LRG_decorations_array[4], \
-    LRG_decorations_array[5], LRG_decorations_array[6], LRG_decorations_array[7], LRG_decorations_array[8], \
-    LRG_decorations_array[9], LRG_decorations_array[10]
+        LRG_decorations_array[1], LRG_decorations_array[2], LRG_decorations_array[3], LRG_decorations_array[4], \
+        LRG_decorations_array[5], LRG_decorations_array[6], LRG_decorations_array[7], LRG_decorations_array[8], \
+        LRG_decorations_array[9], LRG_decorations_array[10]
 
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
-    ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
-    ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+        ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
+        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
     alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
-    ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
-    ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
-    ELG_decorations_array[9]
+        ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
+        ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
+        ELG_decorations_array[9]
 
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
-    QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
-    QSO_design_array[5], QSO_design_array[6]
+        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
+        QSO_design_array[5], QSO_design_array[6]
     alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q = \
-    QSO_decorations_array[1], QSO_decorations_array[2], QSO_decorations_array[3], QSO_decorations_array[4], \
-    QSO_decorations_array[5], QSO_decorations_array[6], QSO_decorations_array[7], QSO_decorations_array[8], \
-    QSO_decorations_array[9]
+        QSO_decorations_array[1], QSO_decorations_array[2], QSO_decorations_array[3], QSO_decorations_array[4], \
+        QSO_decorations_array[5], QSO_decorations_array[6], QSO_decorations_array[7], QSO_decorations_array[8], \
+        QSO_decorations_array[9]
 
     H = len(hmass) # num of particles
 
@@ -588,25 +588,25 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         want_LRG = True
         # LRG design and decorations
         logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
-        map(LRG_HOD.get, ('logM_cut', 
-                          'logM1', 
-                          'sigma', 
-                          'alpha', 
-                          'kappa'))
+            map(LRG_HOD.get, ('logM_cut', 
+                              'logM1', 
+                              'sigma', 
+                              'alpha', 
+                              'kappa'))
         LRG_design_array = np.array([logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L])
 
         alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic = \
-        map(LRG_HOD.get, ('alpha_c', 
-                        'alpha_s',  
-                        's', 
-                        's_v', 
-                        's_p', 
-                        's_r',
-                        'Acent',
-                        'Asat',
-                        'Bcent',
-                        'Bsat',
-                        'ic'))
+            map(LRG_HOD.get, ('alpha_c', 
+                            'alpha_s',  
+                            's', 
+                            's_v', 
+                            's_p', 
+                            's_r',
+                            'Acent',
+                            'Asat',
+                            'Bcent',
+                            'Bsat',
+                            'ic'))
         LRG_decorations_array = np.array([alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
@@ -618,28 +618,28 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         # ELG design
         want_ELG = True
         pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
-        map(ELG_HOD.get, ('p_max',
-                        'Q',
-                        'logM_cut',
-                        'kappa',
-                        'sigma',
-                        'logM1',
-                        'alpha',
-                        'gamma',
-                        'A_s'))
+            map(ELG_HOD.get, ('p_max',
+                            'Q',
+                            'logM_cut',
+                            'kappa',
+                            'sigma',
+                            'logM1',
+                            'alpha',
+                            'gamma',
+                            'A_s'))
         ELG_design_array = np.array(
             [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E])
         alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
-        map(ELG_HOD.get, ('alpha_c', 
-                        'alpha_s',  
-                        's', 
-                        's_v', 
-                        's_p', 
-                        's_r',
-                        'Acent',
-                        'Asat',
-                        'Bcent',
-                        'Bsat'))
+            map(ELG_HOD.get, ('alpha_c', 
+                            'alpha_s',  
+                            's', 
+                            's_v', 
+                            's_p', 
+                            's_r',
+                            'Acent',
+                            'Asat',
+                            'Bcent',
+                            'Bsat'))
         ELG_decorations_array = np.array(
             [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E])
     else:
@@ -652,27 +652,26 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         # QSO design
         want_QSO = True
         pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
-        map(QSO_HOD.get, ('p_max',
-                        'logM_cut',
-                        'kappa',
-                        'sigma',
-                        'logM1',
-                        'alpha',
-                        'A_s'))
-
+            map(QSO_HOD.get, ('p_max',
+                            'logM_cut',
+                            'kappa',
+                            'sigma',
+                            'logM1',
+                            'alpha',
+                            'A_s'))
         QSO_design_array = np.array(
             [pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q])
         alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q = \
-        map(QSO_HOD.get, ('alpha_c', 
-                        'alpha_s',  
-                        's', 
-                        's_v', 
-                        's_p', 
-                        's_r',
-                        'Acent',
-                        'Asat',
-                        'Bcent',
-                        'Bsat'))
+            map(QSO_HOD.get, ('alpha_c', 
+                            'alpha_s',  
+                            's', 
+                            's_v', 
+                            's_p', 
+                            's_r',
+                            'Acent',
+                            'Asat',
+                            'Bcent',
+                            'Bsat'))
         QSO_decorations_array = np.array(
             [alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q])
     else:
@@ -713,20 +712,11 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     # do a concatenate in numba parallel 
     start = time.time()
     HOD_dict = {}
-    for tracer in tracers.keys():
-        tracer_dict = {
-            'x': fast_concatenate(HOD_dict_cent[tracer]['x'], HOD_dict_sat[tracer]['x'], Nthread),
-            'y': fast_concatenate(HOD_dict_cent[tracer]['y'], HOD_dict_sat[tracer]['y'], Nthread),
-            'z': fast_concatenate(HOD_dict_cent[tracer]['z'], HOD_dict_sat[tracer]['z'], Nthread),
-            'vx': fast_concatenate(HOD_dict_cent[tracer]['vx'], HOD_dict_sat[tracer]['vx'], Nthread),
-            'vy': fast_concatenate(HOD_dict_cent[tracer]['vy'], HOD_dict_sat[tracer]['vy'], Nthread),
-            'vz': fast_concatenate(HOD_dict_cent[tracer]['vz'], HOD_dict_sat[tracer]['vz'], Nthread),
-            'mass': fast_concatenate(HOD_dict_cent[tracer]['mass'], HOD_dict_sat[tracer]['mass'], Nthread),
-            'id': fast_concatenate(HOD_dict_cent[tracer]['id'], HOD_dict_sat[tracer]['id'], Nthread),
-            'Ncent': len(HOD_dict_cent[tracer]['x'])
-        }
-        print(tracer, 
-            "number of galaxies ", len(tracer_dict['x']), 
+    for tracer in tracers:
+        tracer_dict = {'Ncent':len(HOD_dict_cent[tracer]['x'])}
+        for k in HOD_dict_cent[tracer]:
+            tracer_dict[k] = fast_concatenate(HOD_dict_cent[tracer][k], HOD_dict_sat[tracer][k], Nthread)
+        print(tracer, "number of galaxies ", len(tracer_dict['x']), 
             ", satellite fraction ", len(HOD_dict_sat[tracer]['x'])/len(tracer_dict['x']))
         HOD_dict[tracer] = tracer_dict
     print("organizing outputs took ", time.time() - start)
