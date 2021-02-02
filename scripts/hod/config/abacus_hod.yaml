@@ -84,7 +84,7 @@ HOD_params:
         Bcent: 0
         Bsat: 0
 
-# Power spectrum parameters
+# clustering parameters
 clustering_params:
 #    power_type: 'wp'
     clustering_type: 'xirppi'
@@ -95,6 +95,11 @@ clustering_params:
     pimax: 40
     pi_bin_size: 2
 
+# ===========================================================================================
+# The following dictionaries are for using the provided emcee/likelihood templates. They 
+# are not needed for using the AbacusHOD class and running HODs. 
+
+# parameters that indicate where the observed data that you would like to fit live. 
 data_params:
     tracer_combos:
         LRG_LRG:    

@@ -40,7 +40,7 @@ def main(path2config):
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
     
     # throw away run for jit to compile, write to disk
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 16)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 16)
     # mock_dict = newBall.gal_reader()
     # xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
     # print(xirppi)
