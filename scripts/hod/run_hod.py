@@ -40,7 +40,7 @@ def main(path2config):
     newBall = AbacusHOD(sim_params, HOD_params, power_params)
     
     # throw away run for jit to compile, write to disk
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 16)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 16)
     # mock_dict = newBall.gal_reader()
     # xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
     # print(xirppi)
@@ -50,8 +50,8 @@ def main(path2config):
     # run the fit 10 times for timing
     for i in range(10):
         # example for sandy
-        newBall.tracers['ELG']['alpha'] += 0.01
-        print("alpha = ",newBall.tracers['ELG']['alpha'])
+        newBall.tracers['LRG']['alpha'] += 0.01
+        print("alpha = ",newBall.tracers['LRG']['alpha'])
         start = time.time()
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
         print("Done iteration ", i, "took time ", time.time() - start)

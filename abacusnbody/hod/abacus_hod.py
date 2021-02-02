@@ -145,9 +145,16 @@ Within Python, you can run the same script with
 If your config file lives in the default location, i.e. ``./config``, then you 
 can ignore the ``-path2config`` flag. 
 Once that is finished, you can construct the ``AbacusHOD`` object and run fast 
-HOD chains. A code template is given in ``abacusnbody/hod/run_hod.py`` for 
-running a few example HODs and ``abacusnbody/hod/run_emcee.py`` for integrating 
-with the ``emcee`` sampler. Here we provide a code snippet
+HOD chains. A code template is given in ``abacusutils/scripts/run_hod.py`` for 
+running a few example HODs and ``abacusutils/scripts/run_emcee.py`` for integrating 
+with the ``emcee`` sampler. 
+
+To use the given ``run_hod.py`` script to run a custom configuration file, you can
+simply run the given script in bash ::
+    python run_hod.py --path2config PATH2CONFIG
+
+You can also consruct the AbacusHOD object yourself within Python and run HODs from
+there. Here we show the scripts within ``run_hod.py`` for reference:
 
 >>> import os
 >>> import glob
@@ -175,14 +182,14 @@ with the ``emcee`` sampler. Here we provide a code snippet
 >>> newBall = AbacusHOD(sim_params, HOD_params, power_params)
 >>>     
 >>> # first hod run, slow due to compiling jit, write to disk
->>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+>>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
 >>> 
 >>> # run the 10 different HODs for timing
 >>> for i in range(10):
 >>>     newBall.tracers['LRG']['alpha'] += 0.01
 >>>     print("alpha = ",newBall.tracers['LRG']['alpha'])
 >>>     start = time.time()
->>>     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False)
+>>>     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 64)
 >>>     print("Done iteration ", i, "took time ", time.time() - start)
 
 The class also provides fast 2PCF calculators. For example to compute the 
@@ -395,21 +402,20 @@ class AbacusHOD:
             maskedhalos = allhalos[mask]
 
             # extracting the halo properties that we need
-            halo_ids = np.array(maskedhalos["id"], dtype = int) # halo IDs
+            halo_ids = maskedhalos["id"].astype(int) # halo IDs
             halo_pos = maskedhalos["x_L2com"] # halo positions, Mpc / h
             halo_vels = maskedhalos['v_L2com'] # halo velocities, km/s
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
-            halo_pstart = np.array(maskedhalos['npstartA'], dtype = int) # starting index of particles
-            halo_pnum = np.array(maskedhalos['npoutA'], dtype = int) # number of particles 
+            halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
+            halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles 
             halo_multi = maskedhalos['multi_halos']
-            halo_submask = np.array(maskedhalos['mask_subsample'], dtype = bool)
+            halo_submask = maskedhalos['mask_subsample'].astype(bool)
             halo_randoms = maskedhalos['randoms']
-            print("loading halos took ", time.time() - start)
+            print("loading halo slab took ", time.time() - start)
 
-            start = time.time()
             hpos[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_pos
             hvel[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vels
             hmass[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_mass
@@ -420,9 +426,7 @@ class AbacusHOD:
             hdeltac[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_deltac
             hfenv[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_fenv
             halo_ticker += Nhalos[eslab]
-            print("concatenate halos took ", time.time() - start)
 
-            start = time.time()
             # extract particle data that we need
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
@@ -430,15 +434,13 @@ class AbacusHOD:
             part_vel = subsample['vel']
             part_hvel = subsample['halo_vel']
             part_halomass = subsample['halo_mass'] # msun / h
-            part_haloid = np.array(subsample['halo_id'], dtype = int)
+            part_haloid = subsample['halo_id'].astype(int)
             part_Np = subsample['Np'] # number of particles that end up in the halo
             part_subsample = subsample['downsample_halo']
             part_randoms = subsample['randoms']
             part_deltac = subsample['halo_deltac']
             part_fenv = subsample['halo_fenv']
-            print("loading particles took ", time.time() - start)
 
-            start = time.time()
             if self.want_ranks:
                 part_ranks = subsample['ranks']
                 part_ranksv = subsample['ranksv']
@@ -462,7 +464,6 @@ class AbacusHOD:
             pdeltac[parts_ticker: parts_ticker + Nparts[eslab]] = part_deltac
             pfenv[parts_ticker: parts_ticker + Nparts[eslab]] = part_fenv
             parts_ticker += Nparts[eslab]
-            print("concatenate particles took ", time.time() - start)
 
         halo_data = {"hpos": hpos, 
                      "hvel": hvel, 
