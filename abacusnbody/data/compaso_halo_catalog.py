@@ -209,7 +209,6 @@ from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, a
 import re
 import gc
 
-# SOWNAK
 from collections import defaultdict
 
 # Stop astropy from trying to download time data; nodes on some clusters are not allowed to access the internet directly
@@ -346,12 +345,10 @@ class CompaSOHaloCatalog:
             if len(halo_fns) == 0:
                 raise FileNotFoundError(f'No halo_info files found! Search pattern was: "{globpat}"')
 
-        # SOWNAK
         path_name_split = self.groupdir.split('AbacusSummit')
 
         self.chunk_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
 
-        # SOWNAK
         if cleaned_halos:
             self.cleandir = pjoin(path_name_split[0], 'cleaned_halos', 'AbacusSummit'+path_name_split[-1])
             if isfile(path[0]):
@@ -381,7 +378,6 @@ class CompaSOHaloCatalog:
                 raise ValueError("`load_subsamples` argument must be string or bool")
 
             # Validate the user's `load_subsamples` option and figure out what subsamples we need to load
-            # SOWNAK re.match --> re.fullmatch
             subsamp_match = re.fullmatch(r'(?P<AB>(A|B|AB))(_(?P<hf>halo|field))?_(?P<pidrv>all|pid|rv|pidrvint|rvint)', load_subsamples)
             if not subsamp_match:
                 raise ValueError(f'Value "{load_subsamples}" for argument `load_subsamples` not understood')
@@ -391,7 +387,7 @@ class CompaSOHaloCatalog:
             self.load_pidrv = subsamp_match.group('pidrv')
             if self.load_pidrv == 'all':
                 self.load_pidrv = ['pid','rv']
-            # SOWNAK
+
             if self.load_pidrv == 'pidrvint':
                 self.load_pidrv = ['pid', 'rvint']
             if self.load_pidrv == 'rvint':
@@ -401,7 +397,7 @@ class CompaSOHaloCatalog:
             if self.load_pidrv == 'rv':
                 self.load_pidrv = ['rv']
 
-            # SOWNAK: if the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
+            # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
             for AB in self.load_AB:
                 if 'npstart'+AB+'_merge' not in cleaned_fields:
                     cleaned_fields += ['npstart'+AB+'_merge']
@@ -416,7 +412,6 @@ class CompaSOHaloCatalog:
             # will also be available as self.halos.meta
             self.header = af['header']
 
-        # SOWNAK
         if cleaned_halos:
             with asdf.open(cleaned_halo_fns[0], lazy_load=True, copy_arrays=False) as af:
                 self.header['TimeSliceRedshiftsPrev'] = af['header']['TimeSliceRedshiftsPrev']
@@ -435,40 +430,35 @@ class CompaSOHaloCatalog:
         # TODO: the changes to the subsample loading procedure for the cleaned cats depends on the data model on disk we end up with
         self.subsamples = Table()  # empty table, to be filled with PIDs and RVs in the loading functions below
 
-        # SOWNAK
         self.numhalos = N_halo_per_file
 
         # reindex subsamples if this is an L1 redshift
         # halo subsamples have not yet been reindexed
         self._reindexed = {'A': False, 'B': False}
 
-        # SOWNAK
         if cleaned_halos:
             self._reindexed_merge = {'A': False, 'B': False}
             self._updated_indices = {'A': False, 'B': False}
 
         # Loading the particle information
         if "pid" in self.load_pidrv:
-            # SOWNAK
             if cleaned_halos:
                 self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=True)
             else:
                 self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=False)
         if "rv" in self.load_pidrv:
-            # SOWNAK
             if cleaned_halos:
                 self._load_RVs(N_halo_per_file, cleaned_halos=True)
             else:
                 self._load_RVs(N_halo_per_file, cleaned_halos=False)
-        # SOWNAK
+
         if "rvint" in self.load_pidrv:
             if cleaned_halos:
                 self._load_RVs(N_halo_per_file, cleaned_halos=True, unpack=False)
             else:
                 self._load_RVs(N_halo_per_file, unpack=False)
 
-    # SOWNAK
-    def _read_halo_info(self, halo_fns, fields, cleaned_halos=False):
+    def _read_halo_info(self, halo_fns, fields, cleaned_halos=True):
         # Remember, this function may be called twice
         # Once with the primary fields, then again with the cleaned fields
 
@@ -477,12 +467,10 @@ class CompaSOHaloCatalog:
         afs = [asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in halo_fns]
 
         # TODO: can't remember if keys() is an iterator
-        # SOWNAK -- added list() to make it scriptable
         N_halo_per_file = np.array([len(af[self.data_key][list(af[self.data_key].keys())[0]]) for af in afs])
         N_halos = N_halo_per_file.sum()
 
         # TODO: maybe this logic should be in the calling function so we can differentiate between base and cleaned
-        # SOWNAK
         if (fields == 'all') and not cleaned_halos:
             fields = list(user_dt.names)
         elif (fields == 'all') and cleaned_halos:
@@ -508,7 +496,6 @@ class CompaSOHaloCatalog:
 
         # Make an empty table for the concatenated, unpacked values
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
-        # SOWNAK
         if not cleaned_halos:
             cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
         else:
@@ -523,7 +510,7 @@ class CompaSOHaloCatalog:
             self.halos = Table(cols, copy=False)
             self.halos.meta.update(self.header)
 
-        # SOWNAK: if we're loading main progenitor info, do this:
+        # If we're loading main progenitor info, do this:
         if cleaned_halos:
             r = re.compile('.*mainprog')
             prog_fields = list(filter(r.match, fields))
@@ -614,7 +601,6 @@ class CompaSOHaloCatalog:
 
         # id,npstartA,npstartB,npoutA,npoutB,ntaggedA,ntaggedB,N,L2_N,L0_N (raw/passthrough fields)
         # If ASDF could read into a user-provided array, could avoid these copies
-        # SOWNAK
         pat = re.compile(r'id|npstartA|npstartB|npoutA|npoutB|ntaggedA|ntaggedB|N|L2_N|L0_N|N_total|N_merge|npstartA_merge|npstartB_merge|npoutA_merge|npoutB_merge|npoutA_L0L1|npoutB_L0L1|is_merged_to|N_mainprog|vcirc_max_L2com_mainprog|sigmav3d_L2com_mainprog')  # TODO: can add other cleaned fields here
         self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
 
@@ -668,7 +654,6 @@ class CompaSOHaloCatalog:
         for field in iter_fields:
             have_match = False
             for pat in self.halo_field_loaders:
-                # SOWNAK re.match --> re.fullmatch
                 match = pat.fullmatch(field)
                 if match:
                     if have_match:
@@ -712,7 +697,6 @@ class CompaSOHaloCatalog:
         have_match = False
         loaded_fields = []
         for pat in self.halo_field_loaders:
-            # SOWNAK re.match --> re.fullmatch
             match = pat.fullmatch(field)
             if match:
                 if have_match:
@@ -739,8 +723,7 @@ class CompaSOHaloCatalog:
 
         return loaded_fields
 
-    # SOWNAK
-    def _reindex_subsamples(self, RVorPID, N_halo_per_file, cleaned_halos=False):
+    def _reindex_subsamples(self, RVorPID, N_halo_per_file, cleaned_halos=True):
         if RVorPID == 'pid':
             asdf_col_name = 'packedpid'
         elif RVorPID == 'rv':
@@ -752,7 +735,6 @@ class CompaSOHaloCatalog:
         np_total = 0
         np_per_file = []
 
-        # SOWNAK
         if cleaned_halos:
             particle_AB_merge_afs = []
             np_total_merge = 0
@@ -765,13 +747,11 @@ class CompaSOHaloCatalog:
             if 'halo' in self.load_halofield:
                 halo_particle_afs = [asdf.open(pjoin(self.groupdir, f'halo_{RVorPID}_{AB}', f'halo_{RVorPID}_{AB}_{i:03d}.asdf'), lazy_load=True, copy_arrays=True)
                                         for i in self.chunk_inds]
-                # SOWNAK
                 if cleaned_halos:
                     halo_particle_merge_afs = [asdf.open(pjoin(self.cleandir,  f'cleaned_rvpid_{i:03d}.asdf'), lazy_load=True, copy_arrays=True) for i in self.chunk_inds]
 
             else:
                 halo_particle_afs = []
-                # SOWNAK
                 if cleaned_halos:
                     halo_particle_merge_afs = []
 
@@ -792,7 +772,6 @@ class CompaSOHaloCatalog:
                 assert len(N_halo_per_file) == len(halo_particle_afs) or len(self.halo_fns) == len(field_particle_afs)
             particle_afs = halo_particle_afs + field_particle_afs
 
-            # SOWNAK
             if cleaned_halos:
                 assert len(N_halo_per_file) == len(halo_particle_merge_afs)
                 particle_merge_afs = halo_particle_merge_afs
@@ -806,7 +785,6 @@ class CompaSOHaloCatalog:
                                                   N_halo_per_file)
                 self._reindexed[AB] = True
 
-            # SOWNAK
             if cleaned_halos:
                 if not self._reindexed_merge[AB] and 'halo' in self.load_halofield and 'npstart'+AB+'_merge' in self.halos.colnames:
                     mask = (self.halos['N_total'] == 0)
@@ -822,7 +800,6 @@ class CompaSOHaloCatalog:
                 np_total = np.sum(np_per_file)
             particle_AB_afs += particle_afs
 
-            # SOWNAK
             if cleaned_halos:
                 for af in particle_merge_afs:
                     np_per_file_merge += [len(af[self.data_key][asdf_col_name+'_'+AB])]
@@ -835,17 +812,15 @@ class CompaSOHaloCatalog:
 
         np_per_file = np.array(np_per_file)
 
-        # SOWNAK
         if cleaned_halos:
             return particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read
         else:
             return particle_AB_afs, np_per_file
 
 
-    def _load_pids(self, unpack_bits, N_halo_per_file, cleaned_halos=False, check_pids=False):
+    def _load_pids(self, unpack_bits, N_halo_per_file, cleaned_halos=True, check_pids=False):
         # Even if unpack_bits is False, return the PID-masked value, not the raw value.
 
-        # SOWNAK
         if cleaned_halos:
             pid_AB_afs, np_per_file, pid_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=True)
         else:
@@ -855,7 +830,6 @@ class CompaSOHaloCatalog:
         np_total = np.sum(np_per_file)
         pids_AB = np.empty(np_total, dtype=np.uint64)
 
-        # SOWNAK
         if cleaned_halos:
             start_merge = 0
             np_total_merge = np.sum(np_per_file_merge)
@@ -869,7 +843,6 @@ class CompaSOHaloCatalog:
                 pids_AB[start:start+thisnp] = af[self.data_key]['packedpid']
             start += thisnp
 
-        # SOWNAK
         if cleaned_halos:
             for i,af in enumerate(pid_AB_merge_afs):
                     thisnp = np_per_file_merge[i]
@@ -883,11 +856,11 @@ class CompaSOHaloCatalog:
         # Could be expensive!  Off by default.  Probably faster ways to implement this.
         if check_pids:
             assert len(np.unique(pids_AB)) == len(pids_AB)
-            # SOWNAK
+
             if cleaned_halos:
                 assert len(np.unique(pids_AB_merge)) == len(pids_AB_merge)
 
-        # SOWNAK: join subsample arrays here
+        # Join subsample arrays here
         if cleaned_halos:
             offset = 0
             total_particles = len(pids_AB) + len(pids_AB_merge)
@@ -930,10 +903,8 @@ class CompaSOHaloCatalog:
             else:
                 self.subsamples.add_column(pids_AB, name='pid', copy=False)
 
-    # SOWNAK
-    def _load_RVs(self, N_halo_per_file, unpack=True, cleaned_halos=False):
+    def _load_RVs(self, N_halo_per_file, unpack=True, cleaned_halos=True):
 
-        # SOWNAK
         if cleaned_halos:
             particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=True)
         else:
@@ -943,7 +914,6 @@ class CompaSOHaloCatalog:
         np_total = np.sum(np_per_file)
         particles_AB = np.empty((np_total,3),dtype=np.int32)
 
-        # SOWNAK
         if cleaned_halos:
             start_merge = 0
             np_total_merge = np.sum(np_per_file_merge)
@@ -954,7 +924,6 @@ class CompaSOHaloCatalog:
             particles_AB[start:start+thisnp] = af[self.data_key]['rvint']
             start += thisnp
 
-        # SOWNAK
         if cleaned_halos:
             for i,af in enumerate(particle_AB_merge_afs):
                     thisnp = np_per_file_merge[i]
@@ -962,7 +931,7 @@ class CompaSOHaloCatalog:
                     particles_AB_merge[start_merge:start_merge+thisnp] = af[self.data_key][key]
                     start_merge += thisnp
 
-        # SOWNAK: join subsample arrays here
+        # Join subsample arrays here
         if cleaned_halos:
             offset = 0
             total_particles = len(particles_AB) + len(particles_AB_merge)
@@ -983,10 +952,9 @@ class CompaSOHaloCatalog:
                     self._updated_indices[AB] = True
             particles_AB_total = particles_AB_total[:offset]
 
-        # SOWNAK
         if unpack:
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
-            # SOWNAK
+
             if cleaned_halos:
                 ppos_AB, pvel_AB = unpack_rvint(particles_AB_total, unpackbox)
             else:
@@ -996,7 +964,7 @@ class CompaSOHaloCatalog:
             self.subsamples.add_column(pvel_AB, name='vel', copy=False)
 
         else:
-            # SOWNAK
+
             if cleaned_halos:
                 self.subsamples.add_column(particles_AB_total, name='rvint', copy=False)
             else:
