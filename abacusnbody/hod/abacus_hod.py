@@ -424,8 +424,6 @@ class AbacusHOD:
             start = time.time()
             newfile = h5py.File(halofilename, 'r')
             maskedhalos = newfile['halos']
-            # mask = np.array(allhalos['mask_subsample'], dtype = bool)
-            # maskedhalos = allhalos[mask]
 
             # extracting the halo properties that we need
             halo_ids = maskedhalos["id"].astype(int) # halo IDs

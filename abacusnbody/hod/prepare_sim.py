@@ -325,15 +325,6 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     dataset = newfile.create_dataset('particles', data = parts)
     newfile.close()
 
-    # # updating the number file
-    # numfile_name = savedir+"/num_halos_parts" 
-    # if MT:
-    #     numfile_name += "_MT"
-    # numfile_name += ".txt"
-    # fnum = open(numfile_name, 'a')
-    # fnum.write("{} {} {} \n".format(i, np.sum(mask_halos), len(parts)))
-    # fnum.close()
-
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
 def main(path2config, params = None):
@@ -372,21 +363,6 @@ def main(path2config, params = None):
         newfile = h5py.File(savedir+"/density_field.h5", 'w')
         dataset = newfile.create_dataset('dens', data = dens_grid)
         newfile.close()
-
-    # # create subsamples
-    # print("starting pool", numslabs)
-    # for i in range(numslabs):
-    #     prepare_slab(i, savedir, simdir, simname, z_mock,        tracer_flags, MT, want_ranks, 
-    #     N_dim, newseed)
-
-    # # create a text file that records the number of halos and particles per chunk 
-    # numfile_name = savedir+"/num_halos_parts" 
-    # if MT:
-    #     numfile_name == "_MT"
-    # numfile_name += ".txt"
-    # if os.path.exists(numfile_name):
-    #     os.remove(numfile_name)
-    # open(numfile_name, 'w').close()
 
     p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
