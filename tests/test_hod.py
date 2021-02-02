@@ -26,7 +26,7 @@ def test_loading(tmp_path):
     config = yaml.load(open(EXAMPLE_CONFIG))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
-    power_params = config['power_params']
+    clustering_params = config['clustering_params']
 
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
@@ -52,13 +52,13 @@ def test_loading(tmp_path):
     # additional parameter choices
     want_rsd = HOD_params['want_rsd']
     write_to_disk = HOD_params['write_to_disk']
-    bin_params = power_params['bin_params']
+    bin_params = clustering_params['bin_params']
     rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
-    pimax = power_params['pimax']
-    pi_bin_size = power_params['pi_bin_size']
+    pimax = clustering_params['pimax']
+    pi_bin_size = clustering_params['pi_bin_size']
     
     # create a new abacushod object
-    newBall = AbacusHOD(sim_params, HOD_params, power_params)
+    newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
     
     # throw away run for jit to compile, write to disk
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
