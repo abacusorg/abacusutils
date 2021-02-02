@@ -29,9 +29,9 @@ HOD_params:
     Ndim: 1024                     # grid density for computing local environment
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
-        LRG: True 
+        LRG: False 
         ELG: False
-        QSO: False
+        QSO: True
     want_rsd: True                 # want RSD? 
     write_to_disk: False
 

@@ -219,7 +219,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     qso_vx = np.empty(N_qso, dtype = mass.dtype)
     qso_vy = np.empty(N_qso, dtype = mass.dtype)
     qso_vz = np.empty(N_qso, dtype = mass.dtype)
-    qso_mass = np.empty(N_lrg, dtype = mass.dtype)
+    qso_mass = np.empty(N_qso, dtype = mass.dtype)
     qso_id = np.empty(N_qso, dtype = ids.dtype)
 
     # fill in the galaxy arrays
@@ -662,7 +662,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
 
         QSO_design_array = np.array(
             [pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q])
-        alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_EQ, Bc_Q, Bs_Q = \
+        alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q = \
         map(QSO_HOD.get, ('alpha_c', 
                         'alpha_s',  
                         's', 

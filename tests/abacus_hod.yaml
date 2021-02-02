@@ -29,9 +29,9 @@ HOD_params:
     Ndim: 16                   # grid density for computing local environment
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
-        LRG: True
+        LRG: False
         ELG: False
-        QSO: False
+        QSO: True
     want_rsd: True                 # want RSD? 
     write_to_disk: False
 
@@ -97,9 +97,9 @@ HOD_params:
         Bsat: 0
 
 # Power spectrum parameters
-power_params:
+clustering_params:
 #    power_type: 'wp'
-    power_type: 'xirppi'
+    clustering_type: 'xirppi'
     bin_params:
         logmin: -0.7728787904780005
         logmax: 1.4771212597864314
