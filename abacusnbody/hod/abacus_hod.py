@@ -154,7 +154,7 @@ simply run the given script in bash ::
     python run_hod.py --path2config PATH2CONFIG
 
 You can also consruct the AbacusHOD object yourself within Python and run HODs from
-there. Here we show the scripts within ``run_hod.py`` for reference:
+there. Here we show the scripts within ``run_hod.py`` for reference.
 
 >>> import os
 >>> import glob
