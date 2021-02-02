@@ -1,0 +1,10 @@
+numpy>=1.16
+blosc>=1.9.2
+astropy>=4.0.0
+scipy
+numba
+asdf
+h5py
+Corrfunc
+emcee
+sacc
