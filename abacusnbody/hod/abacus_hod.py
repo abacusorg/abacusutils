@@ -334,18 +334,44 @@ class AbacusHOD:
         params['numslabs'] = len(halo_info_fns)
         self.lbox = header['BoxSize']
         
-        # figure out number of halos and particles
-        if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-            numfile_name = subsample_dir / ("num_halos_parts.txt")
-        else:
-            numfile_name = subsample_dir / ("num_halos_parts_MT.txt")
-        fnum = np.loadtxt(numfile_name)
-        fnum = np.array(sorted(fnum, key=lambda x : x[0])).astype(int)
-        ichunks = fnum[:, 0]
-        Nhalos = fnum[:, 1]
-        Nparts = fnum[:, 2]
-        Nhalos_tot = np.sum(Nhalos)
-        Nparts_tot = np.sum(Nparts)
+        # # figure out number of halos and particles
+        # if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
+        #     numfile_name = subsample_dir / ("num_halos_parts.txt")
+        # else:
+        #     numfile_name = subsample_dir / ("num_halos_parts_MT.txt")
+        # fnum = np.loadtxt(numfile_name)
+        # fnum = np.array(sorted(fnum, key=lambda x : x[0])).astype(int)
+        # ichunks = fnum[:, 0]
+        # Nhalos = fnum[:, 1]
+        # Nparts = fnum[:, 2]
+        # Nhalos_tot = np.sum(Nhalos)
+        # Nparts_tot = np.sum(Nparts)
+
+        # count ther number of halos and particles
+        Nhalos = np.empty(params['numslabs'])
+        Nparts = np.empty(params['numslabs'])        
+        for eslab in range(params['numslabs']):
+            
+            if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%eslab)
+            else:
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
+
+            if self.want_ranks:
+                particlefilename = str(particlefilename) + '_withranks'
+            halofilename = str(halofilename) + '_new.h5'
+            particlefilename = str(particlefilename) + '_new.h5'
+
+            newfile = h5py.File(halofilename, 'r')
+            newpart = h5py.File(particlefilename, 'r')
+            Nhalos[eslab] = len(newfile['halos'])
+            Nparts[eslab] = len(newpart['particles'])
+        Nhalos = Nhalos.astype(int)
+        Nparts = Nparts.astype(int)
+        Nhalos_tot = int(np.sum(Nhalos))
+        Nparts_tot = int(np.sum(Nparts))
 
         # list holding individual slabs
         hpos = np.empty((Nhalos_tot, 3))
@@ -397,9 +423,9 @@ class AbacusHOD:
 
             start = time.time()
             newfile = h5py.File(halofilename, 'r')
-            allhalos = newfile['halos']
-            mask = np.array(allhalos['mask_subsample'], dtype = bool)
-            maskedhalos = allhalos[mask]
+            maskedhalos = newfile['halos']
+            # mask = np.array(allhalos['mask_subsample'], dtype = bool)
+            # maskedhalos = allhalos[mask]
 
             # extracting the halo properties that we need
             halo_ids = maskedhalos["id"].astype(int) # halo IDs

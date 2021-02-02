@@ -164,19 +164,19 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     # particle arrays for ranks and mask 
     mask_parts = np.zeros(len(parts))
     len_old = len(parts)
-    ranks_parts = np.full(len_old, -1)
-    ranksv_parts = np.full(len_old, -1)
-    ranksr_parts = np.full(len_old, -1)
-    ranksp_parts = np.full(len_old, -1)
-    pos_parts = np.full((len_old, 3), -1)
-    vel_parts = np.full((len_old, 3), -1)
-    hvel_parts = np.full((len_old, 3), -1)
-    Mh_parts = np.full(len_old, -1)
-    Np_parts = np.full(len_old, -1)
-    downsample_parts = np.full(len_old, -1)
-    idh_parts = np.full(len_old, -1)
-    deltach_parts = np.full(len_old, -1)
-    fenvh_parts = np.full(len_old, -1)
+    ranks_parts = np.full(len_old, -1.0)
+    ranksv_parts = np.full(len_old, -1.0)
+    ranksr_parts = np.full(len_old, -1.0)
+    ranksp_parts = np.full(len_old, -1.0)
+    pos_parts = np.full((len_old, 3), -1.0)
+    vel_parts = np.full((len_old, 3), -1.0)
+    hvel_parts = np.full((len_old, 3), -1.0)
+    Mh_parts = np.full(len_old, -1.0)
+    Np_parts = np.full(len_old, -1.0)
+    downsample_parts = np.full(len_old, -1.0)
+    idh_parts = np.full(len_old, -1.0)
+    deltach_parts = np.full(len_old, -1.0)
+    fenvh_parts = np.full(len_old, -1.0)
 
     print("compiling particle subsamples")
     start_tracker = 0
@@ -293,7 +293,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         os.remove(outfilename_halos)
     print(outfilename_halos, outfilename_particles)
     newfile = h5py.File(outfilename_halos, 'w')
-    dataset = newfile.create_dataset('halos', data = halos)
+    dataset = newfile.create_dataset('halos', data = halos[mask_halos])
     newfile.close()
 
     # output the new particle file
@@ -325,14 +325,14 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     dataset = newfile.create_dataset('particles', data = parts)
     newfile.close()
 
-    # updating the number file
-    numfile_name = savedir+"/num_halos_parts" 
-    if MT:
-        numfile_name += "_MT"
-    numfile_name += ".txt"
-    fnum = open(numfile_name, 'a')
-    fnum.write("{} {} {} \n".format(i, np.sum(mask_halos), len(parts)))
-    fnum.close()
+    # # updating the number file
+    # numfile_name = savedir+"/num_halos_parts" 
+    # if MT:
+    #     numfile_name += "_MT"
+    # numfile_name += ".txt"
+    # fnum = open(numfile_name, 'a')
+    # fnum.write("{} {} {} \n".format(i, np.sum(mask_halos), len(parts)))
+    # fnum.close()
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
@@ -379,14 +379,14 @@ def main(path2config, params = None):
     #     prepare_slab(i, savedir, simdir, simname, z_mock,        tracer_flags, MT, want_ranks, 
     #     N_dim, newseed)
 
-    # create a text file that records the number of halos and particles per chunk 
-    numfile_name = savedir+"/num_halos_parts" 
-    if MT:
-        numfile_name == "_MT"
-    numfile_name += ".txt"
-    if os.path.exists(numfile_name):
-        os.remove(numfile_name)
-    open(numfile_name, 'w').close()
+    # # create a text file that records the number of halos and particles per chunk 
+    # numfile_name = savedir+"/num_halos_parts" 
+    # if MT:
+    #     numfile_name == "_MT"
+    # numfile_name += ".txt"
+    # if os.path.exists(numfile_name):
+    #     os.remove(numfile_name)
+    # open(numfile_name, 'w').close()
 
     p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
