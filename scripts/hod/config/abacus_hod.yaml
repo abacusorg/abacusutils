@@ -97,9 +97,9 @@ HOD_params:
         Bsat: 0
 
 # Power spectrum parameters
-power_params:
+clustering_params:
 #    power_type: 'wp'
-    power_type: 'xirppi'
+    clustering_type: 'xirppi'
     bin_params:
         logmin: 0
         logmax: 2

@@ -172,14 +172,14 @@ there. Here we show the scripts within ``run_hod.py`` for reference.
 >>> config = yaml.load(open(path2config))
 >>> sim_params = config['sim_params']
 >>> HOD_params = config['HOD_params']
->>> power_params = config['power_params']
+>>> clustering_params = config['clustering_params']
 >>> 
 >>> # additional parameter choices
 >>> want_rsd = HOD_params['want_rsd']
 >>> write_to_disk = HOD_params['write_to_disk']
 >>> 
 >>> # create a new AbacusHOD object
->>> newBall = AbacusHOD(sim_params, HOD_params, power_params)
+>>> newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 >>>     
 >>> # first hod run, slow due to compiling jit, write to disk
 >>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
@@ -196,10 +196,10 @@ The class also provides fast 2PCF calculators. For example to compute the
 redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`):
 
 >>> # load the rp pi binning from the config file
->>> bin_params = power_params['bin_params']
+>>> bin_params = clustering_params['bin_params']
 >>> rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
->>> pimax = power_params['pimax']
->>> pi_bin_size = power_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
+>>> pimax = clustering_params['pimax']
+>>> pi_bin_size = clustering_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
 >>> 
 >>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
 >>> xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
@@ -228,12 +228,12 @@ class AbacusHOD:
     """
     A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
     """
-    def __init__(self, sim_params, HOD_params, power_params):
+    def __init__(self, sim_params, HOD_params, clustering_params):
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
-        configurations. The ``power_params`` specifies the summary statistics 
-        configurations. The ``HOD_params`` and ``power_params`` can be set to their
+        configurations. The ``clustering_params`` specifies the summary statistics 
+        configurations. The ``HOD_params`` and ``clustering_params`` can be set to their
         default values in the ``config/abacus_hod.yaml`` file and changed later. 
         The ``sim_params`` cannot be changed once the ``AbacusHOD`` object is created. 
 
@@ -263,9 +263,9 @@ class AbacusHOD:
                 * ``ELG_params``: dict, HOD parameter values for ELGs. Default values are given in config file. 
                 * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file. 
 
-        power_params: dict
+        clustering_params: dict
             Sumamry statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
-                * ``power_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
+                * ``clustering_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
                 * ``bin_params``: dict, transverse scale binning. 
                     * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}} in Mpc/h.
                     * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}} in Mpc/h.
@@ -293,12 +293,12 @@ class AbacusHOD:
         self.want_ranks = HOD_params['want_ranks']
         self.want_rsd = HOD_params['want_rsd']
         
-        # power spectrum parameters
-        self.pimax = power_params['pimax']
-        self.pi_bin_size = power_params['pi_bin_size']
-        bin_params = power_params['bin_params']
+        # clusteringparameters
+        self.pimax = clustering_params['pimax']
+        self.pi_bin_size = clustering_params['pi_bin_size']
+        bin_params = clustering_params['bin_params']
         self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
-        self.power_type = power_params['power_type']
+        self.clustering_type = clustering_params['clustering_type']
                 
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
@@ -536,7 +536,7 @@ class AbacusHOD:
 
         return mock_dict
 
-    def compute_power(self, mock_dict, *args, **kwargs):
+    def compute_clustering(self, mock_dict, *args, **kwargs):
         """
         Computes summary statistics, currently enabling ``wp`` and ``xirppi``.
 
@@ -559,16 +559,16 @@ class AbacusHOD:
 
         Returns
         -------
-        power: dict
+        clustering: dict
             dicionary of summary statistics. Auto-correlations/spectra can be
             accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
             accessed with keys such as ``'LRG_ELG'``. 
         """
-        if self.power_type == 'xirppi':
-            power = self.compute_xirppi(mock_dict, *args, **kwargs)
-        elif self.power_type == 'wp':
-            power = self.compute_wp(mock_dict, *args, **kwargs)
-        return power
+        if self.clustering_type == 'xirppi':
+            clustering = self.compute_xirppi(mock_dict, *args, **kwargs)
+        elif self.clustering_type == 'wp':
+            clustering = self.compute_wp(mock_dict, *args, **kwargs)
+        return clustering
     
     def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
@@ -593,12 +593,12 @@ class AbacusHOD:
 
         Returns
         -------
-        power: dict
+        clustering: dict
             dicionary of summary statistics. Auto-correlations/spectra can be
             accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
             accessed with keys such as ``'LRG_ELG'``. 
         """
-        power_spectra = {}
+        clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
             y1 = mock_dict[tr1]['y']
@@ -608,10 +608,10 @@ class AbacusHOD:
                 x2 = mock_dict[tr2]['x']
                 y2 = mock_dict[tr2]['y']
                 z2 = mock_dict[tr2]['z']
-                power_spectra[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
+                clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
                     self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                if i1 != i2: power_spectra[tr2+'_'+tr1] = power_spectra[tr1+'_'+tr2]
-        return power_spectra
+                if i1 != i2: clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+        return clustering
 
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
@@ -636,12 +636,12 @@ class AbacusHOD:
 
         Returns
         -------
-        power: dict
+        clustering: dict
             dicionary of summary statistics. Auto-correlations/spectra can be
             accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
             accessed with keys such as ``'LRG_ELG'``. 
         """
-        power_spectra = {}
+        clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
             y1 = mock_dict[tr1]['y']
@@ -651,9 +651,9 @@ class AbacusHOD:
                 x2 = mock_dict[tr2]['x']
                 y2 = mock_dict[tr2]['y']
                 z2 = mock_dict[tr2]['z']
-                power_spectra[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                if i1 != i2: power_spectra[tr2+'_'+tr1] = power_spectra[tr1+'_'+tr2]
-        return power_spectra
+                clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                if i1 != i2: clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+        return clustering
 
     def gal_reader(self, scratch_dir = None, simname = None, 
         sim_dir = None, z_mock = None, want_rsd = None, tracers = None):
