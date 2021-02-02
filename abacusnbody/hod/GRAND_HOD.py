@@ -435,7 +435,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     qso_vx = np.empty(N_qso, dtype = hmass.dtype)
     qso_vy = np.empty(N_qso, dtype = hmass.dtype)
     qso_vz = np.empty(N_qso, dtype = hmass.dtype)
-    qso_mass = np.empty(N_lrg, dtype = hmass.dtype)
+    qso_mass = np.empty(N_qso, dtype = hmass.dtype)
     qso_id = np.empty(N_qso, dtype = hid.dtype)
 
     # fill in the galaxy arrays
