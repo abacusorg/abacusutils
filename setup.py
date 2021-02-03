@@ -1,4 +1,12 @@
+import os
+
 from setuptools import setup, find_namespace_packages
+
+# If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','emcee','sacc']
+if not on_rtd:
+    install_requires += ['Corrfunc>=2']
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -18,6 +26,6 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
     python_requires='>=3.6',
-    install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','numba','asdf'],
+    install_requires = install_requires,
     entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main']}
 )
