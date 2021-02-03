@@ -361,6 +361,13 @@ class CompaSOHaloCatalog:
 
         del path
 
+        # Minimum requirement for cleaned haloes
+        if cleaned_halos:
+            if type(cleaned_fields) == str:
+                cleaned_fields = [cleaned_fields]
+            if 'N_total' not in cleaned_fields:
+                cleaned_fields += ['N_total']
+
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
         self.verbose = verbose
@@ -398,20 +405,14 @@ class CompaSOHaloCatalog:
                 self.load_pidrv = ['rv']
 
             if cleaned_halos:
-                if type(cleaned_fields) == str:
-                    cleaned_fields = [cleaned_fields]
-                if 'N_total' not in cleaned_fields:
-                    cleaned_fields += ['N_total']
-
-                    # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
-                    for AB in self.load_AB:
-                        if 'npstart'+AB+'_merge' not in cleaned_fields:
-                            cleaned_fields += ['npstart'+AB+'_merge']
-                        if 'npout'+AB+'_merge' not in cleaned_fields:
-                            cleaned_fields += ['npout'+AB+'_merge']
+                # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
+                for AB in self.load_AB:
+                    if 'npstart'+AB+'_merge' not in cleaned_fields:
+                        cleaned_fields += ['npstart'+AB+'_merge']
+                    if 'npout'+AB+'_merge' not in cleaned_fields:
+                        cleaned_fields += ['npout'+AB+'_merge']
 
         del load_subsamples  # use the parsed values
-
 
         # Open the first file, just to grab the header
         with asdf.open(halo_fns[0], lazy_load=True, copy_arrays=False) as af:
