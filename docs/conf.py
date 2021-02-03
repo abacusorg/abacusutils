@@ -65,5 +65,6 @@ napoleon_include_init_with_doc = True
 intersphinx_mapping = {'summit': ('https://abacussummit.readthedocs.io/en/latest', None)}
 
 autosectionlabel_prefix_document = True
+
 autodoc_member_order = 'bysource'
 autodoc_mock_imports = ['Corrfunc']
