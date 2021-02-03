@@ -377,7 +377,7 @@ class AbacusHOD:
         hpos = np.empty((Nhalos_tot, 3))
         hvel = np.empty((Nhalos_tot, 3))
         hmass = np.empty([Nhalos_tot])
-        hid = np.empty([Nhalos_tot])
+        hid = np.empty([Nhalos_tot], dtype = int)
         hmultis = np.empty([Nhalos_tot])
         hrandoms = np.empty([Nhalos_tot])
         hveldev = np.empty([Nhalos_tot])
@@ -388,7 +388,7 @@ class AbacusHOD:
         pvel = np.empty((Nparts_tot, 3))
         phvel = np.empty((Nparts_tot, 3))
         phmass = np.empty([Nparts_tot])
-        phid = np.empty([Nparts_tot])
+        phid = np.empty([Nparts_tot], dtype = int)
         pNp = np.empty([Nparts_tot])
         psubsampling = np.empty([Nparts_tot])
         prandoms = np.empty([Nparts_tot])
@@ -492,7 +492,7 @@ class AbacusHOD:
         halo_data = {"hpos": hpos, 
                      "hvel": hvel, 
                      "hmass": hmass, 
-                     "hid": hid.astype(int), 
+                     "hid": hid, 
                      "hmultis": hmultis, 
                      "hrandoms": hrandoms, 
                      "hveldev": hveldev, 
@@ -503,7 +503,7 @@ class AbacusHOD:
                          "pvel": pvel, 
                          "phvel": phvel, 
                          "phmass": phmass, 
-                         "phid": phid.astype(int), 
+                         "phid": phid, 
                          "pweights": pweights, 
                          "prandoms": prandoms, 
                          "pdeltac": pdeltac, 
