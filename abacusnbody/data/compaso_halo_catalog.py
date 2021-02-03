@@ -397,12 +397,18 @@ class CompaSOHaloCatalog:
             if self.load_pidrv == 'rv':
                 self.load_pidrv = ['rv']
 
-            # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
-            for AB in self.load_AB:
-                if 'npstart'+AB+'_merge' not in cleaned_fields:
-                    cleaned_fields += ['npstart'+AB+'_merge']
-                if 'npout'+AB+'_merge' not in cleaned_fields:
-                    cleaned_fields += ['npout'+AB+'_merge']
+            if cleaned_halos:
+                if type(cleaned_fields) == str:
+                    cleaned_fields = [cleaned_fields]
+                if 'N_total' not in cleaned_fields:
+                    cleaned_fields += ['N_total']
+
+                    # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
+                    for AB in self.load_AB:
+                        if 'npstart'+AB+'_merge' not in cleaned_fields:
+                            cleaned_fields += ['npstart'+AB+'_merge']
+                        if 'npout'+AB+'_merge' not in cleaned_fields:
+                            cleaned_fields += ['npout'+AB+'_merge']
 
         del load_subsamples  # use the parsed values
 
@@ -419,7 +425,7 @@ class CompaSOHaloCatalog:
 
         # Read and unpack the catalog into self.halos
         self._setup_halo_field_loaders()
-        N_halo_per_file = self._read_halo_info(halo_fns, fields)
+        N_halo_per_file = self._read_halo_info(halo_fns, fields, cleaned_halos=False)
 
         if cleaned_halos:
             cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields, cleaned_halos=True)
@@ -456,7 +462,13 @@ class CompaSOHaloCatalog:
             if cleaned_halos:
                 self._load_RVs(N_halo_per_file, cleaned_halos=True, unpack=False)
             else:
-                self._load_RVs(N_halo_per_file, unpack=False)
+                self._load_RVs(N_halo_per_file, cleaned_halos=False, unpack=False)
+
+        # If we're reaading in cleaned haloes, N should be updated
+        if cleaned_halos:
+            if 'N' in self.halos.colnames:
+                self.halos['N'] = self.halos['N_total']
+                self.halos.remove_column('N_total')
 
     def _read_halo_info(self, halo_fns, fields, cleaned_halos=True):
         # Remember, this function may be called twice
@@ -824,7 +836,7 @@ class CompaSOHaloCatalog:
         if cleaned_halos:
             pid_AB_afs, np_per_file, pid_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=True)
         else:
-            pid_AB_afs, np_per_file = self._reindex_subsamples('pid', N_halo_per_file)
+            pid_AB_afs, np_per_file = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=False)
 
         start = 0
         np_total = np.sum(np_per_file)
@@ -908,7 +920,7 @@ class CompaSOHaloCatalog:
         if cleaned_halos:
             particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=True)
         else:
-            particle_AB_afs, np_per_file = self._reindex_subsamples('rv', N_halo_per_file)
+            particle_AB_afs, np_per_file = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=False)
 
         start = 0
         np_total = np.sum(np_per_file)
