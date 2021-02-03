@@ -18,6 +18,7 @@ from numba.typed import Dict
 # config = yaml.load(open('config/abacus_hod.yaml'))
 # numba.set_num_threads(16)
 float_array = types.float64[:]
+int_array = types.int64[:]
 
 @njit(fastmath=True)
 def n_sat_LRG_modified(M_h, logM_cut, M_cut, M_1, sigma, alpha, kappa): 
@@ -271,6 +272,9 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
         # assert j == gstart[tid + 1]
 
     LRG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    ELG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    QSO_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    ID_dict = Dict.empty(key_type = types.unicode_type, value_type = int_array)
     LRG_dict['x'] = lrg_x
     LRG_dict['y'] = lrg_y
     LRG_dict['z'] = lrg_z
@@ -278,9 +282,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     LRG_dict['vy'] = lrg_vy
     LRG_dict['vz'] = lrg_vz
     LRG_dict['mass'] = lrg_mass
-    LRG_dict['id'] = lrg_id.astype(np.float64)
+    ID_dict['LRG'] = lrg_id
 
-    ELG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ELG_dict['x'] = elg_x
     ELG_dict['y'] = elg_y
     ELG_dict['z'] = elg_z
@@ -288,9 +291,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     ELG_dict['vy'] = elg_vy
     ELG_dict['vz'] = elg_vz
     ELG_dict['mass'] = elg_mass
-    ELG_dict['id'] = elg_id.astype(np.float64)
+    ID_dict['ELG'] = elg_id
 
-    QSO_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     QSO_dict['x'] = qso_x
     QSO_dict['y'] = qso_y
     QSO_dict['z'] = qso_z
@@ -298,8 +300,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     QSO_dict['vy'] = qso_vy
     QSO_dict['vz'] = qso_vz
     QSO_dict['mass'] = qso_mass
-    QSO_dict['id'] = qso_id.astype(np.float64)
-    return LRG_dict, ELG_dict, QSO_dict
+    ID_dict['QSO'] = qso_id
+    return LRG_dict, ELG_dict, QSO_dict, ID_dict
 
 
 @njit(parallel = True, fastmath = True)
@@ -483,6 +485,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     LRG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ELG_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     QSO_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    ID_dict = Dict.empty(key_type = types.unicode_type, value_type = int_array)
     LRG_dict['x'] = lrg_x
     LRG_dict['y'] = lrg_y
     LRG_dict['z'] = lrg_z
@@ -490,7 +493,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     LRG_dict['vy'] = lrg_vy
     LRG_dict['vz'] = lrg_vz
     LRG_dict['mass'] = lrg_mass
-    LRG_dict['id'] = lrg_id.astype(np.float64)
+    ID_dict['LRG'] = lrg_id
 
     ELG_dict['x'] = elg_x
     ELG_dict['y'] = elg_y
@@ -499,7 +502,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     ELG_dict['vy'] = elg_vy
     ELG_dict['vz'] = elg_vz
     ELG_dict['mass'] = elg_mass
-    ELG_dict['id'] = elg_id.astype(np.float64)
+    ID_dict['ELG'] = elg_id
 
     QSO_dict['x'] = qso_x
     QSO_dict['y'] = qso_y
@@ -508,8 +511,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     QSO_dict['vy'] = qso_vy
     QSO_dict['vz'] = qso_vz
     QSO_dict['mass'] = qso_mass
-    QSO_dict['id'] = qso_id.astype(np.float64)
-    return LRG_dict, ELG_dict, QSO_dict
+    ID_dict['QSO'] = qso_id
+    return LRG_dict, ELG_dict, QSO_dict, ID_dict
 
 @njit(parallel = True, fastmath = True)
 def fast_concatenate(array1, array2, Nthread):
@@ -686,7 +689,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     inv_velz2kms = 1/velz2kms
     lbox = params['Lbox']
     # for each halo, generate central galaxies and output to file
-    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent = \
+    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
              halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
@@ -695,7 +698,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
 
 
     start = time.time()
-    LRG_dict_sat, ELG_dict_sat, QSO_dict_sat = \
+    LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'], 
              subsample['pweights'], subsample['prandoms'], subsample['pdeltac'], subsample['pfenv'], 
              enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'],
@@ -716,6 +719,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         tracer_dict = {'Ncent':len(HOD_dict_cent[tracer]['x'])}
         for k in HOD_dict_cent[tracer]:
             tracer_dict[k] = fast_concatenate(HOD_dict_cent[tracer][k], HOD_dict_sat[tracer][k], Nthread)
+        tracer_dict['id'] = fast_concatenate(ID_dict_cent[tracer], ID_dict_sat[tracer], Nthread)
         print(tracer, "number of galaxies ", len(tracer_dict['x']), 
             ", satellite fraction ", len(HOD_dict_sat[tracer]['x'])/len(tracer_dict['x']))
         HOD_dict[tracer] = tracer_dict
