@@ -1,8 +1,14 @@
 Changelog
 =========
 
-0.3.1 (upcoming)
-----------------
+0.4.0 (2021-02-03)
+------------------
+
+New Features
+~~~~~~~~~~~~
+- Add ``AbacusHOD`` module for fast HOD generation using AbacusSummit simulations [#4]
+
+- ``CompaSOHaloCatalog`` constructor now takes field names in the ``unpack_bits`` field
 
 Enhancements
 ~~~~~~~~~~~~

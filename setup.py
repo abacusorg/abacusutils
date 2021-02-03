@@ -13,8 +13,8 @@ with open("README.md", "r") as fh:
 
 setup(
     name="abacusutils",
-    version="0.3.0",
-    author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska",
+    version="0.4.0",
+    author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan",
     author_email="lgarrison@flatironinstitute.org",
     description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",
     long_description=long_description,
