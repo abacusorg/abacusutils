@@ -265,6 +265,14 @@ class CompaSOHaloCatalog:
             Will accept ``halo_info`` dirs or "redshift" dirs
             (e.g. ``z1.000/halo_info/`` or ``z1.000/``).
 
+        cleaned_halos: bool, optional
+            Loads the "cleaned" version of the halo catalogues. Always recommended.
+            Assumes there is a directory called 'cleaned_halos' at the same level
+            as the top-level simulation directory.
+            Default: True
+            False returns the out-of-the-box compaSO halos. May be useful for specific
+            applications.
+
         load_subsamples: bool or str, optional
             Load halo particle subsamples.  True or False may be specified
             to load all particles or none, or a string in the following format
@@ -299,6 +307,15 @@ class CompaSOHaloCatalog:
             because the file IO will be limited to the desired fields.
             See ``compaso_halo_catalog.user_dt`` or the :doc:`AbacusSummit Data Model page <summit:data-products>`
             for a list of available fields.
+            Default: 'all'
+
+        cleaned_fields: str or list of str, optional
+            A list of additional fields to load for the cleaned halos: particularly
+            used for loading main progenitor information (time consuming), or information
+            regarding number of merged particles after catalogue cleaning. See
+            ``compaso_halo_catalog.clean_dt`` or the :doc:`AbacusSummit Cleaned Halos Data
+            Model page <summit:cleaned_halos_data>`
+            for a list of available fields
             Default: 'all'
 
         verbose: bool, optional
@@ -363,10 +380,11 @@ class CompaSOHaloCatalog:
 
         # Minimum requirement for cleaned haloes
         if cleaned_halos:
-            if type(cleaned_fields) == str:
-                cleaned_fields = [cleaned_fields]
-            if 'N_total' not in cleaned_fields:
-                cleaned_fields += ['N_total']
+            if not cleaned_fields == 'all':
+                if type(cleaned_fields) == str:
+                    cleaned_fields = [cleaned_fields]
+                if 'N_total' not in cleaned_fields:
+                    cleaned_fields += ['N_total']
 
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
