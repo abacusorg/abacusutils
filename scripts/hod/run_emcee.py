@@ -107,8 +107,8 @@ def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
             
         # pass them to the mock dictionary
         mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd)
-        power = Ball.compute_power(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size)
-        lnP = Data.compute_likelihood(power)
+        clustering = Ball.compute_clustering(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size)
+        lnP = Data.compute_likelihood(clustering)
     else:
         lnP = -np.inf
     return lnP
@@ -120,13 +120,13 @@ def main(path2config, time_likelihood):
     config = yaml.load(open(path2config))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
-    power_params = config['power_params']
+    clustering_params = config['clustering_params']
     data_params = config['data_params']
     ch_config_params = config['ch_config_params']
     fit_params = config['fit_params']    
     
     # create a new abacushod object and load the subsamples
-    newBall = AbacusHOD(sim_params, HOD_params, power_params)
+    newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
     # read data parameters
     newData = PowerData(data_params)

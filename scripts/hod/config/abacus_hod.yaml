@@ -89,11 +89,11 @@ clustering_params:
 #    power_type: 'wp'
     clustering_type: 'xirppi'
     bin_params:
-        logmin: 0
-        logmax: 2
-        nbins: 20
-    pimax: 40
-    pi_bin_size: 2
+        logmin: -0.77288
+        logmax: 1.47712
+        nbins: 8
+    pimax: 30
+    pi_bin_size: 5
 
 # ===========================================================================================
 # The following dictionaries are for using the provided emcee/likelihood templates. They 

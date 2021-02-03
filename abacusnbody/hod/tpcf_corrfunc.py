@@ -10,9 +10,9 @@ from Corrfunc.theory import wp, xi
 
 def calc_xirppi_fast(x1, y1, z1, rpbins, pimax, 
     pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
-    if not pimax.is_integer():
+    if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
-    if not pi_bin_size.is_integer():
+    if not isinstance(pi_bin_size, int):
         raise ValueError("pi_bin_size needs to be an integer")
     if not pimax % pi_bin_size == 0:
         raise ValueError("pi_bin_size needs to be an integer divisor of pimax, current values are ", pi_bin_size, pimax)
@@ -38,7 +38,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
 
 def calc_wp_fast(x1, y1, z1, rpbins, pimax, 
     lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
-    if not pimax.is_integer():
+    if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
 
     ND1 = float(len(x1))

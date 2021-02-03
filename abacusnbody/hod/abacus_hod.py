@@ -297,7 +297,7 @@ class AbacusHOD:
         self.pimax = clustering_params['pimax']
         self.pi_bin_size = clustering_params['pi_bin_size']
         bin_params = clustering_params['bin_params']
-        self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
+        self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
         self.clustering_type = clustering_params['clustering_type']
                 
         # load the subsample particles
