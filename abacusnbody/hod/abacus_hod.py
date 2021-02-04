@@ -629,12 +629,16 @@ class AbacusHOD:
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
-                x2 = mock_dict[tr2]['x']
-                y2 = mock_dict[tr2]['y']
-                z2 = mock_dict[tr2]['z']
-                clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
-                    self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                if i1 != i2: clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+                if i1 == i2: # auto corr
+                    clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
+                        self.lbox, Nthread)
+                else:
+                    x2 = mock_dict[tr2]['x']
+                    y2 = mock_dict[tr2]['y']
+                    z2 = mock_dict[tr2]['z']
+                    clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
+                        self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                    clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
@@ -672,11 +676,15 @@ class AbacusHOD:
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
-                x2 = mock_dict[tr2]['x']
-                y2 = mock_dict[tr2]['y']
-                z2 = mock_dict[tr2]['z']
-                clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                if i1 != i2: clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+                if i1 == i2:
+                    clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
+                else:
+                    x2 = mock_dict[tr2]['x']
+                    y2 = mock_dict[tr2]['y']
+                    z2 = mock_dict[tr2]['z']
+                    clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, 
+                        x2 = x2, y2 = y2, z2 = z2)
+                    clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
     def gal_reader(self, scratch_dir = None, simname = None, 

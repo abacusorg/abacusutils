@@ -43,7 +43,7 @@ def main(path2config):
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 16)
     # mock_dict = newBall.gal_reader()
     start = time.time()
-    xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 32)
+    xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 16)
     print("Done xi, total time ", time.time() - start)
     # print(xirppi)
     # wp = newBall.compute_wp(mock_dict, rpbins, pimax, pi_bin_size)
@@ -58,7 +58,7 @@ def main(path2config):
         start = time.time()
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
         print("Done hod, took time ", time.time() - start)
-        xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 32)
+        xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 16)
         print("Done xi, total time ", time.time() - start)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
