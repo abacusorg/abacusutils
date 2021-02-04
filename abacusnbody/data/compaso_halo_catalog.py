@@ -467,14 +467,16 @@ class CompaSOHaloCatalog:
                 self.header['NumTimeSliceRedshiftsPrev'] = len(af['header']['TimeSliceRedshiftsPrev'])
 
         # Read and unpack the catalog into self.halos
+        self._setup_halo_field_loaders()
         N_halo_per_file = self._read_halo_info(halo_fns, fields, cleaned_halos=False)
-
         if cleaned_halos:
             cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields, cleaned_halos=True)
+
 
             if (N_halo_per_file != cleaned_N_halo_per_file).any():
                 raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
 
+        # TODO: the changes to the subsample loading procedure for the cleaned cats depends on the data model on disk we end up with
         self.subsamples = Table()  # empty table, to be filled with PIDs and RVs in the loading functions below
 
         self.numhalos = N_halo_per_file
@@ -516,10 +518,8 @@ class CompaSOHaloCatalog:
         # Lazy load, but don't use mmap
         afs = [asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in halo_fns]
 
-        if cleaned_halos:
-            N_halo_per_file = np.array([len(af[self.data_key]['N_total']) for af in afs])
-        else:
-            N_halo_per_file = np.array([len(af[self.data_key]['id']) for af in afs])
+        N_halo_per_file = np.array([len(af[self.data_key][list(af[self.data_key].keys*())[0]]) for af in afs])
+
         N_halos = N_halo_per_file.sum()
 
         if (fields == 'all') and not cleaned_halos:
@@ -530,15 +530,17 @@ class CompaSOHaloCatalog:
             fields = [fields]
 
         # Figure out what raw columns we need to read based on the fields the user requested
-        # This will also modify `fields` if necessary
         # TODO: provide option to drop un-requested columns
-        raw_dependencies, fields_with_deps, extra_fields = self._setup_halo_field_loaders(fields)
+        raw_dependencies, fields_with_deps, extra_fields = self._get_halo_fields_dependencies(fields)
         # save for informational purposes
-        self.dependency_info = dict(raw_dependencies=raw_dependencies,
-                                    fields_with_deps=fields_with_deps,
-                                    extra_fields=extra_fields)
+        if not hasattr(self, 'dependency_info'):
+            self.dependency_info = defaultdict(list)
+        self.dependency_info['raw_dependencies'] += raw_dependencies
+        self.dependency_info['fields_with_deps'] += fields_with_deps
+        self.dependency_info['extra_fields'] += extra_fields
 
         if self.verbose:
+            # TODO: going to be repeated in output
             print(f'{len(fields)} halo catalog fields requested. '
                 f'Reading {len(raw_dependencies)} fields from disk. '
                 f'Computing {len(extra_fields)} intermediate fields.')
@@ -550,7 +552,6 @@ class CompaSOHaloCatalog:
         else:
             cols = {col:np.empty(N_halos, dtype=clean_dt[col]) for col in fields}
         #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
-
         if hasattr(self, 'halos'):
             # already exists
             # will throw error if duplicating a column
@@ -599,7 +600,7 @@ class CompaSOHaloCatalog:
         return N_halo_per_file
 
 
-    def _setup_halo_field_loaders(self, fields):
+    def _setup_halo_field_loaders(self):
         # Loaders is a dict of regex -> lambda
         # The lambda is responsible for unpacking the rawhalos field
         # The first regex that matches will be used, so they must be precise
@@ -681,10 +682,6 @@ class CompaSOHaloCatalog:
             return columns
 
         self.halo_field_loaders[pat] = eigvecs_loader
-
-        raw_deps, fields_with_deps, field_deps = self._get_halo_fields_dependencies(fields)
-
-        return raw_deps,fields_with_deps,field_deps
 
 
     def _get_halo_fields_dependencies(self, fields):
