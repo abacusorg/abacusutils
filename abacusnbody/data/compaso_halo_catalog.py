@@ -1019,8 +1019,8 @@ class CompaSOHaloCatalog:
             else:
                 ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB, unpackbox)
 
-                self.subsamples.add_column(ppos_AB, name='pos', copy=False)
-                self.subsamples.add_column(pvel_AB, name='vel', copy=False)
+            self.subsamples.add_column(ppos_AB, name='pos', copy=False)
+            self.subsamples.add_column(pvel_AB, name='vel', copy=False)
         else:
 
             if cleaned_halos:
