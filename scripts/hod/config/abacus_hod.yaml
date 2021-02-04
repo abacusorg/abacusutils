@@ -115,9 +115,11 @@ data_params:
 # Parameters to be fitted in MCMC
 # [mapping_index, mean, min, max, std, tr_type]
 fit_params:
-    logM_cut: [0, 13.3, 13.0, 13.8, 0.05, 'LRG']
-    logM1: [1, 14.3, 13.7, 14.8, 0.05, 'LRG']
-    sigma: [2, 0.3, 0.1, 0.5, 0.05, 'LRG']
+    logM_cut: [0, 13.1, 12.5, 13.8, 0.03, 'LRG']
+    logM1: [1, 14.5, 13.5, 15.5, 0.3, 'LRG']
+    sigma: [2, 0.8, 0.1, 1.5, 0.3, 'LRG']
+    alpha: [3, 1.0, 0.7, 1.5, 0.2, 'LRG']
+    kappa: [4, 0.5, 0.0, 1.0, 0.25, 'LRG']
 
 
 # Configuration parameters for emcee
@@ -129,3 +131,21 @@ ch_config_params:
     walkersRatio: 4
     burninIterations: 2000
     sampleIterations: 40000
+
+# params to be fit for dynesty
+dynesty_fit_params:
+    logM_cut: [0, 13.3, 0.2, 'LRG']
+    logM1: [1, 14.3, 0.2, 'LRG']
+    sigma: [2, 0.5, 0.2, 'LRG']
+
+# configuration parameter for dynesty
+dynesty_config_params:
+    path2output: dynesty/test
+    chainsPrefix: test
+    nlive: 200
+    bound: 'multi'
+    sample: 'unif'
+    maxcall: 10000
+    dlogz: 0.01
+
+

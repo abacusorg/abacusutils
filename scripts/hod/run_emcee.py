@@ -106,7 +106,7 @@ def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
             print(key, Ball.tracers[tracer_type][key])
             
         # pass them to the mock dictionary
-        mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd)
+        mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread = 64)
         clustering = Ball.compute_clustering(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size)
         lnP = Data.compute_likelihood(clustering)
     else:
