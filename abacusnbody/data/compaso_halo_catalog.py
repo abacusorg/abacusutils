@@ -470,7 +470,7 @@ class CompaSOHaloCatalog:
         N_halo_per_file = self._read_halo_info(halo_fns, fields, cleaned_halos=False)
 
         if cleaned_halos:
-            cleaned_N_halo_per_file = self._read_halo_info(halo_fns, cleaned_fields, cleaned_halos=True)
+            cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields, cleaned_halos=True)
 
             if (N_halo_per_file != cleaned_N_halo_per_file).any():
                 raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
