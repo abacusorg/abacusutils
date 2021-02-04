@@ -550,8 +550,15 @@ class CompaSOHaloCatalog:
         else:
             cols = {col:np.empty(N_halos, dtype=clean_dt[col]) for col in fields}
         #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
-        self.halos = Table(cols, copy=False)
-        self.halos.meta.update(self.header)
+
+        if hsattr(self, 'halos'):
+            # already exists
+            # will throw error if duplicating a column
+            self.halos.add_columns(list(cols.values()), names=list(cols.keys()), copy=False)
+        else:
+            # first time
+            self.halos = Table(cols, copy=False)
+            self.halos.meta.update(self.header)
 
          # If we're loading main progenitor info, do this:
         if cleaned_halos:
