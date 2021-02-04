@@ -551,7 +551,7 @@ class CompaSOHaloCatalog:
             cols = {col:np.empty(N_halos, dtype=clean_dt[col]) for col in fields}
         #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
 
-        if hsattr(self, 'halos'):
+        if hasattr(self, 'halos'):
             # already exists
             # will throw error if duplicating a column
             self.halos.add_columns(list(cols.values()), names=list(cols.keys()), copy=False)
