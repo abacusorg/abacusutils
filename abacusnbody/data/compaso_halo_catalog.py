@@ -900,7 +900,7 @@ class CompaSOHaloCatalog:
                 thisnp = np_per_file_merge[i]
                 key = key_to_read[i]
                 if not unpack_bits:
-                    pids_AB_merge[start_merge:start_merge+thisnp] = af[self.data_key][key] & AUXPID
+                    pids_AB_merge[start_merge:start_merge+thisnp] = af[self.data_key][key] & bitpacked.AUXPID
                 else:
                     pids_AB_merge[start_merge:start_merge+thisnp] = af[self.data_key][key]
                 start_merge += thisnp
