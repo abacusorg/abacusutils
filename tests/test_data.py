@@ -3,39 +3,53 @@ import filecmp
 import os.path
 
 import pytest
+from astropy.table import Table
+import numpy as np
 
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
-HALOS_OUTPUT = os.path.join(os.path.dirname(__file__), 'halos.txt')
-PARTICLES_OUTPUT = os.path.join(os.path.dirname(__file__), 'particles.txt')
+HALOS_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_unclean.asdf')
+PARTICLES_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_unclean.asdf')
 
-def test_halos(tmp_path):
-    '''Test loading a halo catalog
+def test_halos_unclean(tmp_path):
+    '''Test loading a base (uncleaned) halo catalog
     '''
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), load_subsamples=True, fields='all')
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), load_subsamples=True, fields='all', cleaned_halos=False)
+    
+    # to regenerate reference
+    #ref = Table(cat.halos[::10])
+    #ref.write('test_halos_unclean.asdf', all_array_storage='internal')
+    
+    ref = Table.read(HALOS_OUTPUT_UNCLEAN)
+    
+    halos = cat.halos[::10]
+    for col in ref.colnames:
+        assert np.allclose(halos[col], ref[col])
+   
+    assert halos.meta == ref.meta
 
-    with open(tmp_path/'halos_test.txt', 'w') as fp:
-        f = cat.halos[::5].pformat_all()
-        fp.write('\n'.join(f))
 
-    assert filecmp.cmp(HALOS_OUTPUT,tmp_path/'halos_test.txt')
-
-
-def test_subsamples(tmp_path):
+def test_subsamples_unclean(tmp_path):
     '''Test loading particle subsamples
     '''
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), load_subsamples=True, fields='all')
-
-    with open(tmp_path/'particles_test.txt', 'w') as fp:
-        f = cat.subsamples[::50].pformat_all()
-        fp.write('\n'.join(f))
-
-    assert filecmp.cmp(PARTICLES_OUTPUT,tmp_path/'particles_test.txt')
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), load_subsamples=True, fields='all', cleaned_halos=False)
+    
+    # to regenerate reference
+    #ref = Table(cat.subsamples[::10])
+    #ref.write('test_subsamples_unclean.asdf', format='asdf', all_array_storage='internal')
+    
+    ref = Table.read(PARTICLES_OUTPUT_UNCLEAN)
+    
+    ss = cat.subsamples[::10]
+    for col in ref.colnames:
+        assert np.allclose(ss[col], ref[col])
+   
+    assert cat.subsamples.meta == ref.meta
 
 
 def test_field_subset_loading():
@@ -75,6 +89,7 @@ def test_halo_info_list():
         cat = CompaSOHaloCatalog(
         [os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf'),
          os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf')])
+
 
 def test_unpack_bits():
     '''Test unpack_bits
