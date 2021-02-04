@@ -518,7 +518,7 @@ class CompaSOHaloCatalog:
         # Lazy load, but don't use mmap
         afs = [asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in halo_fns]
 
-        N_halo_per_file = np.array([len(af[self.data_key][list(af[self.data_key].keys*())[0]]) for af in afs])
+        N_halo_per_file = np.array([len(af[self.data_key][list(af[self.data_key].keys())[0]]) for af in afs])
 
         N_halos = N_halo_per_file.sum()
 
