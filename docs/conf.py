@@ -19,8 +19,8 @@
 
 # TODO: author ordering? LHG adopted the ordering from the ALCC proposal
 project = 'abacusutils'
-copyright = '2020, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska'
-author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska'
+copyright = '2021, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
+author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
 
 
 # -- General configuration ---------------------------------------------------
