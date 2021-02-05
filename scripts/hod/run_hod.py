@@ -53,8 +53,8 @@ def main(path2config):
     for i in range(10):
         print(i)
         # example for sandy
-        newBall.tracers['LRG']['alpha'] += 0.01
-        print("alpha = ",newBall.tracers['LRG']['alpha'])
+        newBall.tracers['ELG']['alpha'] += 0.01
+        print("alpha = ",newBall.tracers['ELG']['alpha'])
         start = time.time()
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
         print("Done hod, took time ", time.time() - start)
