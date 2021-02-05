@@ -38,7 +38,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     # RR_counts_new = np.zeros((len(rpbins) - 1, int(pimax/pi_bin_size)))
     RR_counts_new = np.pi*(rpbins[1:]**2 - rpbins[:-1]**2)*pi_bin_size / lbox**3 * ND1 * ND2 * 2
     xirppi = DD_counts_new / RR_counts_new[:, None] - 1
-    print("corrfunc took ", time.time() - start)
+    print("corrfunc took ", time.time() - start, "ngal ", len(x1))
     return xirppi
 
 def calc_wp_fast(x1, y1, z1, rpbins, pimax, 

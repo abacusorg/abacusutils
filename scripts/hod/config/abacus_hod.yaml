@@ -25,11 +25,11 @@ HOD_params:
 
     # parameters for setting up the HOD of LRGs
     LRG_params:
-        logM_cut: 13.3
-        logM1: 14.3
-        sigma: 0.3
+        logM_cut: 13.1
+        logM1: 14.5
+        sigma: 0.8
         alpha: 1.0
-        kappa: 0.4
+        kappa: 0.5
         alpha_c: 0
         alpha_s: 1
         s: 0.1
@@ -40,7 +40,7 @@ HOD_params:
         Asat: 0
         Bcent: 0
         Bsat: 0
-        ic: 0.97
+        ic: 1.0
 
     # parameters for setting up the HOD of ELGs
     ELG_params:
@@ -101,6 +101,10 @@ clustering_params:
 
 # parameters that indicate where the observed data that you would like to fit live. 
 data_params:
+    tracer_density_mean:
+        LRG: 3.0103e-4 # (mpc/h)^-3
+    tracer_density_std:
+        LRG: 4.0e-5 # (mpc/h)^-3
     tracer_combos:
         LRG_LRG:    
             path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
