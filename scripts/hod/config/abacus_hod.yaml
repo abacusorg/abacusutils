@@ -8,7 +8,7 @@ sim_params:
     sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
-    z_mock: 0.8                                                              # which redshift slice
+    z_mock: 0.5                                                              # which redshift slice
     Nthread_load: 7                                                          # number of thread for organizing simulation outputs (prepare_sim)
 
 # HOD parameters
@@ -17,8 +17,8 @@ HOD_params:
     Ndim: 1024                     # grid density for computing local environment
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
-        LRG: False 
-        ELG: True
+        LRG: True 
+        ELG: False
         QSO: False
     want_rsd: True                 # want RSD? 
     write_to_disk: False
@@ -26,10 +26,10 @@ HOD_params:
     # parameters for setting up the HOD of LRGs
     LRG_params:
         logM_cut: 13.3
-        logM1: 14.0
-        sigma: 0.5
-        alpha: 1.1
-        kappa: 0.1
+        logM1: 14.4
+        sigma: 0.8
+        alpha: 1.0
+        kappa: 0.4
         alpha_c: 0
         alpha_s: 1
         s: 0.1

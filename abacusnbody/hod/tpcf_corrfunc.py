@@ -55,7 +55,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         ND2 = ND1
 
     DD_counts = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
-        boxsize = lbox, periodic = True, max_cells_per_dim = 20)['npairs']
+        boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)['npairs']
     DD_counts = DD_counts.reshape((len(rpbins) - 1, int(pimax)))
 
     # RR_counts = np.zeros((len(rpbins) - 1, int(pimax)))
