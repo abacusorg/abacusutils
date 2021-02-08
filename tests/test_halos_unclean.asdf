@@ -1,0 +1,1083 @@
+#ASDF 1.0.0
+#ASDF_STANDARD 1.5.0
+%YAML 1.1
+%TAG ! tag:stsci.edu:asdf/
+--- !core/asdf-1.1.0
+asdf_library: !core/software-1.0.0 {author: The ASDF Developers, homepage: 'http://github.com/asdf-format/asdf',
+  name: asdf, version: 2.8.0.dev116+gb217546}
+history:
+  extensions:
+  - !core/extension_metadata-1.0.0
+    extension_class: asdf.extension.BuiltinExtension
+    software: !core/software-1.0.0 {name: asdf, version: 2.8.0.dev116+gb217546}
+  - !core/extension_metadata-1.0.0
+    extension_class: astropy.io.misc.asdf.extension.AstropyExtension
+    software: !core/software-1.0.0 {name: astropy, version: '4.2'}
+data: !<tag:astropy.org:astropy/table/table-1.0.0>
+  colnames: [id, npstartA, npstartB, npoutA, npoutB, ntaggedA, ntaggedB, N, L2_N,
+    L0_N, x_com, v_com, sigmav3d_com, meanSpeed_com, sigmav3d_r50_com, meanSpeed_r50_com,
+    r100_com, vcirc_max_com, SO_central_particle, SO_central_density, SO_radius, x_L2com,
+    v_L2com, sigmav3d_L2com, meanSpeed_L2com, sigmav3d_r50_L2com, meanSpeed_r50_L2com,
+    r100_L2com, vcirc_max_L2com, SO_L2max_central_particle, SO_L2max_central_density,
+    SO_L2max_radius, sigmavMin_com, sigmavMid_com, sigmavMaj_com, r10_com, r25_com,
+    r33_com, r50_com, r67_com, r75_com, r90_com, r95_com, r98_com, sigmar_com, sigman_com,
+    sigmar_eigenvecsMin_com, sigmar_eigenvecsMid_com, sigmar_eigenvecsMaj_com, sigmav_eigenvecsMin_com,
+    sigmav_eigenvecsMid_com, sigmav_eigenvecsMaj_com, sigman_eigenvecsMin_com, sigman_eigenvecsMid_com,
+    sigman_eigenvecsMaj_com, sigmavrad_com, sigmavtan_com, rvcirc_max_com, sigmavMin_L2com,
+    sigmavMid_L2com, sigmavMaj_L2com, r10_L2com, r25_L2com, r33_L2com, r50_L2com,
+    r67_L2com, r75_L2com, r90_L2com, r95_L2com, r98_L2com, sigmar_L2com, sigman_L2com,
+    sigmar_eigenvecsMin_L2com, sigmar_eigenvecsMid_L2com, sigmar_eigenvecsMaj_L2com,
+    sigmav_eigenvecsMin_L2com, sigmav_eigenvecsMid_L2com, sigmav_eigenvecsMaj_L2com,
+    sigman_eigenvecsMin_L2com, sigman_eigenvecsMid_L2com, sigman_eigenvecsMaj_L2com,
+    sigmavrad_L2com, sigmavtan_L2com, rvcirc_max_L2com]
+  columns:
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 0
+      datatype: uint64
+      byteorder: little
+      shape: [39]
+    name: id
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 1
+      datatype: uint64
+      byteorder: little
+      shape: [39]
+    name: npstartA
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 2
+      datatype: uint64
+      byteorder: little
+      shape: [39]
+    name: npstartB
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 3
+      datatype: uint32
+      byteorder: little
+      shape: [39]
+    name: npoutA
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 4
+      datatype: uint32
+      byteorder: little
+      shape: [39]
+    name: npoutB
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 5
+      datatype: uint32
+      byteorder: little
+      shape: [39]
+    name: ntaggedA
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 6
+      datatype: uint32
+      byteorder: little
+      shape: [39]
+    name: ntaggedB
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 7
+      datatype: uint32
+      byteorder: little
+      shape: [39]
+    name: N
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 8
+      datatype: uint32
+      byteorder: little
+      shape: [39, 5]
+    name: L2_N
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 9
+      datatype: uint32
+      byteorder: little
+      shape: [39]
+    name: L0_N
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 10
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: x_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 11
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: v_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 12
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmav3d_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 13
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: meanSpeed_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 14
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmav3d_r50_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 15
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: meanSpeed_r50_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 16
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r100_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 17
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: vcirc_max_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 18
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: SO_central_particle
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 19
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: SO_central_density
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 20
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: SO_radius
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 21
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: x_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 22
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: v_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 23
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmav3d_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 24
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: meanSpeed_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 25
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmav3d_r50_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 26
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: meanSpeed_r50_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 27
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r100_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 28
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: vcirc_max_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 29
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: SO_L2max_central_particle
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 30
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: SO_L2max_central_density
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 31
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: SO_L2max_radius
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 32
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavMin_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 33
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavMid_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 34
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavMaj_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 35
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r10_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 36
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r25_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 37
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r33_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 38
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r50_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 39
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r67_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 40
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r75_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 41
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r90_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 42
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r95_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 43
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r98_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 44
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 45
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 46
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_eigenvecsMin_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 47
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_eigenvecsMid_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 48
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_eigenvecsMaj_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 49
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmav_eigenvecsMin_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 50
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmav_eigenvecsMid_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 51
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmav_eigenvecsMaj_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 52
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_eigenvecsMin_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 53
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_eigenvecsMid_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 54
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_eigenvecsMaj_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 55
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavrad_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 56
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavtan_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 57
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: rvcirc_max_com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 58
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavMin_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 59
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavMid_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 60
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavMaj_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 61
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r10_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 62
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r25_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 63
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r33_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 64
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r50_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 65
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r67_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 66
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r75_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 67
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r90_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 68
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r95_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 69
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: r98_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 70
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 71
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 72
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_eigenvecsMin_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 73
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_eigenvecsMid_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 74
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmar_eigenvecsMaj_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 75
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmav_eigenvecsMin_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 76
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmav_eigenvecsMid_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 77
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigmav_eigenvecsMaj_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 78
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_eigenvecsMin_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 79
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_eigenvecsMid_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 80
+      datatype: float32
+      byteorder: little
+      shape: [39, 3]
+    name: sigman_eigenvecsMaj_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 81
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavrad_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 82
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: sigmavtan_L2com
+  - !core/column-1.0.0
+    data: !core/ndarray-1.0.0
+      source: 83
+      datatype: float32
+      byteorder: little
+      shape: [39]
+    name: rvcirc_max_L2com
+  meta: !!omap
+  - !!omap
+    AllowGroupFinding: 1
+  - !!omap
+    BackupDirectory: /mnt/ceph/users/lgarrison//Mini_N64_L32
+  - !!omap
+    BackupStepInterval: -1
+  - !!omap
+    BoxSize: 32.0
+  - !!omap
+    BoxSizeHMpc: 32.0
+  - !!omap
+    BoxSizeMpc: 47.50593824228029
+  - !!omap
+    CPD: 15
+  - !!omap
+    CodeVersion: 210efc5b64ece6cff9618aa2fff7826da536b691
+  - !!omap
+    Conv_IOCores: 0
+  - !!omap
+    Conv_IOMode: normal
+  - !!omap
+    Conv_OMP_NUM_THREADS: 0
+  - !!omap
+    Conv_OMP_PLACES: '{0}:40'
+  - !!omap
+    Conv_OMP_PROC_BIND: close
+  - !!omap
+    CoordinateDistanceHMpc: 2.7958e-11
+  - !!omap
+    DeltaEtaDrift: 0.001765068836306227
+  - !!omap
+    DeltaRedshift: 0.001764249459376
+  - !!omap
+    DeltaScaleFactor: 0.001761142364911
+  - !!omap
+    DeltaTime: 0.001761959818535
+  - !!omap
+    DensityKernelRad: 0.4
+  - !!omap
+    DensityKernelRad2: 3.90625e-05
+  - !!omap
+    DerivativeExpansionRadius: 8
+  - !!omap
+    DerivativesDirectory: /dev/shm/lgarrison/Derivatives
+  - !!omap
+    DirectBPD: 2
+  - !!omap
+    Do2LPTVelocityRereading: 0
+  - !!omap
+    DoublePrecision: 0
+  - !!omap
+    FinalRedshift: 0.0
+  - !!omap
+    FirstHalfEtaKick: 0.0008821452739717905
+  - !!omap
+    FoFLinkingLength: [0.25, 0.25, 0.25]
+  - !!omap
+    FullStepNumber: 580
+  - !!omap
+    GPUQueueAssignments: [0, 0, 1, 1]
+  - !!omap
+    GPUThreadCoreStart: [36, 38, 37, 39]
+  - !!omap
+    GroupDirectory: /mnt/ceph/users/lgarrison//Mini_N64_L32/group
+  - !!omap
+    GroupRadius: 3
+  - !!omap
+    Growth: 0.78841783554687
+  - !!omap
+    Growth_on_a_n: 0.78841783554687
+  - !!omap
+    H0: 67.36
+  - !!omap
+    Htime: 0.950822217525797
+  - !!omap
+    HubbleNow: 1.0
+  - !!omap
+    HubbleTimeGyr: 14.516330166270784
+  - !!omap
+    HubbleTimeHGyr: 9.7782
+  - !!omap
+    ICFormat: RVZel
+  - !!omap
+    ICPositionRange: 32
+  - !!omap
+    ICVelocity2Displacement: 1.0
+  - !!omap
+    IOCores: 35
+  - !!omap
+    InitialConditionsDirectory: /mnt/ceph/users/lgarrison//Mini_N64_L32/ic
+  - !!omap
+    InitialRedshift: 99.0
+  - !!omap
+    L0DensityThreshold: 110.59151887893677
+  - !!omap
+    L1OutputRedshifts: [2, 1, 0.5, 0.0]
+  - !!omap
+    L1Output_dlna: -1
+  - !!omap
+    LPTStepNumber: 0
+  - !!omap
+    LagrangianPTOrder: 2
+  - !!omap
+    LastHalfEtaKick: 0.0008813681400008377
+  - !!omap
+    LightConeDirectory: /mnt/ceph/users/lgarrison//Mini_N64_L32/lightcone
+  - !!omap
+    LightConeOrigins: [-15.0, -15.0, -15.0, -15.0, -15.0, -47.0, -15.0, -47.0, -15.0]
+  - !!omap
+    LogDirectory: /mnt/ceph/users/lgarrison//Mini_N64_L32/log
+  - !!omap
+    MAXRAMMB: 200000
+  - !!omap
+    MachineName: workergpu19
+  - !!omap
+    MicrostepTimeStep: 0
+  - !!omap
+    MinL1HaloNP: 35
+  - !!omap
+    MultipoleDirectory: /dev/shm/lgarrison/Mini_N64_L32/multipole
+  - !!omap
+    MunmapThreadCore: 35
+  - !!omap
+    NGPUThreadCores: 1
+  - !!omap
+    NLightCones: 3
+  - !!omap
+    NP: 262144
+  - !!omap
+    NearFieldRadius: 2
+  - !!omap
+    NodeRank: 0
+  - !!omap
+    NodeSize: 0
+  - !!omap
+    NumSlabsInsertList: 2
+  - !!omap
+    NumSlabsInsertListIC: 15
+  - !!omap
+    OMP_NUM_THREADS: 35
+  - !!omap
+    OMP_PLACES: '{0}:18:2,{1}:17:2'
+  - !!omap
+    OMP_PROC_BIND: spread
+  - !!omap
+    OmegaNow_DE: 0.684808
+  - !!omap
+    OmegaNow_K: 0.0
+  - !!omap
+    OmegaNow_m: 0.315192
+  - !!omap
+    Omega_DE: 0.684808
+  - !!omap
+    Omega_K: 0.0
+  - !!omap
+    Omega_M: 0.315192
+  - !!omap
+    Omega_Smooth: 0.00142
+  - !!omap
+    Order: 8
+  - !!omap
+    OutputDirectory: /mnt/ceph/users/lgarrison//Mini_N64_L32
+  - !!omap
+    OutputFormat: Pack9
+  - !!omap
+    OutputFormatVersion: v2.2
+  - !!omap
+    OutputType: GroupOutput
+  - !!omap
+    ParameterFileName: abacus.par
+  - !!omap
+    ParticleMassHMsun: 10882397390.0
+  - !!omap
+    ParticleMassMsun: 16155578073.04038
+  - !!omap
+    ParticleSubsampleA: 0.03
+  - !!omap
+    ParticleSubsampleB: 0.07
+  - !!omap
+    Pipeline: singlestep
+  - !!omap
+    PowerSpectrumN1d: 256
+  - !!omap
+    PowerSpectrumStepInterval: -1
+  - !!omap
+    ProperSoftening: 1
+  - !!omap
+    RamDisk: 1
+  - !!omap
+    Redshift: 0.0
+  - !!omap
+    RunTime: Fri Jul 24 15:24:21 2020
+  - !!omap
+    SODensity: [200, 800]
+  - !!omap
+    SODensityL1: 368.63839626312256
+  - !!omap
+    SODensityL2: 1474.5535850524902
+  - !!omap
+    SO_EvolvingThreshold: 1
+  - !!omap
+    SO_alpha_eligible: 0.8
+  - !!omap
+    ScaleFactor: 1.0
+  - !!omap
+    ScaleFactorHalf: 0.9991192245681288
+  - !!omap
+    SimName: Mini_N64_L32
+  - !!omap
+    SofteningLength: 0.012500000000000002
+  - !!omap
+    SofteningLengthNow: 0.01252205311824221
+  - !!omap
+    SofteningLengthNowInternal: 0.02698715321884206
+  - !!omap
+    SofteningMax: 0.15000000000000002
+  - !!omap
+    SofteningType: single_spline
+  - !!omap
+    StateIOMode: normal
+  - !!omap
+    TaylorDirectory: /dev/shm/lgarrison/Mini_N64_L32/taylor
+  - !!omap
+    Time: 0.950822217525797
+  - !!omap
+    TimeSliceRedshifts: [2, 1, 0.5, 0.0]
+  - !!omap
+    TimeStepAccel: 0.25
+  - !!omap
+    TimeStepDlna: 0.03
+  - !!omap
+    VelZSpace_to_Canonical: 1.0
+  - !!omap
+    VelZSpace_to_kms: 3200.0
+  - !!omap
+    WorkingDirectory: /dev/shm/lgarrison/Mini_N64_L32
+  - !!omap
+    ZD_NumBlock: 2
+  - !!omap
+    ZD_PLT_filename: /mnt/home/lgarrison/abacus/external/zeldovich-PLT/eigmodes128
+  - !!omap
+    ZD_PLT_target_z: 12.0
+  - !!omap
+    ZD_Pk_file_redshift: 1.0
+  - !!omap
+    ZD_Pk_filename: /mnt/home/lgarrison/abacus/external/AbacusSummit/Cosmologies/abacus_cosm000/CLASS_power
+  - !!omap
+    ZD_Pk_norm: 8.0
+  - !!omap
+    ZD_Pk_scale: 1.0
+  - !!omap
+    ZD_Pk_sigma_ratio: 0.02113950155394198
+  - !!omap
+    ZD_Pk_smooth: 0.0
+  - !!omap
+    ZD_Seed: 12321
+  - !!omap
+    ZD_Version: 2
+  - !!omap
+    ZD_f_cluster: 0.9954948095129318
+  - !!omap
+    ZD_k_cutoff: 1.0
+  - !!omap
+    ZD_qPLT: 1
+  - !!omap
+    ZD_qPLT_rescale: 1
+  - !!omap
+    ZeldovichDirectory: /mnt/home/lgarrison/abacus/external/zeldovich-PLT
+  - !!omap
+    etaD: -4.054275577372243
+  - !!omap
+    etaK: 3.239379512725195
+  - !!omap
+    f_growth: 0.525827390791488
+  - !!omap
+    fsmooth: 0.004505190487068
+  - !!omap
+    hMpc: 1
+  - !!omap
+    ppd: 64.0
+  - !!omap
+    w: -1.0
+  - !!omap
+    w0: -1.0
+  - !!omap
+    wa: 0.0
+  qtable: false
+...
+ÓBLK 0              8      8      8DN4“ÄÖ£nªl/•Ö 	=     @Û{P	   @Ïœ    õÚúZ  €™X­[  @Ë@!æµ  €e—ôµ  ÐÐ«1Ù €Q5&î Ð¥kÎò €Ÿ¾BÌk ¨ó²âÞk Àv¥2èk (WÇúÃÆ Àî›ÖÆ  Q2·! @ôÅÅ!  9©SÎ! @Àp¬| €Óh±| @Ògº|  y#dÁ| (O„˜× @÷A€Ÿ× @FLx­×  Ëu´× €Öä”‹2  ë2å”2  Êl-¬2 ›*Mƒ ¨jSE‘  ¤L	tè h"ñ]vè (ƒÈY}è @KÆdC  Ù¡&až @;Çsž  e‹Vù (G¢kù ÓBLK 0              8      8      8èK!%J2¯½¡2ƒ,Ý        .       I       i       •       2      n      ¡      Ã      ë            T      Ö      b      ‹      Ü      0      M      ’      Ï            3      Z      ¸            6      ƒ      ®      		      6	      o	      ”	      Ì	      
+      /
+      
+      Ç
+      d      Ÿ      ÓBLK 0              8      8      8‡òü5¶ìûYR(ÇÛ|Áê^      ¶      ô      M      ´      ˆ#      $      «$      ü$      s%      ä%      ¡&      ´'      ø(      w)      >*      T-      ¥-      ^.      ÿ.      –/      ë/      80       1      î1      ^2      3      †3      E4      ­4      $5      q5      Ù5      }6      °6      P7      ÿ7      _9      :      ÓBLK 0               œ       œ       œS¡QKÀa¤Êóhz¹¦*                                   (   @                               
+               $                                     ÓBLK 0               œ       œ       œ/àÅÙQ_?ŠÝxm¶è                                 n   x         g           &                        ^                         ,      7      ÓBLK 0               œ       œ       œß¨¼c*¢\¤ò‡+                                      4         µ                                                                	             ÓBLK 0               œ       œ       œ'ˆY«í“>0YˆÉL’ý      	                           I   X         ¾                                   K                                &      ÓBLK 0               œ       œ       œ–æÔ`óôíŽÉ›Så’)y]   >   j   &   =   %   6   ;   *   '   :     Š  V   ?   ÿ  .   )      a  $  B     =   _   _   @   ‰  -   L   @   5   ­   0   Z   f  $   È  8   ÓBLK 0                          <™KV7_êË2(=(               0               S                               -                              (               #               $                              1               ×  t           X              >               *               ¡  §           (                               W               ã               Ü               *               â               3               B               C               )               1                             ;               *               $               ƒ               (               C               Ä                                           '               ÓBLK 0               œ       œ       œˆ÷K…Q[@œï–ŠAérù¿_   ?   j   &   =   (   8   >   *   (   :   ê  T  [   ?   µ!  3   )   €     2  L     >   _   b   A   ž  .   L   B   7   ­   2   Z   Ç  $   Ú  ?   ÓBLK 0              Ô      Ô      Ô‰÷¦¦ª€åsLì:µ¸ì¦~ùbÁa~Á!›ªÀîSmÁ‘"ÞÀeˆÀBhÁžàý@Ï„À¾|JÁ†ËÁxœ°À®iEÁ²˜AÔ£æ¿Bæ-Á¤ÆxÁŒ°hÀÝÁJAÀ¦®À8Á
+á^ÁEj§ÀñÏÁèÇ@IeÇ¿îíüÀï^û@Ä¦?ƒkØÀÌ[Á¹ÕwAñöÀF€X@ %?]ø¹Àa€DA'ÎÁl+WÀ5€3ÁtÄ[À0ð…À!å@58ñÀ¼DÀ‹çÁ>ˆ“ÀÂÀÀ¾ò?”!e@]M>ÀþË6An=ÀÀ°ºd>=üÁ*b@`WÈ<hÀs/kA¯W—?¬Êh@ä1JÁã™•=K”8AØü­Àâ˜Ñ?oÁîxÀ™¼ö?7;ìÀ\MŽÀä‹,@Œhc@õÒRÁ¨‹¨? ä9AÇr'ARp^@X}{ÁŒ¶@Ç”@³¹ÀÆQ2A[|”@qAÜrÃ?Y½@£ãÁâ!žÀèR·@]ù@’™Áéù@Ó¿DÁ¬íÁ_éý@Bˆ.Á:öâ@úéAk¬‰ÀÜ!ZÀŒ
+:A×ÑmÁkâXÀWFA>,ÊÀ<K°ÀØ”DAR5AQ(ŠÀFëvAÒmAÀxfG@Û+rA+ÒbAƒOÀÓBLK 0              Ô      Ô      Ôsr¨‡ Â”jÓõñúç•˜(?ÑC{ëCÄ‡.ÃÄúÂJÃßÈÂ•¶$C}DC8XB1à£BaÑTÃQC9k_C
+z-C[>ÃŸ&6C›±PÂ¸!¦B•¨Bé·‘ÂÈ³tÂ¤°gÂ,ÂZÃŽD†C®B™"ìBÐ…ÁÐŽiÂCãB×|Ã*IŒÁgÖÁ@¼BÏWÂ™V‚ÀF.SÃåAoÀ	BŽ§’C%2CX¦ÈÁ•ÄË 
+Ãš>AC]HhÁÆ÷zÂO
+ÃÝ¼ @© ÃæáƒA‹ª0ÃyMäÂd„âBìÀL{"BùŠÂß·1Ã_ƒûÁRàÂ„wöAù”bÂãE‘Áý‰µBØÀòÁ.M-CÍ1¦ÀÚO¸ÃÛÞC9}lÂO’•Ã´ÈdBä,ËB™a,Ã (›Á·÷2C6›#ÃázÏBÁÂmŒÃˆ ;CÔËqÃÊùÂgãmÂù¢rÁÙ©¦Â›ŒC ªØÂq4ÏÂŽwkBô|RCK³YÂ5yAèJBt9*B	gBÀúÀ Â*ÕžÂ^SBÃ%E²ÂÉsàÂ†«/ÃOy“BUœBûÖ5ÂÓªŒÁgÿ¨ÂuYC´ôÀBV˜C,ã4B)ä¼¿Cc“ÂhàÃ¤\CŸx?CvÃÓBLK 0               œ       œ       œ6uT#÷ûD/‰8y¸C[º(C˜šCbÖACt¤CÈ
+C'ö2C¹ëûB—¡CŽàøBÿÈÛBè~CÚïCúçCH&C®;C”íQDDCC>óB)„=C—ƒCœ€CA 	C	ª‹C|'C¢}!CNÄ)CãüBTîÔC9åÄB±2CÕC2C´‘_CÎCÔ)%Cå†·CÄÙB§´C(i	CÓBLK 0               œ       œ       œdª†˜¾ÉVz°?ý>=ÖŒóC%úCÄ“1Ce«C[°CqàC9íB÷>õBJñãBM3ÉB$ñBXKßCÞ½ÒCS*CðC8lBDCn
+CÈ¥äB£Ç0CcâtC›ËlC”$ C¼ð€C»ÒCCH7C«œèBÝÑÃCu­¶BM¯#C8
+C4ÅC˜ŒOCÎýC>•Coi¨C¡cÉB6Z¤CBíCÓBLK 0               œ       œ       œ´¦WÙSžW­&Ù×^ªFó~Ù&A:¦AqEZA¿)í@˜Âò@ã:œ@tõ@³@ï3Á@!Þ @e¾É@ÿ”Bµ¥BBAÈgï@ÒrC$ì@¾s§@ÝLXAR½»AÊ±ÂA¿»@ÇïAÐ^ô@©A¾J)A(š@LÕ„B;@Yì0A+ìæ@¿¿²@Ò“A^Û@€Í$A ,BßH‚@_Î<B0¶©@ÓBLK 0               œ       œ       œL6×œ®18¡D#~¤{n>*Cg‚CØ>CþTCnVCŽíB„(ÙBU"ôB÷ C2äíB§ßC„âCàåC€—CªCrÕKDixCPóBû—ACÕ`~CAC‘ß C{œCêLC§U CG,CÊ¯ÞBbÓCå¬´B}'.CfpCê±õBñ^CÜ¦Cuô#CDµ©CöeÔB®±C,ÊöBÓBLK 0               œ       œ       œ9[HBàtRñßË€†[5 -‡G>Õz4>+SX>Ù²&>Ô«@>Æ45>«">^<,>€C*>_>›)(>Dí?‡Z?Ý=>«š5>ë·o?Š?#>J‚>ëX>Ä£›>x[>X:>¨>…0->ÚS=>;‹M>¹Î2>	 í>òŸ>0~N>.›7>· >žqx>ù>Q&E>ÁÇ>Sm>òëÅ>Xn?>ÓBLK 0               œ       œ       œ©-l¿]"S7ÿ=D¥óXÂÛC$œCòEOCë‚C GC4ªC²¯
+C‘?CaGCM«ùB5Ù!C}½ÊC³ÜÞC½w&Cÿ{CíF;Dµo$CYôBkáRC5„C)‡CyCžáC¹Ê<Cñ-CªCC¶CíPÊCÑlïBÌACZC1‡CöÊsC1ÒCè¢/Cj¡Cæ›îBÄ¶C£ÅCÓBLK 0              Ô      Ô      ÔØö†B©®Q„‡>³´¶!ÁÍÿbÁÁ‘~Áÿ1ªÀuOmÁßÞÀXlˆÀFhÁý@Öµ„Àé—JÁÖÚÁN0°Àî©EÁe‡AIHæ¿.ÁmqxÁÎpjÀ`.ÁX@ÀÎÀº2ÁÀù^ÁÐ§À ÑÁøà@r)Ç¿©ÍüÀêbû@vË¦?ôBØÀ4cÁ2ÅwA,œÀ*'U@A(?Ð4ºÀEÎDAúçÁ(~WÀf3Á–\Àžæ…Àhå@ôÊñÀþ;ÀØ{Á1‰”ÀóŠÀjò?°¿d@¤¦>Àzé6A'³¿ÀùV>jÁ
+þa@ùÁá<œfgÀÃKkAåè—?¬~i@ŠCJÁw†=8š8Aõ®À¢Ò?ï÷nÁ yÀ¶ø?¾6ìÀÒ|ŽÀ•,@¶êb@oËRÁzG¨?zô9A±€'A˜ž^@ìT{Á¸§¶@3+”@þ¹ÀË02A']”@qA-•Â?G7½@dåÁ±žÀ^·@}~@R£Áyíø@`ïDÁ¡Á<Ûý@" .ÁÍ
+ã@·÷A{È‰À–YÀµ:AÐmÁy	XÀêEA®7ÊÀ¼ô°ÀÒcDA$5A:ŠÀÐvAŽAÀ3H@ßÉqA¼èbAP0OÀÓBLK 0               œ       œ       œ"«‘]3ùöðÞç;3•/Ý'D„£èCT9D¬ÿžC˜]éCP±C„0ÌCêËÑC+>§CFÆ˜CIäCA2mEŸœEŒD™eâCùFFtš½CDm›C‡¿YD€‚ÕD+dÒD‘¡åC³¿×D¢*òCi‚&D”g&DË=èCYE6C¤Cä~D„ðæCH
+ÃCüÕŠD
+oÂC§DA.$EÁËC’ÄJE9ÓCÓBLK 0               œ       œ       œÙ·éðÑTH” ¡¯¾¬Oä¸¼S>f3>µ§@µ§@µ§@^Ð">]Ï->_Ÿ0>µ§@ß*!>µ§@Ã¢ÿ>×6?0ÏC>µ§@M~_?¥ò>µ§@Éÿc>z´œ>Ÿž”>oâ5>µ§@Gæ;>µ§@=™J>(M9>òÈè>Dl!>µ§@·˜7>j(>µ§@0h&>µ§@¤×Î>µ§@ÑÅ>w¡*>ÓBLK 0              Ô      Ô      ÔqzYÕÈ–r­?›TÝÜ´ÊÁÛbÁ’—~ÁJ0ªÀzDmÁ˜ÞÀ\”ˆÀ2KhÁ¨Ëý@rò„ÀbŸJÁu°ÁÔÄ°À)zEÁïŠA±¢æ¿ùÛ-Á‘´xÁ¢phÀ?Á¿@À&™ÀîGÁ”ÿ^ÁøQ§Àì¹ÁvÀ@{Ç¿ð{üÀ‚Fû@(*¦?“[ØÀWaÁ»xAiü›À8U@êa'?à1ºÀSÀDAòßÁŠWÀïm3Á‘µ[À°R†ÀUjå@8ñÀfLÀ|ÁOÀ”Àß×ÀïÁò?s¿e@Šé>À{Ã6AãÀÀ–›b>?Áƒb@ˆõØ<ÜfÀ²?kA›³—?Á(i@~BJÁë½‹=Œ”8AÑ%®ÀÇÇÑ?™ oÁ	yÀ®ö?äîëÀsGŽÀìi,@Ð¢c@"èRÁU¨?žø9Ak'A÷0^@Pz{ÁP“¶@Õ ”@C¹À =2ATÃ”@ôpAîÃ?^T½@˜ùÁ%žÀ÷ù¶@Œ@s|Á+£ù@¡åDÁ¾ÏÁ³ý@Ú¦.Áíã@ŸÔA¹Š‰ÀÒÉYÀî1:AªãmÁô§XÀWàEApGÊÀ•â°À®DAãA5ABXŠÀúávALYAÀrBH@«7rANÚbAApNÀÓBLK 0              Ô      Ô      Ô{…gÃ§XægjÊ3TÕ(œÐCñŸ›BÎ½$ÃßÃ©Ã&SÊÂ÷#CÿCöìcBÉàªBˆ:RÃò[CHKdCq,Cô7Ã@4Cß(EÂŽ­áB[}«BÁ’Âó²ZÂH{kÂïÓ^Ãw4DÖá›B,PìB×«tÁóXpÂkÂÚBáœÃ	¨Á¼ŽïÁõ¾BWÉÃÙ-šBîfˆÃ`]B°£OBŸ¸™C–yCfÏ’ÁÆ‚Äö	Ãk¼EC Ÿ:Á- ÁÐJÂƒ,iA¿öýÂŸ1„A$Ù/ÃbŠéÂG§îB¤ñkÀÈYBˆÂôT*Ãy€Á&ÂQÍAå¡Â…¯³Á÷°B<–ÀÁø±7CX!ÁŽ0¹ÃÀC„»pÂc˜Ã™úCB¼øãBZ0Ã¸ï±Ác6CÉ±"Ã}yÏBÃ‰ÂâÃÃ38C÷‚rÃ¸DÂ†I“ÂÝçÁ	¨Â¡j…C<äÂë‚ÔÂX	eBiTCÝûTÂ;1ÍA<½A	ŠWBûþ+BHpŒAÅÂJ’²Âü%BÃ­¥Â«àòÂyu0ÃBÈžBÎ¸)Â‰CÂ‹ðœÂ•]C­[»B¶ëCˆ3BÞ¡t?	<—Âî},Ã;»`C#»7C³YÃÓBLK 0               œ       œ       œ0°àmžÕdÄ‘g$É@Î
+¾°æ.Cþ­C!ÉAC)Cé³
+Cøá.C—=þBïCê/ùB*ÞÛB—pCiõC§?çC”'CÔ~C‹SD¹Cõ«ñB[D=C«€„CÁ¬€Ce	COâ‹CxC¦v!CŒ(CfýBòÔCæqÄB]2CyÁCD{CÄ_CàCÃ¹$Cõ¿·CÝÏÝBž ´Cá~	CÓBLK 0               œ       œ       œÛ¢£—FI&áÉ°‡\Ç	-'”C¨VC®=1CBÜC¹CÍÕCÞÈðB÷ôùB¸¼äB´2ÉBË²ðBÒgâCÅÑÒC“öCø‡CÀóCDÚ9C¯qãB}0CwCºlCso Cµ-C^ØCþÿC‹¸CçèBôÄC«¾´B‘¢#C/“C¿	CÇPCëCã8Cb5©C7GÎB¸s¤CŽ_CÓBLK 0               œ       œ       œ³3M˜{`\ƒÌzÆ>žÄ¦öA.ÿ@Sí\AP ATó@º0¥@ØŽ@RE«@ÀÁ@FÛ @Rî³@…#ˆB=|žBÆÏAgoò@¿ÁoCk4Ü@¦@Ô“UA…š·AíÑÀAâÜ¸@üîAš‚ø@IÆAÉF)A{[›@À°„B!P;@'1AÐiÕ@k«@W'”AçQâ@­+A|v-B‚9‚@”'<B_Ý«@ÓBLK 0               œ       œ       œ¤ŸVPoÙL¦Ë.#ÜF|dýC ®CÁË?C¼ÛCTÍCr•øB¨1âBñB€Ü CöóíB±›ïBòbØC@1æCžñC"CÀÙJD‡CNlòB g@Cð{C€Cq³üBÈ5CLC" CËG,CêÔßB« ÓCI·B	.CxC)-òBK_C\ä
+C 7'CnàªCÐ’ÔBò{°C÷—øBÓBLK 0               œ       œ       œˆ\[üà_Dí‡zotO‰©ÊT>2C>Èÿ\>á¹->E>67>ö2>œA%>}ˆ,>°*>!¸1>Èy ?h]?§B>þ@>;üb?+>®z>á5\>`Ä>™þ‘>c"3>Ù‹>b×2>t„C>P>EÃ2>vµê>b=+>b¨R>¨Š,>L!>hmy>¯ü&>ÑÕN>ìlÌ>õ>FþÇ>U_C>ÓBLK 0               œ       œ       œ[Ú“ÖÊ,;@BxRoÙRCj CÁ³OCM!CÿüCÊC3'CQ$CR6CÆx C¦‘!C³wÃC-öÝC€Ì'CÃñC±7D»(#CGòBÈQCžë‡C§f†CÕCFÍ‘C*ƒAC:…/Cg3?C‚C¶ËC<qïBßÈ>CèCý
+C\nCê©C¬ž6Cø„£CTÎëBBÒ·CÍ.CÓBLK 0              Ô      Ô      ÔØö†B©®Q„‡>³´¶!ÁÍÿbÁÁ‘~Áÿ1ªÀuOmÁßÞÀXlˆÀFhÁý@Öµ„Àé—JÁÖÚÁN0°Àî©EÁe‡AIHæ¿.ÁmqxÁÎpjÀ`.ÁX@ÀÎÀº2ÁÀù^ÁÐ§À ÑÁøà@r)Ç¿©ÍüÀêbû@vË¦?ôBØÀ4cÁ2ÅwA,œÀ*'U@A(?Ð4ºÀEÎDAúçÁ(~WÀf3Á–\Àžæ…Àhå@ôÊñÀþ;ÀØ{Á1‰”ÀóŠÀjò?°¿d@¤¦>Àzé6A'³¿ÀùV>jÁ
+þa@ùÁá<œfgÀÃKkAåè—?¬~i@ŠCJÁw†=8š8Aõ®À¢Ò?ï÷nÁ yÀ¶ø?¾6ìÀÒ|ŽÀ•,@¶êb@oËRÁzG¨?zô9A±€'A˜ž^@ìT{Á¸§¶@3+”@þ¹ÀË02A']”@qA-•Â?G7½@dåÁ±žÀ^·@}~@R£Áyíø@`ïDÁ¡Á<Ûý@" .ÁÍ
+ã@·÷A{È‰À–YÀµ:AÐmÁy	XÀêEA®7ÊÀ¼ô°ÀÒcDA$5A:ŠÀÐvAŽAÀ3H@ßÉqA¼èbAP0OÀÓBLK 0               œ       œ       œ"«‘]3ùöðÞç;3•/Ý'D„£èCT9D¬ÿžC˜]éCP±C„0ÌCêËÑC+>§CFÆ˜CIäCA2mEŸœEŒD™eâCùFFtš½CDm›C‡¿YD€‚ÕD+dÒD‘¡åC³¿×D¢*òCi‚&D”g&DË=èCYE6C¤Cä~D„ðæCH
+ÃCüÕŠD
+oÂC§DA.$EÁËC’ÄJE9ÓCÓBLK 0               œ       œ       œU1•©&€"ƒ¼ 'ÊVSËÐ=ûFÝ=À>ÎïÐ=IYÍ=7Ó=ŸÏ=¡HÍ=ŽÕ=˜[Ï=‚õ×=ˆÀ{>÷>\[Ý="•Ï=>jô>Œì=kªÕ=jù=úž*>%Z,>U4Ö=l›0>2]Ú=¾	æ=¯ç=­ëÍ=1«‚>xé×=Eªè=YõÖ=˜ºÒ=ŽŒ>}üÌ=ö&ä=cÕV>µ×=R`>çcÎ=ÓBLK 0               œ       œ       œÌÕŸ9,—¬àCFy±–Ç6?LO?9>?wÚ6? Ã2?Ì/?N
+ ?T”$?­V$?Ò-ï>~Ò?S»@{Á@ÞÕ??}N?“}ƒ@+¶)?”ƒÜ>…;‰?RÓ¬?Y“°?äW!?Ò˜»?õ¨6?æ'A?çXZ?6Ê*?ã=@¡Vð>n.a?Ð´O?Óç#?¤<•?mAL?`ÎP?ðàî?¾K?ß ô??ÓBLK 0               œ       œ       œäW­Ã÷R>cÃ›ç‘ÐH?ÍÌY?3S‹?ÞÐU?\¿G?¿??º9?Ÿ…H?g¬7?ˆ??XïI?f9@’Þ@Õ
+c?‡çg?—‡@åÌf?´pG?ê‹?gH¼?ØH»?ÿ…K?”þÈ?Óò`?¢½|?R´q?0?®c@È?€?e?1N?þ#˜?oQ?½r?û- @+?î@RO?ÓBLK 0               œ       œ       œŒŠ'ìè¶/íºä£ˆûMØ6dõ§?`du?AƒŸ?e˜‡?ª-i?¡? uQ?w[?âÖI?¡	O?—÷`?â#g@ÆÃC@8\˜?	|?{ ¿@zq?}%T?MÆ?vÛ?ŸJÍ?N²k? ‘ä?Ô‡?D„?CÜ?6S?|Å6@+?™—?‚‚k?óŒ?Rû¾?%ñV?êŠ?`}@û•8?³@`üq?ÓBLK 0               œ       œ       œHG^$>“A—3œ›îhN&ÍR=pyÁ<mh¦<pè«<ƒ¯=n½<£º=^Ë<VfÆ<u­<RH¬<ÅNµ=ÒSl=z=ú<A÷<  ÿ=*¼¿<­âé<9
+Ä<E(=ÍLå<óè<µë¹<_Æ²<_	Æ<Ùµ‡<
+M <®?S=øô=ù ”<è¦á<E=Á¬¡<ðÁ<Ž¥Ö<!/K=»$Þ<G=þ3ñ<ÓBLK 0               œ       œ       œ–PŸ6öµ/OséÉæ=„)=î%ñ<ù“½<§6)=1}õ<nÈF=‰O=ÄW=$î=)Œ=$¼>ÛEÛ=J=íYK=‡÷N>lþ<±B=ˆÐ=[=WýS=O)=ê!=°2ß<?.=¬=‹¹=8Í=¬ßN=ÿÌ=d,.=®_O=¥=7”=~×$=Ø™²=o"==†Œ=æ2=ÓBLK 0               œ       œ       œ²éXÀ€ $Ð@)UÀ_ÔŒä+µ==MC=ñ½9=¢[ =LÉ3=i\=árN=¦zu=ú{D=L7=Øj4=Ö]9>lÕ>lÎ…=b=Ê>Ë¢#=£[=Üô:=™¿«=9IŠ=Ì g=âI=4=îTL=8P4=)³F=×ö=çfm=‘ý=÷I=µKm=Ù§G=JŽ=zRE=´NÛ=³;=(Ì²=|rG=ÓBLK 0               œ       œ       œ”,1Ÿ²g£‡%IeÓ”6+ÄbÙ=¼Ê…=!vŠ=µ=¦1‰=Kä=d›=|s¬=:Ðe=ÂBk=Î=i= u>™§L>eñ¨=Md‚=v¸>Ý—5=¸ž=`ˆ‹=ÿþ=ÜjÄ=·®==€©=£i!=hš=¨vŸ=!b™=ÃI->¯z™=UõR=V¢‘=x³¦=·(³=ÉZ=‘=+ù>«‚r=…<>Žr‰=ÓBLK 0               œ       œ       œ]•oÖŸÓòð¾€œšôÃ&->G =ÆÂ=?i<=ö±©=¬Cg=C2º=!ß=òÜ’=ÚÆ=›Ã‹=²³—>”³>#9Ó=¬Ô¿=0€é>FËT=®€°=•Ý=u^0>ºØ>ÄöË=¡»ê=dz=îxØ=8U×=4Þ=zv>ßWä=;™=\Ô=Ë=ˆ$ï=V–=ðEØ=iô>>Òî­=lÍA>¶=ÓBLK 0               œ       œ       œFëƒ0Z]¿Ì!ÐØf‚˜E˜>àÂÈ=ÇÔä=ïæy=ü<¿=Ö=à(Ò=O”ø=³°­=3­Ë=9ª=qvª>ª>r·ç=)û=(Æ?pºž=œ]Á=@>vÄI>ã,>“Ö>Œy>Œkš=¡‚÷=ö¬û=†mê=ñ¾‹>R¬ù= íÓ=}„í=Øà=\>$¹=?í=ÏÁX>µ„Ô=ãËp>.³Ø=ÓBLK 0               œ       œ       œÁï©ÚˆµÈBÖm"YÅ-Ð(>Æ	>ˆÝ/>=u×=gtî=Ç‘	>v'>>jÚ=x¤>“¡>jðÐ>UÚ>ï>Y†>ç¬%?`Î>$Ýç=¿!>¤›ƒ>£ôh>½·$>4üB>Â> ¤,>;$>Bõ>hÊµ>#Ñ>ÉŽ>•>>¬¨?>\'æ=öû*>Ò’>·øý=\Èž>"™>ÓBLK 0               œ       œ       œ÷ºå¼,/
+šlh%3>äv&>ì­C>Ÿê>f>0,>lØ>%†%>ZKí=Ú)>ƒ>ôã>FTë>\!>}%>™6?Êa>Áò>ŠD?>J.‹>äþv>[|0>9ãQ>Æx%>Pß9>|¼=>“>¿ªÅ>,3>=q3>²a>ÂQ>W>†Ùÿ=Ø7>Ð¤¥>5Ç
+>œi«>Üú.>ÓBLK 0               œ       œ       œÏ½{…Õ–ÃïŠJÈ')^<D>t°->ÙE>Ù²&>Ái>Æ45>9>ý¡&>€C*>_>(;!>/ ?ÿØø>¦<>î›,>IÊE?Š?#>J‚>ÞéJ>$’>¢$…>–*7>†œk>
+Ÿ,>Y;>¯ZE>:‚%>úÔ>òŸ>G;>3õ6>ÿV>G_>ù>m°@>Ê“·>Sm>šß¶>óÁ/>ÓBLK 0              Ô      Ô      ÔÉÌT=<sòŒ53‰Ž˜˜Îd´±=Ã
+7= o$=Œ±H=ìú=$	=×[=ðà<= #=ì=úßØ<!Ýž<6gF=v²=à~ü<Oþ=ûŠå<õêž<V¡T=s±2=	–ü<±ó=â==z=~h=ò­	=”›ý<cG=Ew=Å)=™“3=7M=þß<€H>àGÓ=FdÊ=}#>¬øõ==ÕÚ=rx=5ˆ.=»t=Œ™L=£À>=³*=Zù{>Ïµe>”m#>¸=ò=ŽCÐ<PO= ®)=å–Ü<‚th=P³G=?#0=Gÿ½=ið©=T¿q=&­Ž=ÿx‡=ê‹n=1[=LÒ=j®=€Ss=ˆ{Y=˜¤8=ä}(=)¥æ<
+€À<¿Ù\=yT=¯ï=uÙe=Û\3=K¹'=Xa\=Öp<=ôn=¢D>!Õ={|¾=ÒyV=tRK=¸†8=Æ53="‚=„ =IQw=#|=Þ±=æ,h=›1=wÞ=Ñ4=™(V=MÿG=Ïˆ"=šå=ìHß<<Às=ß$(=ÒÕ!=ŸÈ=‡ ·= @=,J=Ü=rö<ž}Æ=Šüº=J¥=“¼Q=êþ*=h=ÓBLK 0              Ô      Ô      ÔN7¼ÅJÛì£'r,‡ÑAVWA+‡JAìQ±A×£ŠAmçsAòÒ§AÓM‘AAåÐªA®GŸAã¥QA)\¸A‘íAö(PAÁÊ¸AÂ‡Aü©cAºI³A˜nA˜nbA
+×«AJAøSyA¬¥AåÐŽA…A®¥AÁÊŸA{`A°r®A%˜A%[AÓMÅA!°rAZAÕx²AJƒAî|€AÃõ·A°rŒA´ÈZAáz¢A—A•AZ®A;ß”AÙÎcAî|¡A²›A`åvA¾Ÿ­A=
+žA“LAÙŸA1“A…‡Aj¼¦A?5¡A´ÈXAÂœA-™A®G„Aš™¿A+‡vAiAìQ®AD‹ŒAö(xA´È®AHáˆAªñ~A%¦AV‘A¸‚Açû©A–C‰Aj…A¤p­A…ëŽA/uA\¬AÃõ‡A˜nƒAB`¤Aj’A®‚AßOªA=
+”A¨ÆqAÛù¾Aªñ|A×£dAmçµAX9‚AyéxA–C¤Aé&ŽA°r‡Aã¥¬A˜n“A—lAË¡«Ab’AÙrAo¤AƒÀ‘AÍÌƒA‰A¦AÓM™AžïoAÇK§AÅ A¨Æ„A33£AÉv’A „AÓBLK 0              Ô      Ô      ÔHÀólÊy8¶'Sdçyå¹¤>Y!?ÛK?vO8>®lQ¾õPv?ô>L‡ö½7³q?
+za?›Ì½´Æï>]>±¾ôz?²1¿˜e7?Ë'¹½„!/?wZ5?gÐ1¾™m?Ç±»¾dê„=±%<?Â %?)ÍW¾`·X¿>ú>ãóW>zZÎ>½g?ËÚ	> tÈ¾èC¾·jf?¡>=ÕŸ>{Ë|?pè¾k
+?w;5¿û}1?¤ë? ô ¿õè"?Û?ž¾î4¿<x?‹Kz>Ïèˆ$^?‡Û"¿ûyþ>}¸>ŠŒ¾þOd¿,x¿Yw>þ©-½TK¿«àà=ËH?ib‘¾H¿ý)P??‘º=‚T¿”Gø>[•y>5W¿¦*1?v7?ˆ±=á….¿M¹4?£D¾ƒp¿6#?»o?Z“8½0z]¿m½ÿ> žÛ¾¯÷~¾[K^?{îÒ>c9÷>ÒE?364?^G?âß>¡ò¿Öé.¾Ê¹M?ÕX0¿·Ž8¿£.›=]Bƒ>#p¿ìro>?ç^?´>þò¯¾0Ë·>ZgN?v¼ð>°T`?|ûú=ÀŽî>¸0F¿çSÁ>?Ýp½-HW?Ù´	¿ÓBLK 0              Ô      Ô      ÔTÚJ©¬ ¬Œ6ºÓ™âð1À	d¿Gø½¾:à>§k?FrY?½ª=us¿
+j	=q >¬{™¾FÒ.?|Š*?zÖ×¾m9c?>>R–%?æ&?ÆÁ¿@ä?ä»¾°/=?¿“#¼^Y>¨}?Î7=L;r>„x?âq€>¿:7?;Ù&¿Ñf?(©Ö¾µ>ÓÈÆ>;Z?—=³>¹‡s¿Š}˜¾¬£=\K ?<MB?›Í6>ÂÕå>n²s>Ð~\?ƒ;5?:þ¾¹1?ù3¾$ñ?qJ?(­¾]º>ü#^?t8l?Bl½Œ}Ä>q>ºúv?2¾ð=îÖô=æ}?Õ9½ÏCÃ¾‚V?ÉäÇ>„z7?òe¿gë>æ0_?°ïq½\ñø>»	,?ÃŽ¿á¾é54?Ú¼?µÞ¾a¾<?ðE¿z?ÒgÆ>ó	9?{a±¾²ßn?ŠyÅ=as>ó
+C?«F¿øg<YÂ?¾äK¿pÞ­>žxW?~òÖ>‹²½hc>>ÎŒz?ò‹Á>ÖÎ£>ëf^?á>e³[¿ Íú¾êïn?¾Äž¾s-9¾¿œÒ¾´š1?¤V?q?3t??-À¦>¹‡a?½V¾*Ù¾ÓBLK 0              Ô      Ô      ÔH Û±Pa¾2&[ÊªT¤¾ÿ¨Y?{ Õ¾º‘U?öù¾”Ù„¾ö=Kþ}?ñÔ=ì°»>j%:?»–¿îJe?<á>}Š½T¤>{ Õ>ÿ¨Y?/Žë¾O•?~£&?i‹¾>~k?ï“
+¾©,¿+ :?¾	að>gÿ>g€:?£1¾ž½†{?º‘U?öù¾”Ù„>¹Ûœ¾*/q?ùm¾ŽG"¿Yv¹>dï.?_P¿qÃR?,Ó‡=¹Ûœ>*/q?ùm¾2îE¾MD?è±¿L®;?g.?    a>¤v?ê/u¾ö½ñÔ½Kþ}?ó¤G?m3†½]?á5a?ÐL>Œ	Ý>{ Õ>ÿ¨Y?T¤>Ü½—Ñw?Aív>Åë†>/„¹¾uÞd?ÐL>Œ	Ý>á5a?€&O?×?¨>H>ö¢Q?(£¾¼ô¾º‘U?”Ù„>öù>á5a?Œ	Ý¾ÐL¾œÉ5?¿€ØÕ¾œƒ??0"¿ü×>(<8?è*¿aRC>i¼c?_Œ	>„ß¾ü:ï>cb¿¾ÙM?    ¸ö ¿®$]?i€>«®5?Þ‰(¿ðƒ>ÏÆ¿	#L?	að>gÿ>g€:?ÓBLK 0              Ô      Ô      Ôìc8ó³Z8ÜÓúbç‡&`ÉWµx?ºî=XuS¾óX[?ØGý>­Û>|Œw?÷•{¾|{Š½ð`?1ªk¾ÔPD?4"µ>5Z¨¾$)`¿=¿= e¿"wß>ú…?ý==?æê˜>ÐF?
+Ï?)	±¾¼F—>±{ˆ=›ùs?Wh¾óJ9?ŸÖ&?µyH>E:?Šû'?;ç½¸³1?8?û„E?ï~Ô>Ùö¾€…y?Íö«½T&T>$Ÿ†¾èó¨>Òh?÷ÝT?âÑ¿3ü4¾Hd >¤–|?ŠbÔ=\á¾©S?„«³¾Ö4¿Ê½N?©ºs=
+fX¿%àù>`¥^¾w6Þ¾°Î1?.ã?y>EPt?WmÍ=
+Ì>¡•=Ór¿,±@?Ä9¿§]>3z?ÏX?âT=¿þA¾6+d?îÒ¾´¢>ã
+o¿=™(>@˜•¾eÿ'?2¿hˆÎ=}³†¾ë u?ÙN½“8?Aì0¿7ÛS?.¬‰>Nü>ø[8¾åÕX?
+ ?µv¿¸M?©Ïì½@?( Å>OÉC¿è¾1?†>Rj?±*>ñ‰M?@£
+?¤’t?þŠâ½ BŒ>Â‘8¿»üø>·Áü>X'>mu¿Ëet>ÓBLK 0              Ô      Ô      Ô7†'eˆüîTI-Åª2Z> ã;½TÚy?ç@´>ymD¿W8	?F¹¨=CN=ëÍ~?I; ¿ýßì>» ?îÎn?,ÙD>{œ> ù¿Ÿ) >5C?¯ÄÅ¾N?!™3¿Ë³?§°ç¾YË(?þ·Y¾a%z?³»¸¸Û½0%?X]A¿Ê#-?“´Ä>¨ã ¿›Ö?r?¿çvë>z’#>ýœ_?Oéd¾ir»¾.@g?õþÝ¾ŽL?IÕ¾¶ø#=9d…¾Xòv?UtÚ¾Œ>Uhd¿Æk%?øÿ?’?­LL?Ûp?œ¯X>y†?ñ¨\?\R½iÀW?ž¿	?‘$c¼KÓ>r˜Ž<3u¿×H<?Å&¿p•A>‡ƒ8;]h©>f”q?å|X?¿*ëè½”R8?«ŸÒ>U?Út¸¾}Ý*=’n?M?\?ÿþ>Æ'Þ=Ê<;¿LY"?Óc€>Z4s?î~>ÈB>Ý& ?1@¿t¯Ü¾˜]? ‚Á>È,¨¾ˆÚ?MÌñ>ð‹8?ŽX?Ÿ5µ½Û¢?<T‘¾ë`d?gý³¾Âöñ½1‰?ïKN¿g“¾ó…¿9zG?2qÍ>¶°_?ž«Œ¾s
+?”>â2J?ÓBLK 0              Ô      Ô      Ô‰D0	Ä*Rµ³ µÛ¡¤ñÔ½Kþ}?ö=ßÀ¾´ñÐ>–ãT?Aív>—Ñw?Ü½•¡ÿ>ª,[?-V¾Š‹½´l?éÝ¿¾ö¢Q?(£>¼ô>2?¿¾@¢%¿aRC¾(<8?è*?êon?"ÃN>Z›¾—Ñw?Aív>Ü=œÉ5?¿€ØÕ>–ãT?ßÀ¾´ñÐ><á¾îJe?}Š=    =Am?QPÀ>g¥\?¬ ?‡@‰=×?€&O?¨>H>îJe?}Š½<á¾ð´¿    H?Øœ¾Ä/¾½y?Ä/¾Øœ>½y?(£>¼ô¾ö¢Q?Œ¾j?„«˜¾ç´‡>yw?‚A?Ä‚>Þ‰(?«®5?i€¾ö=ñÔ½Kþ}?è*¿aRC>(<8?¡†`?õþµ>ks¥>€ØÕ¾?œÉ5?©,?+ :?>¿¾@¢%?2?Ä‚¾yw¿‚A?ü:ï>cb¿¾ÙM?ŽG"¿Yv¹¾dï.?ï“
+¾~k?i‹¾>Emh?xf¼>‡M>¤v?a¾ê/u¾,Ó‡½qÃR?_P?ä¡?    ~:S?~:S?    ä¡¿ÓBLK 0              Ô      Ô      Ô]ç HRm)Ìp÷»­r2?y¶?8a?Éc˜>Á«‰¾÷€j?b=½–½ú'¿RF/?k¥å>«?)Ö=_»¾g|?ƒÌ ¾Iå\?eÀÊ¾®$]?¸ö ?fïs$ªL?)NÙ¾N¥Ù¾êR?“?#í=¦¶*?f¹=¿Ë†Ÿ=3å9?‚a'?Ò·Y>H Ä¾G¨¾™2j?©²=ˆ%¾&›}¿)ºÚ¾­†?pÕ/¿‡Ìq?ïŠ*>$ï>ÿ1 ?dSµ¾7ê1¿„ã9?q;?ãÆ>Âs?O.¿©Ü>1S4¿¤â?õ…å>Žu?õÁ¾un‡$W$¿ÝŠÚ½T`B?uw>7w¿¸ºÏ=ã?!Å,>æ0Q¿b=½–½ú'?qS?zž?üÈ°="þ>Zn?µa®¾p2è¾aŽ)?H«?FfÎ=ÇF=¿àl*?-'ÿ>¶t¦½ø\¿Îä->^°?pòU?¿”#?…‰*?\ëÄ>ä¡¿ÿh$~:S?‘6?Ã?ì“Á> ¾dz}?zM~¼6²d?£KÀ= á¾‰O.?Gú"?‚]¹>> x¿î
+=˜š{¾…v¿1Ø?%?£.¾ýèl??8¶¾ÓBLK 0              Ô      Ô      Ôþ›ºßZb|Ð››4}&å³Š$¿>ò[A?yñ\¿Îø¾°>Ýt~?iLÏ½ë§,=+Ð9¿ ²>ùê?ki¾èçu?#>»p?’¯>%Øà¸Y;$>[ÏŒ¾ù­r?\¢Ñ>ã÷¾<g??Áo½š•õ½íµ}?WF¾Á±‘½äz?"0?‚È0¿°òe¾­Ôî>”îS?m‚Ÿ>Crm?ã(¿>U#Ž¼iT4?T1?<•>Phò=žz¿qñ7>ð8?“Q¬½"ª0?é0?ÿ`¿Ò¾Î$"¿H¹½”pE?Äô4?¹ù>ª|?ÑÍÑ½{ò±¾§šn?™>¾v?Ìšy>>®ß¾…›s¼ÿ>f?Ê«J?Ñ€Ô¾Ã‡å>Ýt~¿iLÏ=ë§,=? ›5¿
+fï¾xt?ÇNW¾Œ¿T¾È¬¾ðû>²~M¿½¥?á?„È?¼B?®$?¶“Ç>ÚR„>¾uK?l”¿I7¾as?Æ•D¿çVÆ>3b?˜Î‡>,K¾T±¾i´j?slP?\ü=AA?’”¾²‹Z¿“þ¾/*¿s¨>ìÉ+?7–>îo^?õ…ñ¾>S=?UÕ+?~´M=Åß_?“L~½YHö¾ÓBLK 0              Ô      Ô      ÔB§zpÁg'¨=Ì·àT¤¾ÿ¨Y?{ Õ¾´ñÐ¾–ãT?ßÀ>ñÔ=Kþ}?ö½,Ó‡½qÃR?_P¿—Ñw?Aív>Ü½ï“
+¾i‹¾>~k?¼ô¾ö¢Q?(£><á>îJe?}Š½_P¿qÃR?,Ó‡=(<8?è*?aRC>    9Už¾›ss?	#L?ÏÆ¿ðƒ>i‹¾¾~k?ï“
+¾¿€ØÕ>œÉ5?¹Ûœ¾ùm>*/q?Z›>êon?"ÃN¾    ä¡¿~:S?gÿ>g€:?	að>e_„½4½-¿ÔI;?Åë†>uÞd?/„¹>‚A?Ä‚¾yw?ÕÏ]?bø…>Ÿ³Ù>Åë†>uÞd?/„¹>ñÔ=Kþ}?ö=ÐL>Œ	Ý¾á5a?ç´‡>„«˜>Œ¾j?~:S?ä¡?    ö¢Q?(£¾¼ô¾{ Õ¾ÿ¨Y?T¤¾›ss?9Už¾    œƒ??ü×¾0"¿g€:?	að¾gÿ>©,¿+ :?>_P¿,Ó‡½qÃR?ü×>0"¿œƒ??¿¾2?@¢%¿´FJ¾`Øü>,ÉX?T¤>{ Õ¾ÿ¨Y?ü:ï>cb¿>ÙM?ÓBLK 0               œ       œ       œHÕ#Á~ÿQÔ¯açŠMŽô’?$Èc?S”?BØK?[†f?à;‚?(€C?`áC?ƒc/?Â¡?mîA?B/O@ß¿A@zšˆ?0*R?f¤@¤Ëc?’#:?yüŽ?žbÂ?n¹?bÚU?#ãé?5û}?áu?äTƒ?ÿ7?PR"@Ä) ?¬ˆ?àÞr?5Â}?Y¬?¸(B?¨l€?™¦@§à?*È@ÍÃ/?ÓBLK 0               œ       œ       œ|Òíži€vþXÛV€Ž?tÐ_?Î0^?¤Œ?¬½k?u*??7A…?R5?lD?©
+<?UÅ)?¥ÅD?A@¾@7Óf?¾Ÿp?«J–@~ R?4z0?‘Š?
+‹Â?vÀ?«‘D?m:¿?þïW?X k?¶Ôt?É<?^Ñ@Ìq?Ë?é—V?"DL?j¯¡?©äX?â}m?Ï„
+@p+!?¶\ü?ÈuW?ÓBLK 0               œ       œ       œgªµœúiûõ %@SÖ•KÒ}>G =EÖ<?i<=49­=Z/="W[=~/ü=ãš=$]=o‡=S4Ÿ>øðC>íù=A…’=Sè>¬M=þÉÆ=eLŽ=ÿ/Õ=â ´=gŽ=Ñÿ<£i!=iÆœ=—™Ü<Ê…é<"U>>~=õÍ7=I•Z=Iå=q¬û<" =¡Âˆ=ý­$>«‚r=qÙ=òÔš=ÓBLK 0               œ       œ       œó8€c×Ô„•i˜_ÈÊl;?S?Ü€?6?!N2?ºú?÷E#?~™%?45&?æŒï>LÇ?Ò9@"@´l=? áO?¿Ìƒ@ e'?Lƒé>w°‡?w¯?N°?ï!?×°»?¡y6?)&A?/ôX?=+?%/@„ùô>ò!a?4hN?|"?N5•? KO?Ï˜Q?êî?’A?¶@ô?«º?ÓBLK 0               œ       œ       œJVˆúÆLèKtŠ¤L»TKN?®ÿ\?¡§‹?Ç•U?ø´I?w0‡?Yã;?7'K?æ9?å?0ºI?ñô@§
+@^ãg?%¯k?ª®‡@*b?3£@?‰¯‹?ÏQ½?ñl»?°
+M?!É?-‡`?×|?ôíq?’0?È3@à#?¥ ?ïf?x¨D?Q8˜?OS?u¡o?Ì @ç#? @ð#K?ÓBLK 0               œ       œ       œ½ñN£‰OH7ÈB€¹i Db¯?—Áw?lnŸ? Í‡?Î…g?uä¡?_ Q?×Œ]?×²G?šSO?±÷`?*ôp@‰ C@ð¶˜?¸•|?‚¿Á@Ñq?…T? ?)Ü?Ý©Í?³l?Í@å?…ã‡?·íƒ?î?X<S? ÿ6@E<(?;“—?¯áw?K‹?>R¿?{,[?MEŠ?R¹@T9?‘]@ó%t?ÓBLK 0               œ       œ       œ*È››Ö«ÓŠŽ…ÉnP==™<Ve©<M¼u<iá÷<SM™<ï¯ã<E…Ï<®¯<xõ·<ƒƒÂ<Ñ­…=à|a=¶	=Ü<ÅšÃ=ýwÃ<¸{
+=ùD±<Ób-=9=Î+=Å­<ÑûŽ<Ó8Î<j<hä< Q=	:=qÆ‘<-¼Ž<;=îÝ¦<£ˆ<1ZÏ<«¹N=ÜœÒ<å=°CÎ<ÓBLK 0               œ       œ       œH©ìÜ!Ù§¨&JÔ¹çóŸ˜=¹Õ=p¬ï<ÒfÀ<‘^=­‚ê<¥°=‹âK=ä¢=HÑ=Çª=¤2ü=J¿ß=´ÊO=Žz:==>õ¸
+=å•=âÇ=Ï‰ƒ=fhZ=ŸÚ=O=ß’Ð<Â)=¨C=xK=)Í=˜/B=ê5ý<W=ã’9=Æ…=›ƒà<2ø =o¤²=H•&=3åŠ=ùH%=ÓBLK 0               œ       œ       œsˆ˜ï˜=7û$Õ†’Ëð¾=à™*=¨+=-vÙ<d_B=¾5=A\ ={âa=3rJ=–	=q®=·ß&>[.>Ëv=ÒS=º y>&=!ÂZ=–Z@=bõœ=a‰=ç˜a=ŽuM=¦÷<*ÓJ=Ëu9=‡™I=uMô=ÐTS=”±=Z&=äÐM=EQ=Áž
+=ÅOG=<7Õ=‚B=Lk®=g6=ÓBLK 0               œ       œ       œ!ü‡#ŽLì—â¶°EŽÕ«ä=`Bj=/Tˆ=td=JðŒ=¥l =	2“=ù³·=È©e=õnw=+´`="Eƒ>£N>¾ù¦=o|=Áeº>K)0=/“=7Œ=ÿ=Ê2Ä=‘›™=~§=Èa!=ŸH’=(P›=WÓ•=ÆÅ->~+“=Í”V=—Ò‡=®\—=Fc«=l\=`=ˆ£
+>ø	y=	>©Ç—=ÓBLK 0               œ       œ       œwÃJ¯OÌå~¶›™’Ó)C>úÚ¥=eÒÅ=ß@=¤%®=‰2h=¾}Â=æöå=0ú–=³z»=–Ž=¼è©>"ã>ÃÔ=%Ù=éÂö>‰Th=7„³=Dìç=Ý>0>º>ÈyÔ=¨Úæ=qN}=*~Ï=Ç¯Ø=3°Û=Ïõu> –è=¢•=
+Þ=¸	å=®ê=Aˆ˜=Na×=f–B>Ç²=Vž@>¡=ÓBLK 0               œ       œ       œ·“š?éØ„jVë7ž
+*l¡á>!MØ=CÂÝ=¸Z=0{Ã=?¢=‚óá=ó=ÓÇ¨=í{Ì=o	ž=¸Ä·>‰é©>$€è="Ûü=S†	?‘½’=ážË=;¢>ãN>‹¾+><>îd>5P=Ç-õ=ëb>j,í=!Ë>ø÷û=¹àÌ=éWõ=_ií=¥	>qµ=4üî=”[>ý€×= ±p>	uß=ÓBLK 0               œ       œ       œÙhW{ô°Ž;Œ:6žôÊuô›Ã >Þ>_0>TTï=÷8é=fÜ>8¯>-à>4³ß=>J$>‘žá>LÛ>“	>11>å+? >Ÿø=¡º%>½"…>eºi>í‹'>‹‰E>ú>#{(>5
+$>´'>4{µ>Ä> >|>ž4>õ¾C>Fð=¡C*>Þ •>Ç´>¥Ÿ>®¬>ÓBLK 0               œ       œ       œÜ#2ÕØ„`€·ÓÍ÷H9>«‰4> A>‘V>Ò>—E$>ú§>Œx!>KÎõ=}Ó>1)>
+öí>$Øí>å…'>¦ )>ÚÐ9?Uá>(1>¨ƒ?><¶>y>Væ*>…sV>×1(>o7>J´@> ˜>‰5Ç>P\>Rô3>$ÿ)>b[>xþX>Ì’>¾â5>¿«>÷
+>è¼¬>³ö4>ÓBLK 0               œ       œ       œ¢ÞÀq4TÇ"æ(ñÓz—1h?I>¾$:>E>á¹->ã>67>{˜!>3ë#>}ˆ,>°*>1÷+>JBù>gÜü>ÊLB>·4>:L?+>®z>”ÎJ>8\”>ö …>Òm2>RZn>Bf1>U¾@>o­D>a›%>ÚÖÖ>b=+>Œ™?>û+>÷]>Ze>¯ü&>œD>Ám¾>õ>ff¹>¯Q6>ÓBLK 0              Ô      Ô      ÔMªÐ”Ö‡ô=±K7ƒ¤,Ë†Å²=á<=þm&=¶ôM=êÕ=ßô<‹Á[=aÁ==æ#=P=nIÚ<Ò`…<ÝQI=;8=M#þ<˜é=ãMç<ÿ‡Ÿ<8õW=ñ;3=YÓ=¤…=«6=¨=þ ="¾=[] =«ÚG=r=x¬ù<»Ô/=Bw	=Hà<µV>RùÝ=ÛGË=ñ">e¯õ=8ßÛ=.it=èM1=n¹=ªoT==39=~×&=†³„>“He>äî$>†ð=TÌ=YkÆ<\ÜL=BÇ(=ù/ä<2a=pìG=ìä8=Å|Â=ÚÕ¢=˜qx=§Ò=JG†=‰•l=Ê’=œé=Î=Cvt=ÉV=ãG8=×i*=uËæ<Ê·¿<M]=M¦T=É¡=¶i=Òu0=ÊŒ&=¬^\=^<=Tl=$>h–Ô=IÀ=¾œW=
+ûF=Eå?=Wm2=Ôƒ=œ^ =ˆ±s= -=]]	=(Ûk=Ü	2=ð=$=r¢U=ìéH=-ë#=“=°6Æ<\|{=ù'+=gÞ=Í3Ê=K·=eæ›=˜#U=–L=˜tå<M¾Ä=ÇD¼=-ø¤=nñJ=TÆ9=ú|=ÓBLK 0              Ô      Ô      Ôé¯yÓŸD(œU=òÒËA–CiA;ßKAßO¨A1–AÉvrA
+×¦A\ŽAòÒƒAÂ­A¦›˜A•[Aî|¶A
+×A-TA%¶A…ŠA…ëeAHá­Aff”AÉvfAff«AA5^xA–C¬A-²ŽAyAåÐ¤Ab£A YAžï°AV“AÁÊ_AÃõ¿AZ~A^º_AR¸¯A‡…A/‚Aö(»AP‹AJRANb¥A9´’A‡A¤p©AÉv–A?5nAÂ¦AV—AsA²Au“•A—TAßOŸAP‘Aj¼‰A ¨A7‰žAff\AË¡žAºI˜AoƒA?5ÀA`åzAƒÀbAÓMªA²A)\€Au“¨Aã¥‰AÍÌ†A1§Ad;AƒÀAªA!°‹A
+×‚A{¬A•‘AR¸rAåÐ­AÏ÷ˆA-²€AoŸAÂ”AD‹†Ayé«AßOA+‡xAsh¶A‡AòÒkA!°¦AJA¾Ÿ…A´ÈŸAV“A¢E‡AZd§ATã˜A
+×mA`å©AX9•ApA˜n¦A¼t’A€AÏ÷¯A#Û‘A×£fA¸ªAÙÎŽAD‹~A ¤A/Ý—AXyAÓBLK 0              Ô      Ô      ÔÞÚ¨á2¿x02
+MpQ "´Â>n³þ>Ï™G?ùîÐ=…ï¾òÚ`?©v>µî½½@Sw?‚ÙW?eƒÛ½¹à?"Œ‹=š.¾`ë|?²1¿˜e7?Ë'¹½Â9=?'a*? ¼Ó½™Ñe?há¾5}$O[.¿ÅT;¿ÿUÑ<`·X¿>ú>ãóW><mÍ>­²f?((>%Ø”¾´[>Mr?¡>=ÕŸ>{Ë|?yµô¾üÐ?`.+¿•Ñ(¿K¿ÛÅ ?ä#1?Úí‹¾ó+¿‘u[?]‡¸=rÆ?­$?Õ¿.
+?ì6¶>ùÒŸ¾—a¿Â¦z¿RÉ0>Ç
+Ü½Ú®*¿ÜòT=íT>?õ¢‚¾~¿ß@H? ?qÑ(=¤T¿”Gø>[•y>5W¿¸³1?8?;ç=›Êê¾Ê\?7R[¾ƒp¿6#?»o?Z“8½0z]¿m½ÿ>g&#?gé6¿aÍ“>È×>Ãö>¿àD?ò9?ÁÐ> &?g¹'¿ðS¾Ÿ®0?¨#$¿iž>¿=>>Ïº¸> !k¿°Ö%>éRX¿wäµ="þ?ðŽ>/6E?c™?2i?Xl—>k”>dQ¿é2©>üñ>¸‘`>/NX¿šÄù>ÓBLK 0              Ô      Ô      Ô—ÿQD`)Û¤o	¯( NMÚc¿XW-½¿Xë>kyÅ>™U?»¯Ë>?w¿¿‡«=à™~>stŽ¾Ud@? ?ŽØÞ¾ c?.a>R–%?æ&?ÆÁ¿ á?™¿ƒú>Æ³=ï*7>ãÝz?;dõ¼™q€=„a?âq€>¿:7?;Ù&¿#8b?©Û¾7B>C`ý>ùR^?9þó<¹‡s¿Š}˜¾¬£=½Ç(?hS<?!>~—½Ï6?Ú42?['?†"¾g¥=?wŸä=~a~¿·IG¼ÂX¿äùÃ=+M?=˜n?–^J=#Õ·>ë“>>Lx?Ž^D>†>Ì.s?¼7->–lÍ¾^L?Sõå>Íü?Tð3¿£,¿>æ0_?°ïq½\ñø>r?¿›Ö¿,Ï`?‚EÎ>Ä„¾a¾<?ðE¿z?ÒgÆ>ó	9?Pèw¾ .>ÆŠt?a«>qL?æ¿îà6>	ú+?Œ	8¿ÝÏL>0vO?ù?g$ø¼$Wˆ>~¢v?è?`§°>¤&F?bv>¶œq?h>Œgs?œ¾öcc½ý­>/øn¿PÓê½fvô>©¹X?åÚp>Æû=¿"r8>ŠF%?ÓBLK 0              Ô      Ô      Ôáj?ÖBœ‹àZl$…bø…¾ÕÏ]?Ÿ³Ù¾Œ¾j?„«˜¾ç´‡¾ñÔ=Kþ}?ö=/Žë>~£&?O•¿™Ñe?há>    T¤>{ Õ>ÿ¨Y?bø…¾Ÿ³Ù>ÕÏ]?Œ	Ý>á5a?ÐL¾ÔI;?4½-¿e_„=	að>gÿ>g€:?Aív¾Ü½—Ñw?ö¢Q?¼ô¾(£>¹Ûœ¾*/q?ùm¾»–¿ì°»>j%:?œƒ??ü×¾0"?Ùõ>öàr?ÁhŒ½¬ ¿‡@‰½g¥\?öù>º‘U?”Ù„>ÁhŒ=öàr?Ùõ¾Øœ¾Ä/¾½y?2?¿¾@¢%?á5a?ÐL>Œ	Ý>?œÉ5?€ØÕ>Ü½—Ñw?Aív>ßÀ>´ñÐ¾–ãT?ùm>¹Ûœ>*/q?€&O?×?¨>H>ö¢Q?(£¾¼ô¾ÔI;?4½-?e_„=uÞd?/„¹¾Åë†¾´î*?ÿ¿ÿkÓ¾g€:?gÿ¾	að>MD?è±¿2îE>MD?2îE>è±¿¼ô>(£¾ö¢Q?ð¾_¿òbQ?'^r¾j¾O¾E>s?T¤>{ Õ¾ÿ¨Y?”$"?Ùì ?§i?ÓBLK 0              Ô      Ô      ÔææKˆ0I“îPa D·ÙãÜ}?¤ÀÞ=ƒŽ½ðÐ1?P"8?ù[^<
+—p?Ð[¡¾9@¾ð`?1ªk¾ÔPD?,¢·>}Ì“¾!Ac¿Af=9ºe¿Sà>+?¬/??ÙÊ>
+ì=?#b?‰š¬¾Ñ‹©>Í†½Ò÷p?Wh¾óJ9?ŸÖ&?µyH>E:?Šû'?ÝÆ½Ã?1!N?ÝGX?Ë(à>‚p¾nHn?™¾¯t­>}[¬¾Wâ>“×T?÷ÝT?âÑ¿3ü4¾êÊ¼=2Á~?ôV=¿¾ß¾ÔfR?È»¾ýv¿×O?ðN+<
+fX¿%àù>`¥^¾w6Þ¾°Î1?.ã?IÂP>ïÐv?Ö.>
+Ì>¡•=Ór¿,±@?Ä9¿§]>3z?ÏX?âT=yd{¾m-[?JÉè¾´¢>ã
+o¿=™(>@˜•¾eÿ'?2¿¤*¯=ó›Œ¾e.u?Ð$O½µ$9?S0¿p/H?ÛEƒ>qq?˜q¾ý'R?0?µv¿¸M?©Ïì½? Rš¾$]J?lª¾8…>ÿh?±*>ñ‰M?@£
+?Ú€}?HÞÓ;¡‚>Â‘8¿»üø>·Áü>I=|>ä÷k¿mW™>ÓBLK 0              Ô      Ô      Ô¢ 5’Y‡w;5ä„	^OWœ=¦|½<Ä~?w? —¿®š? q>Â<D&}?I; ¿ýßì>» ?Ì÷n?q&ã=Ý¡®>Ðþý¾$íµ>=ÐJ?o´¾TË.?K×#¿XÐ*?a£¿VÏé>¹á¾i_?Š3]>¸¸Û½0%?X]A¿Ê#-?“´Ä>¨ã ¿à±?›·+?T|Ó¾),œ>0ÍŸ=ûr?)»¾³¾ÇÕ\?‘Ã¿ä$?H¿¶ø#=9d…¾Xòv?ù¾Þ¾	º’=éÅe¿Jm3?D×?aÞ>;fJ?CS?ØÕ`>y†?ñ¨\?\R½iÀW?ž¿	?‘$c¼u~q>ö=£Þv¿×H<?Å&¿p•A>‡ƒ8;]h©>f”q?å|X?¿*ëè½¯ï3?ZÞõ>÷U?Út¸¾}Ý*=’n?M?\?ÿþ>Æ'Þ=Ce.¿kr/?Äƒ>¾zw?Y¤U>¸¤>³¿î¤?ÁÐ?·*Z?AÝ>®V—¾ˆÚ?MÌñ>ð‹8?Ý|!¿¾Bö>®ß?³×­¾Ã]?ž¥¾¾Âöñ½1‰?ïKN¿$wù½àªã¾+c?2qÍ>¶°_?ž«Œ¾ïâ>ƒŽÃ>a›O?ÓBLK 0              Ô      Ô      ÔµZ[Ÿb6È´G$6Ž1-^¸ñÔ½Kþ}?ö=jé¾tÚÙ>C H?Ùõ>öàr?ÁhŒ½•¡ÿ>ª,[?-V¾    ›ss?9Už¾ÕÏ]?bø…>Ÿ³Ù>«®5?i€¾Þ‰(¿,Ó‡½_P?qÃR?º‘U?öù>”Ù„¾—Ñw?Aív>Ü=œÉ5?¿€ØÕ>C H?jé¾tÚÙ><á¾îJe?}Š=    =Am?QPÀ>ÔI;?4½-?e_„½×?€&O?¨>H>îJe?}Š½<á¾_P¿,Ó‡=qÃR?Ä/¾Øœ¾½y?Ä/¾Øœ>½y?(£>¼ô¾ö¢Q?E>s?'^r¾j¾O>yw?‚A?Ä‚>Þ‰(?«®5?i€¾ö=ñÔ½Kþ}?è*¿aRC>(<8?¡†`?õþµ>ks¥>€ØÕ¾?œÉ5?+ :?©,?>i€¾Þ‰(?«®5?2îE>MD?è±¿ü:ï>cb¿¾ÙM?ŽG"¿Yv¹¾dï.?_P?qÃR?,Ó‡½á5a?Œ	Ý>ÐL>¤v?a¾ê/u¾}Š½îJe?<á>ä¡?    ~:S?g¥\?‡@‰=¬ ¿ÓBLK 0              Ô      Ô      Ô˜Y5Œ°«ê³7Íâ2`Þ²ÁÅ?Élþ>/?H¯¬¾çb"?æ2¿—bÕ=á3¤½)Ç}¿Š^¿Ñ+ø<]3þ¾ÝŸí=üŒ¾ãË{?ûÖ¾ÓÛo?y½¥¾8*C?Lb#?ÛmÛ½)ð7?îPë¾£¿ôÕ6?N ?´Î¢>ÐÑ1¿8#8?ÌE<}O?èó?£RW>]ÞŠ¾Ò+	>ƒt?x&0>¯Ò¾Ü¿y¿°ÿ¾\?-!¿‡Ñ¿ï=÷·g<³?»–f¾®ŒD¿[©N?×¡î>/_¹>cF?‡¢#¿¦pç>T7¿ÓP÷>Çù ?9Cx¿c˜w>Ñ=lî7?ÿG=Ôž1¿BÕ/>Ò´t¿ot>¹C?æm>ÚwN¿uþß>Éê=» e¿ŠÑ\?°úþ>´¶=ê71¿Úƒ7?wª½Ö ¿(€?\Ó)?¼'<=0Ùe¿‡5à>u˜>²6¾äj¿™>¯t­>nHn?E??ã$?c•>w¬"¿sÛ>_k$?ÿ¶?lÇ>Ú¦;?yuR¾eˆw?ñ«>2n?r=OÝº¾÷©?(Ã#?D:?×Ów¿ x
+=«S~¾ó1¿ƒð>¼‚?ÝÆ½Ã¿1!N?ÓBLK 0              Ô      Ô      Ôbj×¡bJ!#ì°Ôþ¸^½ÅM¿B•E=Ë?¿+C?6?mF>"6}?MMÄ½Éä=£Ô½Gw?U—u>ªƒ–¾Síp?yó*>]{?Ã+,>¨²=0é>|uÒ¾5J?ÿ"ö>X`[¾¾¬Y?åº§¾ØWÔ½”ip?~²?N?¬V/¿Å?9ÎQ¿…,ƒ½´Ì•>Dst?«P½;­b?‰0é>¬3½=Ày0?‚6?|c> :=+m?h-À>mÅ?î
+¿ø2?v¥>ãÆ\¿Ü}Ç>Û=¿J¬—¾¤?±…+?Ÿ‘-?<Êš>	Ï>ÙC4?AŒ1¿¹Jâ>uú<?w?Éð¾J±>P‡_?L?¶zâ¾\QÒ>4„e?ý~Ü½ üÛ>izî>k{6¿{;¿ý\1?«Ä ?Œuµ¾ÃÀ¾AÔ?ûÒ>¿§?½zÉ>2Q@?µÐs?]>…š†>³>ÇÕ\?)»¾ÚsQ¾Ì? 7A¿( ?yõR?ii+<HÁ¯>k2?[ˆ!¿_9?">=ô(0?ÃÏD¾6N¿UÇ¿sF¿Õn=W’!?Dú¨=ç†z?ë@¾¯¿?G‰H?²=Û=à±¿›·+?T|Ó>ÓBLK 0              Ô      Ô      ÔY¸E‡ý!ÞBª„=XJbø…¾ÕÏ]?Ÿ³Ù¾4b¿©î>ª1?ñÔ=Kþ}?ö½öù¾”Ù„¾º‘U?öàr?Ùõ>ÁhŒ½ùm¾¹Ûœ>*/q?/Žë¾~£&?O•?¬ ?g¥\?‡@‰½ÐX¿é^F?CX¾gÿ>	að>g€:?Øœ¾Ä/¾½y?Œ¾j?ç´‡¾„«˜>Œ	Ý¾á5a?ÐL¾ÜW¿6©½>Ÿ3D?    QPÀ¾=Am?×?€&O?¨>H>`Øü¾´FJ>,ÉX?i€>«®5?Þ‰(?¨>H>×¿€&O?aRC>è*?(<8?7}	¿­=,?»@¿ÕÏ]?bø…>Ÿ³Ù>bø…>ÕÏ]?Ÿ³Ù>ö=Kþ}?ñÔ=´FJ>`Øü¾,ÉX?"ÃN>Z›>êon?ó¤G?]?m3†=,ÉX?´FJ¾`Øü¾ÁhŒ½öàr?Ùõ¾=Am?QPÀ¾    ”$"?Ùì ¿§i¿ÜW?6©½¾Ÿ3D?‚A?yw¿Ä‚¾Þ‰(¿i€¾«®5?¹Ÿ>š¼¿û>?6©½¾Ÿ3D?ÜW¿'^r¾j¾O>E>s?ßÀ>´ñÐ¾–ãT?C H?jé>tÚÙ>ÓBLK 0               œ       œ       œ›ˆ?£`ÙU#»ã/Y¤@iŸù—?pP‚?ÄÝ’?-…Q?Ô‹f?}¸€?þH?TDF?D<?€f?Ÿ°I? £f@MöA@‹±Š?ýªW?9£«@›ïH?äâ=?±ô?f{Â?Éåº?høP?Âùé?ï¦z?ÖŽy?¥R?¦à;?ig$@3?-SŒ?‹G}? ¯{?uû°?Pæ:?mt?Ï @­«#?[ý@ËÚ'?ÓBLK 0               œ       œ       œnÛ·¤†v.yº¸ûON± ƒzh?½cP?åX?œ	i?tô>?E?‡ú4?éF?_6?™Ï*?‰´@?¿Ì@Ÿ@Ñ7f?9áp?°”@ø\?j«,?¦A‰?m„Ä?ÎÎ¿?<nH?s²¿?¼§Y?ÿh?Ñ7t?ˆ:?%»@Ÿ$?†!~?[hW?mþF?ñ=Ÿ?l`?øïr?l&@$?Paü?¤ÅZ?ÓBLK 0               œ       œ       œçcëÎ>NG¶ÝÂgÀÝ*›Ã >„’_=rð<td=TÒŸ=z"-=…=½Íø=†˜=–	=¤Bš=hÆ>mÕ:>p•ø=¦†=›Ý?r4=½å=ÿò’=óŸ’=XÝ©=™ ‰=]>V=’û(=ŸH’=®â=c…Ó<µÁ>~+“=g8={„:=Ö€§=Ï^%=½i =`=5^> Ø=Ý*à=¡=#ASDF BLOCK INDEX
+%YAML 1.1
+---
+- 21761
+- 22127
+- 22493
+- 22859
+- 23069
+- 23279
+- 23489
+- 23699
+- 23909
+- 24743
+- 24953
+- 25475
+- 25997
+- 26207
+- 26417
+- 26627
+- 26837
+- 27047
+- 27257
+- 27779
+- 27989
+- 28199
+- 28721
+- 29243
+- 29453
+- 29663
+- 29873
+- 30083
+- 30293
+- 30503
+- 31025
+- 31235
+- 31445
+- 31655
+- 31865
+- 32075
+- 32285
+- 32495
+- 32705
+- 32915
+- 33125
+- 33335
+- 33545
+- 33755
+- 33965
+- 34487
+- 35009
+- 35531
+- 36053
+- 36575
+- 37097
+- 37619
+- 38141
+- 38663
+- 39185
+- 39707
+- 39917
+- 40127
+- 40337
+- 40547
+- 40757
+- 40967
+- 41177
+- 41387
+- 41597
+- 41807
+- 42017
+- 42227
+- 42437
+- 42647
+- 42857
+- 43379
+- 43901
+- 44423
+- 44945
+- 45467
+- 45989
+- 46511
+- 47033
+- 47555
+- 48077
+- 48599
+- 48809
+- 49019
+...
