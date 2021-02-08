@@ -376,7 +376,7 @@ class CompaSOHaloCatalog:
         path_name_split = self.groupdir.split('AbacusSummit')
 
         self.chunk_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
-
+        '''
         if cleaned_halos:
             self.cleandir = pjoin(path_name_split[0], 'cleaned_halos', 'AbacusSummit'+path_name_split[-1])
             if isfile(path[0]):
@@ -386,6 +386,13 @@ class CompaSOHaloCatalog:
                 cleaned_halo_fns = sorted(glob(globpat))
                 if len(cleaned_halo_fns) == 0:
                     raise FileNotFoundError(f'No cleaned_halo_info files found! Search pattern was "{globpat}"')
+        '''
+
+        if cleaned_halos:
+            self.cleandir = pjoin(path_name_split[0], 'cleaned_halos', 'AbacusSummit'+path_name_split[-1])
+            cleaned_halo_fns = [self.cleandir+'/cleaned_halo_info_%03d.asdf'%(ext) for ext in self.chunk_inds]
+            if len(cleaned_halo_fns) == 0:
+                raise FileNotFoundError(f'No cleaned_halo_info files found!')
 
         del path # use groupdir and halo_fns
 
@@ -396,6 +403,9 @@ class CompaSOHaloCatalog:
                     cleaned_fields = [cleaned_fields]
                 if 'N_total' not in cleaned_fields:
                     cleaned_fields += ['N_total']
+            # If we load cleaned_halos, 'N' no longer has meaning
+            if 'N' in fields:
+                fields.remove('N')
 
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
@@ -434,12 +444,13 @@ class CompaSOHaloCatalog:
                 self.load_pidrv = ['rv']
 
             if cleaned_halos:
-                # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
-                for AB in self.load_AB:
-                    if 'npstart'+AB+'_merge' not in cleaned_fields:
-                        cleaned_fields += ['npstart'+AB+'_merge']
-                    if 'npout'+AB+'_merge' not in cleaned_fields:
-                        cleaned_fields += ['npout'+AB+'_merge']
+                if 'halo' in self.load_halofield:
+                    # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
+                    for AB in self.load_AB:
+                        if 'npstart'+AB+'_merge' not in cleaned_fields:
+                            cleaned_fields += ['npstart'+AB+'_merge']
+                        if 'npout'+AB+'_merge' not in cleaned_fields:
+                            cleaned_fields += ['npout'+AB+'_merge']
 
         del load_subsamples  # use the parsed values
 
@@ -491,27 +502,15 @@ class CompaSOHaloCatalog:
 
         # Loading the particle information
         if "pid" in self.load_pidrv:
-            if cleaned_halos:
-                self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=True)
-            else:
-                self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=False)
+            self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=cleaned_halos)
         if "rv" in self.load_pidrv:
-            if cleaned_halos:
-                self._load_RVs(N_halo_per_file, cleaned_halos=True)
-            else:
-                self._load_RVs(N_halo_per_file, cleaned_halos=False)
+            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos)
         if "rvint" in self.load_pidrv:
-            if cleaned_halos:
-                self._load_RVs(N_halo_per_file, cleaned_halos=True, unpack=False)
-            else:
-                self._load_RVs(N_halo_per_file, cleaned_halos=False, unpack=False)
+            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=False)
 
         # If we're reaading in cleaned haloes, N should be updated
         if cleaned_halos:
-            if 'N' in self.halos.colnames:
-                self.halos['N'] = self.halos['N_total']
-                self.halos.remove_column('N_total')
-
+                self.halos.rename_column('N_total', 'N')
 
     def _read_halo_info(self, halo_fns, fields, cleaned_halos=True):
         # Open all the files, validate them, and count the halos
@@ -522,10 +521,8 @@ class CompaSOHaloCatalog:
 
         N_halos = N_halo_per_file.sum()
 
-        if (fields == 'all') and not cleaned_halos:
+        if (fields == 'all'):
             fields = list(user_dt.names)
-        elif (fields == 'all') and cleaned_halos:
-            fields = list(clean_dt.names)
         if type(fields) == str:
             fields = [fields]
 
@@ -547,10 +544,15 @@ class CompaSOHaloCatalog:
 
         # Make an empty table for the concatenated, unpacked values
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
+        '''
         if not cleaned_halos:
             cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
         else:
             cols = {col:np.empty(N_halos, dtype=clean_dt[col]) for col in fields}
+        '''
+
+        cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
+
         #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
         if hasattr(self, 'halos'):
             # already exists
@@ -562,11 +564,13 @@ class CompaSOHaloCatalog:
             self.halos.meta.update(self.header)
 
          # If we're loading main progenitor info, do this:
+        '''
         if cleaned_halos:
-            r = re.compile('.*mainprog')
-            prog_fields = list(filter(r.match, fields))
-            for fields in prog_fields:
-                self.halos.replace_column(fields, np.empty(N_halos, dtype=(clean_dt[fields], self.header['NumTimeSliceRedshiftsPrev'])))
+        '''
+        r = re.compile('.*mainprog')
+        prog_fields = list(filter(r.match, fields))
+        for fields in prog_fields:
+            self.halos.replace_column(fields, np.empty(N_halos, dtype=(user_dt[fields], self.header['NumTimeSliceRedshiftsPrev'])))
 
         # Unpack the cats into the concatenated array
         # The writes would probably be more efficient if the outer loop was over column
@@ -1223,7 +1227,7 @@ struct HaloStat {
 # Note we never actually create a Numpy array with this dtype
 # But it is a useful format for parsing the needed dtypes for the Astropy table columns
 # Could automatically generate this from the raw dtype, but perhaps an explicit listing is helpful
-
+'''
 clean_dt = np.dtype([('npstartA_merge', np.int64),
                      ('npstartB_merge', np.int64),
                      ('npoutA_L0L1', np.uint32),
@@ -1237,6 +1241,7 @@ clean_dt = np.dtype([('npstartA_merge', np.int64),
                      ('vcirc_max_L2com_mainprog', np.float32),
                      ('sigmav3d_L2com_mainprog', np.float32),
                      ], align=True)
+'''
 
 user_dt = np.dtype([('id', np.uint64),
                     ('npstartA', np.uint64),
@@ -1333,4 +1338,17 @@ user_dt = np.dtype([('id', np.uint64),
                     ('sigmavrad_L2com', np.float32),
                     ('sigmavtan_L2com', np.float32),
                     ('rvcirc_max_L2com', np.float32),
+
+                    ('npstartA_merge', np.int64),
+                    ('npstartB_merge', np.int64),
+                    ('npoutA_L0L1', np.uint32),
+                    ('npoutB_L0L1', np.uint32),
+                    ('npoutA_merge', np.uint32),
+                    ('npoutB_merge', np.uint32),
+                    ('N_total', np.uint32),
+                    ('N_merge', np.uint32),
+                    ('is_merged_to', np.int64),
+                    ('N_mainprog', np.uint32),
+                    ('vcirc_max_L2com_mainprog', np.float32),
+                    ('sigmav3d_L2com_mainprog', np.float32),
 ], align=True)
