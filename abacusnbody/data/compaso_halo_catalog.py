@@ -216,6 +216,7 @@ import os.path
 from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, abspath, samefile
 import re
 import gc
+import warnings
 
 from collections import defaultdict
 
@@ -281,7 +282,7 @@ class CompaSOHaloCatalog:
             False returns the out-of-the-box compaSO halos. May be useful for specific
             applications.
 
-        load_subsamples: bool or str, optional
+        load_subsamples: bool or dict, optional
             Load halo particle subsamples.  True or False may be specified
             to load all particles or none, or a string in the following format
             may be specified:
@@ -410,49 +411,18 @@ class CompaSOHaloCatalog:
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
         self.verbose = verbose
-
-        if load_subsamples == False:
-            # stub
-            self.load_AB = []
-            self.load_halofield = []
-            self.load_pidrv = []
-        else:
-            # If user has not specified which subsamples, then assume user wants to load everything
-            if load_subsamples == True:
-                load_subsamples = "AB_all"
-            if type(load_subsamples) != str:
-                raise ValueError("`load_subsamples` argument must be string or bool")
-
-            # Validate the user's `load_subsamples` option and figure out what subsamples we need to load
-            subsamp_match = re.fullmatch(r'(?P<AB>(A|B|AB))(_(?P<hf>halo|field))?_(?P<pidrv>all|pid|rv)', load_subsamples)
-            if not subsamp_match:
-                raise ValueError(f'Value "{load_subsamples}" for argument `load_subsamples` not understood')
-            self.load_AB = subsamp_match.group('AB')
-            self.load_halofield = subsamp_match.group('hf')
-            self.load_halofield = [self.load_halofield] if self.load_halofield else ['halo','field']  # default is both
-            self.load_pidrv = subsamp_match.group('pidrv')
-
-            if self.load_pidrv == 'all':
-                self.load_pidrv = ['pid','rv']
-            if self.load_pidrv == 'pidrvint':
-                self.load_pidrv = ['pid', 'rvint']
-            if self.load_pidrv == 'rvint':
-                self.load_pidrv = ['rvint']
-            if self.load_pidrv == 'pid':
-                self.load_pidrv = ['pid']
-            if self.load_pidrv == 'rv':
-                self.load_pidrv = ['rv']
-
-            if cleaned_halos:
-                if 'halo' in self.load_halofield:
-                    # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
-                    for AB in self.load_AB:
-                        if 'npstart'+AB+'_merge' not in cleaned_fields:
-                            cleaned_fields += ['npstart'+AB+'_merge']
-                        if 'npout'+AB+'_merge' not in cleaned_fields:
-                            cleaned_fields += ['npout'+AB+'_merge']
-
+        
+        # Figure out what subsamples the user is asking us to loads
+        self.load_AB, self.load_pidrv = self._parse_load_subsamples(load_subsamples)
         del load_subsamples  # use the parsed values
+
+        if cleaned_halos:
+            # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
+            for AB in self.load_AB:
+                if 'npstart'+AB+'_merge' not in cleaned_fields:
+                    cleaned_fields += ['npstart'+AB+'_merge']
+                if 'npout'+AB+'_merge' not in cleaned_fields:
+                    cleaned_fields += ['npout'+AB+'_merge']
 
         # validate unpack_bits
         if type(unpack_bits) is str:
@@ -511,6 +481,58 @@ class CompaSOHaloCatalog:
         # If we're reaading in cleaned haloes, N should be updated
         if cleaned_halos:
                 self.halos.rename_column('N_total', 'N')
+                
+                
+    @staticmethod
+    def _parse_load_subsamples(load_subsamples):
+        if load_subsamples == False:
+            # stub
+            load_AB = []
+            load_pidrv = []
+        else:
+            # If user has not specified which subsamples, then assume user wants to load everything
+            if load_subsamples == True:
+                load_subsamples = dict(A=True, B=True, rv=True, pid=True)
+                
+            elif type(load_subsamples) == dict:
+                load_AB = [k for k in 'AB' if load_subsamples.pop(k,False)]  # ['A', 'B']
+                load_pidrv = [k for k in ('pid','rv') if load_subsamples.pop(k,False)]  # ['pid', 'rv']
+                
+                if load_pidrv and not load_AB:
+                    warnings.warn(f'Loading of {load_pidrv} was requested but neither subsample A nor B was specified. Assuming subsample A. Can specify with `load_subsamples=dict(A=True)`.')
+                    load_AB = ['A']
+                elif not load_pidrv and load_AB:
+                    warnings.warn(f'Loading of subsample {load_AB} was requested but neither `rv` nor `pid` was specified. Assuming `rv`. Can specify with `load_subsamples=dict(rv=True)`.')
+                    load_pidrv = ['rv']
+                
+                if load_subsamples.pop('field',False):
+                    raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
+                
+                # We've popped all the keys until now, so if anything is left, that's an error!
+                if load_subsamples:
+                    raise ValueError(f'Unrecognized keys in `load_subsamples`: {list(load_subsamples)}')
+                
+            elif type(load_subsamples) == str:
+                # This section is deprecated, will remove in mid-2021
+                warnings.warn('Passing a string to `load_subsamples` is deprecated; use a dict instead, like: `load_subsamples=dict(A=True, rv=True)`', FutureWarning)
+
+                # Validate the user's `load_subsamples` option and figure out what subsamples we need to load
+                subsamp_match = re.fullmatch(r'(?P<AB>(A|B|AB))(_(?P<hf>halo|field))?_(?P<pidrv>all|pid|rv)', load_subsamples)
+                if not subsamp_match:
+                    raise ValueError(f'Value "{load_subsamples}" for argument `load_subsamples` not understood')
+                load_AB = subsamp_match.group('AB')
+                load_halofield = subsamp_match.group('hf')
+                load_halofield = [load_halofield] if load_halofield else ['halo','field']  # default is both
+                load_pidrv = subsamp_match.group('pidrv')
+                load_pidrv = subsamp_match.group('pidrv')
+                if load_pidrv == 'all':
+                    load_pidrv = ['pid','rv']
+                if 'field' in load_halofield:
+                    raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
+        
+        # The caller will set self.load_AB and self.load_pidrv
+        return load_AB, load_pidrv
+
 
     def _read_halo_info(self, halo_fns, fields, cleaned_halos=True):
         # Open all the files, validate them, and count the halos
