@@ -497,7 +497,9 @@ class CompaSOHaloCatalog:
         self._reindexed = {'A': False, 'B': False}
 
         if cleaned_halos:
+            '''
             self._reindexed_merge = {'A': False, 'B': False}
+            '''
             self._updated_indices = {'A': False, 'B': False}
 
         # Loading the particle information
@@ -791,11 +793,10 @@ class CompaSOHaloCatalog:
         np_total = 0
         np_per_file = []
 
-        if cleaned_halos:
-            particle_AB_merge_afs = []
-            np_total_merge = 0
-            np_per_file_merge = []
-            key_to_read = []
+        particle_AB_merge_afs = []
+        np_total_merge = 0
+        np_per_file_merge = []
+        key_to_read = []
 
         for AB in self.load_AB:
             # Open the ASDF file handles so we can query the size
@@ -838,6 +839,7 @@ class CompaSOHaloCatalog:
                                                   N_halo_per_file)
                 self._reindexed[AB] = True
 
+            '''
             if cleaned_halos:
                 if not self._reindexed_merge[AB] and 'halo' in self.load_halofield and 'npstart'+AB+'_merge' in self.halos.colnames:
                     mask = (self.halos['N_total'] == 0)
@@ -846,7 +848,7 @@ class CompaSOHaloCatalog:
                                                         [af[self.data_key][asdf_col_name+'_'+AB] for af in halo_particle_merge_afs], N_halo_per_file)
                     self.halos['npstart'+AB+'_merge'][mask] = -999
                     self._reindexed_merge[AB] = True
-
+            '''
             # total number of particles
             for af in particle_afs:
                 np_per_file += [len(af[self.data_key][asdf_col_name])]
@@ -865,19 +867,35 @@ class CompaSOHaloCatalog:
 
         np_per_file = np.array(np_per_file)
 
+        particle_dict = {'particle_AB_afs': particle_AB_afs,
+	                     'np_per_file': np_per_file,
+                         'particle_AB_merge_afs': particle_AB_merge_afs,
+                         'np_per_file_merge': np_per_file_merge,
+                         'key_to_read': key_to_read}
+
+        '''
         if cleaned_halos:
             return particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read
         else:
             return particle_AB_afs, np_per_file
-
+        '''
+        return particle_dict
 
     def _load_pids(self, unpack_bits, N_halo_per_file, cleaned_halos=True, check_pids=False):
         # Even if unpack_bits is False, return the PID-masked value, not the raw value.
-
+        '''
         if cleaned_halos:
             pid_AB_afs, np_per_file, pid_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=True)
         else:
             pid_AB_afs, np_per_file = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=False)
+        '''
+
+        particle_dict = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=cleaned_halos)
+        pid_AB_afs = particle_dict['particle_AB_afs']
+        np_per_file = particle_dict['np_per_file']
+        pid_AB_merge_afs = particle_dict['particle_AB_merge_afs']
+        np_per_file_merge = particle_dict['np_per_file_merge']
+        key_to_read = particle_dict['key_to_read']
 
         start = 0
         np_total = np.sum(np_per_file)
@@ -938,6 +956,10 @@ class CompaSOHaloCatalog:
 
             pids_AB_total = pids_AB_total[:offset]
 
+        else:
+
+            pids_AB_total = pids_AB
+
         if unpack_bits:  # anything to unpack?
             # TODO: eventually, unpacking could be done on each file to save memory, as we do with the rvint
             if unpack_bits is True:
@@ -948,26 +970,32 @@ class CompaSOHaloCatalog:
             # unpack_pids will do unit conversion if requested
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
 
+            '''
             if cleaned_halos:
                 unpacked_arrays = bitpacked.unpack_pids(pids_AB_total, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
             else:
                 unpacked_arrays = bitpacked.unpack_pids(pids_AB, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
+            '''
+            unpacked_arrays = bitpacked.unpack_pids(pids_AB_total, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
 
             for name in unpacked_arrays:
                 self.subsamples.add_column(unpacked_arrays[name], name=name, copy=False)
         else:
-            if cleaned_halos:
-                self.subsamples.add_column(pids_AB_total, name='pid', copy=False)
-            else:
-                self.subsamples.add_column(pids_AB, name='pid', copy=False)
-
+            self.subsamples.add_column(pids_AB_total, name='pid', copy=False)
 
     def _load_RVs(self, N_halo_per_file, unpack=True, cleaned_halos=True):
-
+        '''
         if cleaned_halos:
             particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=True)
         else:
             particle_AB_afs, np_per_file = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=False)
+        '''
+        particle_dict = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=cleaned_halos)
+        particle_AB_afs = particle_dict['particle_AB_afs']
+        np_per_file = particle_dict['np_per_file']
+        particle_AB_merge_afs = particle_dict['particle_AB_merge_afs']
+        np_per_file_merge = particle_dict['np_per_file_merge']
+        key_to_read = particle_dict['key_to_read']
 
         start = 0
         np_total = np.sum(np_per_file)
@@ -1011,25 +1039,25 @@ class CompaSOHaloCatalog:
                     self._updated_indices[AB] = True
             particles_AB_total = particles_AB_total[:offset]
 
+        else:
+            particles_AB_total = particles_AB
+
         if unpack:
 
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
-
+            '''
             if cleaned_halos:
                 ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox)
             else:
                 ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB, unpackbox)
+            '''
+            ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox)
 
             self.subsamples.add_column(ppos_AB, name='pos', copy=False)
             self.subsamples.add_column(pvel_AB, name='vel', copy=False)
         else:
-
-            if cleaned_halos:
-                self.subsamples.add_column(particles_AB_total, name='rvint', copy=False)
-            else:
-                self.subsamples.add_column(particles_AB, name='rvint', copy=False)
-
-
+            self.subsamples.add_column(particles_AB_total, name='rvint', copy=False)
+            
 def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_per_file):
     '''
     For subsample redshifts where we have L1s followed by L0s in the halo_pids files,
