@@ -26,12 +26,26 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
         autocorr = 1
         ND2 = ND1
     
+    # single precision mode
+    # to do: make this native 
+    cf_start = time.time()
+    rpbins = rpbins.astype(np.float32)
+    pimax = np.float32(pimax)
+    x1 = x1.astype(np.float32)
+    y1 = y1.astype(np.float32)
+    z1 = z1.astype(np.float32)
+    lbox = np.float32(lbox)
+
     if autocorr == 1:    
-        DD_counts = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
-            boxsize = lbox, periodic = True, max_cells_per_dim = 20)['npairs']
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
+            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        DD_counts = results['npairs']
     else:
-        DD_counts = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
-            boxsize = lbox, periodic = True, max_cells_per_dim = 20)['npairs']
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        DD_counts = results['npairs']
+    print("corrfunc took time ", time.time() - cf_start)
+
     DD_counts_new = np.array([np.sum(DD_counts[i:i+pi_bin_size]) for i in range(0, len(DD_counts), pi_bin_size)])
     DD_counts_new = DD_counts_new.reshape((len(rpbins) - 1, int(pimax/pi_bin_size)))
 
@@ -54,8 +68,25 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         autocorr = 1
         ND2 = ND1
 
-    DD_counts = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
-        boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)['npairs']
+    # single precision mode
+    # to do: make this native 
+    cf_start = time.time()
+    rpbins = rpbins.astype(np.float32)
+    pimax = np.float32(pimax)
+    x1 = x1.astype(np.float32)
+    y1 = y1.astype(np.float32)
+    z1 = z1.astype(np.float32)
+    lbox = np.float32(lbox)
+
+    if autocorr == 1:    
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
+            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        DD_counts = results['npairs']
+    else:
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        DD_counts = results['npairs']
+    print("corrfunc took time ", time.time() - cf_start)
     DD_counts = DD_counts.reshape((len(rpbins) - 1, int(pimax)))
 
     # RR_counts = np.zeros((len(rpbins) - 1, int(pimax)))

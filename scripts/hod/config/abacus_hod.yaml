@@ -146,9 +146,10 @@ dynesty_fit_params:
 dynesty_config_params:
     path2output: dynesty/test
     chainsPrefix: test
+    rerun: 0
     nlive: 200
     bound: 'multi'
-    sample: 'unif'
+    method: 'unif'
     maxcall: 10000
     dlogz: 0.01
 
