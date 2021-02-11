@@ -54,7 +54,7 @@ def main(path2config):
     Ntest = 20
     for i in range(Ntest):
         print(i)
-        # # example for sandy
+        # # run hod, ngal, xirppi
         # newBall.tracers['LRG']['alpha'] += 0.01
         # print("alpha = ",newBall.tracers['LRG']['alpha'])
         # start = time.time()

@@ -151,6 +151,5 @@ dynesty_config_params:
     bound: 'multi'
     method: 'unif'
     maxcall: 10000
-    dlogz: 0.01
 
 
