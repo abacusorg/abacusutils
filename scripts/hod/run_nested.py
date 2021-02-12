@@ -87,13 +87,13 @@ def main(path2config):
 
     # initiate sampler
     found_file = os.path.isfile(prefix_chain+'.dill')
-    if (not found_file) or (not ch_config_params['rerun']):
+    if (not found_file) or (not dynesty_config_params['rerun']):
 
         # initialize our nested sampler
         sampler = NestedSampler(lnprob, prior_transform, nparams, 
             logl_args = [param_mapping, param_tracer, newData, newBall], 
             ptform_args = [params[:, 0], params[:, 1]], 
-            nlive=nlive, sample = method, rstate = np.random.RandomState(dynesty_config_params[rseed]))
+            nlive=nlive, sample = method, rstate = np.random.RandomState(dynesty_config_params['rseed']))
             # first_update = {'min_eff': 20})
 
     else:
