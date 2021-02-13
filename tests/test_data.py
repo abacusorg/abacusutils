@@ -20,14 +20,12 @@ def test_halos_unclean(tmp_path):
     
     # to regenerate reference
     #ref = Table(cat.halos[::10])
-    #ref.write('test_halos_unclean.asdf', all_array_storage='internal')
+    #ref.write(HALOS_OUTPUT_UNCLEAN, all_array_storage='internal')
     
     ref = Table.read(HALOS_OUTPUT_UNCLEAN)
     
     halos = cat.halos[::10]
     for col in ref.colnames:
-        if col == 'npstartB':
-            continue
         assert np.allclose(halos[col], ref[col])
    
     assert halos.meta == ref.meta
@@ -43,7 +41,7 @@ def test_subsamples_unclean(tmp_path):
     
     # to regenerate reference
     #ref = Table(cat.subsamples[::10])
-    #ref.write('test_subsamples_unclean.asdf', format='asdf', all_array_storage='internal')
+    #ref.write(PARTICLES_OUTPUT_UNCLEAN, format='asdf', all_array_storage='internal')
     
     ref = Table.read(PARTICLES_OUTPUT_UNCLEAN)
     
