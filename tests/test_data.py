@@ -1,6 +1,7 @@
 import tempfile
 import filecmp
 import os.path
+import numbers
 
 import pytest
 from astropy.table import Table
@@ -19,14 +20,18 @@ def test_halos_unclean(tmp_path):
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=False)
     
     # to regenerate reference
-    #ref = Table(cat.halos[::10])
-    #ref.write(HALOS_OUTPUT_UNCLEAN, all_array_storage='internal')
+    #ref = cat.halos
+    #import asdf; asdf.compression.set_compression_options(typesize='auto')
+    #ref.write(HALOS_OUTPUT_UNCLEAN, all_array_storage='internal', all_array_compression='blsc')
     
     ref = Table.read(HALOS_OUTPUT_UNCLEAN)
     
-    halos = cat.halos[::10]
+    halos = cat.halos
     for col in ref.colnames:
-        assert np.allclose(halos[col], ref[col])
+        if issubclass(ref[col].dtype.type, numbers.Integral):
+            assert np.all(halos[col] == ref[col])
+        else:
+            assert np.allclose(halos[col], ref[col])
    
     assert halos.meta == ref.meta
 
@@ -40,24 +45,18 @@ def test_subsamples_unclean(tmp_path):
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=False)
     
     # to regenerate reference
-    #ref = Table(cat.subsamples[::10])
-    #ref.write(PARTICLES_OUTPUT_UNCLEAN, format='asdf', all_array_storage='internal')
+    #ref = cat.subsamples
+    #import asdf; asdf.compression.set_compression_options(typesize='auto')
+    #ref.write(PARTICLES_OUTPUT_UNCLEAN, format='asdf', all_array_storage='internal', all_array_compression='blsc')
     
     ref = Table.read(PARTICLES_OUTPUT_UNCLEAN)
     
-    ss = cat.subsamples[::10]
-    for i in range(len(cat.halos)):
-        h = cat.halos[i]
-        
-        _ss = ss[h['npstartA']:h['npstartA']+h['npoutA']]
-        _ref = ref[h['npstartA']:h['npstartA']+h['npoutA']]
-        for col in _ss.colnames:
-            assert np.allclose(_ss[col], _ref[col])
-        
-        _ss = ss[h['npstartB']:h['npstartB']+h['npoutB']]
-        _ref = ref[h['npstartB']:h['npstartB']+h['npoutB']]
-        for col in _ss.colnames:
-            assert np.allclose(_ss[col], _ref[col])
+    ss = cat.subsamples
+    for col in ref.colnames:
+        if issubclass(ref[col].dtype.type, numbers.Integral):
+            assert np.all(ss[col] == ref[col])
+        else:
+            assert np.allclose(ss[col], ref[col])
    
     assert cat.subsamples.meta == ref.meta
 

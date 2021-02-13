@@ -547,8 +547,8 @@ class CompaSOHaloCatalog:
                 if load_subsamples.pop('field',False):
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
                 
-                # Pop all the keys until now, so if anything is left, that's an error!
-                for k in load_AB + load_pidrv + ['unpack']:
+                # Pop all known keys, so if anything is left, that's an error!
+                for k in ['A', 'B', 'rv', 'pid', 'pos', 'vel', 'unpack']:
                     load_subsamples.pop(k,None)
                 
                 if load_subsamples:
@@ -877,6 +877,9 @@ class CompaSOHaloCatalog:
 
 
     def _reindex_subsamples(self, RVorPID, N_halo_per_file, cleaned_halos=True):
+        # TODO: this whole function probably goes away.
+        # The algorithm ought to be: load concatenated L1 table using original indices, then fix indices
+        
         if RVorPID == 'pid':
             asdf_col_name = 'packedpid'
         elif RVorPID == 'rv':
@@ -1151,6 +1154,7 @@ class CompaSOHaloCatalog:
         
             
     def __str__(self):
+        # TODO: there's probably some more helpful info we could put in here
         s= ('CompaSO Halo Catalog\n'
             '====================\n'
            f'{self.header["SimName"]} @ z={self.header["Redshift"]}\n'
@@ -1160,7 +1164,7 @@ class CompaSOHaloCatalog:
            )
         return s
           
-            
+        
 def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_per_file):
     '''
     For subsample redshifts where we have L1s followed by L0s in the halo_pids files,
@@ -1173,6 +1177,7 @@ def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_pe
         nh += N_halo_per_file[k]
         np_thisfile = len(p)
         subsamp_start[nh:] += np_thisfile
+            
 
 ####################################################################################################
 # The following constants and functions relate to unpacking our compressed halo and particle formats
