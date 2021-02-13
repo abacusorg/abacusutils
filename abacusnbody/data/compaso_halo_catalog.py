@@ -370,7 +370,7 @@ class CompaSOHaloCatalog:
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
          self.load_pidrv,
-         self.unpack) = self._setup_load_subsamples(load_subsamples)
+         self.unpack_subsamples) = self._setup_load_subsamples(load_subsamples)
         del load_subsamples  # use the parsed values
 
         if cleaned_halos:
@@ -423,9 +423,7 @@ class CompaSOHaloCatalog:
         if "pid" in self.load_pidrv:
             self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=cleaned_halos)
         if "rv" in self.load_pidrv:
-            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos)
-        if "rvint" in self.load_pidrv:
-            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=False)
+            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples)
 
         # If we're reaading in cleaned haloes, N should be updated
         if cleaned_halos:
@@ -520,7 +518,7 @@ class CompaSOHaloCatalog:
             # stub
             load_AB = []
             load_pidrv = []
-            unpack = True
+            unpack_subsamples = True
         else:
             # If user has not specified which subsamples, then assume user wants to load everything
             if load_subsamples == True:
@@ -536,7 +534,7 @@ class CompaSOHaloCatalog:
                 
                 load_pidrv = [k for k in load_subsamples if k in ('pid','pos','vel','rv') and load_subsamples.get(k)]  # ['pid', 'pos', 'vel']
                 
-                unpack = load_subsamples.pop('unpack',True)
+                unpack_subsamples = load_subsamples.pop('unpack',True)
                 
                 # set some intelligent defaults
                 if load_pidrv and not load_AB:
@@ -573,9 +571,9 @@ class CompaSOHaloCatalog:
                     load_pidrv = ['pid','rv']
                 if 'field' in load_halofield:
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
-                unpack = True
+                unpack_subsamples = True
         
-        return load_AB, load_pidrv, unpack
+        return load_AB, load_pidrv, unpack_subsamples
 
     
     def _setup_fields(self, fields, cleaned_fields, cleaned_halos=True):
