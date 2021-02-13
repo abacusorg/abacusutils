@@ -1134,6 +1134,32 @@ class CompaSOHaloCatalog:
             self.subsamples.add_column(pvel_AB, name='vel', copy=False)
         else:
             self.subsamples.add_column(particles_AB_total, name='rvint', copy=False)
+        
+
+    def nbytes(self, halos=True, subsamples=True):
+        '''Return the memory usage of the big arrays: the halo catalog and the particle subsamples'''
+        nbytes = 0
+        which = []
+        if halos:
+            which += [self.halos]
+        if subsamples:
+            which += [self.subsamples]
+        for cat in which:
+            for col in cat.columns:
+                nbytes += cat[col].nbytes
+        return nbytes
+        
+            
+    def __str__(self):
+        s= ('CompaSO Halo Catalog\n'
+            '====================\n'
+           f'{self.header["SimName"]} @ z={self.header["Redshift"]}\n'
+            '--------------------\n'
+           f'    Halos: {len(self.halos):8.3g} halos,     {len(self.halos.columns):3d} fields, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB\n'
+           f'Particles: {len(self.subsamples):8.3g} particles, {len(self.subsamples.columns):3d} fields, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB\n'
+           )
+        return s
+          
             
 def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_per_file):
     '''
