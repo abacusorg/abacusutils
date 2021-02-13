@@ -428,7 +428,9 @@ class CompaSOHaloCatalog:
         # If we're reaading in cleaned haloes, N should be updated
         if cleaned_halos:
             self.halos.rename_column('N_total', 'N')
-                
+            
+        if verbose:
+            print('\n'+str(self))
                 
     def _setup_file_paths(self, path, cleaned_halos=True):
         '''Figure out what files the user is asking for
@@ -1153,16 +1155,21 @@ class CompaSOHaloCatalog:
         return nbytes
         
             
-    def __str__(self):
+    def __repr__(self):
         # TODO: there's probably some more helpful info we could put in here
-        s= ('CompaSO Halo Catalog\n'
-            '====================\n'
-           f'{self.header["SimName"]} @ z={self.header["Redshift"]}\n'
-            '--------------------\n'
-           f'    Halos: {len(self.halos):8.3g} halos,     {len(self.halos.columns):3d} fields, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB\n'
-           f'Particles: {len(self.subsamples):8.3g} particles, {len(self.subsamples.columns):3d} fields, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB\n'
-           )
-        return s
+        # Formally, this is supposed to be unambiguous, but mostly we just want it to look good in a notebook
+        lines =   ['CompaSO Halo Catalog',
+                   '====================',
+                  f'{self.header["SimName"]} @ z={self.header["Redshift"]}',
+                ]
+        n_halo_field = len(self.halos.columns)
+        n_subsamp_field = len(self.subsamples.columns)
+        lines += ['-'*len(lines[-1]),
+                 f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field > 1 else "field "}, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB',
+                 f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field > 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
+                 ]
+        return '\n'.join(lines)
+        
           
         
 def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_per_file):
