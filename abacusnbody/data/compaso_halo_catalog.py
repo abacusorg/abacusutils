@@ -400,7 +400,7 @@ class CompaSOHaloCatalog:
         self._setup_halo_field_loaders()
         N_halo_per_file = self._read_halo_info(self.halo_fns, fields, cleaned_halos=False)
         if cleaned_halos:
-            cleaned_N_halo_per_file = self._read_halo_info(cleaned_halo_fns, cleaned_fields, cleaned_halos=True)
+            cleaned_N_halo_per_file = self._read_halo_info(self.cleaned_halo_fns, cleaned_fields, cleaned_halos=True)
 
             if (N_halo_per_file != cleaned_N_halo_per_file).any():
                 raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
@@ -475,8 +475,6 @@ class CompaSOHaloCatalog:
             if len(halo_fns) == 0:
                 raise FileNotFoundError(f'No halo_info files found! Search pattern was: "{globpat}"')
 
-        path_name_split = groupdir.split('AbacusSummit')
-
         superslab_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
         '''
         if cleaned_halos:
@@ -491,7 +489,8 @@ class CompaSOHaloCatalog:
         '''
 
         if cleaned_halos:
-            cleandir = pjoin(path_name_split[0], 'cleaned_halos', 'AbacusSummit'+path_name_split[-1])
+            pathsplit = groupdir.split(os.path.sep)
+            cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos', *pathsplit[-3:])  # TODO ugly
             cleaned_halo_fns = [cleandir+'/cleaned_halo_info_%03d.asdf'%(ext) for ext in superslab_inds]
             if len(cleaned_halo_fns) == 0:
                 raise FileNotFoundError(f'No cleaned_halo_info files found!')
