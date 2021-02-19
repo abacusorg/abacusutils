@@ -263,7 +263,7 @@ class CompaSOHaloCatalog:
     # TODO: generator mode over superslabs
 
     def __init__(self, path, cleaned_halos=True, subsamples=False, convert_units=True, unpack_bits=False,
-                 fields='all', cleaned_fields='all', verbose=False,
+                 fields='DEFAULT_FIELDS', verbose=False,
                  **kwargs):
         """
         Loads halos.  The ``halos`` field of this object will contain
@@ -301,7 +301,7 @@ class CompaSOHaloCatalog:
             .. code-block:: none
 
                 subsamples=dict(A=True, B=True, pos=True, vel=True, pid=True)
-            
+
             The ``rv`` key may be used as shorthand to set both ``pos`` and ``vel``.
             False (the default) loads nothing.
 
@@ -323,17 +323,8 @@ class CompaSOHaloCatalog:
             subset of fields can be substantially faster than loading all fields
             because the file IO will be limited to the desired fields.
             See ``compaso_halo_catalog.user_dt`` or the :doc:`AbacusSummit Data Model page <summit:data-products>`
-            for a list of available fields.
-            Default: 'all'
-
-        cleaned_fields: str or list of str, optional
-            A list of additional fields to load for the cleaned halos: particularly
-            used for loading main progenitor information (time consuming), or information
-            regarding number of merged particles after catalogue cleaning. See
-            ``compaso_halo_catalog.clean_dt`` or the :doc:`AbacusSummit Cleaned Halos Data
-            Model page <summit:cleaned_halos_data>`
-            for a list of available fields
-            Default: 'all'
+            for a list of available fields. See ``compaso_halo_catalog.clean_dt`` for the list of cleaned halo fields that will be loaded. 'all' will also load main progenitor information, which could be slow.
+            Default: 'DEFAULT_FIELDS'
 
         verbose: bool, optional
             Print informational messages. Default: False
@@ -345,7 +336,7 @@ class CompaSOHaloCatalog:
         if 'load_subsamples' in kwargs:
             load_subsamples = kwargs.pop('load_subsamples')
             warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`')
-        
+
         # Check no unknown args!
         if kwargs:
             raise ValueError(f'Unknown arguments to CompaSOHaloCatalog constructor: {list(kwargs)}')
@@ -356,17 +347,24 @@ class CompaSOHaloCatalog:
          self.superslab_inds,
          self.halo_fns,
          self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos)
-                    
+
         # Parse `fields` and `cleaned_fields` to determine halo catalog fields to read
         # note how we unpack into local variables --- don't want to desync from the class attributes
-        fields, cleaned_fields = self._setup_fields(fields, cleaned_fields, cleaned_halos=cleaned_halos)
+        cleaned_fields = []
+        fields = self._setup_fields(fields, cleaned_halos=cleaned_halos)
+
+        # Let's split `fields` so that there is a separate set of `cleaned_fields`
+        for item in list(clean_dt_progen.names):
+            if item in fields:
+                fields.remove(item)
+                cleaned_fields += [item]
+
         self.fields = fields
         self.cleaned_fields = cleaned_fields
-
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
         self.verbose = verbose
-        
+
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
          self.load_pidrv,
@@ -376,6 +374,10 @@ class CompaSOHaloCatalog:
         if cleaned_halos:
             # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
             for AB in self.load_AB:
+                if 'npstart'+AB not in fields:
+                    fields += ['npstart'+AB]
+                if 'npout'+AB not in fields:
+                    fields += ['npout'+AB]
                 if 'npstart'+AB+'_merge' not in cleaned_fields:
                     cleaned_fields += ['npstart'+AB+'_merge']
                 if 'npout'+AB+'_merge' not in cleaned_fields:
@@ -414,28 +416,47 @@ class CompaSOHaloCatalog:
         self._reindexed = {'A': False, 'B': False}
 
         if cleaned_halos:
-            '''
-            self._reindexed_merge = {'A': False, 'B': False}
-            '''
             self._updated_indices = {'A': False, 'B': False}
+
+        # If the user requests both `pos=True` and `vel=True`, just redirect this to rv=True
+        if all(key in self.load_pidrv for key in ["pos", "vel"]):
+            self.load_pidrv.remove('pos')
+            self.load_pidrv.remove('vel')
+            self.load_pidrv += ['rv']
+
+        # Updating subsamples indices needs to be done only once, and only right
+        # at the end (i.e. after all pid/pos/vel/rv have been read)
+        # Define `self.subsamples_to_load` as a way to track what still needs to be loaded
+        self.subsamples_to_load = self.load_pidrv
 
         # Loading the particle information
         if "pid" in self.load_pidrv:
+            self.subsamples_to_load.remove('pid')
             self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=cleaned_halos)
         if "rv" in self.load_pidrv:
+            self.subsamples_to_load.remove('rv')
             self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples)
+        elif "pos" in self.load_pidrv:
+            self.subsamples_to_load.remove('pos')
+            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples, unpack_which='pos')
+        elif "vel" in self.load_pidrv:
+            self.subsamples_to_load.remove('vel')
+            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples, unpack_which='vel')
+
+        # Don't need this any more
+        del self.subsamples_to_load
 
         # If we're reaading in cleaned haloes, N should be updated
         if cleaned_halos:
             self.halos.rename_column('N_total', 'N')
-            
+
         if verbose:
             print('\n'+str(self))
-                
+
     def _setup_file_paths(self, path, cleaned_halos=True):
         '''Figure out what files the user is asking for
         '''
-        
+
         if type(path) is str:
             path = [path]  # dir or file
         else:
@@ -476,17 +497,6 @@ class CompaSOHaloCatalog:
                 raise FileNotFoundError(f'No halo_info files found! Search pattern was: "{globpat}"')
 
         superslab_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
-        '''
-        if cleaned_halos:
-            self.cleandir = pjoin(path_name_split[0], 'cleaned_halos', 'AbacusSummit'+path_name_split[-1])
-            if isfile(path[0]):
-                cleaned_halo_fns = [self.cleandir+'/cleaned_halo_info_%03d.asdf'%(ext) for ext in superslab_inds]
-            else:
-                globpat = pjoin(self.cleandir, 'cleaned_halo_info_*')
-                cleaned_halo_fns = sorted(glob(globpat))
-                if len(cleaned_halo_fns) == 0:
-                    raise FileNotFoundError(f'No cleaned_halo_info files found! Search pattern was "{globpat}"')
-        '''
 
         if cleaned_halos:
             pathsplit = groupdir.split(os.path.sep)
@@ -499,8 +509,8 @@ class CompaSOHaloCatalog:
             cleaned_halo_fns = []
 
         return groupdir, cleandir, superslab_inds, halo_fns, cleaned_halo_fns
-    
-    
+
+
     def _setup_unpack_bits(self, unpack_bits):
         # validate unpack_bits
         if type(unpack_bits) is str:
@@ -512,8 +522,8 @@ class CompaSOHaloCatalog:
             except:
                 raise ValueError(f'`unpack_bits` must be True, False, or one of: "{bitpacked.PID_FIELDS}"')
         return unpack_bits
-    
-    
+
+
     def _setup_load_subsamples(self, load_subsamples):
         if load_subsamples == False:
             # stub
@@ -524,19 +534,19 @@ class CompaSOHaloCatalog:
             # If user has not specified which subsamples, then assume user wants to load everything
             if load_subsamples == True:
                 load_subsamples = dict(A=True, B=True, rv=True, pid=True)
-                
+
             if type(load_subsamples) == dict:
                 load_AB = [k for k in 'AB' if load_subsamples.get(k)]  # ['A', 'B']
-                
+
                 # Check for conflicts between rv, pos, vel. Must be done before list-ifying to distinguish False and not given.
                 if 'rv' in load_subsamples:
                     if 'pos' in load_subsamples or 'vel' in load_subsamples:
                         raise ValueError('Cannot pass `rv` and `pos` or `vel` in `load_subsamples`.')
-                
+
                 load_pidrv = [k for k in load_subsamples if k in ('pid','pos','vel','rv') and load_subsamples.get(k)]  # ['pid', 'pos', 'vel']
-                
+
                 unpack_subsamples = load_subsamples.pop('unpack',True)
-                
+
                 # set some intelligent defaults
                 if load_pidrv and not load_AB:
                     warnings.warn(f'Loading of {load_pidrv} was requested but neither subsample A nor B was specified. Assuming subsample A. Can specify with `load_subsamples=dict(A=True)`.')
@@ -544,17 +554,17 @@ class CompaSOHaloCatalog:
                 elif not load_pidrv and load_AB:
                     warnings.warn(f'Loading of subsample {load_AB} was requested but none of `pos`, `vel`, `rv`, `pid` was specified. Assuming `rv`. Can specify with `load_subsamples=dict(rv=True)`.')
                     load_pidrv = ['rv']
-                
+
                 if load_subsamples.pop('field',False):
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
-                
+
                 # Pop all known keys, so if anything is left, that's an error!
                 for k in ['A', 'B', 'rv', 'pid', 'pos', 'vel', 'unpack']:
                     load_subsamples.pop(k,None)
-                
+
                 if load_subsamples:
                     raise ValueError(f'Unrecognized keys in `load_subsamples`: {list(load_subsamples)}')
-                
+
             elif type(load_subsamples) == str:
                 # This section is deprecated, will remove in mid-2021
                 warnings.warn('Passing a string to `load_subsamples` is deprecated; use a dict instead, like: `load_subsamples=dict(A=True, rv=True)`', FutureWarning)
@@ -573,42 +583,37 @@ class CompaSOHaloCatalog:
                 if 'field' in load_halofield:
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
                 unpack_subsamples = True
-        
+
         return load_AB, load_pidrv, unpack_subsamples
 
-    
-    def _setup_fields(self, fields, cleaned_fields, cleaned_halos=True):
+
+    def _setup_fields(self, fields, cleaned_halos=True):
         '''Determine the halo catalog fields to load based on user input
         '''
-        
-        if fields == 'all':
+
+        if fields == 'DEFAULT_FIELDS':
             fields = list(user_dt.names)
             if cleaned_halos:
                 fields += list(clean_dt.names)
-                
-                # TODO: is this only needed with subsamples?
-                if 'N_total' not in fields:
-                    fields += ['N_total']
+
+        if fields == 'all':
+            fields = list(user_dt.names)
+            if cleaned_halos:
+                fields += list(clean_dt_progen.names)
+
         if type(fields) == str:
             fields = [fields]
-        
+
         # Minimum requirement for cleaned haloes
         if cleaned_halos:
             # If we load cleaned_halos, 'N' no longer has meaning
             if 'N' in fields:
                 fields.remove('N')
-                
-            
-            if cleaned_fields == 'all':
-                # TODO: I forget, do we need `cleaned_fields` or just `fields`?
-                cleaned_fields = []
-            if type(cleaned_fields) == str:
-                cleaned_fields = [cleaned_fields]
-        else:
-            cleaned_fields = []
-        
-        return fields, cleaned_fields
-        
+            if 'N_total' not in fields:
+                fields += ['N_total']
+
+        return fields
+
 
     def _read_halo_info(self, halo_fns, fields, cleaned_halos=True):
         # Open all the files, validate them, and count the halos
@@ -637,14 +642,11 @@ class CompaSOHaloCatalog:
 
         # Make an empty table for the concatenated, unpacked values
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
-        '''
+
         if not cleaned_halos:
             cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
         else:
-            cols = {col:np.empty(N_halos, dtype=clean_dt[col]) for col in fields}
-        '''
-
-        cols = {col:np.empty(N_halos, dtype=user_dt[col]) for col in fields}
+            cols = {col:np.empty(N_halos, dtype=clean_dt_progen[col]) for col in fields}
 
         #cols = {col:np.full(N_halos, np.nan, dtype=user_dt[col]) for col in fields}  # nans for debugging
         if hasattr(self, 'halos'):
@@ -657,14 +659,15 @@ class CompaSOHaloCatalog:
             self.halos.meta.update(self.header)
 
          # If we're loading main progenitor info, do this:
-        '''
-        if cleaned_halos:
-        '''
+
         # TODO: this shows the limits of querying the types from a numpy dtype, should query from a function
         r = re.compile('.*mainprog')
         prog_fields = list(filter(r.match, fields))
         for fields in prog_fields:
-            self.halos.replace_column(fields, np.empty(N_halos, dtype=(user_dt[fields], self.header['NumTimeSliceRedshiftsPrev'])))
+            if fields in ['v_L2com_mainprog', 'haloindex_mainprog']:
+                continue
+            else:
+                self.halos.replace_column(fields, np.empty(N_halos, dtype=(clean_dt_progen[fields], self.header['NumTimeSliceRedshiftsPrev'])))
 
         # Unpack the cats into the concatenated array
         # The writes would probably be more efficient if the outer loop was over column
@@ -750,7 +753,7 @@ class CompaSOHaloCatalog:
 
         # id,npstartA,npstartB,npoutA,npoutB,ntaggedA,ntaggedB,N,L2_N,L0_N (raw/passthrough fields)
         # If ASDF could read into a user-provided array, could avoid these copies
-        pat = re.compile(r'id|npstartA|npstartB|npoutA|npoutB|ntaggedA|ntaggedB|N|L2_N|L0_N|N_total|N_merge|npstartA_merge|npstartB_merge|npoutA_merge|npoutB_merge|npoutA_L0L1|npoutB_L0L1|is_merged_to|N_mainprog|vcirc_max_L2com_mainprog|sigmav3d_L2com_mainprog')
+        pat = re.compile(r'id|npstartA|npstartB|npoutA|npoutB|ntaggedA|ntaggedB|N|L2_N|L0_N|N_total|N_merge|npstartA_merge|npstartB_merge|npoutA_merge|npoutB_merge|npoutA_L0L1|npoutB_L0L1|is_merged_to|N_mainprog|vcirc_max_L2com_mainprog|sigmav3d_L2com_mainprog|haloindex|haloindex_mainprog|v_L2com_mainprog')
         self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
 
         # SO_central_particle,SO_radius (and _L2max) (box-scaled fields)
@@ -880,7 +883,7 @@ class CompaSOHaloCatalog:
     def _reindex_subsamples(self, RVorPID, N_halo_per_file, cleaned_halos=True):
         # TODO: this whole function probably goes away.
         # The algorithm ought to be: load concatenated L1 table using original indices, then fix indices
-        
+
         if RVorPID == 'pid':
             asdf_col_name = 'packedpid'
         elif RVorPID == 'rv':
@@ -919,16 +922,6 @@ class CompaSOHaloCatalog:
                                                   N_halo_per_file)
                 self._reindexed[AB] = True
 
-            '''
-            if cleaned_halos:
-                if not self._reindexed_merge[AB] and 'halo' in self.load_halofield and 'npstart'+AB+'_merge' in self.halos.colnames:
-                    mask = (self.halos['N_total'] == 0)
-                    self.halos['npstart'+AB+'_merge'] += np_total_merge
-                    _reindex_subsamples_from_asdf_size(self.halos['npstart'+AB+'_merge'],
-                                                        [af[self.data_key][asdf_col_name+'_'+AB] for af in halo_particle_merge_afs], N_halo_per_file)
-                    self.halos['npstart'+AB+'_merge'][mask] = -999
-                    self._reindexed_merge[AB] = True
-            '''
             # total number of particles
             for af in particle_afs:
                 np_per_file += [len(af[self.data_key][asdf_col_name])]
@@ -953,23 +946,11 @@ class CompaSOHaloCatalog:
                          'np_per_file_merge': np_per_file_merge,
                          'key_to_read': key_to_read}
 
-        '''
-        if cleaned_halos:
-            return particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read
-        else:
-            return particle_AB_afs, np_per_file
-        '''
         return particle_dict
 
-    
+
     def _load_pids(self, unpack_bits, N_halo_per_file, cleaned_halos=True, check_pids=False):
         # Even if unpack_bits is False, return the PID-masked value, not the raw value.
-        '''
-        if cleaned_halos:
-            pid_AB_afs, np_per_file, pid_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=True)
-        else:
-            pid_AB_afs, np_per_file = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=False)
-        '''
 
         particle_dict = self._reindex_subsamples('pid', N_halo_per_file, cleaned_halos=cleaned_halos)
         pid_AB_afs = particle_dict['particle_AB_afs']
@@ -1025,7 +1006,7 @@ class CompaSOHaloCatalog:
                 nump_indices_merge = self.halos[f'npout{AB}_merge']
                 pids_AB_total, npstart_updated, offset = join_arrays(offset, pids_AB, pids_AB_merge, pids_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
 
-                if self.load_pidrv[-1] == 'pid' and not self._updated_indices[AB]:
+                if not self.subsamples_to_load and not self._updated_indices[AB]:
                     #self.halos.add_column(npstart_updated, name=f'npstart{AB}_updated', copy=False)
                     self.halos[f'npstart{AB}'] = npstart_updated
                     self.halos[f'npout{AB}'] += self.halos[f'npout{AB}_merge']
@@ -1051,12 +1032,6 @@ class CompaSOHaloCatalog:
             # unpack_pids will do unit conversion if requested
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
 
-            '''
-            if cleaned_halos:
-                unpacked_arrays = bitpacked.unpack_pids(pids_AB_total, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
-            else:
-                unpacked_arrays = bitpacked.unpack_pids(pids_AB, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
-            '''
             unpacked_arrays = bitpacked.unpack_pids(pids_AB_total, box=unpackbox, ppd=self.header['ppd'], **unpack_which)
 
             for name in unpacked_arrays:
@@ -1064,13 +1039,8 @@ class CompaSOHaloCatalog:
         else:
             self.subsamples.add_column(pids_AB_total, name='pid', copy=False)
 
-    def _load_RVs(self, N_halo_per_file, unpack=True, cleaned_halos=True):
-        '''
-        if cleaned_halos:
-            particle_AB_afs, np_per_file, particle_AB_merge_afs, np_per_file_merge, key_to_read = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=True)
-        else:
-            particle_AB_afs, np_per_file = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=False)
-        '''
+    def _load_RVs(self, N_halo_per_file, unpack=True, cleaned_halos=True, unpack_which='all'):
+
         particle_dict = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=cleaned_halos)
         particle_AB_afs = particle_dict['particle_AB_afs']
         np_per_file = particle_dict['np_per_file']
@@ -1111,13 +1081,14 @@ class CompaSOHaloCatalog:
                 nump_indices = self.halos[f'npout{AB}']
                 nump_indices_merge = self.halos[f'npout{AB}_merge']
                 particles_AB_total, npstart_updated, offset = join_arrays(offset, particles_AB, particles_AB_merge, particles_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
-                if self.load_pidrv[-1] == 'rv' and not self._updated_indices[AB]:
-                    #self.halos.add_column(npstart_updated, name=f'npstart{AB}_updated', copy=False)
+                if not self.subsamples_to_load and not self._updated_indices[AB] :
                     self.halos[f'npstart{AB}'] = npstart_updated
                     self.halos[f'npout{AB}'] += self.halos[f'npout{AB}_merge']
                     mask = (self.halos['N_total'] == 0)
                     self.halos[f'npout{AB}'][mask] = 0
                     self._updated_indices[AB] = True
+                    self.halos.remove_column(f'npout{AB}_merge')
+                    self.halos.remove_column(f'npstart{AB}_merge')
             particles_AB_total = particles_AB_total[:offset]
 
         else:
@@ -1126,19 +1097,21 @@ class CompaSOHaloCatalog:
         if unpack:
 
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
-            '''
-            if cleaned_halos:
-                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox)
-            else:
-                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB, unpackbox)
-            '''
-            ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox)
 
-            self.subsamples.add_column(ppos_AB, name='pos', copy=False)
-            self.subsamples.add_column(pvel_AB, name='vel', copy=False)
+            if unpack_which == 'all':
+                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox)
+                self.subsamples.add_column(ppos_AB, name='pos', copy=False)
+                self.subsamples.add_column(pvel_AB, name='vel', copy=False)
+            elif unpack_which == 'pos':
+                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox, velout=False)
+                self.subsamples.add_column(ppos_AB, name='pos', copy=False)
+            elif unpack_which == 'vel':
+                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox, posout=False)
+                self.subsamples.add_column(pvel_AB, name='vel', copy=False)
+
         else:
             self.subsamples.add_column(particles_AB_total, name='rvint', copy=False)
-        
+
 
     def nbytes(self, halos=True, subsamples=True):
         '''Return the memory usage of the big arrays: the halo catalog and the particle subsamples'''
@@ -1152,8 +1125,8 @@ class CompaSOHaloCatalog:
             for col in cat.columns:
                 nbytes += cat[col].nbytes
         return nbytes
-        
-            
+
+
     def __repr__(self):
         # TODO: there's probably some more helpful info we could put in here
         # Formally, this is supposed to be unambiguous, but mostly we just want it to look good in a notebook
@@ -1168,9 +1141,9 @@ class CompaSOHaloCatalog:
                  f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field > 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
                  ]
         return '\n'.join(lines)
-        
-          
-        
+
+
+
 def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_per_file):
     '''
     For subsample redshifts where we have L1s followed by L0s in the halo_pids files,
@@ -1183,7 +1156,7 @@ def _reindex_subsamples_from_asdf_size(subsamp_start, particle_arrays, N_halo_pe
         nh += N_halo_per_file[k]
         np_thisfile = len(p)
         subsamp_start[nh:] += np_thisfile
-            
+
 
 ####################################################################################################
 # The following constants and functions relate to unpacking our compressed halo and particle formats
@@ -1371,16 +1344,29 @@ struct HaloStat {
 
 clean_dt = np.dtype([('npstartA_merge', np.int64),
                      ('npstartB_merge', np.int64),
-                     ('npoutA_L0L1', np.uint32),
-                     ('npoutB_L0L1', np.uint32),
                      ('npoutA_merge', np.uint32),
                      ('npoutB_merge', np.uint32),
                      ('N_total', np.uint32),
                      ('N_merge', np.uint32),
+                     ('haloindex', np.uint64),
+                     ('is_merged_to', np.int64),
+                     ('haloindex_mainprog', np.int64),
+                     ('v_L2com_mainprog', np.float32, 3),
+                     ], align=True)
+
+clean_dt_progen = np.dtype([('npstartA_merge', np.int64),
+                     ('npstartB_merge', np.int64),
+                     ('npoutA_merge', np.uint32),
+                     ('npoutB_merge', np.uint32),
+                     ('N_total', np.uint32),
+                     ('N_merge', np.uint32),
+                     ('haloindex', np.uint64),
                      ('is_merged_to', np.int64),
                      ('N_mainprog', np.uint32),
                      ('vcirc_max_L2com_mainprog', np.float32),
                      ('sigmav3d_L2com_mainprog', np.float32),
+                     ('haloindex_mainprog', np.int64),
+                     ('v_L2com_mainprog', np.float32, 3),
                      ], align=True)
 
 
