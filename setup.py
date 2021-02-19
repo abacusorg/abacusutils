@@ -2,10 +2,12 @@ import os
 
 from setuptools import setup, find_namespace_packages
 
+install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','emcee','schwimmbad']
+
 # If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
-install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','emcee','schwimmbad']
 if not on_rtd:
+    # This list must be kept synchronized with `autodoc_mock_imports` in docs/conf.py
     install_requires += ['Corrfunc>=2']
 
 with open("README.md", "r") as fh:
@@ -27,5 +29,6 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires = install_requires,
-    entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main']}
+    entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main'],
+                  'asdf.extensions':['abacusutils = abacusutils.data.asdf.AbacusExtension']}
 )
