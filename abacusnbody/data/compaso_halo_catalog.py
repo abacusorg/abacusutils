@@ -347,41 +347,21 @@ class CompaSOHaloCatalog:
          self.superslab_inds,
          self.halo_fns,
          self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos)
-
-        # Parse `fields` and `cleaned_fields` to determine halo catalog fields to read
-        # note how we unpack into local variables --- don't want to desync from the class attributes
-        cleaned_fields = []
-        fields = self._setup_fields(fields, cleaned_halos=cleaned_halos)
-
-        # Let's split `fields` so that there is a separate set of `cleaned_fields`
-        for item in list(clean_dt_progen.names):
-            if item in fields:
-                fields.remove(item)
-                cleaned_fields += [item]
-
-        self.fields = fields
-        self.cleaned_fields = cleaned_fields
-        self.data_key = 'data'
-        self.convert_units = convert_units  # let's save, user might want to check later
-        self.verbose = verbose
-
+        
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
          self.load_pidrv,
          self.unpack_subsamples) = self._setup_load_subsamples(load_subsamples)
         del load_subsamples  # use the parsed values
 
-        if cleaned_halos:
-            # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
-            for AB in self.load_AB:
-                if 'npstart'+AB not in fields:
-                    fields += ['npstart'+AB]
-                if 'npout'+AB not in fields:
-                    fields += ['npout'+AB]
-                if 'npstart'+AB+'_merge' not in cleaned_fields:
-                    cleaned_fields += ['npstart'+AB+'_merge']
-                if 'npout'+AB+'_merge' not in cleaned_fields:
-                    cleaned_fields += ['npout'+AB+'_merge']
+        # Parse `fields` and `cleaned_fields` to determine halo catalog fields to read
+        (self.fields,
+         self.cleaned_fields) = self._setup_fields(fields, cleaned_halos=cleaned_halos, load_AB=self.load_AB)
+        del fields  # use self.fields
+        
+        self.data_key = 'data'
+        self.convert_units = convert_units  # let's save, user might want to check later
+        self.verbose = verbose
 
         unpack_bits = self._setup_unpack_bits(unpack_bits)
 
@@ -400,9 +380,9 @@ class CompaSOHaloCatalog:
 
         # Read and unpack the catalog into self.halos
         self._setup_halo_field_loaders()
-        N_halo_per_file = self._read_halo_info(self.halo_fns, fields, cleaned_halos=False)
+        N_halo_per_file = self._read_halo_info(self.halo_fns, self.fields, cleaned_halos=False)
         if cleaned_halos:
-            cleaned_N_halo_per_file = self._read_halo_info(self.cleaned_halo_fns, cleaned_fields, cleaned_halos=True)
+            cleaned_N_halo_per_file = self._read_halo_info(self.cleaned_halo_fns, self.cleaned_fields, cleaned_halos=True)
 
             if (N_halo_per_file != cleaned_N_halo_per_file).any():
                 raise RuntimeError('N_halo per superslab in primary halo files does not match N_halo per superslab in the cleaned files!')
@@ -418,30 +398,24 @@ class CompaSOHaloCatalog:
         if cleaned_halos:
             self._updated_indices = {'A': False, 'B': False}
 
-        # If the user requests both `pos=True` and `vel=True`, just redirect this to rv=True
-        if all(key in self.load_pidrv for key in ["pos", "vel"]):
-            self.load_pidrv.remove('pos')
-            self.load_pidrv.remove('vel')
-            self.load_pidrv += ['rv']
-
         # Updating subsamples indices needs to be done only once, and only right
         # at the end (i.e. after all pid/pos/vel/rv have been read)
         # Define `self.subsamples_to_load` as a way to track what still needs to be loaded
-        self.subsamples_to_load = self.load_pidrv
+        self.subsamples_to_load = self.load_pidrv.copy()
 
         # Loading the particle information
         if "pid" in self.load_pidrv:
             self.subsamples_to_load.remove('pid')
             self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=cleaned_halos)
-        if "rv" in self.load_pidrv:
-            self.subsamples_to_load.remove('rv')
-            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples)
-        elif "pos" in self.load_pidrv:
-            self.subsamples_to_load.remove('pos')
-            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples, unpack_which='pos')
-        elif "vel" in self.load_pidrv:
-            self.subsamples_to_load.remove('vel')
-            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack=self.unpack_subsamples, unpack_which='vel')
+        
+        if 'pos' in self.load_pidrv or 'vel' in self.load_pidrv:
+            for k in ['pos','vel']:
+                if k in self.subsamples_to_load:
+                    self.subsamples_to_load.remove(k)
+            
+            # unpack_which = None will still read the RVs but will keep them in rvint
+            unpack_which = self.load_pidrv if self.unpack_subsamples else None
+            self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack_which=unpack_which)
 
         # Don't need this any more
         del self.subsamples_to_load
@@ -453,6 +427,7 @@ class CompaSOHaloCatalog:
         if verbose:
             print('\n'+str(self))
 
+    
     def _setup_file_paths(self, path, cleaned_halos=True):
         '''Figure out what files the user is asking for
         '''
@@ -525,6 +500,11 @@ class CompaSOHaloCatalog:
 
 
     def _setup_load_subsamples(self, load_subsamples):
+        '''
+        Figure out if the user wants A, B, pid, pos, vel.
+        Will be returned as lists of strings in `load_AB` and `load_pidrv`.
+        `unpack_subsamples` is for pipelining, to keep things in rvint.
+        '''
         if load_subsamples == False:
             # stub
             load_AB = []
@@ -552,8 +532,13 @@ class CompaSOHaloCatalog:
                     warnings.warn(f'Loading of {load_pidrv} was requested but neither subsample A nor B was specified. Assuming subsample A. Can specify with `load_subsamples=dict(A=True)`.')
                     load_AB = ['A']
                 elif not load_pidrv and load_AB:
-                    warnings.warn(f'Loading of subsample {load_AB} was requested but none of `pos`, `vel`, `rv`, `pid` was specified. Assuming `rv`. Can specify with `load_subsamples=dict(rv=True)`.')
-                    load_pidrv = ['rv']
+                    if load_subsamples.get('pos') is not False:
+                        load_pidrv += ['pos']
+                    if load_subsamples.get('vel') is not False:
+                        load_pidrv += ['vel']
+                    if not load_pidrv:
+                        warnings.warn(f'Loading of subsample {load_AB} was requested but none of `pos`, `vel`, `rv`, `pid` was specified. Assuming `rv`. Can specify with `load_subsamples=dict(rv=True)`.')
+                        load_pidrv = ['rv']
 
                 if load_subsamples.pop('field',False):
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
@@ -583,11 +568,15 @@ class CompaSOHaloCatalog:
                 if 'field' in load_halofield:
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
                 unpack_subsamples = True
+                
+        if 'rv' in load_pidrv:
+            load_pidrv.remove('rv')
+            load_pidrv += ['pos', 'vel']
 
         return load_AB, load_pidrv, unpack_subsamples
 
 
-    def _setup_fields(self, fields, cleaned_halos=True):
+    def _setup_fields(self, fields, cleaned_halos=True, load_AB=[]):
         '''Determine the halo catalog fields to load based on user input
         '''
 
@@ -603,6 +592,8 @@ class CompaSOHaloCatalog:
 
         if type(fields) == str:
             fields = [fields]
+        # Convert any other iter, like tuple
+        fields = list(fields)
 
         # Minimum requirement for cleaned haloes
         if cleaned_halos:
@@ -611,8 +602,27 @@ class CompaSOHaloCatalog:
                 fields.remove('N')
             if 'N_total' not in fields:
                 fields += ['N_total']
+                
+        # Let's split `fields` so that there is a separate set of `cleaned_fields`
+        cleaned_fields = []
+        for item in list(clean_dt_progen.names):
+            if item in fields:
+                fields.remove(item)
+                cleaned_fields += [item]
+                
+        if cleaned_halos:
+            # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
+            for AB in load_AB:
+                if 'npstart'+AB not in fields:
+                    fields += ['npstart'+AB]
+                if 'npout'+AB not in fields:
+                    fields += ['npout'+AB]
+                if 'npstart'+AB+'_merge' not in cleaned_fields:
+                    cleaned_fields += ['npstart'+AB+'_merge']
+                if 'npout'+AB+'_merge' not in cleaned_fields:
+                    cleaned_fields += ['npout'+AB+'_merge']
 
-        return fields
+        return fields, cleaned_fields
 
 
     def _read_halo_info(self, halo_fns, fields, cleaned_halos=True):
@@ -636,7 +646,7 @@ class CompaSOHaloCatalog:
 
         if self.verbose:
             # TODO: going to be repeated in output
-            print(f'{len(fields)} halo catalog fields requested. '
+            print(f'{len(fields)} {"cleaned " if cleaned_halos else ""}halo catalog fields requested. '
                 f'Reading {len(raw_dependencies)} fields from disk. '
                 f'Computing {len(extra_fields)} intermediate fields.')
 
@@ -661,13 +671,14 @@ class CompaSOHaloCatalog:
          # If we're loading main progenitor info, do this:
 
         # TODO: this shows the limits of querying the types from a numpy dtype, should query from a function
-        r = re.compile('.*mainprog')
-        prog_fields = list(filter(r.match, fields))
-        for fields in prog_fields:
-            if fields in ['v_L2com_mainprog', 'haloindex_mainprog']:
-                continue
-            else:
-                self.halos.replace_column(fields, np.empty(N_halos, dtype=(clean_dt_progen[fields], self.header['NumTimeSliceRedshiftsPrev'])))
+        if cleaned_halos:
+            r = re.compile('.*mainprog')
+            prog_fields = list(filter(r.match, fields))
+            for fields in prog_fields:
+                if fields in ['v_L2com_mainprog', 'haloindex_mainprog']:
+                    continue
+                else:
+                    self.halos.replace_column(fields, np.empty(N_halos, dtype=(clean_dt_progen[fields], self.header['NumTimeSliceRedshiftsPrev'])))
 
         # Unpack the cats into the concatenated array
         # The writes would probably be more efficient if the outer loop was over column
@@ -1039,7 +1050,7 @@ class CompaSOHaloCatalog:
         else:
             self.subsamples.add_column(pids_AB_total, name='pid', copy=False)
 
-    def _load_RVs(self, N_halo_per_file, unpack=True, cleaned_halos=True, unpack_which='all'):
+    def _load_RVs(self, N_halo_per_file, cleaned_halos=True, unpack_which=['pos','vel']):
 
         particle_dict = self._reindex_subsamples('rv', N_halo_per_file, cleaned_halos=cleaned_halos)
         particle_AB_afs = particle_dict['particle_AB_afs']
@@ -1059,6 +1070,7 @@ class CompaSOHaloCatalog:
 
         for i,af in enumerate(particle_AB_afs):
             thisnp = np_per_file[i]
+            # TODO: don't concatenate here, then unpack. Unpack into the concatenated array below.
             particles_AB[start:start+thisnp] = af[self.data_key]['rvint']
             start += thisnp
 
@@ -1094,21 +1106,18 @@ class CompaSOHaloCatalog:
         else:
             particles_AB_total = particles_AB
 
-        if unpack:
-
+        if unpack_which:
             unpackbox = self.header['BoxSize'] if self.convert_units else 1.
 
-            if unpack_which == 'all':
-                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox)
+            _out = {}
+            _out['posout'] = None if 'pos' in unpack_which else False
+            _out['velout'] = None if 'vel' in unpack_which else False
+                
+            ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox, **_out)
+            if _out['posout'] is not False:
                 self.subsamples.add_column(ppos_AB, name='pos', copy=False)
+            if _out['velout'] is not False:
                 self.subsamples.add_column(pvel_AB, name='vel', copy=False)
-            elif unpack_which == 'pos':
-                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox, velout=False)
-                self.subsamples.add_column(ppos_AB, name='pos', copy=False)
-            elif unpack_which == 'vel':
-                ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox, posout=False)
-                self.subsamples.add_column(pvel_AB, name='vel', copy=False)
-
         else:
             self.subsamples.add_column(particles_AB_total, name='rvint', copy=False)
 
