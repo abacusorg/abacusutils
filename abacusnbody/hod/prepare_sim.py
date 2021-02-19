@@ -335,6 +335,7 @@ def main(path2config, params = None):
     config.update(params)
 
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
+    print(simname)
     simdir = config['sim_params']['sim_dir']
     z_mock = config['sim_params']['z_mock']
     savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
@@ -383,4 +384,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     args = vars(parser.parse_args())
-    main(**args)
+
+    # # Simulation parameters
+    # param_dict = {
+    # 'sim_params' :
+    #     {
+    #     'sim_name': 'AbacusSummit_base_c000_ph006',                                 # which simulation 
+    #     'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
+    #     'scratch_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
+    #     'subsample_dir': '/mnt/marvin1/syuan/scratch/data_summit/',                 # where to output subsample data
+    #     'z_mock': 0.5,                                                             # which redshift slice
+    #     'Nthread_load': 7                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    #     }
+    # }
+    # for i in range(25):
+    #     param_dict['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
+    #     main(**args, params = param_dict)

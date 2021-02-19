@@ -292,7 +292,7 @@ class AbacusHOD:
         # HOD parameter choices
         self.want_ranks = HOD_params['want_ranks']
         self.want_rsd = HOD_params['want_rsd']
-        
+
         # clusteringparameters
         self.pimax = clustering_params['pimax']
         self.pi_bin_size = clustering_params['pi_bin_size']
@@ -560,8 +560,11 @@ class AbacusHOD:
         if tracers == None:
             tracers = self.tracers
 
-        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread,
-            enable_ranks = self.want_ranks, rsd = want_rsd, write_to_disk = write_to_disk, savedir = self.mock_dir)
+        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
+            enable_ranks = self.want_ranks, 
+            rsd = want_rsd, 
+            write_to_disk = write_to_disk, 
+            savedir = self.mock_dir)
 
         return mock_dict
 
