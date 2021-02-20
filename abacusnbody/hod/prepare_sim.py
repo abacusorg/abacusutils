@@ -50,7 +50,7 @@ def subsample_particles(m, MT):
 def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
     cat = CompaSOHaloCatalog(
     simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
+        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com']) # , cleaned_halos = cleaning)
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
 
@@ -98,8 +98,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     cat = CompaSOHaloCatalog(
         simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
         +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv', fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
-        cleaned_halos = cleaning)
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com']) # , 
+        # cleaned_halos = cleaning)
     halos = cat.halos
     if cleaning:
         halos = halos[halos['N'] > 0]
@@ -386,11 +386,13 @@ class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentD
     pass
 
 if __name__ == "__main__":
-    
+
     # parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     args = vars(parser.parse_args())
+
+    main(**args)
 
     # # Simulation parameters
     # param_dict = {
