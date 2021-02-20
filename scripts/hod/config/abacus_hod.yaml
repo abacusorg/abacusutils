@@ -9,6 +9,7 @@ sim_params:
     scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit/'                 # where to output subsample data
     z_mock: 0.5                                                              # which redshift slice
+    cleaned_halos: False                                                     # load cleaned halos?
     Nthread_load: 7                                                          # number of thread for organizing simulation outputs (prepare_sim)
 
 # HOD parameters
