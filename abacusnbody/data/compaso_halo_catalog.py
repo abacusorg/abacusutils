@@ -347,7 +347,7 @@ class CompaSOHaloCatalog:
          self.superslab_inds,
          self.halo_fns,
          self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos)
-        
+
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
          self.load_pidrv,
@@ -358,7 +358,7 @@ class CompaSOHaloCatalog:
         (self.fields,
          self.cleaned_fields) = self._setup_fields(fields, cleaned_halos=cleaned_halos, load_AB=self.load_AB)
         del fields  # use self.fields
-        
+
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
         self.verbose = verbose
@@ -395,6 +395,8 @@ class CompaSOHaloCatalog:
         # halo subsamples have not yet been reindexed
         self._reindexed = {'A': False, 'B': False}
 
+        self._reindexed_merge = {'A': False, 'B': False}
+
         if cleaned_halos:
             self._updated_indices = {'A': False, 'B': False}
 
@@ -407,12 +409,12 @@ class CompaSOHaloCatalog:
         if "pid" in self.load_pidrv:
             self.subsamples_to_load.remove('pid')
             self._load_pids(unpack_bits, N_halo_per_file, cleaned_halos=cleaned_halos)
-        
+
         if 'pos' in self.load_pidrv or 'vel' in self.load_pidrv:
             for k in ['pos','vel']:
                 if k in self.subsamples_to_load:
                     self.subsamples_to_load.remove(k)
-            
+
             # unpack_which = None will still read the RVs but will keep them in rvint
             unpack_which = self.load_pidrv if self.unpack_subsamples else None
             self._load_RVs(N_halo_per_file, cleaned_halos=cleaned_halos, unpack_which=unpack_which)
@@ -427,7 +429,7 @@ class CompaSOHaloCatalog:
         if verbose:
             print('\n'+str(self))
 
-    
+
     def _setup_file_paths(self, path, cleaned_halos=True):
         '''Figure out what files the user is asking for
         '''
@@ -568,7 +570,7 @@ class CompaSOHaloCatalog:
                 if 'field' in load_halofield:
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
                 unpack_subsamples = True
-                
+
         if 'rv' in load_pidrv:
             load_pidrv.remove('rv')
             load_pidrv += ['pos', 'vel']
@@ -602,14 +604,14 @@ class CompaSOHaloCatalog:
                 fields.remove('N')
             if 'N_total' not in fields:
                 fields += ['N_total']
-                
+
         # Let's split `fields` so that there is a separate set of `cleaned_fields`
         cleaned_fields = []
         for item in list(clean_dt_progen.names):
             if item in fields:
                 fields.remove(item)
                 cleaned_fields += [item]
-                
+
         if cleaned_halos:
             # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
             for AB in load_AB:
@@ -933,6 +935,15 @@ class CompaSOHaloCatalog:
                                                   N_halo_per_file)
                 self._reindexed[AB] = True
 
+            if cleaned_halos:
+                if not self._reindexed_merge[AB] and 'npstart'+AB+'_merge' in self.halos.colnames:
+                    mask = (self.halos['N_total'] == 0)
+                    self.halos['npstart'+AB+'_merge'] += np_total_merge
+                    _reindex_subsamples_from_asdf_size(self.halos['npstart'+AB+'_merge'],
+                                                        [af[self.data_key][asdf_col_name+'_'+AB] for af in particle_merge_afs], N_halo_per_file)
+                    self.halos['npstart'+AB+'_merge'][mask] = -999
+                    self._reindexed_merge[AB] = True
+
             # total number of particles
             for af in particle_afs:
                 np_per_file += [len(af[self.data_key][asdf_col_name])]
@@ -1018,7 +1029,6 @@ class CompaSOHaloCatalog:
                 pids_AB_total, npstart_updated, offset = join_arrays(offset, pids_AB, pids_AB_merge, pids_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
 
                 if not self.subsamples_to_load and not self._updated_indices[AB]:
-                    #self.halos.add_column(npstart_updated, name=f'npstart{AB}_updated', copy=False)
                     self.halos[f'npstart{AB}'] = npstart_updated
                     self.halos[f'npout{AB}'] += self.halos[f'npout{AB}_merge']
                     mask = (self.halos['N_total'] == 0)
@@ -1093,6 +1103,7 @@ class CompaSOHaloCatalog:
                 nump_indices = self.halos[f'npout{AB}']
                 nump_indices_merge = self.halos[f'npout{AB}_merge']
                 particles_AB_total, npstart_updated, offset = join_arrays(offset, particles_AB, particles_AB_merge, particles_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
+                
                 if not self.subsamples_to_load and not self._updated_indices[AB] :
                     self.halos[f'npstart{AB}'] = npstart_updated
                     self.halos[f'npout{AB}'] += self.halos[f'npout{AB}_merge']
@@ -1112,7 +1123,7 @@ class CompaSOHaloCatalog:
             _out = {}
             _out['posout'] = None if 'pos' in unpack_which else False
             _out['velout'] = None if 'vel' in unpack_which else False
-                
+
             ppos_AB, pvel_AB = bitpacked.unpack_rvint(particles_AB_total, unpackbox, **_out)
             if _out['posout'] is not False:
                 self.subsamples.add_column(ppos_AB, name='pos', copy=False)
@@ -1361,22 +1372,22 @@ clean_dt = np.dtype([('npstartA_merge', np.int64),
                      ('is_merged_to', np.int64),
                      ('haloindex_mainprog', np.int64),
                      ('v_L2com_mainprog', np.float32, 3),
-                     ], align=True)
+], align=True)
 
 clean_dt_progen = np.dtype([('npstartA_merge', np.int64),
-                     ('npstartB_merge', np.int64),
-                     ('npoutA_merge', np.uint32),
-                     ('npoutB_merge', np.uint32),
-                     ('N_total', np.uint32),
-                     ('N_merge', np.uint32),
-                     ('haloindex', np.uint64),
-                     ('is_merged_to', np.int64),
-                     ('N_mainprog', np.uint32),
-                     ('vcirc_max_L2com_mainprog', np.float32),
-                     ('sigmav3d_L2com_mainprog', np.float32),
-                     ('haloindex_mainprog', np.int64),
-                     ('v_L2com_mainprog', np.float32, 3),
-                     ], align=True)
+                            ('npstartB_merge', np.int64),
+                            ('npoutA_merge', np.uint32),
+                            ('npoutB_merge', np.uint32),
+                            ('N_total', np.uint32),
+                            ('N_merge', np.uint32),
+                            ('haloindex', np.uint64),
+                            ('is_merged_to', np.int64),
+                            ('N_mainprog', np.uint32),
+                            ('vcirc_max_L2com_mainprog', np.float32),
+                            ('sigmav3d_L2com_mainprog', np.float32),
+                            ('haloindex_mainprog', np.int64),
+                            ('v_L2com_mainprog', np.float32, 3),
+], align=True)
 
 
 user_dt = np.dtype([('id', np.uint64),
