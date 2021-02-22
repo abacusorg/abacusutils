@@ -106,8 +106,8 @@ def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
             print(key, Ball.tracers[tracer_type][key])
             
         # pass them to the mock dictionary
-        mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd)
-        clustering = Ball.compute_clustering(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size)
+        mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread = 64)
+        clustering = Ball.compute_xirppi(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size, Nthread = 16)
         lnP = Data.compute_likelihood(clustering)
     else:
         lnP = -np.inf
@@ -129,7 +129,7 @@ def main(path2config, time_likelihood):
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
     # read data parameters
-    newData = PowerData(data_params)
+    newData = PowerData(data_params, HOD_params)
 
     # parameters to fit
     nparams = len(fit_params.keys())

@@ -727,7 +727,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     return HOD_dict
 
 
-def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
+def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16, 
     enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./"):
     """
     pass on inputs to the gen_gals function and takes care of I/O

@@ -47,25 +47,26 @@ def subsample_particles(m, MT):
     else:
         return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
-def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim):
+def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
     cat = CompaSOHaloCatalog(
     simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'])
+        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com']) # , cleaned_halos = cleaning)
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
-      
-    # total number of objects                                                                                                      
-    N_g = np.sum(halos['N'])   
+
+    if cleaning:
+        halos = halos[halos['N'] > 0]
+
     # get a 3d histogram with number of objects in each cell                                                                       
     D, edges = np.histogramdd(halos['x_L2com'], weights = halos['N'],
         bins = N_dim, range = [[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2]])   
     return D
 
 
-def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim):   
+def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim, cleaning):   
     Dtot = 0
     for i in range(numslabs):
-        Dtot += get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim)   
+        Dtot += get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning)   
 
     # gaussian smoothing 
     Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
@@ -74,7 +75,7 @@ def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim):
     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
     return Dtot / D_avg - 1
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, N_dim, newseed):
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, cleaning, N_dim, newseed):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     if MT:
@@ -97,8 +98,12 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     cat = CompaSOHaloCatalog(
         simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
         +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv', fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'])
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com']) # , 
+        # cleaned_halos = cleaning)
     halos = cat.halos
+    if cleaning:
+        halos = halos[halos['N'] > 0]
+
     parts = cat.subsamples
     header = cat.header
     Lbox = cat.header['BoxSizeHMpc']
@@ -328,6 +333,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
 def main(path2config, params = None):
+    print("compiling compaso halo catalogs into subsampled catalogs")
+
     config = yaml.load(open(path2config))
     # update params if needed
     if params is None:
@@ -338,6 +345,7 @@ def main(path2config, params = None):
     simdir = config['sim_params']['sim_dir']
     z_mock = config['sim_params']['z_mock']
     savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
+    cleaning = config['sim_params']['cleaned_halos']
 
     halo_info_fns = \
     list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
@@ -357,7 +365,7 @@ def main(path2config, params = None):
     start = time.time()
     if not os.path.exists(savedir+"/density_field.h5"):
         dens_grid = get_smo_density(config['HOD_params']['density_sigma'],
-             numslabs, simdir, simname, z_mock, N_dim)
+             numslabs, simdir, simname, z_mock, N_dim, cleaning)
         print("Generating density field took ", time.time() - start)
         # np.savez(savedir+"/density_field", dens = dens_grid)
         newfile = h5py.File(savedir+"/density_field.h5", 'w')
@@ -368,7 +376,7 @@ def main(path2config, params = None):
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
         repeat(simdir), repeat(simname), repeat(z_mock), 
         repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-        repeat(N_dim), repeat(newseed)))
+        repeat(cleaning), repeat(N_dim), repeat(newseed)))
     p.close()
     p.join()
 
@@ -383,4 +391,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     args = vars(parser.parse_args())
+
     main(**args)
+
+    # # Simulation parameters
+    # param_dict = {
+    # 'sim_params' :
+    #     {
+    #     'sim_name': 'AbacusSummit_base_c000_ph006',                                 # which simulation 
+    #     'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
+    #     'scratch_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
+    #     'subsample_dir': '/mnt/marvin1/syuan/scratch/data_summit/',                 # where to output subsample data
+    #     'z_mock': 0.5,                                                             # which redshift slice
+    #     'Nthread_load': 7                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    #     }
+    # }
+    # for i in range(25):
+    #     param_dict['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
+    #     main(**args, params = param_dict)

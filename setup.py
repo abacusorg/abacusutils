@@ -4,7 +4,7 @@ from setuptools import setup, find_namespace_packages
 
 # If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
-install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','emcee','schwimmbad']
+install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba','asdf','h5py','emcee','schwimmbad','getdist','dynesty']
 if not on_rtd:
     install_requires += ['Corrfunc>=2']
 
