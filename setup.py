@@ -30,5 +30,5 @@ setup(
     python_requires='>=3.6',
     install_requires = install_requires,
     entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main'],
-                  'asdf.extensions':['abacusutils = abacusutils.data.asdf.AbacusExtension']}
+                  'asdf.extensions':['abacusutils = abacusnbody.data.asdf:AbacusExtension']}
 )
