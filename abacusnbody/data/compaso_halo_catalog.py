@@ -242,16 +242,15 @@ import asdf
 import asdf.compression
 try:
     asdf.compression.validate('blsc')
-except:
-    # Note: this is a temporary solution until blosc is integrated into ASDF, or until we package a pluggable decompressor
-    exit('Error: your ASDF installation does not support Blosc compression.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
+except Exception as e:
+    raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils?") from e
 
 from . import bitpacked
 
 # Default to 4 decompression threads, or fewer if fewer cores are available
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
-asdf.compression.set_decompression_options(nthreads=DEFAULT_BLOSC_THREADS)
+asdf.config.get_config().decompression_options['blsc'] = dict(nthreads=DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
     """
