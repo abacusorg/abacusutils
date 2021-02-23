@@ -10,7 +10,7 @@ before_install:
   - python --version
   - pip install -U pip
   - pip install -U pytest
-  - pip install git+https://github.com/lgarrison/asdf.git
+  - pip install git+https://github.com/lgarrison/asdf.git@compression-extension
   - gcc --version
 install:
   - pip install .
