@@ -10,6 +10,7 @@ sim_params:
     subsample_dir: './tests/data_summit/'                 # where to output subsample data
     z_mock: 0.0                                                              # which redshift slice
     Nthread_load: 2                                                          # number of thread for organizing simulation outputs (load_sims)
+    cleaned_halos: True
 
 # HOD parameters
 HOD_params:

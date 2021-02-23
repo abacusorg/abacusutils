@@ -1,6 +1,29 @@
 Changelog
 =========
 
+1.0.0 (upcoming)
+----------------
+
+New Features
+~~~~~~~~~~~~
+- ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned_halos=True`` (the default) [#6]
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Can no longer load field particles or L0 halo particles through ``CompaSOHaloCatalog``; use
+  ``abacusnbody.data.read_abacus.read_asdf()`` to read the particle files directly instead. [#6]
+
+Enhancements
+~~~~~~~~~~~~
+- AbacusHOD now supports cleaned catalogs and uses them by default [#6]
+
+- Printing a ``CompaSOHaloCatalog`` now shows the memory usage (also available with ``CompaSOHaloCatalog.nbytes()``) [#6]
+
+Deprecations
+~~~~~~~~~~~~
+- Passing a string to the ``load_subsamples`` argument of ``CompaSOHaloCatalog`` is deprecated;
+  use a dict instead, like: ``load_subsamples=dict(A=True, rv=True)``. [#6]
+
 0.4.0 (2021-02-03)
 ------------------
 
