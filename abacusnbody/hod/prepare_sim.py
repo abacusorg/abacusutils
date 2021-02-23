@@ -52,12 +52,7 @@ def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
     cat = CompaSOHaloCatalog(
-<<<<<<< HEAD
         slabname, fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
-=======
-    simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
 
@@ -105,15 +100,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
     start = time.time()
-<<<<<<< HEAD
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
         'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
-=======
-    cat = CompaSOHaloCatalog(
-        simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', load_subsamples = dict(A=True, rv=True), fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'],
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
         cleaned_halos = cleaning)
     halos = cat.halos
     if cleaning:

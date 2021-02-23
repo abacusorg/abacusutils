@@ -10,11 +10,8 @@ import numpy as np
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
 HALOS_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_unclean.asdf')
 PARTICLES_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_unclean.asdf')
-<<<<<<< HEAD
-=======
 HALOS_OUTPUT_CLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_clean.asdf')
 PARTICLES_OUTPUT_CLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_clean.asdf')
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
 
 def test_halos_unclean(tmp_path):
     '''Test loading a base (uncleaned) halo catalog
@@ -23,31 +20,12 @@ def test_halos_unclean(tmp_path):
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=False)
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
     # to regenerate reference
     #ref = cat.halos
     #import asdf; asdf.compression.set_compression_options(typesize='auto')
     #ref.write(HALOS_OUTPUT_UNCLEAN, all_array_storage='internal', all_array_compression='blsc')
-<<<<<<< HEAD
-    
-    ref = Table.read(HALOS_OUTPUT_UNCLEAN)
-    
-    halos = cat.halos
-    for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(halos[col] == ref[col])
-        else:
-            assert np.allclose(halos[col], ref[col])
-   
-    assert halos.meta == ref.meta
-=======
 
     ref = Table.read(HALOS_OUTPUT_UNCLEAN)
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
 
     halos = cat.halos
     for col in ref.colnames:
@@ -56,9 +34,6 @@ def test_halos_unclean(tmp_path):
         else:
             assert np.allclose(halos[col], ref[col])
 
-<<<<<<< HEAD
-def test_subsamples_unclean(tmp_path):
-=======
     assert halos.meta == ref.meta
 
 def test_halos_clean(tmp_path):
@@ -117,23 +92,11 @@ def test_subsamples_unclean(tmp_path):
     assert cat.subsamples.meta == ref.meta
 
 def test_subsamples_clean(tmp_path):
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
     '''Test loading particle subsamples
     '''
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-<<<<<<< HEAD
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=False)
-    
-    # to regenerate reference
-    #ref = cat.subsamples
-    #import asdf; asdf.compression.set_compression_options(typesize='auto')
-    #ref.write(PARTICLES_OUTPUT_UNCLEAN, format='asdf', all_array_storage='internal', all_array_compression='blsc')
-    
-    ref = Table.read(PARTICLES_OUTPUT_UNCLEAN)
-    
-=======
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=True)
 
     # to regenerate reference
@@ -143,21 +106,15 @@ def test_subsamples_clean(tmp_path):
 
     ref = Table.read(PARTICLES_OUTPUT_CLEAN)
 
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
     ss = cat.subsamples
     for col in ref.colnames:
         if issubclass(ref[col].dtype.type, numbers.Integral):
             assert np.all(ss[col] == ref[col])
         else:
             assert np.allclose(ss[col], ref[col])
-<<<<<<< HEAD
-   
-    assert cat.subsamples.meta == ref.meta
-=======
 
     # total number of particles in ref should be equal to the sum total of npout{AB} in EXAMPLE_SIM
     assert len(ref) == np.sum(cat.halos['npoutA']) + np.sum(cat.halos['npoutB'])
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
 
     assert cat.subsamples.meta == ref.meta
 
@@ -206,17 +163,10 @@ def test_unpack_bits():
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
     from abacusnbody.data.bitpacked import PID_FIELDS
-<<<<<<< HEAD
-    
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits=True, fields='N')
-    assert set(PID_FIELDS) <= set(cat.subsamples.colnames)  # check subset
-    
-=======
 
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits=True, fields='N')
     assert set(PID_FIELDS) <= set(cat.subsamples.colnames)  # check subset
 
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits='density', fields='N')
     assert 'density' in cat.subsamples.colnames
     assert 'lagr_pos' not in cat.subsamples.colnames  # too many?

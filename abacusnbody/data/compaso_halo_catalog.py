@@ -335,11 +335,7 @@ class CompaSOHaloCatalog:
         del subsamples
         if 'load_subsamples' in kwargs:
             load_subsamples = kwargs.pop('load_subsamples')
-<<<<<<< HEAD
-            warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`')
-=======
             warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`', FutureWarning)
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
 
         # Check no unknown args!
         if kwargs:
@@ -571,12 +567,9 @@ class CompaSOHaloCatalog:
                 load_pidrv = subsamp_match.group('pidrv')
                 if load_pidrv == 'all':
                     load_pidrv = ['pid','rv']
-<<<<<<< HEAD
-=======
                 if type(load_pidrv) == str:
                     # Turn this into a list so that the .remove() operation below doesn't complain
                     load_pidrv = [load_pidrv]
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
                 if 'field' in load_halofield:
                     raise ValueError('Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.')
                 unpack_subsamples = True
@@ -1113,11 +1106,7 @@ class CompaSOHaloCatalog:
                 nump_indices = self.halos[f'npout{AB}']
                 nump_indices_merge = self.halos[f'npout{AB}_merge']
                 particles_AB_total, npstart_updated, offset = join_arrays(offset, particles_AB, particles_AB_merge, particles_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
-<<<<<<< HEAD
-                
-=======
 
->>>>>>> 79e9a2361f1bbf389cc53ca266b4c287a5c5af9c
                 if not self.subsamples_to_load and not self._updated_indices[AB] :
                     self.halos[f'npstart{AB}'] = npstart_updated
                     self.halos[f'npout{AB}'] += self.halos[f'npout{AB}_merge']
