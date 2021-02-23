@@ -4,7 +4,7 @@ This is a script for loading simulation data and generating subsamples.
 
 Usage
 -----
-$ python -m abacusnbody.hod.AbacusHOD.load_sims
+$ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.yaml
 '''
 
 import os
@@ -48,9 +48,11 @@ def subsample_particles(m, MT):
         return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
 def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
+    slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
+    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+
     cat = CompaSOHaloCatalog(
-    simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', fields = ['N', 'x_L2com']) # , cleaned_halos = cleaning)
+        slabname, fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
     Lbox = cat.header['BoxSizeHMpc']
     halos = cat.halos
 
@@ -94,12 +96,13 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     # load the halo catalog slab
     print("loading halo catalog ")
+    slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
+    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+
     start = time.time()
-    cat = CompaSOHaloCatalog(
-        simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_info/halo_info_'\
-        +str(i).zfill(3)+'.asdf', load_subsamples = 'A_halo_rv', fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com']) # , 
-        # cleaned_halos = cleaning)
+    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
+        cleaned_halos = cleaning)
     halos = cat.halos
     if cleaning:
         halos = halos[halos['N'] > 0]
@@ -350,6 +353,8 @@ def main(path2config, params = None):
     halo_info_fns = \
     list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
     numslabs = len(halo_info_fns)
+
+    print(numslabs)
 
     tracer_flags = config['HOD_params']['tracer_flags']
     MT = False
