@@ -335,7 +335,7 @@ class CompaSOHaloCatalog:
         del subsamples
         if 'load_subsamples' in kwargs:
             load_subsamples = kwargs.pop('load_subsamples')
-            warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`')
+            warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`', FutureWarning)
 
         # Check no unknown args!
         if kwargs:
