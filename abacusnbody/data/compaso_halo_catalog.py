@@ -683,7 +683,10 @@ class CompaSOHaloCatalog:
                 if fields in ['v_L2com_mainprog', 'haloindex_mainprog']:
                     continue
                 else:
-                    self.halos.replace_column(fields, np.empty(N_halos, dtype=(clean_dt_progen[fields], self.header['NumTimeSliceRedshiftsPrev'])))
+                    if self.header['NumTimeSliceRedshiftsPrev'] > 0:
+                        self.halos.replace_column(fields, np.empty(N_halos, dtype=(clean_dt_progen[fields], self.header['NumTimeSliceRedshiftsPrev'])))
+                    else:
+                        raise KeyError(f'No preceding merger tree information for this redshift. Load without "{fields}".')
 
         # Unpack the cats into the concatenated array
         # The writes would probably be more efficient if the outer loop was over column
