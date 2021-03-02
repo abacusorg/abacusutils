@@ -720,8 +720,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         for k in HOD_dict_cent[tracer]:
             tracer_dict[k] = fast_concatenate(HOD_dict_cent[tracer][k], HOD_dict_sat[tracer][k], Nthread)
         tracer_dict['id'] = fast_concatenate(ID_dict_cent[tracer], ID_dict_sat[tracer], Nthread)
-        print(tracer, "number of galaxies ", len(tracer_dict['x']), 
-            ", satellite fraction ", len(HOD_dict_sat[tracer]['x'])/len(tracer_dict['x']))
+        print(tracer, "number of galaxies ", len(tracer_dict['x']))
+        print("satellite fraction ", len(HOD_dict_sat[tracer]['x'])/len(tracer_dict['x']))
         HOD_dict[tracer] = tracer_dict
     print("organizing outputs took ", time.time() - start)
     return HOD_dict
