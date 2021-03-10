@@ -138,7 +138,6 @@ You can run ``load_sims`` on command line with ::
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
 
 Within Python, you can run the same script with::
-
     from abacusnbody.hod import prepare_sim
     prepare_sim.main(/path/to/config.yaml)
 
@@ -156,53 +155,53 @@ simply run the given script in bash ::
 You can also consruct the AbacusHOD object yourself within Python and run HODs from
 there. Here we show the scripts within ``run_hod.py`` for reference.::
 
-import os
-import glob
-import time
+    import os
+    import glob
+    import time
 
-import yaml
-import numpy as np
-import argparse
+    import yaml
+    import numpy as np
+    import argparse
 
-from abacusnbody.hod.abacus_hod import AbacusHOD
+    from abacusnbody.hod.abacus_hod import AbacusHOD
 
-path2config = 'config/abacus_hod.yaml' # path to config file
+    path2config = 'config/abacus_hod.yaml' # path to config file
 
-# load the config file and parse in relevant parameters
-config = yaml.load(open(path2config))
-sim_params = config['sim_params']
-HOD_params = config['HOD_params']
-clustering_params = config['clustering_params']
+    # load the config file and parse in relevant parameters
+    config = yaml.load(open(path2config))
+    sim_params = config['sim_params']
+    HOD_params = config['HOD_params']
+    clustering_params = config['clustering_params']
 
-# additional parameter choices
-want_rsd = HOD_params['want_rsd']
-write_to_disk = HOD_params['write_to_disk']
+    # additional parameter choices
+    want_rsd = HOD_params['want_rsd']
+    write_to_disk = HOD_params['write_to_disk']
 
-# create a new AbacusHOD object
-newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-    
-# first hod run, slow due to compiling jit, write to disk
-mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
+    # create a new AbacusHOD object
+    newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
+        
+    # first hod run, slow due to compiling jit, write to disk
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
 
-# run the 10 different HODs for timing
-for i in range(10):
-    newBall.tracers['LRG']['alpha'] += 0.01
-    print("alpha = ",newBall.tracers['LRG']['alpha'])
-    start = time.time()
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 64)
-    print("Done iteration ", i, "took time ", time.time() - start)
+    # run the 10 different HODs for timing
+    for i in range(10):
+        newBall.tracers['LRG']['alpha'] += 0.01
+        print("alpha = ",newBall.tracers['LRG']['alpha'])
+        start = time.time()
+        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 64)
+        print("Done iteration ", i, "took time ", time.time() - start)
 
 The class also provides fast 2PCF calculators. For example to compute the 
 redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`): ::
 
-# load the rp pi binning from the config file
-bin_params = clustering_params['bin_params']
-rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
-pimax = clustering_params['pimax']
-pi_bin_size = clustering_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
+    # load the rp pi binning from the config file
+    bin_params = clustering_params['bin_params']
+    rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
+    pimax = clustering_params['pimax']
+    pi_bin_size = clustering_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
 
-mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
-xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+    xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
 """
 import os
