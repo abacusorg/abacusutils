@@ -139,8 +139,8 @@ You can run ``load_sims`` on command line with ::
 
 Within Python, you can run the same script with
 
->>> from abacusnbody.hod import prepare_sim
->>> prepare_sim.main(/path/to/config.yaml)
+    from abacusnbody.hod import prepare_sim
+    prepare_sim.main(/path/to/config.yaml)
 
 If your config file lives in the default location, i.e. ``./config``, then you 
 can ignore the ``-path2config`` flag. 
