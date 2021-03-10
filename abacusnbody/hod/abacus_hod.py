@@ -133,7 +133,7 @@ to be larger than Lbox/sigma_density.
 Now you need to run the ``prepare_sim`` script, this extracts the simulation outputs
 and organizes them into formats that are suited for the HOD code. This code can take 
 approximately an hour depending on your configuration settings and system capabilities. 
-We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_20)``.
+We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_30)``.
 You can run ``load_sims`` on command line with ::
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
 
@@ -243,10 +243,9 @@ class AbacusHOD:
             Dictionary of simulation parameters. Load from ``config/abacus_hod.yaml``. The dictionary should contain the following keys:
                 * ``sim_name``: str, name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'. 
                 * ``sim_dir``: str, the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
-                * ``scratch_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
+                * ``output_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
                 * ``subsample_dir``: str, where to save halo+particle subsample, e.g. '/my/output/subsamples/'. 
                 * ``z_mock``: float, which redshift slice, e.g. 0.5.    
-                * ``Nthread_load``: int, how many threads to use to load the simulation data, default 7. 
 
         HOD_params: dict 
             HOD parameters and tracer configurations. Load from ``config/abacus_hod.yaml``. It contains the following keys:
@@ -279,7 +278,7 @@ class AbacusHOD:
         self.sim_dir = sim_params['sim_dir']
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
-        self.scratch_dir = sim_params['scratch_dir']
+        self.output_dir = sim_params['output_dir']
         
         # tracers
         tracer_flags = HOD_params['tracer_flags']
@@ -326,10 +325,10 @@ class AbacusHOD:
         Constructor call this function to load the halo+particle subsamples onto memory. 
         """
         # all paths relevant for mock generation
-        scratch_dir = Path(self.scratch_dir)
+        output_dir = Path(self.output_dir)
         simname = Path(self.sim_name)
         sim_dir = Path(self.sim_dir)
-        mock_dir = scratch_dir / simname / ('z%4.3f'%self.z_mock)
+        mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
         # create mock_dir if not created
         mock_dir.mkdir(parents = True, exist_ok = True)
         subsample_dir = \
@@ -524,7 +523,7 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16):
+    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -542,7 +541,10 @@ class AbacusHOD:
             output to disk? default ``False``. Setting to ``True`` decreases performance. 
 
         ``Nthread``: int
-            Number of threads in the HOD run. Default 16. 
+            number of threads in the HOD run. Default 16. 
+
+        ``verbose``: bool, 
+            detailed stdout? default ``False``.
 
         Returns
         -------
@@ -564,7 +566,8 @@ class AbacusHOD:
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
-            savedir = self.mock_dir)
+            savedir = self.mock_dir,
+            verbose = False)
 
         return mock_dict
 
@@ -832,7 +835,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def gal_reader(self, scratch_dir = None, simname = None, 
+    def gal_reader(self, output_dir = None, simname = None, 
         sim_dir = None, z_mock = None, want_rsd = None, tracers = None):
         """
         Loads galaxy data given directory and return a ``mock_dict`` dictionary.  
@@ -845,7 +848,7 @@ class AbacusHOD:
         ``sim_dir``: str
             the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
 
-        ``scratch_dir``: str
+        ``output_dir``: str
             the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
 
         ``z_mock``: floa
@@ -864,8 +867,8 @@ class AbacusHOD:
 
         """
 
-        if scratch_dir == None:
-            scratch_dir = Path(self.scratch_dir)
+        if output_dir == None:
+            output_dir = Path(self.output_dir)
         if simname == None:
             simname = Path(self.sim_name)
         if sim_dir == None:
@@ -876,7 +879,7 @@ class AbacusHOD:
             want_rsd = self.want_rsd
         if tracers == None:
             tracers = self.tracers.keys()
-        mock_dir = scratch_dir / simname / ('z%4.3f'%self.z_mock)
+        mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
 
         if want_rsd:
             rsd_string = "_rsd"

@@ -80,6 +80,7 @@ def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim, cleanin
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, cleaning, N_dim, newseed):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
+    print("processing slab ", i)
     if MT:
         outfilename_halos += '_MT'
         outfilename_particles += '_MT'
@@ -89,17 +90,16 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
-    # # if file already exists, just skip
-    # if os.path.exists(outfilename_halos) \
-    # and os.path.exists(outfilename_particles):
-    #     return 0
+    # if file already exists, just skip
+    if os.path.exists(outfilename_halos) \
+    and os.path.exists(outfilename_particles):
+        return 0
 
     # load the halo catalog slab
     print("loading halo catalog ")
     slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
-    start = time.time()
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
         'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
         cleaned_halos = cleaning)
@@ -113,9 +113,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     Mpart = header['ParticleMassHMsun'] # msun / h 
     H0 = header['H0']
     h = H0/100.0
-    print("finished loading halo catalog", time.time() - start)
-    print("number of halos ", len(halos), "max halo mass", np.max(halos['N']) * Mpart,
-        "min halo mass", np.min(halos['N']) * Mpart, "particle mass ", Mpart)
+
     # # form a halo table of the columns i care about 
     # creating a mask of which halos to keep, which halos to drop
     p_halos = subsample_halos(halos['N']*Mpart, MT)
@@ -129,11 +127,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
 
     print("computing density rank")
-    start = time.time()
     dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
     ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
     halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
-    print("done overdensity array")
     fenv_rank = np.zeros(len(halos))
     for ibin in range(nbins):
         mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
@@ -144,11 +140,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 new_fenv_rank = halos_overdens[mmask].argsort().argsort()
                 fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
     halos['fenv_rank'] = fenv_rank
-    print("finished density rank", time.time() - start)
 
     # compute delta concentration
     print("computing c rank")
-    start = time.time()
     halos_c = halos['r90_L2com']/halos['r25_L2com']
     deltac_rank = np.zeros(len(halos))
     for ibin in range(nbins):
@@ -161,7 +155,6 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 new_deltac_rank = new_deltac.argsort().argsort()
                 deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
     halos['deltac_rank'] = deltac_rank
-    print("finished delta c", time.time() - start)
 
     # the new particle start, len, and multiplier
     halos_pstart = halos['npstartA']
@@ -354,8 +347,6 @@ def main(path2config, params = None):
     list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
     numslabs = len(halo_info_fns)
 
-    print(numslabs)
-
     tracer_flags = config['HOD_params']['tracer_flags']
     MT = False
     if tracer_flags['ELG'] or tracer_flags['QSO']:
@@ -377,7 +368,7 @@ def main(path2config, params = None):
         dataset = newfile.create_dataset('dens', data = dens_grid)
         newfile.close()
 
-    p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
+    p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
         repeat(simdir), repeat(simname), repeat(z_mock), 
         repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
@@ -405,7 +396,7 @@ if __name__ == "__main__":
     #     {
     #     'sim_name': 'AbacusSummit_base_c000_ph006',                                 # which simulation 
     #     'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
-    #     'scratch_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
+    #     'output_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
     #     'subsample_dir': '/mnt/marvin1/syuan/scratch/data_summit/',                 # where to output subsample data
     #     'z_mock': 0.5,                                                             # which redshift slice
     #     'Nthread_load': 7                                                          # number of thread for organizing simulation outputs (prepare_sim)

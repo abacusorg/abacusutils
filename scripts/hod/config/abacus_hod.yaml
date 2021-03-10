@@ -7,11 +7,13 @@ sim_params:
     sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation 
     # sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
     sim_dir: /mnt/alan1/sbose/scratch/data/cleaned_catalogues/
-    scratch_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
+    output_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit_cleaned/'                 # where to output subsample data
     z_mock: 0.5                                                              # which redshift slice
     cleaned_halos: True                                                     # load cleaned halos?
-    Nthread_load: 7                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    
+prepare_sim:
+    Nparallel_load: 5                                                          # number of thread for organizing simulation outputs (prepare_sim)
 
 # HOD parameters
 HOD_params:

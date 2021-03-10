@@ -550,7 +550,7 @@ def fast_concatenate(array1, array2, Nthread):
     # final_array = np.concatenate((array1, array2))
     return final_array
 
-def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd):
+def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd, verbose):
     """
     parse hod parameters, pass them on to central and satellite generators 
     and then format the results 
@@ -694,7 +694,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
              halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread)
-    print("generating centrals took ", time.time() - start)
+    if verbose:
+        print("generating centrals took ", time.time() - start)
 
 
     start = time.time()
@@ -705,8 +706,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
              want_LRG, want_ELG, want_QSO, Nthread)
-
-    print("generating satellites took ", time.time() - start)
+    if verbose:
+        print("generating satellites took ", time.time() - start)
 
     # B.H. TODO: need a for loop above so we don't need to do this by hand
     HOD_dict_sat = {'LRG': LRG_dict_sat, 'ELG': ELG_dict_sat, 'QSO': QSO_dict_sat}
@@ -720,15 +721,17 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         for k in HOD_dict_cent[tracer]:
             tracer_dict[k] = fast_concatenate(HOD_dict_cent[tracer][k], HOD_dict_sat[tracer][k], Nthread)
         tracer_dict['id'] = fast_concatenate(ID_dict_cent[tracer], ID_dict_sat[tracer], Nthread)
-        print(tracer, "number of galaxies ", len(tracer_dict['x']))
-        print("satellite fraction ", len(HOD_dict_sat[tracer]['x'])/len(tracer_dict['x']))
+        if verbose:
+            print(tracer, "number of galaxies ", len(tracer_dict['x']))
+            print("satellite fraction ", len(HOD_dict_sat[tracer]['x'])/len(tracer_dict['x']))
         HOD_dict[tracer] = tracer_dict
-    print("organizing outputs took ", time.time() - start)
+    if verbose:
+        print("organizing outputs took ", time.time() - start)
     return HOD_dict
 
 
 def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16, 
-    enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./"):
+    enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./", verbose = False):
     """
     pass on inputs to the gen_gals function and takes care of I/O
 
@@ -753,6 +756,9 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     write_to_disk : boolean
         Flag of whether to output to disk. 
 
+    verbose : boolean
+        Whether to output detailed outputs. 
+
     savedir : str
         where to save the output if write_to_disk == True. 
 
@@ -772,16 +778,18 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
         raise ValueError("Error: rsd has to be a boolean")
 
     # find the halos, populate them with galaxies and write them to files
-    HOD_dict = gen_gals(halo_data, particle_data, tracers, params, Nthread, enable_ranks, rsd)
+    HOD_dict = gen_gals(halo_data, particle_data, tracers, params, Nthread, enable_ranks, rsd, verbose)
     
     # how many galaxies were generated and write them to disk
     for tracer in tracers.keys():
         Ncent = HOD_dict[tracer]['Ncent']
-        print("generated %ss:"%tracer, len(HOD_dict[tracer]['x']), 
-            "satellite fraction ", 1 - Ncent/len(HOD_dict[tracer]['x']))
+        if verbose:
+            print("generated %ss:"%tracer, len(HOD_dict[tracer]['x']), 
+                "satellite fraction ", 1 - Ncent/len(HOD_dict[tracer]['x']))
         
         if write_to_disk:
-            print("outputting galaxies to disk")
+            if verbose:
+                print("outputting galaxies to disk")
 
             if rsd:
                 rsd_string = "_rsd"
