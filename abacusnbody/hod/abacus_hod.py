@@ -154,11 +154,9 @@ simply run the given script in bash ::
 
 You can also consruct the AbacusHOD object yourself within Python and run HODs from
 there. Here we show the scripts within ``run_hod.py`` for reference.::
-
     import os
     import glob
     import time
-
     import yaml
     import numpy as np
     import argparse
