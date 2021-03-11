@@ -137,7 +137,7 @@ We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, mem
 You can run ``load_sims`` on command line with ::
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
 
-Within Python, you can run the same script with::
+Within Python, you can run the same script with ::
     from abacusnbody.hod import prepare_sim
     prepare_sim.main(/path/to/config.yaml)
 
