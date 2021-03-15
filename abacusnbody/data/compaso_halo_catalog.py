@@ -478,9 +478,10 @@ class CompaSOHaloCatalog:
         superslab_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
 
         if cleaned_halos:
+            pathsplit = groupdir.split(os.path.sep)
             if not cleandir:
-                pathsplit = groupdir.split(os.path.sep)
-                cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos', *pathsplit[-3:])  # TODO ugly
+                cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos')
+            cleandir = pjoin(cleandir, *pathsplit[-3:])  # TODO ugly
             cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
             if len(cleaned_halo_fns) == 0:
                 raise FileNotFoundError(f'No cleaned_halo_info files found!')
