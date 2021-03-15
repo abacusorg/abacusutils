@@ -336,6 +336,8 @@ class CompaSOHaloCatalog:
         if 'load_subsamples' in kwargs:
             load_subsamples = kwargs.pop('load_subsamples')
             warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`', FutureWarning)
+            
+        self.cleandir = kwargs.pop('cleandir',None)
 
         # Check no unknown args!
         if kwargs:
@@ -346,7 +348,7 @@ class CompaSOHaloCatalog:
          self.cleandir,
          self.superslab_inds,
          self.halo_fns,
-         self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos)
+         self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos, cleandir=self.cleandir)
 
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
@@ -430,7 +432,7 @@ class CompaSOHaloCatalog:
             print('\n'+str(self))
 
 
-    def _setup_file_paths(self, path, cleaned_halos=True):
+    def _setup_file_paths(self, path, cleaned_halos=True, cleandir=None):
         '''Figure out what files the user is asking for
         '''
 
@@ -476,9 +478,10 @@ class CompaSOHaloCatalog:
         superslab_inds = np.array([int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns])
 
         if cleaned_halos:
-            pathsplit = groupdir.split(os.path.sep)
-            cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos', *pathsplit[-3:])  # TODO ugly
-            cleaned_halo_fns = [cleandir+'/cleaned_halo_info_%03d.asdf'%(ext) for ext in superslab_inds]
+            if not cleandir:
+                pathsplit = groupdir.split(os.path.sep)
+                cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos', *pathsplit[-3:])  # TODO ugly
+            cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
             if len(cleaned_halo_fns) == 0:
                 raise FileNotFoundError(f'No cleaned_halo_info files found!')
         else:
