@@ -250,7 +250,7 @@ from . import bitpacked
 # Default to 4 decompression threads, or fewer if fewer cores are available
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
-asdf.config.get_config().decompression_options['blsc'] = dict(nthreads=DEFAULT_BLOSC_THREADS)
+#asdf.config.get_config().decompression_options['blsc'] = dict(nthreads=DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
     """

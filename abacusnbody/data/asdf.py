@@ -13,30 +13,67 @@ import struct
 
 import numpy as np
 import blosc
-from asdf.extension import Extension, Compressor, Decompressor
+from asdf.extension import Extension, Compressor
+    
 
-class BloscDecompressor(Decompressor):
+class BloscCompressor(Compressor):
     '''
-    An implementation of Blosc decompression, as used by Abacus.
+    An implementation of Blosc compression, as used by Abacus.
     '''
     
-    def __init__(self, nthreads=1):
+    def __init__(self, compression_kwargs=None,
+                 decompression_kwargs=None,
+                ):
         '''
-        Construct a BloscDecompressor object.
+        Construct a BloscCompressor object.
+        
+        Useful compression kwargs:
+        nthreads
+        compression_block_size
+        blosc_block_size
+        shuffle
+        typesize
+        cname
+        clevel
+        
+        Useful decompression kwargs:
+        nthreads
         '''
         
-        self.nthreads = nthreads
-        blosc.set_nthreads(nthreads)
+        if compression_kwargs is None:
+            compression_kwargs = {}
+        if decompression_kwargs is None:
+            decompression_kwargs = {}
+        
+        # Compression fields
+        compression_kwargs = compression_kwargs.copy()
+        self.compression_kwargs = compression_kwargs
+        self.nthreads_compress = compression_kwargs.pop('nthreads',1)
+        self.compression_block_size = compression_kwargs.pop('compression_block_size',1<<22)
+        self.blosc_block_size = compression_kwargs.pop('blosc_block_size', 512*1024)
+        shuffle = compression_kwargs.pop('shuffle', 'shuffle')
+        if shuffle == 'shuffle':
+            self.shuffle = blosc.SHUFFLE
+        elif shuffle == 'bitshuffle':
+            self.shuffle = blosc.BITSHUFFLE
+        elif shuffle == None:
+            self.shuffle = blosc.NOSHUFFLE
+        else:
+            raise ValueError(shuffle)
+        self.typesize = compression_kwargs.pop('typesize','auto')  # dtype size in bytes, e.g. 8 for int64
+        self.clevel = compression_kwargs.pop('clevel',1)  # compression level, usually only need lowest for zstd
+        self.cname = compression_kwargs.pop('cname','zstd')  # compressor name, default zstd, good performance/compression tradeoff
         
         # Decompression fields
+        decompression_kwargs = decompression_kwargs.copy()
+        self.decompression_kwargs = decompression_kwargs
+        self.nthreads_decompress = decompression_kwargs.pop('nthreads',1)
         self._size = 0
         self._pos = 0
         self._buffer = None
         self._partial_len = b''
         self.decompression_time = 0.
-            
-    def __del__(self):
-        assert self._buffer is None
+        
     
     @property
     def labels(self):
@@ -46,12 +83,43 @@ class BloscDecompressor(Decompressor):
         '''
         return ['blsc']
     
-    def decompress_into(self, data, out):
+    
+    def compress(self, data, out=None):
+        # Blosc code probably assumes contiguous buffer
+        assert data.contiguous
+        blosc.set_nthreads(self.nthreads_compress)
+        blosc.set_blocksize(self.blosc_block_size)
+        
+        if self.typesize == 'auto':
+            this_typesize = data.itemsize
+        else:
+            this_typesize = self.typesize
+        #assert this_typesize != 1
+        
+        nelem = self.compression_block_size // data.itemsize
+        for i in range(0,len(data),nelem):
+            compressed = blosc.compress(data[i:i+nelem], typesize=this_typesize, clevel=self.clevel, shuffle=self.shuffle, cname=self.cname,
+                                    **self.compression_kwargs)
+            header = struct.pack('!I', len(compressed))
+            # TODO: this probably triggers a data copy, feels inefficient. Probably have to add output array arg to blosc to fix
+            yield header + compressed
+    
+    
+    def decompress(self, data, out=None):
+        if out is None:
+            raise NotImplementedError
+            
         bytesout = 0
         data = memoryview(data).cast('c').toreadonly()  # don't copy on slice
         
         # Blosc code probably assumes contiguous buffer
-        assert data.contiguous
+        if not data.contiguous:
+            raise ValueError(data.contiguous)
+        if not out.contiguous:
+            raise ValuerError(out.contiguous)
+        
+        # get the out address
+        out = np.frombuffer(out, dtype=np.uint8).ctypes.data
         
         while len(data):
             if not self._size:
@@ -84,7 +152,7 @@ class BloscDecompressor(Decompressor):
 
                 if self._pos == self._size:
                     start = time.perf_counter()
-                    n_thisout = blosc.decompress_ptr(memoryview(self._buffer), out.ctypes.data + bytesout)
+                    n_thisout = blosc.decompress_ptr(memoryview(self._buffer), out + bytesout)
                     self.decompression_time += time.perf_counter() - start
                     bytesout += n_thisout
                     self._buffer = None
@@ -92,73 +160,13 @@ class BloscDecompressor(Decompressor):
             else:
                 # We have at least one full block
                 start = time.perf_counter()
-                n_thisout = blosc.decompress_ptr(memoryview(data[:self._size]), out.ctypes.data + bytesout)
+                n_thisout = blosc.decompress_ptr(memoryview(data[:self._size]), out + bytesout)
                 self.decompression_time += time.perf_counter() - start
                 bytesout += n_thisout
                 data = data[self._size:]
                 self._size = 0
 
         return bytesout
-    
-
-class BloscCompressor(Compressor):
-    '''
-    An implementation of Blosc compression, as used by Abacus.
-    '''
-    
-    def __init__(self, nthreads=1, asdf_block_size=None,
-                 shuffle='shuffle', typesize='auto',
-                 cname='zstd', clevel=1, blosc_block_size=512*1024):
-        '''
-        Construct a BloscCompressor object.
-        '''
-        
-        self.nthreads = nthreads
-        blosc.set_nthreads(nthreads)
-        
-        # Compression fields
-        self.blosc_block_size = blosc_block_size
-        blosc.set_blocksize(blosc_block_size)
-        # Only set this field if we want to override the default
-        if asdf_block_size:
-            self.asdf_block_size = asdf_block_size
-        self.typesize = typesize  # dtype size in bytes, e.g. 8 for int64
-        self.clevel = clevel  # compression level, usually only need lowest for zstd
-        self.cname = cname  # compressor name, default zstd, good performance/compression tradeoff
-        if shuffle == 'shuffle':
-            self.shuffle = blosc.SHUFFLE
-        elif shuffle == 'bitshuffle':
-            self.shuffle = blosc.BITSHUFFLE
-        elif shuffle == None:
-            self.shuffle = blosc.NOSHUFFLE
-        else:
-            raise ValueError(shuffle)
-    
-    @property
-    def labels(self):
-        '''
-        The string labels in the binary block headers
-        that indicate Blosc compression
-        '''
-        return ['blsc']
-    
-    
-    def compress(self, data):
-        # Blosc code probably assumes contiguous buffer
-        assert data.contiguous
-        
-        if data.nbytes > 2147483631:  # ~2 GB
-            # This should never happen, because we compress in blocks that are 4 MiB
-            raise ValueError("data blocks must be smaller than 2147483631 bytes due to internal blosc limitations")
-        if self.typesize == 'auto':
-            this_typesize = data.itemsize
-        else:
-            this_typesize = self.typesize
-        #assert this_typesize != 1
-        compressed = blosc.compress(data, typesize=this_typesize, clevel=self.clevel, shuffle=self.shuffle, cname=self.cname)
-        header = struct.pack('!I', len(compressed))
-        # TODO: this probably triggers a data copy, feels inefficient. Probably have to add output array arg to blosc to fix
-        return header + compressed  # bytes type
        
 
 class AbacusExtension(Extension):
@@ -193,4 +201,3 @@ class AbacusExtension(Extension):
         Return the Decompressors implemented in this extension
         '''
         return [BloscDecompressor]
-    
