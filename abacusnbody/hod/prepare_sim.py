@@ -26,6 +26,8 @@ from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 import multiprocessing
 from multiprocessing import Pool
 
+# from sklearn.neighbors import KDTree
+
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
@@ -101,7 +103,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
         cleaned_halos = cleaning)
     halos = cat.halos
     if cleaning:
@@ -141,6 +143,30 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
     halos['fenv_rank'] = fenv_rank
 
+    # allpos = halos['x_L2com']
+    # allmasses = halos['N']*Mpart
+    # allpos_tree = KDTree(allpos)
+
+    # allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
+    # allinds_outer = allpos_tree.query_radius(allpos, r = 5)
+    # print("computng m stacks")
+    # starttime = time.time()
+    # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
+    #     for ind in np.arange(len(halos))])
+
+    # fenv_rank = np.zeros(len(Menv))
+    # for ibin in range(nbins):
+    #     mmask = (halos['N']*Mpart > mbins[ibin]) \
+    #     & (halos['N']*Mpart < mbins[ibin + 1])
+    #     if np.sum(mmask) > 0:
+    #         if np.sum(mmask) == 1:
+    #             fenv_rank[mmask] = 0
+    #         else:
+    #             new_fenv_rank = Menv[mmask].argsort().argsort()
+    #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+
+    # halos['fenv_rank'] = fenv_rank
+
     # compute delta concentration
     print("computing c rank")
     halos_c = halos['r90_L2com']/halos['r25_L2com']
@@ -175,7 +201,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     Mh_parts = np.full(len_old, -1.0)
     Np_parts = np.full(len_old, -1.0)
     downsample_parts = np.full(len_old, -1.0)
-    idh_parts = np.full(len_old, -1.0)
+    idh_parts = np.full(len_old, -1)
     deltach_parts = np.full(len_old, -1.0)
     fenvh_parts = np.full(len_old, -1.0)
 

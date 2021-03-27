@@ -7,6 +7,9 @@ import Corrfunc
 from Corrfunc.theory.DDrppi import DDrppi
 from Corrfunc.theory import wp, xi
 
+from halotools.mock_observables import s_mu_tpcf  
+from halotools.mock_observables import tpcf_multipole, tpcf
+
 
 def calc_xirppi_fast(x1, y1, z1, rpbins, pimax, 
     pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
@@ -54,6 +57,44 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     xirppi = DD_counts_new / RR_counts_new[:, None] - 1
     print("corrfunc took ", time.time() - start, "ngal ", len(x1))
     return xirppi
+
+
+def calc_multipole_fast(x1, y1, z1, rpbins, 
+    lbox, Nthread, x2 = None, y2 = None, z2 = None, orders = [0, 2, 4]):  # all r assumed to be in h-1 mpc units. 
+
+    ND1 = float(len(x1))
+    if x2 is not None:
+        ND2 = len(x2)
+        autocorr = 0
+    else:
+        autocorr = 1
+        ND2 = ND1
+    
+    # single precision mode
+    # to do: make this native 
+    cf_start = time.time()
+    rpbins = rpbins.astype(np.float32)
+    x1 = x1.astype(np.float32)
+    y1 = y1.astype(np.float32)
+    z1 = z1.astype(np.float32)
+    pos1 = np.array([x1, y1, z1]).T
+    lbox = np.float32(lbox)
+
+    mu_bins = np.linspace(0, 1, 20)
+
+    if autocorr == 1: 
+        xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, period = lbox, num_threads = Nthread)
+    else:
+        xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, sample2 = np.array([x2, y2, z2]).T, period = lbox, num_threads = Nthread)
+    xi_array = []
+    for neworder in orders:
+        # print(neworder, rpbins, tpcf_multipole(xi_s_mu, mu_bins, order = neworder))
+        xi_array += [tpcf_multipole(xi_s_mu, mu_bins, order=neworder)]
+    xi_array = np.concatenate(xi_array)
+
+    print("multipoles took time ", time.time() - cf_start)
+    return xi_array
+
 
 def calc_wp_fast(x1, y1, z1, rpbins, pimax, 
     lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 

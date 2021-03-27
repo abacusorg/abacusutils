@@ -139,7 +139,7 @@ You can run ``load_sims`` on command line with ::
 
 Within Python, you can run the same script with ::
     from abacusnbody.hod import prepare_sim
-    
+
     prepare_sim.main(/path/to/config.yaml)
 
 If your config file lives in the default location, i.e. ``./config``, then you 
@@ -217,9 +217,8 @@ import multiprocessing
 from multiprocessing import Pool
 from astropy.io import ascii
 
-
 from .GRAND_HOD import *
-from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast
+from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 class AbacusHOD:
@@ -311,11 +310,6 @@ class AbacusHOD:
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
             weights = self.halo_data['hmultis'])
-        # print("tot num halos in histogram", np.sum(self.halo_mass_func),
-        #     "tot num halos in array", np.sum(self.halo_data['hmultis']),
-        #     np.min(self.halo_data['hdeltac']), np.max(self.halo_data['hdeltac']),
-        #     np.min(self.halo_data['hfenv']), np.max(self.halo_data['hfenv']))
-
 
 
     def staging(self):
@@ -517,7 +511,7 @@ class AbacusHOD:
             particle_data['pranksv'] =  np.ones(Nparts_tot)
             particle_data['pranksp'] =  np.ones(Nparts_tot)
             particle_data['pranksr'] =  np.ones(Nparts_tot)
-            
+        
         return halo_data, particle_data, params, mock_dir
 
     
@@ -738,6 +732,8 @@ class AbacusHOD:
             clustering = self.compute_xirppi(mock_dict, *args, **kwargs)
         elif self.clustering_type == 'wp':
             clustering = self.compute_wp(mock_dict, *args, **kwargs)
+        elif self.clustering_type == 'multipole':
+            clustering = self.compute_multipole(mock_dict, *args, **kwargs)
         return clustering
     
     def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
@@ -784,6 +780,31 @@ class AbacusHOD:
                     z2 = mock_dict[tr2]['z']
                     clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
                         self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                    clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+        return clustering
+
+    def compute_multipole(self, mock_dict, rpbins, pimax, Nthread = 8):
+        clustering = {}
+        for i1, tr1 in enumerate(mock_dict.keys()):
+            x1 = mock_dict[tr1]['x']
+            y1 = mock_dict[tr1]['y']
+            z1 = mock_dict[tr1]['z']
+            for i2, tr2 in enumerate(mock_dict.keys()):
+                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 == i2: # auto corr
+                    new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
+                        self.lbox, Nthread)
+                    new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
+                    clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
+                else:
+                    x2 = mock_dict[tr2]['x']
+                    y2 = mock_dict[tr2]['y']
+                    z2 = mock_dict[tr2]['z']
+                    new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
+                        self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                    new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, 
+                        x2 = x2, y2 = y2, z2 = z2)
+                    clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
