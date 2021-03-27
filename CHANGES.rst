@@ -4,6 +4,10 @@ Changelog
 1.0.0 (upcoming)
 ----------------
 
+Fixes
+~~~~~
+- Fixed issue where satellite galaxy halo ID was incorrect. 
+  
 New Features
 ~~~~~~~~~~~~
 - ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned_halos=True`` (the default) [#6]
