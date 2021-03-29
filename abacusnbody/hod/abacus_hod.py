@@ -124,13 +124,16 @@ made initially (you can always re-do this but it would take some time) include:
 do you only want LRGs or do you want other tracers as well? 
 Do you want to enable satellite profile flexibilities (the :math:`s, s_v, s_p, s_r`
 parameters)? If so, you need to turn on ``want_ranks`` flag in the config file. 
-If you want to enable secondary bias based on local environment, what scale 
-radius do you want the environment do be defined in, this is set by the 
-``density_sigma`` flag in Mpc/h. The default value is 3. Related, the ``Ndim``
-parameter sets the grid size used to compute local density, and it should be set
-to be larger than Lbox/sigma_density. 
+If you want to enable secondary bias, you need to set ``want_AB`` flat to true in the
+config file. The local environment is defined by total mass within 5 Mpc/h but beyond
+``r98``. 
 
-Now you need to run the ``prepare_sim`` script, this extracts the simulation outputs
+IMPORTANT: Running this code is a two-part process. First, you need to first run the ``prepare_sim``
+code, which generates the necessary data files for that simulation. Then you can run the actual
+HOD code. The first step only needs to be done once for a simulation box, but it can be slow, 
+depending on the downsampling and the features you choose to enable. 
+
+So first, you need to run the ``prepare_sim`` script, this extracts the simulation outputs
 and organizes them into formats that are suited for the HOD code. This code can take 
 approximately an hour depending on your configuration settings and system capabilities. 
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_30)``.
