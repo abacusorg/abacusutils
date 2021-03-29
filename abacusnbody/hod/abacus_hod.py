@@ -128,7 +128,7 @@ If you want to enable secondary bias, you need to set ``want_AB`` flat to true i
 config file. The local environment is defined by total mass within 5 Mpc/h but beyond
 ``r98``. 
 
-IMPORTANT: Running this code is a two-part process. First, you need to first run the ``prepare_sim``
+IMPORTANT: Running this code is a two-part process. First, you need to  run the ``prepare_sim``
 code, which generates the necessary data files for that simulation. Then you can run the actual
 HOD code. The first step only needs to be done once for a simulation box, but it can be slow, 
 depending on the downsampling and the features you choose to enable. 
@@ -139,6 +139,7 @@ approximately an hour depending on your configuration settings and system capabi
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_30)``.
 You can run ``load_sims`` on command line with ::
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
+
 
 Within Python, you can run the same script with ::
     from abacusnbody.hod import prepare_sim
