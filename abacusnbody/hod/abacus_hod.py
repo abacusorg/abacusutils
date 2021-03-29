@@ -348,8 +348,8 @@ class AbacusHOD:
         for eslab in range(params['numslabs']):
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
@@ -405,8 +405,8 @@ class AbacusHOD:
             print("Loading simulation by slab, ", eslab)
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            

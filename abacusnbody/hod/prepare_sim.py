@@ -26,7 +26,7 @@ from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 import multiprocessing
 from multiprocessing import Pool
 
-# from sklearn.neighbors import KDTree
+from sklearn.neighbors import KDTree
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -80,8 +80,8 @@ def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim, cleanin
     return Dtot / D_avg - 1
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, cleaning, N_dim, newseed):
-    outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
-    outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
+    outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
+    outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
     if MT:
         outfilename_halos += '_MT'
@@ -128,44 +128,44 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     nbins = 100
     mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
 
-    print("computing density rank")
-    dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
-    ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
-    halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
-    fenv_rank = np.zeros(len(halos))
-    for ibin in range(nbins):
-        mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
-        if np.sum(mmask) > 0:
-            if np.sum(mmask) == 1:
-                fenv_rank[mmask] = 0
-            else:
-                new_fenv_rank = halos_overdens[mmask].argsort().argsort()
-                fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-    halos['fenv_rank'] = fenv_rank
-
-    # allpos = halos['x_L2com']
-    # allmasses = halos['N']*Mpart
-    # allpos_tree = KDTree(allpos)
-
-    # allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
-    # allinds_outer = allpos_tree.query_radius(allpos, r = 5)
-    # print("computng m stacks")
-    # starttime = time.time()
-    # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
-    #     for ind in np.arange(len(halos))])
-
-    # fenv_rank = np.zeros(len(Menv))
+    # print("computing density rank")
+    # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
+    # ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
+    # halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
+    # fenv_rank = np.zeros(len(halos))
     # for ibin in range(nbins):
-    #     mmask = (halos['N']*Mpart > mbins[ibin]) \
-    #     & (halos['N']*Mpart < mbins[ibin + 1])
+    #     mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
     #     if np.sum(mmask) > 0:
     #         if np.sum(mmask) == 1:
     #             fenv_rank[mmask] = 0
     #         else:
-    #             new_fenv_rank = Menv[mmask].argsort().argsort()
+    #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
     #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-
     # halos['fenv_rank'] = fenv_rank
+
+    allpos = halos['x_L2com']
+    allmasses = halos['N']*Mpart
+    allpos_tree = KDTree(allpos)
+
+    allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
+    allinds_outer = allpos_tree.query_radius(allpos, r = 5)
+    print("computng m stacks")
+    starttime = time.time()
+    Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
+        for ind in np.arange(len(halos))])
+
+    fenv_rank = np.zeros(len(Menv))
+    for ibin in range(nbins):
+        mmask = (halos['N']*Mpart > mbins[ibin]) \
+        & (halos['N']*Mpart < mbins[ibin + 1])
+        if np.sum(mmask) > 0:
+            if np.sum(mmask) == 1:
+                fenv_rank[mmask] = 0
+            else:
+                new_fenv_rank = Menv[mmask].argsort().argsort()
+                fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+
+    halos['fenv_rank'] = fenv_rank
 
     # compute delta concentration
     print("computing c rank")
@@ -383,16 +383,16 @@ def main(path2config, params = None):
 
     os.makedirs(savedir, exist_ok = True)
 
-    print("reading sim ", simname, "redshift ", z_mock)
-    start = time.time()
-    if not os.path.exists(savedir+"/density_field.h5"):
-        dens_grid = get_smo_density(config['HOD_params']['density_sigma'],
-             numslabs, simdir, simname, z_mock, N_dim, cleaning)
-        print("Generating density field took ", time.time() - start)
-        # np.savez(savedir+"/density_field", dens = dens_grid)
-        newfile = h5py.File(savedir+"/density_field.h5", 'w')
-        dataset = newfile.create_dataset('dens', data = dens_grid)
-        newfile.close()
+    # print("reading sim ", simname, "redshift ", z_mock)
+    # start = time.time()
+    # if not os.path.exists(savedir+"/density_field.h5"):
+    #     dens_grid = get_smo_density(config['HOD_params']['density_sigma'],
+    #          numslabs, simdir, simname, z_mock, N_dim, cleaning)
+    #     print("Generating density field took ", time.time() - start)
+    #     # np.savez(savedir+"/density_field", dens = dens_grid)
+    #     newfile = h5py.File(savedir+"/density_field.h5", 'w')
+    #     dataset = newfile.create_dataset('dens', data = dens_grid)
+    #     newfile.close()
 
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
