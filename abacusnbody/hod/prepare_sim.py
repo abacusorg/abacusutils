@@ -80,7 +80,7 @@ def subsample_particles(m, MT):
 #     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
 #     return Dtot / D_avg - 1
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, N_dim, newseed):
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -410,7 +410,7 @@ def main(path2config, params = None):
     p.close()
     p.join()
 
-    print("done, took time ", time.time() - start)
+    # print("done, took time ", time.time() - start)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
@@ -424,6 +424,7 @@ if __name__ == "__main__":
 
     main(**args)
 
+    print("done")
     # # run a series of simulations
     # param_dict = {
     # 'sim_params' :
