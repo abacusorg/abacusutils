@@ -1164,8 +1164,8 @@ class CompaSOHaloCatalog:
         n_halo_field = len(self.halos.columns)
         n_subsamp_field = len(self.subsamples.columns)
         lines += ['-'*len(lines[-1]),
-                 f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field > 1 else "field "}, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB',
-                 f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field > 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
+                 f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field != 1 else "field "}, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB',
+                 f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field != 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
                  ]
         return '\n'.join(lines)
 
