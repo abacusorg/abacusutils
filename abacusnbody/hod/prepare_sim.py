@@ -105,7 +105,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
         'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
-        cleaned_halos = cleaning, cleandir = '/mnt/alan1/sbose/scratch/data/cleaned_catalogues/cleaned_halos/AbacusSummit_base_c000_ph000_v3/')
+        cleaned_halos = cleaning)
     halos = cat.halos
     if cleaning:
         halos = halos[halos['N'] > 0]
