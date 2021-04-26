@@ -202,7 +202,7 @@ dependency purposes.
 Superslab (Chunk) Processing
 ============================
 The halo catalogs are divided across multiple files, called "superslabs", which are
-typically planar chunks of the simulation volume (all (y,z) for some range of x, with
+typically planar chunks of the simulation volume (all y,z for some range of x, with
 a bit of overlap at the boundaries).  Applications that can process the volume
 superslab-by-superslab can save a substantial amount of memory compared to loading
 the full volume.  To load a single superslab, pass the corresponding ``halo_info_XXX.asdf``
@@ -218,8 +218,8 @@ rolling fashion:
 .. code-block:: python
 
     cat = CompaSOHaloCatalog(['AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_033.asdf',
-                               AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf',
-                               AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_001.asdf'])
+                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf',
+                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_001.asdf'])
 
 
 Multi-threaded Decompression
