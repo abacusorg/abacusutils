@@ -28,7 +28,7 @@ and new performance opportunities identified.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Interfaces
+   :caption: Main Modules
 
    compaso
    hod
