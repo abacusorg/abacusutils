@@ -199,6 +199,29 @@ at the level of individual files.  In other words, when loading multiple files,
 the concatenated array will never be constructed for columns that only exist for
 dependency purposes.
 
+Superslab (Chunk) Processing
+============================
+The halo catalogs are divided across multiple files, called "superslabs", which are
+typically planar chunks of the simulation volume (all y,z for some range of x, with
+a bit of overlap at the boundaries).  Applications that can process the volume
+superslab-by-superslab can save a substantial amount of memory compared to loading
+the full volume.  To load a single superslab, pass the corresponding ``halo_info_XXX.asdf``
+file as the ``path`` argument:
+
+.. code-block:: python
+
+    cat = CompaSOHaloCatalog('AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf')
+
+If your application needs one slab of padding, you can pass a list of files and proceed in a
+rolling fashion:
+
+.. code-block:: python
+
+    cat = CompaSOHaloCatalog(['AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_033.asdf',
+                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf',
+                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_001.asdf'])
+
+
 Multi-threaded Decompression
 ============================
 The Blosc compression we use inside the ASDF files supports multi-threaded

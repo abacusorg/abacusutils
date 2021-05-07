@@ -3,16 +3,17 @@ Installation
 
 .. highlight:: console
 
-Python Installation
--------------------
-For access to the Python functionality of abacusutils, the recommended installation method is via pip:
+Pip Installation
+----------------
+For access to the Python functionality of abacusutils, you can either install via pip
+or clone from GitHub.  The pip installation is recommended if you don't need to modify
+the source:
 ::
     
     $ pip install git+https://github.com/lgarrison/asdf.git abacusutils
 
 This command installs both our fork of ASDF and the abacusutils package.
-
-This pip command also gives access to the :doc:`pipes` functionality.
+It also gives access to the :doc:`pipes` functionality.
 
 Python Dependencies
 ^^^^^^^^^^^^^^^^^^^
@@ -22,22 +23,21 @@ to be installed (located at: https://github.com/lgarrison/asdf/).  Our fork supp
 `blosc compression <https://blosc.org/pages/blosc-in-depth/>`_.
 
 
-Direct Download
----------------
-To use the C/C++ code, the recommended method is to clone the repository directly:
+Installing from Cloned Repository
+---------------------------------
+If you want to hack on the abacusutils source code (or use the C/C++ code),
+then the recommendation is to clone the repo and install the package in
+pip "editable mode":
 ::
-    
     $ git clone https://github.com/abacusorg/abacusutils.git
-
-
-To install the Python package directly from the downloaded repo, one can invoke pip on the cloned repo:
-::
+    $ cd abacusutils
+    $ pip install -r requirements.txt -e ./  # install from current dir in editable mode
     
-    $ git clone https://github.com/abacusorg/abacusutils.git
-    $ cd abacusutils/
-    $ pip install -r requirements.txt -e .  # << note the dot
-
 The ``-e`` flag ("editable") is optional but recommended so that the installed copy is just a
-link to the cloned repo (and thus the Python code will behave a little more like the
-C code in terms of being able to see the immediate effect of edits).  The requirements file
-brings in the ASDF fork.
+link to the cloned repo (and thus modifications to the Python code will be seen by code that
+imports abacusutils).  The requirements file brings in the ASDF fork.
+    
+.. warning::
+    If you download via pip and then later clone the repo, don't forget to
+    run ``pip install -e ./`` in the repo.  Otherwise, you will have two
+    copies of abacusutils: one cloned, and one downloaded via pip.

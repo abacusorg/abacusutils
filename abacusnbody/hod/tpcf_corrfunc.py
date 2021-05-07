@@ -4,10 +4,9 @@ import os, sys, time
 import Corrfunc
 # from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
 # from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
-from Corrfunc.theory.DDrppi import DDrppi
-from Corrfunc.theory import wp, xi
+# from Corrfunc.theory.DDrppi import 
+from Corrfunc.theory import wp, xi, DDsmu, DDrppi
 
-from halotools.mock_observables import s_mu_tpcf  
 from halotools.mock_observables import tpcf_multipole, tpcf
 
 
@@ -60,7 +59,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
 
 
 def calc_multipole_fast(x1, y1, z1, rpbins, 
-    lbox, Nthread, x2 = None, y2 = None, z2 = None, orders = [0, 2, 4]):  # all r assumed to be in h-1 mpc units. 
+    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2, 4]):  # all r assumed to be in h-1 mpc units. 
 
     ND1 = float(len(x1))
     if x2 is not None:
@@ -77,22 +76,38 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
     x1 = x1.astype(np.float32)
     y1 = y1.astype(np.float32)
     z1 = z1.astype(np.float32)
-    pos1 = np.array([x1, y1, z1]).T
+    pos1 = np.array([x1, y1, z1]).T % lbox
     lbox = np.float32(lbox)
 
-    mu_bins = np.linspace(0, 1, 20)
+    # mu_bins = np.linspace(0, 1, 20)
 
+    # if autocorr == 1: 
+    #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, period = lbox, num_threads = Nthread)
+    #     print("halotools ", xi_s_mu)
+    # else:
+    #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, sample2 = np.array([x2, y2, z2]).T % lbox, period = lbox, num_threads = Nthread)
+
+    nbins_mu = 20
     if autocorr == 1: 
-        xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, period = lbox, num_threads = Nthread)
+        results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
+        DD_counts = results['npairs']
     else:
-        xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, sample2 = np.array([x2, y2, z2]).T, period = lbox, num_threads = Nthread)
+        results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+            periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
+        DD_counts = results['npairs']
+    DD_counts = DD_counts.reshape((len(rpbins) - 1, nbins_mu))
+
+    mu_bins = np.linspace(0, 1, nbins_mu+1)
+    RR_counts = 2*np.pi/3*(rpbins[1:, None]**3 - rpbins[:-1, None]**3)*(mu_bins[None, 1:] - mu_bins[None, :-1]) / lbox**3 * ND1 * ND2 * 2
+
+    xi_s_mu = DD_counts / RR_counts - 1
+
     xi_array = []
     for neworder in orders:
         # print(neworder, rpbins, tpcf_multipole(xi_s_mu, mu_bins, order = neworder))
         xi_array += [tpcf_multipole(xi_s_mu, mu_bins, order=neworder)]
     xi_array = np.concatenate(xi_array)
 
-    print("multipoles took time ", time.time() - cf_start)
     return xi_array
 
 

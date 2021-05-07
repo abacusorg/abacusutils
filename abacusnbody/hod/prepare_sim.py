@@ -391,17 +391,6 @@ def main(path2config, params = None):
 
     os.makedirs(savedir, exist_ok = True)
 
-    # print("reading sim ", simname, "redshift ", z_mock)
-    # start = time.time()
-    # if not os.path.exists(savedir+"/density_field.h5"):
-    #     dens_grid = get_smo_density(config['HOD_params']['density_sigma'],
-    #          numslabs, simdir, simname, z_mock, N_dim, cleaning)
-    #     print("Generating density field took ", time.time() - start)
-    #     # np.savez(savedir+"/density_field", dens = dens_grid)
-    #     newfile = h5py.File(savedir+"/density_field.h5", 'w')
-    #     dataset = newfile.create_dataset('dens', data = dens_grid)
-    #     newfile.close()
-
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
         repeat(simdir), repeat(simname), repeat(z_mock), 
