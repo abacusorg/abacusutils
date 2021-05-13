@@ -124,23 +124,25 @@ made initially (you can always re-do this but it would take some time) include:
 do you only want LRGs or do you want other tracers as well? 
 Do you want to enable satellite profile flexibilities (the :math:`s, s_v, s_p, s_r`
 parameters)? If so, you need to turn on ``want_ranks`` flag in the config file. 
-If you want to enable secondary bias based on local environment, what scale 
-radius do you want the environment do be defined in, this is set by the 
-``density_sigma`` flag in Mpc/h. The default value is 3. Related, the ``Ndim``
-parameter sets the grid size used to compute local density, and it should be set
-to be larger than Lbox/sigma_density. 
+If you want to enable secondary bias, you need to set ``want_AB`` flag to true in the
+config file. The local environment is defined by total mass within 5 Mpc/h but beyond
+``r98``. 
 
-Now you need to run the ``prepare_sim`` script, this extracts the simulation outputs
+IMPORTANT: Running this code is a two-part process. First, you need to run the ``prepare_sim``
+code, which generates the necessary data files for that simulation. Then you can run the actual
+HOD code. The first step only needs to be done once for a simulation box, but it can be slow, 
+depending on the downsampling and the features you choose to enable. 
+
+So first, you need to run the ``prepare_sim`` script, this extracts the simulation outputs
 and organizes them into formats that are suited for the HOD code. This code can take 
 approximately an hour depending on your configuration settings and system capabilities. 
-We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_20)``.
+We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_30)``.
 You can run ``load_sims`` on command line with ::
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
 
-Within Python, you can run the same script with
 
->>> from abacusnbody.hod import prepare_sim
->>> prepare_sim.main(/path/to/config.yaml)
+Within Python, you can run the same script with ``from abacusnbody.hod import prepare_sim``
+and then ``prepare_sim.main(/path/to/config.yaml)``.
 
 If your config file lives in the default location, i.e. ``./config``, then you 
 can ignore the ``-path2config`` flag. 
@@ -154,55 +156,53 @@ simply run the given script in bash ::
     python run_hod.py --path2config PATH2CONFIG
 
 You can also consruct the AbacusHOD object yourself within Python and run HODs from
-there. Here we show the scripts within ``run_hod.py`` for reference.
+there. Here we show the scripts within ``run_hod.py`` for reference.::
+    import os
+    import glob
+    import time
+    import yaml
+    import numpy as np
+    import argparse
 
->>> import os
->>> import glob
->>> import time
->>> 
->>> import yaml
->>> import numpy as np
->>> import argparse
->>> 
->>> from abacusnbody.hod.abacus_hod import AbacusHOD
->>> 
->>> path2config = 'config/abacus_hod.yaml' # path to config file
->>> 
->>> # load the config file and parse in relevant parameters
->>> config = yaml.load(open(path2config))
->>> sim_params = config['sim_params']
->>> HOD_params = config['HOD_params']
->>> clustering_params = config['clustering_params']
->>> 
->>> # additional parameter choices
->>> want_rsd = HOD_params['want_rsd']
->>> write_to_disk = HOD_params['write_to_disk']
->>> 
->>> # create a new AbacusHOD object
->>> newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
->>>     
->>> # first hod run, slow due to compiling jit, write to disk
->>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
->>> 
->>> # run the 10 different HODs for timing
->>> for i in range(10):
->>>     newBall.tracers['LRG']['alpha'] += 0.01
->>>     print("alpha = ",newBall.tracers['LRG']['alpha'])
->>>     start = time.time()
->>>     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 64)
->>>     print("Done iteration ", i, "took time ", time.time() - start)
+    from abacusnbody.hod.abacus_hod import AbacusHOD
+
+    path2config = 'config/abacus_hod.yaml' # path to config file
+
+    # load the config file and parse in relevant parameters
+    config = yaml.load(open(path2config))
+    sim_params = config['sim_params']
+    HOD_params = config['HOD_params']
+    clustering_params = config['clustering_params']
+
+    # additional parameter choices
+    want_rsd = HOD_params['want_rsd']
+    write_to_disk = HOD_params['write_to_disk']
+
+    # create a new AbacusHOD object
+    newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
+        
+    # first hod run, slow due to compiling jit, write to disk
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
+
+    # run the 10 different HODs for timing
+    for i in range(10):
+        newBall.tracers['LRG']['alpha'] += 0.01
+        print("alpha = ",newBall.tracers['LRG']['alpha'])
+        start = time.time()
+        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 64)
+        print("Done iteration ", i, "took time ", time.time() - start)
 
 The class also provides fast 2PCF calculators. For example to compute the 
-redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`):
+redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`): ::
 
->>> # load the rp pi binning from the config file
->>> bin_params = clustering_params['bin_params']
->>> rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
->>> pimax = clustering_params['pimax']
->>> pi_bin_size = clustering_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
->>> 
->>> mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
->>> xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
+    # load the rp pi binning from the config file
+    bin_params = clustering_params['bin_params']
+    rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
+    pimax = clustering_params['pimax']
+    pi_bin_size = clustering_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
+
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+    xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
 """
 import os
@@ -219,9 +219,8 @@ import multiprocessing
 from multiprocessing import Pool
 from astropy.io import ascii
 
-
 from .GRAND_HOD import *
-from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast
+from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 class AbacusHOD:
@@ -243,10 +242,9 @@ class AbacusHOD:
             Dictionary of simulation parameters. Load from ``config/abacus_hod.yaml``. The dictionary should contain the following keys:
                 * ``sim_name``: str, name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'. 
                 * ``sim_dir``: str, the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
-                * ``scratch_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
+                * ``output_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
                 * ``subsample_dir``: str, where to save halo+particle subsample, e.g. '/my/output/subsamples/'. 
                 * ``z_mock``: float, which redshift slice, e.g. 0.5.    
-                * ``Nthread_load``: int, how many threads to use to load the simulation data, default 7. 
 
         HOD_params: dict 
             HOD parameters and tracer configurations. Load from ``config/abacus_hod.yaml``. It contains the following keys:
@@ -279,7 +277,7 @@ class AbacusHOD:
         self.sim_dir = sim_params['sim_dir']
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
-        self.scratch_dir = sim_params['scratch_dir']
+        self.output_dir = sim_params['output_dir']
         
         # tracers
         tracer_flags = HOD_params['tracer_flags']
@@ -314,11 +312,6 @@ class AbacusHOD:
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
             weights = self.halo_data['hmultis'])
-        # print("tot num halos in histogram", np.sum(self.halo_mass_func),
-        #     "tot num halos in array", np.sum(self.halo_data['hmultis']),
-        #     np.min(self.halo_data['hdeltac']), np.max(self.halo_data['hdeltac']),
-        #     np.min(self.halo_data['hfenv']), np.max(self.halo_data['hfenv']))
-
 
 
     def staging(self):
@@ -326,10 +319,10 @@ class AbacusHOD:
         Constructor call this function to load the halo+particle subsamples onto memory. 
         """
         # all paths relevant for mock generation
-        scratch_dir = Path(self.scratch_dir)
+        output_dir = Path(self.output_dir)
         simname = Path(self.sim_name)
         sim_dir = Path(self.sim_dir)
-        mock_dir = scratch_dir / simname / ('z%4.3f'%self.z_mock)
+        mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
         # create mock_dir if not created
         mock_dir.mkdir(parents = True, exist_ok = True)
         subsample_dir = \
@@ -357,8 +350,8 @@ class AbacusHOD:
         for eslab in range(params['numslabs']):
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
@@ -414,8 +407,8 @@ class AbacusHOD:
             print("Loading simulation by slab, ", eslab)
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
@@ -520,11 +513,11 @@ class AbacusHOD:
             particle_data['pranksv'] =  np.ones(Nparts_tot)
             particle_data['pranksp'] =  np.ones(Nparts_tot)
             particle_data['pranksr'] =  np.ones(Nparts_tot)
-            
+        
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16):
+    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -542,7 +535,10 @@ class AbacusHOD:
             output to disk? default ``False``. Setting to ``True`` decreases performance. 
 
         ``Nthread``: int
-            Number of threads in the HOD run. Default 16. 
+            number of threads in the HOD run. Default 16. 
+
+        ``verbose``: bool, 
+            detailed stdout? default ``False``.
 
         Returns
         -------
@@ -564,7 +560,8 @@ class AbacusHOD:
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
-            savedir = self.mock_dir)
+            savedir = self.mock_dir,
+            verbose = False)
 
         return mock_dict
 
@@ -737,6 +734,8 @@ class AbacusHOD:
             clustering = self.compute_xirppi(mock_dict, *args, **kwargs)
         elif self.clustering_type == 'wp':
             clustering = self.compute_wp(mock_dict, *args, **kwargs)
+        elif self.clustering_type == 'multipole':
+            clustering = self.compute_multipole(mock_dict, *args, **kwargs)
         return clustering
     
     def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
@@ -786,6 +785,31 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
+    def compute_multipole(self, mock_dict, rpbins, pimax, Nthread = 8):
+        clustering = {}
+        for i1, tr1 in enumerate(mock_dict.keys()):
+            x1 = mock_dict[tr1]['x']
+            y1 = mock_dict[tr1]['y']
+            z1 = mock_dict[tr1]['z']
+            for i2, tr2 in enumerate(mock_dict.keys()):
+                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 == i2: # auto corr
+                    new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
+                        self.lbox, Nthread)
+                    new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
+                    clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
+                else:
+                    x2 = mock_dict[tr2]['x']
+                    y2 = mock_dict[tr2]['y']
+                    z2 = mock_dict[tr2]['z']
+                    new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
+                        self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                    new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, 
+                        x2 = x2, y2 = y2, z2 = z2)
+                    clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
+                    clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+        return clustering
+
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`w_p`.
@@ -832,7 +856,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def gal_reader(self, scratch_dir = None, simname = None, 
+    def gal_reader(self, output_dir = None, simname = None, 
         sim_dir = None, z_mock = None, want_rsd = None, tracers = None):
         """
         Loads galaxy data given directory and return a ``mock_dict`` dictionary.  
@@ -845,7 +869,7 @@ class AbacusHOD:
         ``sim_dir``: str
             the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
 
-        ``scratch_dir``: str
+        ``output_dir``: str
             the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
 
         ``z_mock``: floa
@@ -864,8 +888,8 @@ class AbacusHOD:
 
         """
 
-        if scratch_dir == None:
-            scratch_dir = Path(self.scratch_dir)
+        if output_dir == None:
+            output_dir = Path(self.output_dir)
         if simname == None:
             simname = Path(self.sim_name)
         if sim_dir == None:
@@ -876,7 +900,7 @@ class AbacusHOD:
             want_rsd = self.want_rsd
         if tracers == None:
             tracers = self.tracers.keys()
-        mock_dir = scratch_dir / simname / ('z%4.3f'%self.z_mock)
+        mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
 
         if want_rsd:
             rsd_string = "_rsd"

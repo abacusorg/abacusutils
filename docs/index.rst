@@ -2,6 +2,11 @@
    sphinx-quickstart on Tue May 19 12:00:18 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
+   
+.. figure:: images/icon_red.png
+  :width: 175
+  :alt: Abacus logo
+  :align: center
 
 abacusutils
 ===========
@@ -14,7 +19,7 @@ language-agnostic interfaces like Unix pipes.
 abacusutils is hosted in the `abacusorg/abacusutils <https://github.com/abacusorg/abacusutils>`_ GitHub repository.  Please report
 bugs and ask questions by opening an issue in that repository.
 
-While you're there, press the GitHub "Watch" button in the top right and select "Releases Only" to be notified about bug fixes
+While you're there, press the GitHub "Watch" button in the top right and select "Custom->Releases" to be notified about bug fixes
 and new features!  This package is still in early stages, and bugs are likely to be identified and squashed,
 and new performance opportunities identified.
 
@@ -28,7 +33,7 @@ and new performance opportunities identified.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Interfaces
+   :caption: Main Modules
 
    compaso
    hod

@@ -26,6 +26,8 @@ from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 import multiprocessing
 from multiprocessing import Pool
 
+from sklearn.neighbors import KDTree
+
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
@@ -47,39 +49,41 @@ def subsample_particles(m, MT):
     else:
         return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
-def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
-    slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
-    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+# # these two functions are for grid based density calculation. We found the grid based definiton is disfavored by data
+# def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
+#     slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
+#     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
-    cat = CompaSOHaloCatalog(
-        slabname, fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
-    Lbox = cat.header['BoxSizeHMpc']
-    halos = cat.halos
+#     cat = CompaSOHaloCatalog(
+#         slabname, fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
+#     Lbox = cat.header['BoxSizeHMpc']
+#     halos = cat.halos
 
-    if cleaning:
-        halos = halos[halos['N'] > 0]
+#     if cleaning:
+#         halos = halos[halos['N'] > 0]
 
-    # get a 3d histogram with number of objects in each cell                                                                       
-    D, edges = np.histogramdd(halos['x_L2com'], weights = halos['N'],
-        bins = N_dim, range = [[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2]])   
-    return D
+#     # get a 3d histogram with number of objects in each cell                                                                       
+#     D, edges = np.histogramdd(halos['x_L2com'], weights = halos['N'],
+#         bins = N_dim, range = [[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2]])   
+#     return D
 
 
-def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim, cleaning):   
-    Dtot = 0
-    for i in range(numslabs):
-        Dtot += get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning)   
+# def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim, cleaning):   
+#     Dtot = 0
+#     for i in range(numslabs):
+#         Dtot += get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning)   
 
-    # gaussian smoothing 
-    Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
+#     # gaussian smoothing 
+#     Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
 
-    # average number of particles per cell                                                                                         
-    D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
-    return Dtot / D_avg - 1
+#     # average number of particles per cell                                                                                         
+#     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
+#     return Dtot / D_avg - 1
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, cleaning, N_dim, newseed):
-    outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
-    outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod'
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed):
+    outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
+    outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
+    print("processing slab ", i)
     if MT:
         outfilename_halos += '_MT'
         outfilename_particles += '_MT'
@@ -89,19 +93,18 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     outfilename_halos += '_new.h5'
 
     np.random.seed(newseed + i)
-    # # if file already exists, just skip
-    # if os.path.exists(outfilename_halos) \
-    # and os.path.exists(outfilename_particles):
-    #     return 0
+    # if file already exists, just skip
+    if os.path.exists(outfilename_halos) \
+    and os.path.exists(outfilename_particles):
+        return 0
 
     # load the halo catalog slab
     print("loading halo catalog ")
     slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
-    start = time.time()
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
         cleaned_halos = cleaning)
     halos = cat.halos
     if cleaning:
@@ -113,9 +116,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     Mpart = header['ParticleMassHMsun'] # msun / h 
     H0 = header['H0']
     h = H0/100.0
-    print("finished loading halo catalog", time.time() - start)
-    print("number of halos ", len(halos), "max halo mass", np.max(halos['N']) * Mpart,
-        "min halo mass", np.min(halos['N']) * Mpart, "particle mass ", Mpart)
+
     # # form a halo table of the columns i care about 
     # creating a mask of which halos to keep, which halos to drop
     p_halos = subsample_halos(halos['N']*Mpart, MT)
@@ -125,43 +126,68 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     halos['mask_subsample'] = mask_halos
     halos['multi_halos'] = 1.0 / p_halos
 
-    nbins = 100
-    mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
+    # only generate fenv ranks and c ranks if the user wants to enable secondary biases
+    if want_AB:
+        nbins = 100
+        mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
 
-    print("computing density rank")
-    start = time.time()
-    dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
-    ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
-    halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
-    print("done overdensity array")
-    fenv_rank = np.zeros(len(halos))
-    for ibin in range(nbins):
-        mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
-        if np.sum(mmask) > 0:
-            if np.sum(mmask) == 1:
-                fenv_rank[mmask] = 0
-            else:
-                new_fenv_rank = halos_overdens[mmask].argsort().argsort()
-                fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-    halos['fenv_rank'] = fenv_rank
-    print("finished density rank", time.time() - start)
+        # # grid based environment calculation
+        # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
+        # ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
+        # halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
+        # fenv_rank = np.zeros(len(halos))
+        # for ibin in range(nbins):
+        #     mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
+        #     if np.sum(mmask) > 0:
+        #         if np.sum(mmask) == 1:
+        #             fenv_rank[mmask] = 0
+        #         else:
+        #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
+        #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+        # halos['fenv_rank'] = fenv_rank
 
-    # compute delta concentration
-    print("computing c rank")
-    start = time.time()
-    halos_c = halos['r90_L2com']/halos['r25_L2com']
-    deltac_rank = np.zeros(len(halos))
-    for ibin in range(nbins):
-        mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
-        if np.sum(mmask) > 0:
-            if np.sum(mmask) == 1:
-                deltac_rank[mmask] = 0
-            else:
-                new_deltac = halos_c[mmask] - np.median(halos_c[mmask])
-                new_deltac_rank = new_deltac.argsort().argsort()
-                deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
-    halos['deltac_rank'] = deltac_rank
-    print("finished delta c", time.time() - start)
+        allpos = halos['x_L2com']
+        allmasses = halos['N']*Mpart
+        allpos_tree = KDTree(allpos)
+
+        allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
+        allinds_outer = allpos_tree.query_radius(allpos, r = 5)
+        print("computng m stacks")
+        starttime = time.time()
+        Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
+            for ind in np.arange(len(halos))])
+
+        fenv_rank = np.zeros(len(Menv))
+        for ibin in range(nbins):
+            mmask = (halos['N']*Mpart > mbins[ibin]) \
+            & (halos['N']*Mpart < mbins[ibin + 1])
+            if np.sum(mmask) > 0:
+                if np.sum(mmask) == 1:
+                    fenv_rank[mmask] = 0
+                else:
+                    new_fenv_rank = Menv[mmask].argsort().argsort()
+                    fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+
+        halos['fenv_rank'] = fenv_rank
+
+        # compute delta concentration
+        print("computing c rank")
+        halos_c = halos['r90_L2com']/halos['r25_L2com']
+        deltac_rank = np.zeros(len(halos))
+        for ibin in range(nbins):
+            mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
+            if np.sum(mmask) > 0:
+                if np.sum(mmask) == 1:
+                    deltac_rank[mmask] = 0
+                else:
+                    new_deltac = halos_c[mmask] - np.median(halos_c[mmask])
+                    new_deltac_rank = new_deltac.argsort().argsort()
+                    deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
+        halos['deltac_rank'] = deltac_rank
+
+    else:
+        halos['fenv_rank'] = np.zeros(len(halos))
+        halos['deltac_rank'] = np.zeros(len(halos))
 
     # the new particle start, len, and multiplier
     halos_pstart = halos['npstartA']
@@ -182,7 +208,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     Mh_parts = np.full(len_old, -1.0)
     Np_parts = np.full(len_old, -1.0)
     downsample_parts = np.full(len_old, -1.0)
-    idh_parts = np.full(len_old, -1.0)
+    idh_parts = np.full(len_old, -1)
     deltach_parts = np.full(len_old, -1.0)
     fenvh_parts = np.full(len_old, -1.0)
 
@@ -354,38 +380,26 @@ def main(path2config, params = None):
     list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
     numslabs = len(halo_info_fns)
 
-    print(numslabs)
-
     tracer_flags = config['HOD_params']['tracer_flags']
     MT = False
     if tracer_flags['ELG'] or tracer_flags['QSO']:
         MT = True
     want_ranks = config['HOD_params']['want_ranks']
+    want_AB = config['HOD_params']['want_AB']
     newseed = 600
-    N_dim = config['HOD_params']['Ndim']
+    # N_dim = config['HOD_params']['Ndim']
 
     os.makedirs(savedir, exist_ok = True)
 
-    print("reading sim ", simname, "redshift ", z_mock)
-    start = time.time()
-    if not os.path.exists(savedir+"/density_field.h5"):
-        dens_grid = get_smo_density(config['HOD_params']['density_sigma'],
-             numslabs, simdir, simname, z_mock, N_dim, cleaning)
-        print("Generating density field took ", time.time() - start)
-        # np.savez(savedir+"/density_field", dens = dens_grid)
-        newfile = h5py.File(savedir+"/density_field.h5", 'w')
-        dataset = newfile.create_dataset('dens', data = dens_grid)
-        newfile.close()
-
-    p = multiprocessing.Pool(config['sim_params']['Nthread_load'])
+    p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
         repeat(simdir), repeat(simname), repeat(z_mock), 
         repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-        repeat(cleaning), repeat(N_dim), repeat(newseed)))
+        repeat(want_AB), repeat(cleaning), repeat(newseed)))
     p.close()
     p.join()
 
-    print("done, took time ", time.time() - start)
+    # print("done, took time ", time.time() - start)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
@@ -399,13 +413,14 @@ if __name__ == "__main__":
 
     main(**args)
 
-    # # Simulation parameters
+    print("done")
+    # # run a series of simulations
     # param_dict = {
     # 'sim_params' :
     #     {
     #     'sim_name': 'AbacusSummit_base_c000_ph006',                                 # which simulation 
     #     'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
-    #     'scratch_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
+    #     'output_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
     #     'subsample_dir': '/mnt/marvin1/syuan/scratch/data_summit/',                 # where to output subsample data
     #     'z_mock': 0.5,                                                             # which redshift slice
     #     'Nthread_load': 7                                                          # number of thread for organizing simulation outputs (prepare_sim)

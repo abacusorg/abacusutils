@@ -57,9 +57,9 @@ def main(path2config):
         # # run hod, ngal, xirppi
         # newBall.tracers['LRG']['alpha'] += 0.01
         # print("alpha = ",newBall.tracers['LRG']['alpha'])
-        # start = time.time()
-        # mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
-        # print("Done hod, took time ", time.time() - start)
+        start = time.time()
+        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 64)
+        print("Done hod, took time ", time.time() - start)
         start = time.time()
         # ngal_dict = newBall.compute_ngal()
         # print("Done ngal, took time ", time.time() - start, ngal_dict)

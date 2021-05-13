@@ -199,6 +199,29 @@ at the level of individual files.  In other words, when loading multiple files,
 the concatenated array will never be constructed for columns that only exist for
 dependency purposes.
 
+Superslab (Chunk) Processing
+============================
+The halo catalogs are divided across multiple files, called "superslabs", which are
+typically planar chunks of the simulation volume (all y,z for some range of x, with
+a bit of overlap at the boundaries).  Applications that can process the volume
+superslab-by-superslab can save a substantial amount of memory compared to loading
+the full volume.  To load a single superslab, pass the corresponding ``halo_info_XXX.asdf``
+file as the ``path`` argument:
+
+.. code-block:: python
+
+    cat = CompaSOHaloCatalog('AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf')
+
+If your application needs one slab of padding, you can pass a list of files and proceed in a
+rolling fashion:
+
+.. code-block:: python
+
+    cat = CompaSOHaloCatalog(['AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_033.asdf',
+                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf',
+                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_001.asdf'])
+
+
 Multi-threaded Decompression
 ============================
 The Blosc compression we use inside the ASDF files supports multi-threaded
@@ -335,6 +358,8 @@ class CompaSOHaloCatalog:
         if 'load_subsamples' in kwargs:
             load_subsamples = kwargs.pop('load_subsamples')
             warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`', FutureWarning)
+            
+        self.cleandir = kwargs.pop('cleandir',None)
 
         # Check no unknown args!
         if kwargs:
@@ -345,7 +370,7 @@ class CompaSOHaloCatalog:
          self.cleandir,
          self.superslab_inds,
          self.halo_fns,
-         self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos)
+         self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned_halos=cleaned_halos, cleandir=self.cleandir)
 
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
@@ -429,7 +454,7 @@ class CompaSOHaloCatalog:
             print('\n'+str(self))
 
 
-    def _setup_file_paths(self, path, cleaned_halos=True):
+    def _setup_file_paths(self, path, cleaned_halos=True, cleandir=None):
         '''Figure out what files the user is asking for
         '''
 
@@ -476,8 +501,10 @@ class CompaSOHaloCatalog:
 
         if cleaned_halos:
             pathsplit = groupdir.split(os.path.sep)
-            cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos', *pathsplit[-3:])  # TODO ugly
-            cleaned_halo_fns = [cleandir+'/cleaned_halo_info_%03d.asdf'%(ext) for ext in superslab_inds]
+            if not cleandir:
+                cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos')
+            cleandir = pjoin(cleandir, *pathsplit[-3:])  # TODO ugly
+            cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
             if len(cleaned_halo_fns) == 0:
                 raise FileNotFoundError(f'No cleaned_halo_info files found!')
         else:
