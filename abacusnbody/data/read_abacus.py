@@ -68,8 +68,8 @@ def read_asdf(fn, colname=None,
     import asdf.compression
     try:
         asdf.compression.validate('blsc')
-    except:
-        raise RuntimeError('Error: your ASDF installation does not support Blosc compression.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
+    except Exception as e:
+        raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
     base = basename(fn)
     if load_pos is None:

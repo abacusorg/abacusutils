@@ -14,6 +14,15 @@ import struct
 import numpy as np
 import blosc
 from asdf.extension import Extension, Compressor
+
+import asdf
+def _monkey_patch(*args,**kwargs):
+    raise Exception("Please use abacusnbody.data.asdf.set_nthreads(nthreads)")
+    
+asdf.compression.set_decompression_options = _monkey_patch
+
+def set_nthreads(nthreads):
+    blosc.set_nthreads(nthreads)
     
 
 class BloscCompressor(Compressor):

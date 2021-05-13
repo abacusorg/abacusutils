@@ -266,7 +266,7 @@ import asdf.compression
 try:
     asdf.compression.validate('blsc')
 except Exception as e:
-    raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils?") from e
+    raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
 from . import bitpacked
 
@@ -274,6 +274,8 @@ from . import bitpacked
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
 #asdf.config.get_config().decompression_options['blsc'] = dict(nthreads=DEFAULT_BLOSC_THREADS)
+import .asdf as _asdf
+_asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
     """
