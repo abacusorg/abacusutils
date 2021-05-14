@@ -93,9 +93,8 @@ import numpy as np
 import asdf.compression
 try:
     asdf.compression.validate('blsc')
-except:
-    # Note: this is a temporary solution until blosc is integrated into ASDF, or until we package a pluggable decompressor
-    warnings.warn('Your ASDF installation does not support Blosc compression.  May not be able to read AbacusSummit ASDF files.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
+except Exception as e:
+    raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
 DEFAULT_DATA_KEY = 'data'
 DEFAULT_HEADER_KEY = 'header'

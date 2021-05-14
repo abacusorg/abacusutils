@@ -23,6 +23,8 @@ Enhancements
 
 - Printing a ``CompaSOHaloCatalog`` now shows the memory usage (also available with ``CompaSOHaloCatalog.nbytes()``) [#6]
 
+- Our custom fork of ASDF is no longer required [#10]
+
 Deprecations
 ~~~~~~~~~~~~
 - Passing a string to the ``load_subsamples`` argument of ``CompaSOHaloCatalog`` is deprecated;
