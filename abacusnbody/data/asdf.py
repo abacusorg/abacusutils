@@ -111,7 +111,12 @@ class BloscCompressor(Compressor):
         out = np.frombuffer(out, dtype=np.uint8).ctypes.data
         
         for block in blocks:
-            block = memoryview(block).cast('c').toreadonly()
+            block = memoryview(block).cast('c')
+            try:
+                block = block.toreadonly()  # python>=3.8 only
+            except AttributeError:
+                pass
+            
             if not block.contiguous:
                 raise ValueError(block.contiguous)
                 
