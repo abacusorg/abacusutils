@@ -34,7 +34,7 @@ wget https://github.com/abacusorg/abacusutils/archive/master.zip
 ```
 
 ## Usage
-abacusutil has multiple interfaces, summarized here and at <https://abacusutils.readthedocs.io/en/latest/usage.html>.
+abacusutils has multiple interfaces, summarized here and at <https://abacusutils.readthedocs.io/en/latest/usage.html>.
 
 Specific examples of how to use abacusutils to work with AbacusSummit data will soon
 be given at the AbacusSummit website: <https://abacussummit.readthedocs.io>
