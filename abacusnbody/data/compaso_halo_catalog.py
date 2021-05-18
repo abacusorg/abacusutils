@@ -183,7 +183,7 @@ Field Subset Loading
 ====================
 Because the ASDF files are column-oriented, it is possible to load just one or a few
 columns (halo catalog fields) rather than the whole file.  This can save huge amounts
-of IO, memory, and CPU time (due to the decompression).  Use the ``fields`` argument
+of IO, memory, and CPU time (the latter due to the decompression).  Use the ``fields`` argument
 to the ``CompaSOHaloCatalog`` constructor to specify the list of columns you want.
 
 In detail, some columns are stored as ratios to other columns.  For example, ``r90``
