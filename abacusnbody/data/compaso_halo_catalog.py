@@ -183,7 +183,7 @@ Field Subset Loading
 ====================
 Because the ASDF files are column-oriented, it is possible to load just one or a few
 columns (halo catalog fields) rather than the whole file.  This can save huge amounts
-of IO, memory, and CPU time (due to the decompression).  Use the ``fields`` argument
+of IO, memory, and CPU time (the latter due to the decompression).  Use the ``fields`` argument
 to the ``CompaSOHaloCatalog`` constructor to specify the list of columns you want.
 
 In detail, some columns are stored as ratios to other columns.  For example, ``r90``
@@ -265,16 +265,17 @@ import asdf
 import asdf.compression
 try:
     asdf.compression.validate('blsc')
-except:
-    # Note: this is a temporary solution until blosc is integrated into ASDF, or until we package a pluggable decompressor
-    exit('Error: your ASDF installation does not support Blosc compression.  Please install the fork with Blosc support with the following command: "pip install git+https://github.com/lgarrison/asdf.git"')
+except Exception as e:
+    raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
 from . import bitpacked
 
 # Default to 4 decompression threads, or fewer if fewer cores are available
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
-asdf.compression.set_decompression_options(nthreads=DEFAULT_BLOSC_THREADS)
+#asdf.config.get_config().decompression_options['blsc'] = dict(nthreads=DEFAULT_BLOSC_THREADS)
+from . import asdf as _asdf
+_asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
     """

@@ -10,18 +10,16 @@ or clone from GitHub.  The pip installation is recommended if you don't need to 
 the source:
 ::
     
-    $ pip install git+https://github.com/lgarrison/asdf.git abacusutils
+    $ pip install abacusutils
 
-This command installs both our fork of ASDF and the abacusutils package.
-It also gives access to the :doc:`pipes` functionality.
+This command will also give access to the command-line :doc:`pipes` functionality.
 
-Python Dependencies
-^^^^^^^^^^^^^^^^^^^
-The Python dependencies are numpy, asdf (our fork), blosc, astropy, and numba.
-The only "unusual" dependency is asdf, because we require our fork of the project
-to be installed (located at: https://github.com/lgarrison/asdf/).  Our fork supports
-`blosc compression <https://blosc.org/pages/blosc-in-depth/>`_.
+.. note::
+    Previously, a custom fork of ASDF was required.  As of abacusutils 1.0.0,
+    this is no longer required, instead using the extension mechanism of ASDF 2.8.
 
+All the pip-installed functionality is pure-Python, using numba for any performance-intensive
+routines.
 
 Installing from Cloned Repository
 ---------------------------------
@@ -31,11 +29,11 @@ pip "editable mode":
 ::
     $ git clone https://github.com/abacusorg/abacusutils.git
     $ cd abacusutils
-    $ pip install -r requirements.txt -e ./  # install from current dir in editable mode
+    $ pip install -e ./  # install from current dir in editable mode
     
 The ``-e`` flag ("editable") is optional but recommended so that the installed copy is just a
 link to the cloned repo (and thus modifications to the Python code will be seen by code that
-imports abacusutils).  The requirements file brings in the ASDF fork.
+imports abacusutils).
     
 .. warning::
     If you download via pip and then later clone the repo, don't forget to
