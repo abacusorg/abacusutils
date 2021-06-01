@@ -245,6 +245,7 @@ You can control the number of decompression threads with:
 from glob import glob
 import os
 import os.path
+# TODO: may be happier with pathlib
 from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, abspath, samefile
 import re
 import gc
@@ -287,7 +288,7 @@ class CompaSOHaloCatalog:
     # TODO: generator mode over superslabs
 
     def __init__(self, path, cleaned_halos=True, subsamples=False, convert_units=True, unpack_bits=False,
-                 fields='DEFAULT_FIELDS', verbose=False,
+                 fields='DEFAULT_FIELDS', verbose=False, cleandir=None,
                  **kwargs):
         """
         Loads halos.  The ``halos`` field of this object will contain
@@ -312,9 +313,9 @@ class CompaSOHaloCatalog:
         cleaned_halos: bool, optional
             Loads the "cleaned" version of the halo catalogues. Always recommended.
             Assumes there is a directory called 'cleaned_halos' at the same level
-            as the top-level simulation directory.
+            as the top-level simulation directory (or see ``cleandir``).
             Default: True
-            False returns the out-of-the-box compaSO halos. May be useful for specific
+            False returns the out-of-the-box CompaSO halos. May be useful for specific
             applications.
 
         subsamples: bool or dict, optional
@@ -352,6 +353,11 @@ class CompaSOHaloCatalog:
 
         verbose: bool, optional
             Print informational messages. Default: False
+            
+        cleandir: str, optional
+            Where the halo catalog cleaning files are located (usually called ``cleaned_halos/``).
+            Default of None will try to detect it automatically.  Only has any effect if
+            using ``cleaned_halos=True``.
 
         """
         # Internally, we will use `load_subsamples` as the name of the `subsamples` arg to distinguish it from the `self.subsamples` table
@@ -362,6 +368,7 @@ class CompaSOHaloCatalog:
             warnings.warn('`load_subsamples` argument is deprecated; use `subsamples`', FutureWarning)
             
         self.cleandir = kwargs.pop('cleandir',None)
+        self.cleaned_halos = cleaned_halos
 
         # Check no unknown args!
         if kwargs:
@@ -504,11 +511,23 @@ class CompaSOHaloCatalog:
         if cleaned_halos:
             pathsplit = groupdir.split(os.path.sep)
             if not cleandir:
-                cleandir = os.path.sep + pjoin(*pathsplit[:-3], 'cleaned_halos')
-            cleandir = pjoin(cleandir, *pathsplit[-3:])  # TODO ugly
+                s = -3
+                cleandir = os.path.sep + pjoin(*pathsplit[:s], 'cleaned_halos')
+                if not isdir(cleandir) and 'small' in pathsplit[-3]:
+                    s = -4
+                    cleandir_small = os.path.sep + pjoin(*pathsplit[:s], 'cleaned_halos')
+                    if not isdir(cleandir_small):
+                        raise FileNotFoundError(f'Could not find cleaning info dir. Tried: "{cleandir}", "{cleandir_small}".')
+                    cleandir = cleandir_small
+            
+            cleandir = pjoin(cleandir, *pathsplit[s:])  # TODO ugly
+            
             cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
-            if len(cleaned_halo_fns) == 0:
-                raise FileNotFoundError(f'No cleaned_halo_info files found!')
+            
+            for fn in cleaned_halo_fns:
+                if not isfile(fn):
+                    raise FileNotFoundError(f'Could not find file {fn}')
+            
         else:
             cleandir = None
             cleaned_halo_fns = []
@@ -1190,6 +1209,8 @@ class CompaSOHaloCatalog:
         lines += ['-'*len(lines[-1]),
                  f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field != 1 else "field "}, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB',
                  f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field != 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
+                  '',
+                 f'Cleaned halos: {self.cleaned_halos}'
                  ]
         return '\n'.join(lines)
 
