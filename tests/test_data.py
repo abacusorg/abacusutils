@@ -19,7 +19,7 @@ def test_halos_unclean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=False)
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=False)
 
     # to regenerate reference
     #ref = cat.halos
@@ -43,7 +43,7 @@ def test_halos_clean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=True)
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=True)
 
     # to regenerate reference
     #ref = cat.halos
@@ -74,7 +74,7 @@ def test_subsamples_unclean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=False)
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=False)
 
     # to regenerate reference
     #ref = cat.subsamples
@@ -98,7 +98,7 @@ def test_subsamples_clean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned_halos=True)
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=True)
 
     # to regenerate reference
     #ref = cat.subsamples

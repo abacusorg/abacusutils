@@ -29,6 +29,8 @@ Deprecations
 ~~~~~~~~~~~~
 - Passing a string to the ``load_subsamples`` argument of ``CompaSOHaloCatalog`` is deprecated;
   use a dict instead, like: ``load_subsamples=dict(A=True, rv=True)``. [#6]
+  
+- ``cleaned_halos`` renamed to ``cleaned``
 
 0.4.0 (2021-02-03)
 ------------------
