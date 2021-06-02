@@ -169,7 +169,7 @@ there. Here we show the scripts within ``run_hod.py`` for reference.::
     path2config = 'config/abacus_hod.yaml' # path to config file
 
     # load the config file and parse in relevant parameters
-    config = yaml.load(open(path2config))
+    config = yaml.safe_load(open(path2config))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']

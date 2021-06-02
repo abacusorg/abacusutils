@@ -364,7 +364,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 def main(path2config, params = None):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
-    config = yaml.load(open(path2config))
+    config = yaml.safe_load(open(path2config))
     # update params if needed
     if params is None:
         params = {}
