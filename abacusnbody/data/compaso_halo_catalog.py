@@ -528,7 +528,7 @@ class CompaSOHaloCatalog:
             
             for fn in cleaned_halo_fns:
                 if not isfile(fn):
-                    raise FileNotFoundError(f'Could not find file {fn}')
+                    raise FileNotFoundError(f'Cleaning info not found. File path was: "{fn}"')
             
         else:
             cleandir = None
