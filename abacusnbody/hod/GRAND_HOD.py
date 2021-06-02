@@ -15,7 +15,7 @@ from numba import njit, types, jit
 from numba.typed import Dict
 
 # import yaml
-# config = yaml.load(open('config/abacus_hod.yaml'))
+# config = yaml.safe_load(open('config/abacus_hod.yaml'))
 # numba.set_num_threads(16)
 float_array = types.float64[:]
 int_array = types.int64[:]
