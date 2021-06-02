@@ -10,7 +10,7 @@ Fixes
   
 New Features
 ~~~~~~~~~~~~
-- ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned_halos=True`` (the default) [#6]
+- ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned=True`` (the default) [#6]
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
