@@ -311,7 +311,7 @@ class CompaSOHaloCatalog:
 
         cleaned: bool, optional
             Loads the "cleaned" version of the halo catalogues. Always recommended.
-            Assumes there is a directory called 'cleaned_halos' at the same level
+            Assumes there is a directory called ``cleaning/`` at the same level
             as the top-level simulation directory (or see ``cleandir``).
             Default: True
             False returns the out-of-the-box CompaSO halos. May be useful for specific
@@ -354,7 +354,7 @@ class CompaSOHaloCatalog:
             Print informational messages. Default: False
             
         cleandir: str, optional
-            Where the halo catalog cleaning files are located (usually called ``cleaned_halos/``).
+            Where the halo catalog cleaning files are located (usually called ``cleaning/``).
             Default of None will try to detect it automatically.  Only has any effect if
             using ``cleaned=True``.
 
@@ -512,19 +512,20 @@ class CompaSOHaloCatalog:
 
         if cleaned:
             pathsplit = groupdir.split(os.path.sep)
+            del pathsplit[-2]  # remove halos/
             if not cleandir:
-                s = -3
-                cleandir = os.path.sep + pjoin(*pathsplit[:s], 'cleaned_halos')
-                if not isdir(cleandir) and 'small' in pathsplit[-3]:
-                    s = -4
-                    cleandir_small = os.path.sep + pjoin(*pathsplit[:s], 'cleaned_halos')
+                s = -2
+                cleandir = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
+                if not isdir(cleandir) and 'small' in pathsplit[-2]:
+                    s = -3
+                    cleandir_small = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
                     if not isdir(cleandir_small):
                         raise FileNotFoundError(f'Could not find cleaning info dir. Tried: "{cleandir}", "{cleandir_small}".')
                     cleandir = cleandir_small
             
             cleandir = pjoin(cleandir, *pathsplit[s:])  # TODO ugly
             
-            cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
+            cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info', 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
             
             for fn in cleaned_halo_fns:
                 if not isfile(fn):
@@ -970,7 +971,7 @@ class CompaSOHaloCatalog:
             particle_afs = [asdf.open(pjoin(self.groupdir, f'halo_{RVorPID}_{AB}', f'halo_{RVorPID}_{AB}_{i:03d}.asdf'), lazy_load=True, copy_arrays=True)
                                     for i in self.superslab_inds]
             if cleaned:
-                particle_merge_afs = [asdf.open(pjoin(self.cleandir,  f'cleaned_rvpid_{i:03d}.asdf'), lazy_load=True, copy_arrays=True) for i in self.superslab_inds]
+                particle_merge_afs = [asdf.open(pjoin(self.cleandir,  'cleaned_rvpid', f'cleaned_rvpid_{i:03d}.asdf'), lazy_load=True, copy_arrays=True) for i in self.superslab_inds]
 
             # Should have same number of files (1st subsample; 2nd L1), but note that empty slabs don't get files
             # TODO: double-check this assert
