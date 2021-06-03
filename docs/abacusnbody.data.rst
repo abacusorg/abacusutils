@@ -26,3 +26,12 @@ bitpacked module
    :members:
    :undoc-members:
    :show-inheritance:
+
+
+asdf module
+----------------
+
+.. automodule:: abacusnbody.data.asdf
+   :members:
+   :undoc-members:
+   :show-inheritance:
