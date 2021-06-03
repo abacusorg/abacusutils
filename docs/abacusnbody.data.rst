@@ -29,7 +29,7 @@ bitpacked module
 
 
 asdf module
-----------------
+-----------
 
 .. automodule:: abacusnbody.data.asdf
    :members:
