@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.0.2 (2021-06-04)
+------------------
+
+Changes
+~~~~~~~
+- Relax numba version requirement for DESI Conda compatibility. Warning: ``numba<0.52`` not fully tested with ``abacusnbody.hod`` package.
+
+
 1.0.1 (2021-06-03)
 ------------------
 
