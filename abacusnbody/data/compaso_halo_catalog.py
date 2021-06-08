@@ -307,12 +307,19 @@ class CompaSOHaloCatalog:
             Or a single halo info file, or a list of halo info files.
             Will accept ``halo_info`` dirs or "redshift" dirs
             (e.g. ``z1.000/halo_info/`` or ``z1.000/``).
+	    
+	    .. note::
+	    
+                To load cleaned catalogs, you do *not* need to pass a different
+		argument to the ``path`` directory.  Use ``cleaned=True`` instead
+		and the path to the cleaning info will be detected automatically
+		(or see ``cleandir``).
 
         cleaned: bool, optional
             Loads the "cleaned" version of the halo catalogues. Always recommended.
             Assumes there is a directory called ``cleaning/`` at the same level
             as the top-level simulation directory (or see ``cleandir``).
-            Default: True
+            Default: True.
             False returns the out-of-the-box CompaSO halos. May be useful for specific
             applications.
 
