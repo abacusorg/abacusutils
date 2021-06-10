@@ -22,14 +22,14 @@ from astropy.io import ascii
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
 EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
 EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_new.h5')
+    'data_summit/Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_oldfenv_ref.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_new.h5')
+    'data_summit/Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_oldfenv_ref.h5')
 EXAMPLE_GALS = os.path.join(os.path.dirname(__file__), 
     'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/LRGs.dat')
 path2config = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
 
-@pytest.mark.xfail
+# @pytest.mark.xfail
 def test_hod(tmp_path, reference_mode = False):
     '''Test loading a halo catalog
     '''
@@ -75,12 +75,12 @@ def test_hod(tmp_path, reference_mode = False):
         # check subsample file match
         prepare_sim.main(EXAMPLE_CONFIG, params = config)
 
-        newhalos = h5py.File(savedir+'/halos_xcom_2_seed600_abacushod_new.h5', 'r')['halos']
+        newhalos = h5py.File(savedir+'/halos_xcom_2_seed600_abacushod_oldfenv_new.h5', 'r')['halos']
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
         for i in range(len(newhalos)):
             for j in range(len(newhalos[i])):
                 assert np.array_equal(newhalos[i][j], temphalos[i][j])
-        newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_new.h5', 'r')['particles']
+        newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_oldfenv_new.h5', 'r')['particles']
         tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
         for i in range(len(newparticles)):
             for j in range(len(newparticles[i])):
@@ -99,7 +99,7 @@ def test_hod(tmp_path, reference_mode = False):
         
         # throw away run for jit to compile, write to disk
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
-        savedir_gal = config['sim_params']['scratch_dir']\
+        savedir_gal = config['sim_params']['output_dir']\
             +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
         data = ascii.read(EXAMPLE_GALS)
         data1 = ascii.read(savedir_gal)
@@ -107,4 +107,4 @@ def test_hod(tmp_path, reference_mode = False):
             assert np.allclose(data[ekey], data1[ekey])
 
 if __name__ == '__main__':
-    test_hod(".", reference_mode = True)
+    test_hod(".", reference_mode = False)
