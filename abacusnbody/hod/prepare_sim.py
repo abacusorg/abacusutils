@@ -37,15 +37,19 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 def subsample_halos(m, MT):
     x = np.log10(m)
     if MT:
-        return 1.0/(1.0 + 10*np.exp(-(x - 11.2)*25)) # MT
+        downfactors = np.zeros(len(x))
+        mask = x < 11.9572
+        downfactors[mask] = 0.1/(1.0 + 10*np.exp(-(x[mask] - 11.2)*25))
+        downfactors[~mask] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask] - 12.6)*7))
+        return downfactors
     else:
-        return 1.0/(1.0 + 0.1*np.exp(-(x - 13.3)*5)) # LRG only
+        return 1.0/(1.0 + 0.1*np.exp(-(x - 12.6)*7)) # LRG only
 
 def subsample_particles(m, MT):
     x = np.log10(m)
     # return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
     if MT:
-        return 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
+        return 0.03 # 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
     else:
         return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
 
@@ -229,8 +233,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             Mh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['N'][j] * Mpart # in msun / h
             Np_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = np.sum(submask)
             idh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['id'][j]
-            deltach_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = deltac_rank[j]
-            fenvh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = fenv_rank[j]
+            deltach_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['deltac_rank'][j]
+            fenvh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['fenv_rank'][j]
 
             # updating the pstart, pnum, for the halos
             halos_pstart_new[j] = start_tracker
