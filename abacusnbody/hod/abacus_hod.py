@@ -350,8 +350,8 @@ class AbacusHOD:
         for eslab in range(params['numslabs']):
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
