@@ -59,7 +59,7 @@ def subsample_particles(m, MT):
 #     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
 
 #     cat = CompaSOHaloCatalog(
-#         slabname, fields = ['N', 'x_L2com'], cleaned_halos = cleaning)
+#         slabname, fields = ['N', 'x_L2com'], cleaned = cleaning)
 #     Lbox = cat.header['BoxSizeHMpc']
 #     halos = cat.halos
 
@@ -109,7 +109,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
         'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
-        cleaned_halos = cleaning)
+        cleaned = cleaning)
     halos = cat.halos
     if cleaning:
         halos = halos[halos['N'] > 0]
@@ -368,7 +368,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 def main(path2config, params = None):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
-    config = yaml.load(open(path2config))
+    config = yaml.safe_load(open(path2config))
     # update params if needed
     if params is None:
         params = {}

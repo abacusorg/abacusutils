@@ -1,16 +1,18 @@
 """
 to test the hod code against reference, run 
-    pytest tests/test_hod.py
+    $ pytest tests/test_hod.py
 from abacusutils/ 
 
 to generate new reference, run 
-    python tests/test_hod.py
+    $ python tests/test_hod.py
 from abacusutils/
 
 """
+
 import tempfile
 import filecmp
 import os.path
+
 import yaml
 import pytest
 import h5py
@@ -27,6 +29,7 @@ EXAMPLE_GALS = os.path.join(os.path.dirname(__file__),
     'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/LRGs.dat')
 path2config = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
 
+@pytest.mark.xfail
 def test_hod(tmp_path, reference_mode = False):
     '''Test loading a halo catalog
     '''
@@ -38,7 +41,7 @@ def test_hod(tmp_path, reference_mode = False):
         prepare_sim.main(path2config)
 
         # load the yaml parameters
-        config = yaml.load(open(path2config))
+        config = yaml.safe_load(open(path2config))
         sim_params = config['sim_params']
         HOD_params = config['HOD_params']
         clustering_params = config['clustering_params']
@@ -57,7 +60,7 @@ def test_hod(tmp_path, reference_mode = False):
 
     # test mode
     else:
-        config = yaml.load(open(EXAMPLE_CONFIG))
+        config = yaml.safe_load(open(EXAMPLE_CONFIG))
         sim_params = config['sim_params']
         HOD_params = config['HOD_params']
         clustering_params = config['clustering_params']
@@ -97,7 +100,7 @@ def test_hod(tmp_path, reference_mode = False):
         # throw away run for jit to compile, write to disk
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
         savedir_gal = config['sim_params']['scratch_dir']\
-        +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
+            +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
         data = ascii.read(EXAMPLE_GALS)
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():

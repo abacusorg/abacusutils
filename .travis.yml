@@ -2,6 +2,7 @@ python:
   - 3.6
   - 3.7
   - 3.8
+  - 3.9
 language: python
 dist: bionic
 before_install:
@@ -10,7 +11,6 @@ before_install:
   - python --version
   - pip install -U pip
   - pip install -U pytest
-  - pip install git+https://github.com/lgarrison/asdf.git
   - gcc --version
 install:
   - pip install .
