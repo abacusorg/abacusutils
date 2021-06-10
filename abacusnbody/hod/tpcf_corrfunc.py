@@ -112,7 +112,7 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
 
 
 def calc_wp_fast(x1, y1, z1, rpbins, pimax, 
-    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
+    lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
     if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
 
@@ -135,10 +135,15 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     lbox = np.float32(lbox)
 
     if autocorr == 1:    
+        print("sample size", len(x1))
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
+        print("sample size", len(x1), len(x2))
+        x2 = x2.astype(np.float32)
+        y2 = y2.astype(np.float32)
+        z2 = z2.astype(np.float32)
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']

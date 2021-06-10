@@ -350,11 +350,11 @@ class AbacusHOD:
         for eslab in range(params['numslabs']):
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -410,8 +410,8 @@ class AbacusHOD:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -670,8 +670,8 @@ class AbacusHOD:
                     Mh_temp = 10**logMs[i]
                     logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
-                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma)
-                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, A_s)
+                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma, A_s)
+                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha)
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp
                     ngal_sat += halo_mass_func[i, j, k] * nsat_temp
         return ngal_cent, ngal_sat
@@ -846,8 +846,10 @@ class AbacusHOD:
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2:
+                    print(tr1+'_'+tr2)
                     clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
                 else:
+                    print(tr1+'_'+tr2)
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
