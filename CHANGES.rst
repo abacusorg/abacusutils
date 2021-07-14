@@ -1,8 +1,12 @@
 Changelog
 =========
 
-1.0.3 (upcoming)
-----------------
+1.0.3 (2021-06-16)
+------------------
+
+Fixes
+~~~~~
+- Fix HOD ``prepare_sim`` error when ``want_AB = False`` [#14]
 
 Changes
 ~~~~~~~
