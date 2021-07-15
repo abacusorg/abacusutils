@@ -526,7 +526,7 @@ class CompaSOHaloCatalog:
                     s = -3
                     cleandir_small = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
                     if not isdir(cleandir_small):
-                        raise FileNotFoundError(f'Could not find cleaning info dir. Tried: "{cleandir}", "{cleandir_small}".')
+                        raise FileNotFoundError(f'Could not find cleaning info dir. Tried: "{cleandir}", "{cleandir_small}". To load the uncleaned catalog, use `cleaned=False`.')
                     cleandir = cleandir_small
             
             cleandir = pjoin(cleandir, *pathsplit[s:])  # TODO ugly
@@ -535,7 +535,7 @@ class CompaSOHaloCatalog:
             
             for fn in cleaned_halo_fns:
                 if not isfile(fn):
-                    raise FileNotFoundError(f'Cleaning info not found. File path was: "{fn}"')
+                    raise FileNotFoundError(f'Cleaning info not found. File path was: "{fn}". To load the uncleaned catalog, use `cleaned=False`.')
             
         else:
             cleandir = None
