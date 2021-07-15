@@ -21,7 +21,7 @@ HOD_params:
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
         LRG: True 
-        ELG: False
+        ELG: True
         QSO: False
     want_rsd: True                 # want RSD? 
     write_to_disk: False
@@ -87,6 +87,7 @@ HOD_params:
         Asat: 0
         Bcent: 0
         Bsat: 0
+        ic: 1.0
 
 # Power spectrum parameters
 clustering_params:
