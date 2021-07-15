@@ -25,8 +25,10 @@ EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__),
     'data_summit/Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_oldfenv_MT_ref.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
     'data_summit/Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_oldfenv_MT_ref.h5')
-EXAMPLE_GALS = os.path.join(os.path.dirname(__file__), 
+EXAMPLE_LRGS = os.path.join(os.path.dirname(__file__), 
     'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/LRGs.dat')
+EXAMPLE_ELGS = os.path.join(os.path.dirname(__file__), 
+    'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/ELGs.dat')
 path2config = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
 
 # @pytest.mark.xfail
@@ -101,14 +103,14 @@ def test_hod(tmp_path, reference_mode = False):
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
         savedir_gal = config['sim_params']['output_dir']\
             +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
-        data = ascii.read(EXAMPLE_GALS)
+        data = ascii.read(EXAMPLE_LRGS)
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():
             assert np.allclose(data[ekey], data1[ekey])
 
         savedir_gal = config['sim_params']['output_dir']\
             +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/ELGs.dat"
-        data = ascii.read(EXAMPLE_GALS)
+        data = ascii.read(EXAMPLE_ELGS)
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():
             assert np.allclose(data[ekey], data1[ekey])

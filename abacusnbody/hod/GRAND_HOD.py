@@ -692,7 +692,6 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     inv_velz2kms = 1/velz2kms
     lbox = params['Lbox']
     # for each halo, generate central galaxies and output to file
-    print(LRG_design_array)
     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
              halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
