@@ -57,6 +57,7 @@ def generate_cf(cat, nthread):
     '''
     log(f'Using {nthread} threads')
     
+    N = len(cat.halos)
     pos = cat.halos['x_L2com'].T
     box = cat.header['BoxSize']
     rbins = np.geomspace(0.1, 50, 13)
@@ -65,7 +66,7 @@ def generate_cf(cat, nthread):
                             periodic=True, boxsize=box,
                            )
     cf = Table(cf, meta=cat.header)
-    RR = len(pos)*(len(pos)-1)/box**3 * 4/3*np.pi*np.diff(rbins**3)
+    RR = N*(N-1)/box**3 * 4/3*np.pi*np.diff(rbins**3)
     cf['xi'] = cf['npairs'] / RR - 1
     cf['rmid'] = (cf['rmin'] + cf['rmax'])/2.
     
