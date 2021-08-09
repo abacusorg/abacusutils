@@ -37,8 +37,8 @@ HOD_params:
         kappa: 0.4
         alpha_c: 0
         alpha_s: 1
-        s: 0.1
-        s_v: -0.1
+        s: 0
+        s_v: 0
         s_p: 0
         s_r: 0
         Acent: 0
