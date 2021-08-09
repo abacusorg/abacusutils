@@ -350,11 +350,11 @@ class AbacusHOD:
         for eslab in range(params['numslabs']):
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_newdownsample'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_newdownsample'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_newdownsample_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_newdownsample_MT'%eslab)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -407,11 +407,11 @@ class AbacusHOD:
             print("Loading simulation by slab, ", eslab)
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_newdownsample'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_newdownsample'%eslab)
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_newdownsample_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_newdownsample_MT'%eslab)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
