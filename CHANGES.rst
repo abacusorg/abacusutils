@@ -1,5 +1,8 @@
 Changelog
 =========
+1.0.5
+----------------
+- Fixed issues with QSO incompleteness [#15] 
 
 1.0.4 (2021-07-15)
 ------------------

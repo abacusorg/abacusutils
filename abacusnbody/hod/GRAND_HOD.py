@@ -144,7 +144,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
         QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
         QSO_design_array[5], QSO_design_array[6]
-    alpha_c_Q, Ac_Q, Bc_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8]
+    alpha_c_Q, Ac_Q, Bc_Q, ic_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8],\
+    QSO_decorations_array[10]
 
     H = len(mass)
 
@@ -170,7 +171,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             QSO_marker = ELG_marker
             if want_QSO:
                 logM_cut_Q_temp = logM_cut_Q + Ac_Q * deltac[i] + Bc_Q * fenv[i]
-                QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q)
+                QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q) * ic_Q * multis[i]
 
             if randoms[i] <= LRG_marker:
                 Nout[tid, 0, 0] += 1 # counting
