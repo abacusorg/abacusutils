@@ -609,7 +609,7 @@ class AbacusHOD:
                     tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
                     tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod['A_s'],  
-                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], Nthread) 
+                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], tracer_hod['ic'], Nthread) 
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
@@ -618,7 +618,7 @@ class AbacusHOD:
                     tracer_hod['p_max'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
                     tracer_hod['alpha'], tracer_hod['A_s'],  
-                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], Nthread)         
+                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], tracer_hod['ic'], Nthread)         
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
         return ngal_dict, fsat_dict
@@ -672,8 +672,8 @@ class AbacusHOD:
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
                     ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma, A_s)
                     nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha)
-                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp
-                    ngal_sat += halo_mass_func[i, j, k] * nsat_temp
+                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
+                    ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
         return ngal_cent, ngal_sat
 
     @staticmethod
