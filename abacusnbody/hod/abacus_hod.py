@@ -653,7 +653,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, Nthread):
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
         internal helper to computer number of LRGs
         """
@@ -679,7 +679,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, p_max,
-                   logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, Nthread):
+                   logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
         internal helper to computer number of LRGs
         """
