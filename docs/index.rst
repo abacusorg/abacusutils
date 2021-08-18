@@ -11,7 +11,7 @@
 abacusutils
 ===========
 
-abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
+abacusutils is a package for reading and manipulating data products from the Abacus *N*-body project.
 In particular, these utilities are intended for use with the `AbacusSummit <https://abacussummit.readthedocs.io>`_
 suite of simulations.  We provide multiple interfaces: primarily Python 3, but also C/C++ [coming soon!] and
 language-agnostic interfaces like Unix pipes.
