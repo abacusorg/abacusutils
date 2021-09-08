@@ -186,4 +186,4 @@ def test_filter_func():
                             filter_func = lambda c: c['N'] > 100)
     print(len(cat.halos))
     assert (cat.halos['N'] > 100).all()
-    #assert len(cat.halos) == 
+    assert len(cat.halos) == 146
