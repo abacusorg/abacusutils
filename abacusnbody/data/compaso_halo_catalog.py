@@ -179,6 +179,7 @@ such as the ``lagr_idx`` field using ``int16``.  It is easy to silently overflow
 narrow int types; make sure your operations stay within the type width and cast
 if necessary.
 
+
 Field Subset Loading
 ====================
 Because the ASDF files are column-oriented, it is possible to load just one or a few
@@ -198,6 +199,7 @@ Despite the potential extra IO and CPU time, the extra memory usage is granular
 at the level of individual files.  In other words, when loading multiple files,
 the concatenated array will never be constructed for columns that only exist for
 dependency purposes.
+
 
 Superslab (Chunk) Processing
 ============================
@@ -220,6 +222,23 @@ rolling fashion:
     cat = CompaSOHaloCatalog(['AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_033.asdf',
                               'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf',
                               'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_001.asdf'])
+
+
+Superslab Filtering
+===================
+Another way to save memory is to use the ``filter_func`` argument.  This function
+will be called for each superslab, and must return a mask representing the rows
+to keep.  For example, to drop all halos with less than 100 particles, use:
+
+.. code-block:: python
+    
+    cat = CompaSOHaloCatalog(..., filter_func=lambda h: h['N'] >= 100)
+    
+Because this mask is applied on each superslab immediately after loading,
+the full, unfiltered table is never constructed, thus saving memory.
+
+The filtering adds some CPU time, but in many cases loading catalogs is
+IO limited, so this won't add much overhead.
 
 
 Multi-threaded Decompression
@@ -365,7 +384,16 @@ class CompaSOHaloCatalog:
             Where the halo catalog cleaning files are located (usually called ``cleaning/``).
             Default of None will try to detect it automatically.  Only has any effect if
             using ``cleaned=True``.
-
+            
+        filter_func: function, optional
+            A mask function to be applied to each superslab as it is loaded.  The function
+            must take one argument (a halo table) and return a boolean array or similar
+            mask. Simple lambda expressions are particularly useful here; for example,
+            to load all halos with 100 particles or more, use:
+            
+            .. code-block:: python
+            
+                filter_func=lambda h: h['N'] >= 100
         """
         # Internally, we will use `load_subsamples` as the name of the `subsamples` arg to distinguish it from the `self.subsamples` table
         load_subsamples = subsamples
@@ -1261,7 +1289,6 @@ class CompaSOHaloCatalog:
         lines += ['-'*len(lines[-1]),
                  f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field != 1 else "field "}, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB',
                  f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field != 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
-                  '',
                  f'Cleaned halos: {self.cleaned}'
                  ]
         return '\n'.join(lines)
