@@ -73,8 +73,19 @@ def test_subsamples_unclean(tmp_path):
     '''
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+    
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=dict(A=True), fields='all', cleaned=False)
+    lenA = len(cat.subsamples)
+    assert lenA == 2975
+    assert cat.subsamples.colnames == ['pos', 'vel']
+    
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=dict(B=True), fields='all', cleaned=False)
+    lenB = len(cat.subsamples)
+    assert lenB == 7082
 
     cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=False)
+    
+    assert len(cat.subsamples) == lenA + lenB
 
     # to regenerate reference
     #ref = cat.subsamples
@@ -175,3 +186,17 @@ def test_unpack_bits():
     # bad bits field name
     with pytest.raises(ValueError):
         cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits=['blah'], fields='N')
+
+
+def test_filter_func():
+    '''Test CHC filter_func
+    '''
+    
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), fields=['N','x_L2com'],
+                            filter_func = lambda c: c['N'] > 100,
+                            subsamples=True)
+    assert (cat.halos['N'] > 100).all()
+    assert len(cat.halos) == 146
+    assert len(cat.subsamples) == 7193
