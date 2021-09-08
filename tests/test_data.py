@@ -175,3 +175,15 @@ def test_unpack_bits():
     # bad bits field name
     with pytest.raises(ValueError):
         cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits=['blah'], fields='N')
+
+def test_filter_func():
+    '''Test CHC filter_func
+    '''
+    
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+
+    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), fields=['N','x_L2com'],
+                            filter_func = lambda c: c['N'] > 100)
+    print(len(cat.halos))
+    assert (cat.halos['N'] > 100).all()
+    #assert len(cat.halos) == 

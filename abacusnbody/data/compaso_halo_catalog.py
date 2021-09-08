@@ -287,6 +287,7 @@ class CompaSOHaloCatalog:
 
     def __init__(self, path, cleaned=True, subsamples=False, convert_units=True, unpack_bits=False,
                  fields='DEFAULT_FIELDS', verbose=False, cleandir=None,
+                 filter_func=None,
                  **kwargs):
         """
         Loads halos.  The ``halos`` field of this object will contain
@@ -403,6 +404,7 @@ class CompaSOHaloCatalog:
         self.data_key = 'data'
         self.convert_units = convert_units  # let's save, user might want to check later
         self.verbose = verbose
+        self.filter_func = filter_func
 
         unpack_bits = self._setup_unpack_bits(unpack_bits)
 
@@ -754,7 +756,6 @@ class CompaSOHaloCatalog:
 
             # `halos` will be a "pointer" to the next open space in the master table
             halos = self.halos[N_written:N_written+len(rawhalos)]
-            N_written += len(rawhalos)  # actually not written yet, but let's aggregate the logic
 
             # For temporary (extra) columns, only need to construct the per-file version
             halos.add_columns([np.empty(len(rawhalos), dtype=user_dt[col]) for col in extra_fields], names=extra_fields, copy=False)
@@ -765,6 +766,16 @@ class CompaSOHaloCatalog:
                 if field in loaded_fields:
                     continue
                 loaded_fields += self._load_halo_field(halos, rawhalos, field)
+            
+            if self.filter_func:
+                breakpoint()
+                mask = self.filter_func(halos)
+                nmask = mask.sum()
+                halos[:nmask] = halos[mask]
+                del mask
+                N_written += nmask
+            else:
+                N_written += len(halos)
 
             del rawhalos
             del halos
