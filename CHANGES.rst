@@ -11,6 +11,10 @@ New Features
 ~~~~~~~~~~~~
 - Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
 
+Changes
+~~~~~~~
+- Migrate testing to GitHub CI; start some linting [#17]
+
 1.0.4 (2021-07-15)
 ------------------
 
