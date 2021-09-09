@@ -105,7 +105,7 @@ class BloscCompressor(Compressor):
         
         # Blosc code probably assumes contiguous buffer
         if not out.contiguous:
-            raise ValuerError(out.contiguous)
+            raise ValueError(out.contiguous)
         
         # get the out address
         out = np.frombuffer(out, dtype=np.uint8).ctypes.data
