@@ -28,7 +28,6 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
     python_requires='>=3.6',
-    setup_requires=['wheel'],
     install_requires = install_requires,
     entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main'],
                   'asdf.extensions':['abacusutils = abacusnbody.data.asdf:AbacusExtension']}
