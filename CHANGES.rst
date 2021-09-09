@@ -1,8 +1,15 @@
 Changelog
 =========
-1.0.5
+1.1.0 (upcoming)
 ----------------
-- Fixed issues with QSO incompleteness [#15] 
+
+Fixes
+~~~~~
+- Fixed issues with QSO incompleteness [#15]
+
+New Features
+~~~~~~~~~~~~
+- Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
 
 1.0.4 (2021-07-15)
 ------------------
