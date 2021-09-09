@@ -4,7 +4,7 @@
 <img src="docs/images/icon_red.png" width="175px" alt="Abacus Logo">
 </p>
 
-[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Build Status](https://travis-ci.com/abacusorg/abacusutils.svg?branch=master)](https://travis-ci.com/abacusorg/abacusutils)
+[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Tests](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml/badge.svg)](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml)
 
 abacusutils is a package for reading and manipulating data products from the Abacus *N*-body project.
 In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io)

@@ -1,4 +1,4 @@
-name: abacusutils
+name: Tests
 
 on: [push]
 
