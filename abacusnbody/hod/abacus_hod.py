@@ -138,6 +138,7 @@ and organizes them into formats that are suited for the HOD code. This code can 
 approximately an hour depending on your configuration settings and system capabilities. 
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_30)``.
 You can run ``load_sims`` on command line with ::
+
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
 
 
@@ -153,10 +154,12 @@ with the ``emcee`` sampler.
 
 To use the given ``run_hod.py`` script to run a custom configuration file, you can
 simply run the given script in bash ::
+
     python run_hod.py --path2config PATH2CONFIG
 
 You can also consruct the AbacusHOD object yourself within Python and run HODs from
 there. Here we show the scripts within ``run_hod.py`` for reference.::
+
     import os
     import glob
     import time
@@ -262,11 +265,11 @@ class AbacusHOD:
                 * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file. 
 
         clustering_params: dict
-            Sumamry statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
+            Summary statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
                 * ``clustering_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
                 * ``bin_params``: dict, transverse scale binning. 
-                    * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}} in Mpc/h.
-                    * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}} in Mpc/h.
+                    * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}}` in Mpc/h.
+                    * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}}` in Mpc/h.
                     * ``nbins``: int, number of bins.
                 * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`. 
                 * ``pi_bin_size``: int, size of bins along of the line of sight. Need to be divisor of ``pimax``.

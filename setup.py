@@ -2,13 +2,13 @@ import os
 
 from setuptools import setup, find_namespace_packages
 
-install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba>=0.50','asdf>=2.8','h5py','emcee','schwimmbad','getdist','dynesty','halotools','sklearn']
+install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba>=0.50','asdf>=2.8','h5py','emcee','schwimmbad','getdist','dynesty','sklearn']
 
 # If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     # This list must be kept synchronized with `autodoc_mock_imports` in docs/conf.py
-    install_requires += ['Corrfunc>=2']
+    install_requires += ['Corrfunc>=2', 'halotools>=0.7']
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
