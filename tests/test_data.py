@@ -23,7 +23,6 @@ def test_halos_unclean(tmp_path):
 
     # to regenerate reference
     #ref = cat.halos
-    #import asdf; asdf.compression.set_compression_options(typesize='auto')
     #ref.write(HALOS_OUTPUT_UNCLEAN, all_array_storage='internal', all_array_compression='blsc')
 
     ref = Table.read(HALOS_OUTPUT_UNCLEAN)
@@ -47,7 +46,6 @@ def test_halos_clean(tmp_path):
 
     # to regenerate reference
     #ref = cat.halos
-    #import asdf; asdf.compression.set_compression_options(typesize='auto')
     #ref.write(HALOS_OUTPUT_CLEAN, all_array_storage='internal', all_array_compression='blsc')
 
     ref = Table.read(HALOS_OUTPUT_CLEAN)
