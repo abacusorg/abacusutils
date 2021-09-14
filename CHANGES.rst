@@ -6,6 +6,7 @@ Changelog
 Fixes
 ~~~~~
 - Fixed issues with QSO incompleteness [#15]
+- Fix ``cleandir`` and propagate cleaning info in header [#18]
 
 New Features
 ~~~~~~~~~~~~

@@ -405,7 +405,6 @@ class CompaSOHaloCatalog:
             cleaned = kwargs.pop('cleaned_halos')
             warnings.warn('`cleaned_halos` argument is deprecated; use `cleaned`', FutureWarning)
             
-        self.cleandir = kwargs.pop('cleandir',None)
         self.cleaned = cleaned
 
         # Check no unknown args!
@@ -417,7 +416,7 @@ class CompaSOHaloCatalog:
          self.cleandir,
          self.superslab_inds,
          self.halo_fns,
-         self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned=cleaned, cleandir=self.cleandir)
+         self.cleaned_halo_fns) = self._setup_file_paths(path, cleaned=cleaned, cleandir=cleandir)
 
         # Figure out what subsamples the user is asking us to loads
         (self.load_AB,
@@ -443,6 +442,8 @@ class CompaSOHaloCatalog:
         with asdf.open(self.halo_fns[0], lazy_load=True, copy_arrays=False) as af:
             # will also be available as self.halos.meta
             self.header = af['header']
+            # For any applications that propagate the header, record whether they used cleaned halos
+            self.header['cleaned_halos'] = self.cleaned
 
         # If we are using cleaned haloes, want to also grab header information regarding number of preceding timesteps
         if cleaned:
@@ -548,15 +549,15 @@ class CompaSOHaloCatalog:
 
         if cleaned:
             pathsplit = groupdir.split(os.path.sep)
-            del pathsplit[-2]  # remove halos/
+            del pathsplit[-2]  # remove halos/, leaving .../SimName/z0.000
+            s = -2
             if not cleandir:
-                s = -2
                 cleandir = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
                 if not isdir(cleandir) and 'small' in pathsplit[-2]:
                     s = -3
                     cleandir_small = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
                     if not isdir(cleandir_small):
-                        raise FileNotFoundError(f'Could not find cleaning info dir. Tried: "{cleandir}", "{cleandir_small}". To load the uncleaned catalog, use `cleaned=False`.')
+                        raise FileNotFoundError(f'Could not find cleaning info dir. Tried:\n"{cleandir}"\n"{cleandir_small}"\nTo load the uncleaned catalog, use `cleaned=False`.')
                     cleandir = cleandir_small
             
             cleandir = pjoin(cleandir, *pathsplit[s:])  # TODO ugly
