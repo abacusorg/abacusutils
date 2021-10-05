@@ -15,6 +15,7 @@ New Features
 Changes
 ~~~~~~~
 - Migrate testing to GitHub CI; start some linting [#17]
+- Start testing Python 3.10 [#19]
 
 1.0.4 (2021-07-15)
 ------------------
