@@ -8,7 +8,7 @@ install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy','numba
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     # This list must be kept synchronized with `autodoc_mock_imports` in docs/conf.py
-    install_requires += ['Corrfunc>=2', 'halotools>=0.7']
+    install_requires += ['Corrfunc>=2']
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
