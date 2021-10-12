@@ -1,5 +1,20 @@
 Changelog
 =========
+1.1.0 (upcoming)
+----------------
+
+Fixes
+~~~~~
+- Fixed issues with QSO incompleteness [#15]
+- Fix ``cleandir`` and propagate cleaning info in header [#18]
+
+New Features
+~~~~~~~~~~~~
+- Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
+
+Changes
+~~~~~~~
+- Migrate testing to GitHub CI; start some linting [#17]
 
 1.0.4 (2021-07-15)
 ------------------
