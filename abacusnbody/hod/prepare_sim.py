@@ -423,13 +423,34 @@ if __name__ == "__main__":
     # 'sim_params' :
     #     {
     #     'sim_name': 'AbacusSummit_base_c000_ph006',                                 # which simulation 
-    #     'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
-    #     'output_dir': '/mnt/marvin1/syuan/scratch/data_mocks_summit_new',          # where to output galaxy mocks
+    #     # 'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
+    #     'sim_dir': '/mnt/marvin1/syuan/scratch/bigsims/',                                        # where is the simulation
+    #     'output_dir': '/mnt/marvin1/syuan/scratch/data_mocks_georgios',          # where to output galaxy mocks
     #     'subsample_dir': '/mnt/marvin1/syuan/scratch/data_summit/',                 # where to output subsample data
     #     'z_mock': 0.5,                                                             # which redshift slice
-    #     'Nthread_load': 7                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    #     'Nthread_load': 7,                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    #     'cleaned_halos': False
     #     }
     # }
     # for i in range(25):
     #     param_dict['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
+    #     main(**args, params = param_dict)
+
+    # other_cosmologies = [
+    # 'AbacusSummit_base_c100_ph000',
+    # 'AbacusSummit_base_c101_ph000',
+    # 'AbacusSummit_base_c102_ph000',
+    # 'AbacusSummit_base_c103_ph000',
+    # 'AbacusSummit_base_c112_ph000',
+    # 'AbacusSummit_base_c113_ph000',
+    # 'AbacusSummit_base_c104_ph000',
+    # 'AbacusSummit_base_c105_ph000',
+    # 'AbacusSummit_base_c108_ph000',
+    # 'AbacusSummit_base_c109_ph000',
+    # 'AbacusSummit_base_c009_ph000'
+    # ]
+ 
+    # for ecosmo in other_cosmologies:
+    #     print(ecosmo)
+    #     param_dict['sim_params']['sim_name'] = ecosmo
     #     main(**args, params = param_dict)
