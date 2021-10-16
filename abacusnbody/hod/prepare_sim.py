@@ -365,14 +365,15 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config, params = None):
+def main(path2config, params = None, alt_simname = None):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
     config = yaml.safe_load(open(path2config))
     # update params if needed
-    if params is None:
-        params = {}
-    config.update(params)
+    if params:
+        config.update(params)
+    if alt_simname: 
+        config['sim_params']['sim_name'] = alt_simname
 
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
@@ -413,6 +414,9 @@ if __name__ == "__main__":
     # parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
+    parser.add_argument('--alt_simname',
+                        help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
+                       )
     args = vars(parser.parse_args())
 
     main(**args)
