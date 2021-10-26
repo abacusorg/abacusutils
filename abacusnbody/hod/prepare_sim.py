@@ -365,14 +365,15 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config, params = None):
+def main(path2config, params = None, alt_simname = None, newseed = 600):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
     config = yaml.safe_load(open(path2config))
     # update params if needed
-    if params is None:
-        params = {}
-    config.update(params)
+    if params:
+        config.update(params)
+    if alt_simname: 
+        config['sim_params']['sim_name'] = alt_simname
 
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
@@ -390,7 +391,6 @@ def main(path2config, params = None):
         MT = True
     want_ranks = config['HOD_params']['want_ranks']
     want_AB = config['HOD_params']['want_AB']
-    newseed = 600
     # N_dim = config['HOD_params']['Ndim']
 
     os.makedirs(savedir, exist_ok = True)
@@ -413,6 +413,12 @@ if __name__ == "__main__":
     # parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
+    parser.add_argument('--alt_simname',
+                        help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
+                       )
+    parser.add_argument('--newseed',
+                        help='alternative random number seed, positive integer',
+                       )
     args = vars(parser.parse_args())
 
     main(**args)
