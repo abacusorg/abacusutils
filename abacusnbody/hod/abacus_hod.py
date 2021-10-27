@@ -522,33 +522,24 @@ class AbacusHOD:
             particle_data['pranksr'] =  np.ones(Nparts_tot)
         
         return halo_data, particle_data, params, mock_dir
+    
+    @staticmethod
+    @njit(parallel = True, fastmath = True)
+    def _np_random_parallel(N, Nthread):
+        numba.set_num_threads(Nthread)
+        return np.random.random(N)
 
     @staticmethod
     @njit(parallel = True, fastmath = True)
-    def _generate_randoms(length, Nthread):
-        """
-        internal helper to generate fast randoms
-        """
+    def _np_randn_parallel(N, Nthread):
         numba.set_num_threads(Nthread)
-        output = np.zeros(length)
-        hstart = np.rint(np.linspace(0, length, Nthread + 1))
-        for tid in numba.prange(Nthread):
-            output[int(hstart[tid]): int(hstart[tid + 1])] = np.random.random(int(hstart[tid+1] - hstart[tid]))
-        return output
-   
-    @staticmethod
-    @njit(parallel = True, fastmath = True)
-    def _generate_randoms_normal(length, Nthread):
-        """
-        internal helper to generate fast randoms
-        """
-        numba.set_num_threads(Nthread)
-        output = np.zeros(length)
-        hstart = np.rint(np.linspace(0, length, Nthread + 1))
-        for tid in numba.prange(Nthread):
-            output[int(hstart[tid]): int(hstart[tid + 1])] = np.random.randn(int(hstart[tid+1] - hstart[tid]))
-        return output
+        return np.random.randn(N)
 
+
+    # np_random_parallel = numba.njit(parallel=True)(self, lambda N: np.random.random(N))
+
+    # np_randn_parallel = numba.njit(parallel=True)(self, lambda N: np.random.randn(N))
+    
     def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
         Nthread = 16, verbose = False):
         """
@@ -595,10 +586,10 @@ class AbacusHOD:
         start = time.time()
         if reseed:
             np.random.seed(reseed)
-            self.halo_data['hrandoms'] = AbacusHOD._generate_randoms(len(self.halo_data['hrandoms']), Nthread) 
-            self.halo_data['hveldev'] = AbacusHOD._generate_randoms_normal(len(self.halo_data['hveldev']), Nthread)\
-             * self.halo_data['hsigma3d']/np.sqrt(3)
-            self.particle_data['prandoms'] = AbacusHOD._generate_randoms(len(self.particle_data['prandoms']), Nthread)
+            self.halo_data['hrandoms'] = AbacusHOD._np_random_parallel(len(self.halo_data['hrandoms']), Nthread)
+            self.halo_data['hveldev'] = AbacusHOD._np_randn_parallel(len(self.halo_data['hveldev']), Nthread)*self.halo_data['hsigma3d']/np.sqrt(3)
+            self.particle_data['prandoms'] = AbacusHOD._np_random_parallel(len(self.particle_data['prandoms']), Nthread)
+
         print("gen randoms took, ", time.time() - start)
             
         start = time.time()
