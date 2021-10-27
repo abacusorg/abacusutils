@@ -381,6 +381,7 @@ class AbacusHOD:
         hmultis = np.empty([Nhalos_tot])
         hrandoms = np.empty([Nhalos_tot])
         hveldev = np.empty([Nhalos_tot])
+        hsigma3d = np.empty([Nhalos_tot])
         hdeltac = np.empty([Nhalos_tot])
         hfenv = np.empty([Nhalos_tot])
 
@@ -429,6 +430,7 @@ class AbacusHOD:
             halo_pos = maskedhalos["x_L2com"] # halo positions, Mpc / h
             halo_vels = maskedhalos['v_L2com'] # halo velocities, km/s
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
+            halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
@@ -445,6 +447,7 @@ class AbacusHOD:
             hmultis[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_multi
             hrandoms[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_randoms
             hveldev[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vel_dev
+            hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_sigma3d
             hdeltac[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_deltac
             hfenv[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_fenv
             halo_ticker += Nhalos[eslab]
@@ -494,6 +497,7 @@ class AbacusHOD:
                      "hmultis": hmultis, 
                      "hrandoms": hrandoms, 
                      "hveldev": hveldev, 
+                     "hsigma3d": hsigma3d, 
                      "hdeltac": hdeltac, 
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
@@ -520,7 +524,7 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     
-    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16, verbose = False):
+    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -533,6 +537,10 @@ class AbacusHOD:
         
         ``want_rsd``: bool 
             enable RSD? default ``True``.
+            
+        ``reseed``: int
+            re-generate random numbers? supply random number seed. This overwrites the pre-generated random numbers, at a performance cost.
+            Default ``None``.
 
         ``write_to_disk``: bool 
             output to disk? default ``False``. Setting to ``True`` decreases performance. 
@@ -559,6 +567,12 @@ class AbacusHOD:
         if tracers == None:
             tracers = self.tracers
 
+        if reseed:
+            rng = np.random.default_rng(reseed)
+            self.halo_data['hrandoms'] = rng.random(len(self.halo_data['hrandoms']))
+            self.halo_data['hveldev'] = rng.normal(loc = 0, scale = self.halo_data['hsigma3d']/np.sqrt(3), size = len(self.halo_data['hveldev']))
+            self.particle_data['prandoms'] = rng.random(len(self.particle_data['prandoms']))
+            
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
