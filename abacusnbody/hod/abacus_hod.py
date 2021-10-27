@@ -523,8 +523,34 @@ class AbacusHOD:
         
         return halo_data, particle_data, params, mock_dir
 
-    
-    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, Nthread = 16, verbose = False):
+    @staticmethod
+    @njit(parallel = True, fastmath = True)
+    def _generate_randoms(length, Nthread):
+        """
+        internal helper to generate fast randoms
+        """
+        numba.set_num_threads(Nthread)
+        output = np.zeros(length)
+        hstart = np.rint(np.linspace(0, length, Nthread + 1))
+        for tid in numba.prange(Nthread):
+            output[int(hstart[tid]): int(hstart[tid + 1])] = np.random.random(int(hstart[tid+1] - hstart[tid]))
+        return output
+   
+    @staticmethod
+    @njit(parallel = True, fastmath = True)
+    def _generate_randoms_normal(length, Nthread):
+        """
+        internal helper to generate fast randoms
+        """
+        numba.set_num_threads(Nthread)
+        output = np.zeros(length)
+        hstart = np.rint(np.linspace(0, length, Nthread + 1))
+        for tid in numba.prange(Nthread):
+            output[int(hstart[tid]): int(hstart[tid + 1])] = np.random.randn(int(hstart[tid+1] - hstart[tid]))
+        return output
+
+    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
+        Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -566,19 +592,23 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-
+        start = time.time()
         if reseed:
-            rng = np.random.default_rng(reseed)
-            self.halo_data['hrandoms'] = rng.random(len(self.halo_data['hrandoms']))
-            self.halo_data['hveldev'] = rng.normal(loc = 0, scale = self.halo_data['hsigma3d']/np.sqrt(3), size = len(self.halo_data['hveldev']))
-            self.particle_data['prandoms'] = rng.random(len(self.particle_data['prandoms']))
+            np.random.seed(reseed)
+            self.halo_data['hrandoms'] = AbacusHOD._generate_randoms(len(self.halo_data['hrandoms']), Nthread) 
+            self.halo_data['hveldev'] = AbacusHOD._generate_randoms_normal(len(self.halo_data['hveldev']), Nthread)\
+             * self.halo_data['hsigma3d']/np.sqrt(3)
+            self.particle_data['prandoms'] = AbacusHOD._generate_randoms(len(self.particle_data['prandoms']), Nthread)
+        print("gen randoms took, ", time.time() - start)
             
+        start = time.time()
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
             verbose = False)
+        print("gen mocks", time.time() - start)
 
         return mock_dict
 
@@ -645,7 +675,7 @@ class AbacusHOD:
     def _compute_ngal_lrg(logMbins, deltacbins, fenvbins, halo_mass_func,
                    logM_cut, logM1, sigma, alpha, kappa, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -672,7 +702,7 @@ class AbacusHOD:
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
                    logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -698,7 +728,7 @@ class AbacusHOD:
     def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, p_max,
                    logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
