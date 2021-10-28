@@ -525,14 +525,16 @@ class AbacusHOD:
     
     @staticmethod
     @njit(parallel = True, fastmath = True)
-    def _np_random_parallel(N, Nthread):
+    def _np_random_parallel(N, Nthread, reseed):
         numba.set_num_threads(Nthread)
+        np.random.seed(reseed)
         return np.random.random(N)
 
     @staticmethod
     @njit(parallel = True, fastmath = True)
-    def _np_randn_parallel(N, Nthread):
+    def _np_randn_parallel(N, Nthread, reseed):
         numba.set_num_threads(Nthread)
+        np.random.seed(reseed)
         return np.random.randn(N)
 
 
@@ -586,9 +588,12 @@ class AbacusHOD:
         start = time.time()
         if reseed:
             np.random.seed(reseed)
-            self.halo_data['hrandoms'] = AbacusHOD._np_random_parallel(len(self.halo_data['hrandoms']), Nthread)
-            self.halo_data['hveldev'] = AbacusHOD._np_randn_parallel(len(self.halo_data['hveldev']), Nthread)*self.halo_data['hsigma3d']/np.sqrt(3)
-            self.particle_data['prandoms'] = AbacusHOD._np_random_parallel(len(self.particle_data['prandoms']), Nthread)
+            self.halo_data['hrandoms'] = \
+            AbacusHOD._np_random_parallel(len(self.halo_data['hrandoms']), Nthread, reseed)
+            self.halo_data['hveldev'] = \
+            AbacusHOD._np_randn_parallel(len(self.halo_data['hveldev']), Nthread, reseed)*self.halo_data['hsigma3d']/np.sqrt(3)
+            self.particle_data['prandoms'] = \
+            AbacusHOD._np_random_parallel(len(self.particle_data['prandoms']), Nthread, reseed)
 
         print("gen randoms took, ", time.time() - start)
             
