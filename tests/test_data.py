@@ -12,6 +12,7 @@ HALOS_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_uncle
 PARTICLES_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_unclean.asdf')
 HALOS_OUTPUT_CLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_clean.asdf')
 PARTICLES_OUTPUT_CLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_clean.asdf')
+PACK9_OUTPUT = os.path.join(os.path.dirname(__file__), 'test_pack9.asdf')
 
 def test_halos_unclean(tmp_path):
     '''Test loading a base (uncleaned) halo catalog
@@ -198,3 +199,17 @@ def test_filter_func():
     assert (cat.halos['N'] > 100).all()
     assert len(cat.halos) == 146
     assert len(cat.subsamples) == 7193
+
+
+def test_pack9():
+    from abacusnbody.data.read_abacus import read_asdf
+    fn = os.path.join(EXAMPLE_SIM, 'slices', 'z0.000', 'L0_pack9', 'slab000.L0.pack9.asdf')
+    p = read_asdf(fn, load_pos=True, load_vel=True, load_pid=None,
+                dtype=np.float32)
+    
+    #p.write(PACK9_OUTPUT, format='asdf', all_array_compression='blsc')
+    ref = Table.read(PACK9_OUTPUT)
+    
+    for k in ref.colnames:
+        assert np.all(p[k] == ref[k])
+    assert p.meta == ref.meta
