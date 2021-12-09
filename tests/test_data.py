@@ -1,17 +1,21 @@
 import tempfile
 import filecmp
-import os.path
+from pathlib import Path
 import numbers
 
 import pytest
 from astropy.table import Table
 import numpy as np
 
-EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
-HALOS_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_unclean.asdf')
-PARTICLES_OUTPUT_UNCLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_unclean.asdf')
-HALOS_OUTPUT_CLEAN = os.path.join(os.path.dirname(__file__), 'test_halos_clean.asdf')
-PARTICLES_OUTPUT_CLEAN = os.path.join(os.path.dirname(__file__), 'test_subsamples_clean.asdf')
+curdir = Path(__file__).parent
+refdir = curdir / 'ref'
+EXAMPLE_SIM = curdir / 'Mini_N64_L32'
+HALOS_OUTPUT_UNCLEAN = refdir / 'test_halos_unclean.asdf'
+PARTICLES_OUTPUT_UNCLEAN = refdir / 'test_subsamples_unclean.asdf'
+HALOS_OUTPUT_CLEAN = refdir / 'test_halos_clean.asdf'
+PARTICLES_OUTPUT_CLEAN = refdir / 'test_subsamples_clean.asdf'
+PACK9_OUTPUT = refdir / 'test_pack9.asdf'
+PACK9_PID_OUTPUT = refdir / 'test_pack9_pid.asdf'
 
 def test_halos_unclean(tmp_path):
     '''Test loading a base (uncleaned) halo catalog
@@ -19,7 +23,7 @@ def test_halos_unclean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=False)
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, fields='all', cleaned=False)
 
     # to regenerate reference
     #ref = cat.halos
@@ -42,7 +46,7 @@ def test_halos_clean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=True)
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, fields='all', cleaned=True)
 
     # to regenerate reference
     #ref = cat.halos
@@ -72,16 +76,16 @@ def test_subsamples_unclean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
     
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=dict(A=True), fields='all', cleaned=False)
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=dict(A=True), fields='all', cleaned=False)
     lenA = len(cat.subsamples)
     assert lenA == 2975
     assert cat.subsamples.colnames == ['pos', 'vel']
     
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=dict(B=True), fields='all', cleaned=False)
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=dict(B=True), fields='all', cleaned=False)
     lenB = len(cat.subsamples)
     assert lenB == 7082
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=False)
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, fields='all', cleaned=False)
     
     assert len(cat.subsamples) == lenA + lenB
 
@@ -107,7 +111,7 @@ def test_subsamples_clean(tmp_path):
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, fields='all', cleaned=True)
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, fields='all', cleaned=True)
 
     # to regenerate reference
     #ref = cat.subsamples
@@ -133,7 +137,7 @@ def test_field_subset_loading():
     '''
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), fields=['N','x_com'])
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', fields=['N','x_com'])
     assert set(cat.halos.colnames) == set(['N','x_com'])
 
 
@@ -142,7 +146,7 @@ def test_one_halo_info():
     '''
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf'),
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000'/'halo_info'/'halo_info_000.asdf',
         subsamples=True)
     assert len(cat.halos) == 127
     assert len(cat.subsamples) == 3209 #9306
@@ -154,8 +158,8 @@ def test_halo_info_list():
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(
-        [os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf'),
-         os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_001.asdf')],
+        [EXAMPLE_SIM/'halos'/'z0.000'/'halo_info'/'halo_info_000.asdf',
+         EXAMPLE_SIM/'halos'/'z0.000'/'halo_info'/'halo_info_001.asdf'],
         subsamples=True)
     assert len(cat.halos) == 281
     assert len(cat.subsamples) == 6900 #19555
@@ -163,8 +167,8 @@ def test_halo_info_list():
     # check fail on dups
     with pytest.raises(ValueError):
         cat = CompaSOHaloCatalog(
-        [os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf'),
-         os.path.join(EXAMPLE_SIM, 'halos', 'z0.000', 'halo_info', 'halo_info_000.asdf')])
+        [EXAMPLE_SIM/'halos'/'z0.000'/'halo_info'/'halo_info_000.asdf',
+         EXAMPLE_SIM/'halos'/'z0.000'/'halo_info'/'halo_info_000.asdf'])
 
 
 def test_unpack_bits():
@@ -174,16 +178,16 @@ def test_unpack_bits():
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
     from abacusnbody.data.bitpacked import PID_FIELDS
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits=True, fields='N')
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, unpack_bits=True, fields='N')
     assert set(PID_FIELDS) <= set(cat.subsamples.colnames)  # check subset
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits='density', fields='N')
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, unpack_bits='density', fields='N')
     assert 'density' in cat.subsamples.colnames
     assert 'lagr_pos' not in cat.subsamples.colnames  # too many?
 
     # bad bits field name
     with pytest.raises(ValueError):
-        cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), subsamples=True, unpack_bits=['blah'], fields='N')
+        cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, unpack_bits=['blah'], fields='N')
 
 
 def test_filter_func():
@@ -192,9 +196,42 @@ def test_filter_func():
     
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
-    cat = CompaSOHaloCatalog(os.path.join(EXAMPLE_SIM, 'halos', 'z0.000'), fields=['N','x_L2com'],
+    cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', fields=['N','x_L2com'],
                             filter_func = lambda c: c['N'] > 100,
                             subsamples=True)
     assert (cat.halos['N'] > 100).all()
     assert len(cat.halos) == 146
     assert len(cat.subsamples) == 7193
+
+
+def test_pack9():
+    '''Test reading a pack9 timeslice file
+    '''
+    from abacusnbody.data.read_abacus import read_asdf
+    fn = EXAMPLE_SIM/'slices'/'z0.000'/'L0_pack9'/'slab000.L0.pack9.asdf'
+    p = read_asdf(fn, load=('pos','vel'),
+                dtype=np.float32)
+    
+    #p.write(PACK9_OUTPUT, format='asdf', all_array_compression='blsc')
+    ref = Table.read(PACK9_OUTPUT)
+    
+    for k in ref.colnames:
+        assert np.all(p[k] == ref[k])
+    assert p.meta == ref.meta
+    
+    p = read_asdf(fn, dtype=np.float32)
+    assert sorted(p.colnames) == ['pos','vel']
+
+    # pid checks
+    pidfn = EXAMPLE_SIM/'slices'/'z0.000'/'L0_pack9_pid'/'slab000.L0.pack9.pid.asdf'
+    p = read_asdf(pidfn, load=('aux','pid','lagr_pos','tagged','density','lagr_idx'))
+    
+    #p.write(PACK9_PID_OUTPUT, format='asdf', all_array_compression='blsc')
+    ref = Table.read(PACK9_PID_OUTPUT)
+    
+    for k in ref.colnames:
+        assert np.all(p[k] == ref[k])
+    assert p.meta == ref.meta
+    
+    p = read_asdf(pidfn, dtype=np.float32)
+    assert p.colnames == ['pid']

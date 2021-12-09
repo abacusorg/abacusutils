@@ -118,7 +118,7 @@ def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=Fa
     
     Parameters
     ----------
-    packed: ndarray of np.int64, shape (N,)
+    packed: ndarray of np.uint64, shape (N,)
         The packed PIDs
     box: float
         The box size, used for `lagr_pos`
@@ -136,6 +136,7 @@ def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=Fa
     unpacked_arrays: dict of ndarray
         A dictionary of all fields that were unpacked
     '''
+    packed = np.asanyarray(packed, dtype=np.uint64)
     
     if lagr_pos is not False:
         if box is None:
@@ -144,8 +145,9 @@ def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=Fa
             raise ValueError('Must supply `ppd` if requesting `lagr_pos`')
             
     N = len(packed)
-    if ppd != int(ppd):
+    if not np.isclose(ppd, int(round(ppd))):
         raise ValueError(f'ppd "{ppd}" not valid int?')
+    ppd = int(round(ppd))
     
     arr = {}
     if pid is True:
