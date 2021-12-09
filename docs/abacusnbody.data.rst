@@ -35,3 +35,11 @@ asdf module
    :members:
    :undoc-members:
    :show-inheritance:
+
+pack9 module
+------------
+
+.. automodule:: abacusnbody.data.pack9
+   :members:
+   :undoc-members:
+   :show-inheritance:
