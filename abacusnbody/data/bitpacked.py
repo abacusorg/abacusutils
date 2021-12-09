@@ -1,6 +1,10 @@
 '''
 A collection of routines related to various Abacus bitpacked
 formats, like RVint and encoding of information in the PIDs.
+
+Most users will not use this module directly, but will instead use
+:mod:`abacusnbody.data.compaso_halo_catalog` or
+:func:`abacusnbody.data.read_abacus.read_asdf`.
 '''
 
 import numpy as np
@@ -114,22 +118,54 @@ def _unpack_rvint(intdata, boxsize, posout, velout):
 
 def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=False, density=False, lagr_idx=False, float_dtype=np.float32):
     '''
-    Extract fields from bit-packed PIDs.
+    Extract fields from bit-packed PIDs.  The PID (really, the 64-bit aux field)
+    enocdes the particle ID, the Lagrangian index (and therefore position), the
+    density, and the L2 tagged field.
     
     Parameters
     ----------
-    packed: ndarray of np.uint64, shape (N,)
-        The packed PIDs
-    box: float
-        The box size, used for `lagr_pos`
-    ppd: int
-        The particles-per-dimension, used for `lagr_pos`
-    pid, lagr_pos, tagged, density, lagr_idx: bool, optional
-        Whether the given field should be unpacked.
-        A few array will be constructed and returned.
+    packed: array-like of np.uint64, shape (N,)
+        The bit-packed PID (i.e. the aux field)
+        
+    box: float, optional
+        The box size, needed only for ``lagr_pos``
+        
+    ppd: int, optional
+        The particles-per-dimension, needed only for ``lagr_pos``
+        
+    pid: bool, optional
+        Whether to unpack and return the unique particle ID.
+        
+        Loaded as a ``np.int64`` array of shape `(N,)`.
+    
+    lagr_idx: bool, optional
+        Whether to unpack and return the Lagrangian index, which is the `(i,j,k)`
+        integer coordinates of the particle in the cubic lattice used in Abacus
+        pre-initial conditions. The ``lagr_pos`` field will automatically convert
+        this index to a position.
+        
+        Loaded as a ``np.int16`` array of shape `(N,3)`.
+    
+    lagr_pos: bool, optional
+        Whether to unpack and return the Lagrangian position of the particles,
+        based on the Lagrangian index (``lagr_idx``).
+        
+        Loaded as array of type ``dtype`` and shape `(N,3)`.
+    
+    tagged: bool, optional
+        Whether to unpack and return the CompaSO L2 tagged bit of the particles---
+        whether the particle was ever part of an L2 group (i.e. halo core).
+        
+        Loaded as a ``np.bool8`` array of shape `(N,)`.
+    
+    density: bool, optional
+        Whether to unpack and return the local density estimate, in units of mean
+        density.
+        
+        Loaded as a array of type ``dtype`` and shape `(N,)`.
+        
     float_dtype: np.dtype, optional
-        The dtype in which to store float arrays.
-        Default: np.float32
+        The dtype in which to store float arrays. Default: ``np.float32``
         
     Returns
     -------

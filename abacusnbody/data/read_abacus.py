@@ -5,7 +5,7 @@ like ASDF, pack9, and RVint.
 For particle-oriented access to the data, one can use
 this interface.  For halo-oriented access (e.g. associating
 halo particles with their host halo), one should use the
-relevant halo module (like compaso_halo_catalog).
+relevant halo module (like :mod:`abacusnbody.data.compaso_halo_catalog`).
 
 The decoding of the binary formats is generally contained
 in other modules (e.g. bitpacked); this interface mainly
@@ -25,10 +25,12 @@ from astropy.table import Table
 from .bitpacked import unpack_rvint, unpack_pids
 from .pack9 import unpack_pack9
 
+__all__ = ['read_asdf']
+
 ASDF_DATA_KEY = 'data'
 ASDF_HEADER_KEY = 'header'
 
-def read_asdf(fn, colname=None, load=None, dtype=np.float32, **kwargs):
+def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
     '''
     Read an Abacus ASDF file.  The result will be returned in an Astropy table.
 
@@ -37,20 +39,21 @@ def read_asdf(fn, colname=None, load=None, dtype=np.float32, **kwargs):
     fn: str
         The filename of the ASDF file to load
         
-    colname: str or None, optional
-        The ASDF column name to load.  Probably one of 'rvint', 'packedpid', or
-        'pack9'.  In most cases, the name can be automatically detected, which is the
-        default behavior.
-        
     load: list of str or None, optional
-        A list of columns to load. The default (None) is to load columns based on
+        A list of columns to load. The default (``None``) is to load columns based on
         what's in the file. If the file contains positions and velocities, those will
         be loaded; if it contains PIDs, those will be loaded.
         
-        The list of fields that can be specified is:
-            ``'pos', 'vel', 'pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'aux'``
+        The list of fields that can be specified is: \
+        ``'pos', 'vel', 'pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'aux'``
             
-        All except `pos` & `vel` are PID-derived fields (see ``bitpacked.unpack_pids``)
+        All except ``pos`` & ``vel`` are PID-derived fields (see
+        :func:`abacusnbody.data.bitpacked.unpack_pids`)
+        
+    colname: str or None, optional
+        The internal column name in the ASDF file to load.  Probably one of ``'rvint'``,
+        ``'packedpid'``, ``'pid'``, or ``'pack9'``.  In most cases, the name can be
+        automatically detected, which is the default behavior (``None``).
     
     dtype: np.dtype, optional
         The precision in which to unpack any floating

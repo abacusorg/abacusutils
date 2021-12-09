@@ -1,6 +1,10 @@
 '''
-Unpack pack9 particle data, which encodes the pos + vel in 9 bytes,
-and then the PID + aux in another 8 bytes in a separate file.
+Unpack pack9 particle data, which encodes the pos + vel in 9 bytes, and then the
+PID + aux in another 8 bytes in a separate file.  The 9-byte part is handled by this
+module; the 8-byte (PID) part is handled by ``bitpacked.unpack_pids()``.
+
+Most users will not use this module directly, but will instead use the
+:func:`abacusnbody.data.read_abacus.read_asdf` function.
 '''
 
 import numpy as np
