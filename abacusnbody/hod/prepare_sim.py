@@ -38,8 +38,8 @@ def subsample_halos(m, MT):
     x = np.log10(m)
     if MT:
         downfactors = np.zeros(len(x))
-        mask = x < 11.9572
-        downfactors[mask] = 0.1/(1.0 + 10*np.exp(-(x[mask] - 11.2)*25))
+        mask = x < 12.07
+        downfactors[mask] = 0.2/(1.0 + 10*np.exp(-(x[mask] - 11.2)*25))
         downfactors[~mask] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask] - 12.6)*7))
         return downfactors
     else:
@@ -83,7 +83,7 @@ def subsample_particles(m, MT):
 #     # average number of particles per cell                                                                                         
 #     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
 #     return Dtot / D_avg - 1
-
+    
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
@@ -98,9 +98,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     np.random.seed(newseed + i)
     # if file already exists, just skip
-    if os.path.exists(outfilename_halos) \
-    and os.path.exists(outfilename_particles):
-        return 0
+    # if os.path.exists(outfilename_halos) \
+    # and os.path.exists(outfilename_particles):
+    #     return 0
 
     # load the halo catalog slab
     print("loading halo catalog ")
@@ -394,7 +394,7 @@ def main(path2config, params = None, alt_simname = None, newseed = 600):
     # N_dim = config['HOD_params']['Ndim']
 
     os.makedirs(savedir, exist_ok = True)
-
+    
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
         repeat(simdir), repeat(simname), repeat(z_mock), 
@@ -417,7 +417,7 @@ if __name__ == "__main__":
                         help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
                        )
     parser.add_argument('--newseed',
-                        help='alternative random number seed, positive integer',
+                        help='alternative random number seed, positive integer', default = 600
                        )
     args = vars(parser.parse_args())
 
