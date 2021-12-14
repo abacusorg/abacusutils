@@ -523,26 +523,7 @@ class AbacusHOD:
             particle_data['pranksr'] =  np.ones(Nparts_tot)
         
         return halo_data, particle_data, params, mock_dir
-    
-    @staticmethod
-    @njit(parallel = True, fastmath = True)
-    def _np_random_parallel(N, Nthread, reseed):
-        numba.set_num_threads(Nthread)
-        np.random.seed(reseed)
-        return np.random.random(N)
 
-    @staticmethod
-    @njit(parallel = True, fastmath = True)
-    def _np_randn_parallel(N, Nthread, reseed):
-        numba.set_num_threads(Nthread)
-        np.random.seed(reseed)
-        return np.random.randn(N)
-
-
-    # np_random_parallel = numba.njit(parallel=True)(self, lambda N: np.random.random(N))
-
-    # np_randn_parallel = numba.njit(parallel=True)(self, lambda N: np.random.randn(N))
-    
     def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
         Nthread = 16, verbose = False):
         """
@@ -592,7 +573,6 @@ class AbacusHOD:
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
             r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
-            # np.random.seed(reseed)
             self.halo_data['hrandoms'] = r1
             self.halo_data['hveldev'] = r2
             self.particle_data['prandoms'] = r3
