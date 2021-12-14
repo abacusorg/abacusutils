@@ -223,6 +223,7 @@ from multiprocessing import Pool
 from astropy.io import ascii
 
 from .GRAND_HOD import *
+from .parallel_numpy_rng import *
 from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -585,17 +586,18 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-        start = time.time()
         if reseed:
-            np.random.seed(reseed)
-            self.halo_data['hrandoms'] = \
-            AbacusHOD._np_random_parallel(len(self.halo_data['hrandoms']), Nthread, reseed)
-            self.halo_data['hveldev'] = \
-            AbacusHOD._np_randn_parallel(len(self.halo_data['hveldev']), Nthread, reseed)*self.halo_data['hsigma3d']/np.sqrt(3)
-            self.particle_data['prandoms'] = \
-            AbacusHOD._np_random_parallel(len(self.particle_data['prandoms']), Nthread, reseed)
-
-        print("gen randoms took, ", time.time() - start)
+            start = time.time()
+            mtg = MTGenerator(np.random.PCG64(reseed))
+            r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
+            r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
+            # np.random.seed(reseed)
+            self.halo_data['hrandoms'] = r1
+            self.halo_data['hveldev'] = r2
+            self.particle_data['prandoms'] = r3
+            
+            print("gen randoms took, ", time.time() - start)
             
         start = time.time()
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
