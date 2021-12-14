@@ -223,6 +223,7 @@ from multiprocessing import Pool
 from astropy.io import ascii
 
 from .GRAND_HOD import *
+from .parallel_numpy_rng import *
 from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -523,8 +524,8 @@ class AbacusHOD:
         
         return halo_data, particle_data, params, mock_dir
 
-    
-    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, Nthread = 16, verbose = False):
+    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
+        Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -566,19 +567,26 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-
         if reseed:
-            rng = np.random.default_rng(reseed)
-            self.halo_data['hrandoms'] = rng.random(len(self.halo_data['hrandoms']))
-            self.halo_data['hveldev'] = rng.normal(loc = 0, scale = self.halo_data['hsigma3d']/np.sqrt(3), size = len(self.halo_data['hveldev']))
-            self.particle_data['prandoms'] = rng.random(len(self.particle_data['prandoms']))
+            start = time.time()
+            mtg = MTGenerator(np.random.PCG64(reseed))
+            r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
+            r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
+            self.halo_data['hrandoms'] = r1
+            self.halo_data['hveldev'] = r2
+            self.particle_data['prandoms'] = r3
             
+            print("gen randoms took, ", time.time() - start)
+            
+        start = time.time()
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
             verbose = False)
+        print("gen mocks", time.time() - start)
 
         return mock_dict
 
@@ -645,7 +653,7 @@ class AbacusHOD:
     def _compute_ngal_lrg(logMbins, deltacbins, fenvbins, halo_mass_func,
                    logM_cut, logM1, sigma, alpha, kappa, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -672,7 +680,7 @@ class AbacusHOD:
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
                    logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -698,7 +706,7 @@ class AbacusHOD:
     def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, p_max,
                    logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
