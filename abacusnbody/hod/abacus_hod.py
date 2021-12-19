@@ -569,12 +569,14 @@ class AbacusHOD:
             tracers = self.tracers
         if reseed:
             start = time.time()
+            # np.random.seed(reseed)
             mtg = MTGenerator(np.random.PCG64(reseed))
+            rng = np.random.default_rng()
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
-            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
+            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
             self.halo_data['hrandoms'] = r1
-            self.halo_data['hveldev'] = r2
+            self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
             self.particle_data['prandoms'] = r3
             
             print("gen randoms took, ", time.time() - start)

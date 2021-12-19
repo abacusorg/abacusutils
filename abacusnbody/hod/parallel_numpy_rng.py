@@ -27,7 +27,7 @@ class MTGenerator:
     
     Usage
     -----
-    ```python
+    ```
     p = np.random.PCG64(123)  # or PCG64DXSM
     mtg = MTGenerator(p)
     r1 = mtg.random(size=16, nthread=2, dtype=np.float32)
@@ -58,7 +58,9 @@ class MTGenerator:
             nthread = len(os.sched_getaffinity(0))
         self.nthread = nthread
         
-        self._next_float = _next_float[bit_generator.state['bit_generator']]
+        # each is a dict, keyed on dtype
+        self._next_float = _next_float[bit_generator.state['bit_generator']]['zero']
+        self._next_float_nonzero = _next_float[bit_generator.state['bit_generator']]['nonzero']
         
         self._cached_normal = None
         
@@ -81,12 +83,8 @@ class MTGenerator:
         
         if out is None:
             out = np.empty(size, dtype=dtype)
-        if dtype == np.float64:
-            _random(states, starts, out, self.bitgen.ctypes.next_double)
-        elif dtype == np.float32:
-            _random(states, starts, out, self._next_float)
-        else:
-            raise ValueError(dtype)
+        next_float = self._next_float[dtype]
+        _random(states, starts, out, next_float)
             
         if verify_rng:
             # Did we advance each RNG by the right amount?
@@ -159,12 +157,8 @@ class MTGenerator:
         
         # now offset the out array
         _out = out[first:]
-        if dtype == np.float64:
-            _cached_normal = _boxmuller(states, ff, _out, self.bitgen.ctypes.next_double)
-        elif dtype == np.float32:
-            _cached_normal = _boxmuller(states, ff, _out, self._next_float)
-        else:
-            raise ValueError(dtype)
+        next_float_nonzero = self._next_float_nonzero[dtype]
+        _cached_normal = _boxmuller(states, ff, _out, next_float_nonzero)
         if not np.isnan(_cached_normal):
             self._cached_normal = _cached_normal
         del _out
@@ -236,19 +230,42 @@ def _boxmuller(states, starts, out, next_double):
 
     return cache[0]
 
-            
-# initialize some numba functions
-_next_uint32_pcg64 = np.random.PCG64().ctypes.next_uint32
-@njit(fastmath=True)
-def _next_float_pcg64(state):
-    return np.float32(np.int32(_next_uint32_pcg64(state) >> np.uint32(8)) * (np.float32(1.) / np.float32(16777216.)))
+# TODO: there are now enough of these that they should live in their own module
+# TODO: for very low latency cases, there may be benefit to inlining these
 
-_next_float={'PCG64':_next_float_pcg64}
+def _generate_int_to_float(bitgen):
+    # initialize the numba functions to convert ints to floats
+    _next_uint32_pcg64 = bitgen().ctypes.next_uint32
+    _next_uint64_pcg64 = bitgen().ctypes.next_uint64
+
+    @njit(fastmath=True)
+    def _next_float_pcg64(state):
+        '''Random float in the semi-open interval [0,1)'''
+        return np.float32(np.int32(_next_uint32_pcg64(state) >> np.uint32(8)) * (np.float32(1.) / np.float32(16777216.)))
+
+    @njit(fastmath=True)
+    def _next_float_pcg64_nonzero(state):
+        '''Random float in the semi-open interval (0,1]'''
+        return np.float32((np.int32(_next_uint32_pcg64(state) >> np.uint32(8)) + np.int32(1))  * (np.float32(1.) / np.float32(16777216.)))
+
+    @njit(fastmath=True)
+    def _next_double_pcg64(state):
+        '''Random double in the semi-open interval [0,1)'''
+        return np.float64(np.int64(_next_uint64_pcg64(state) >> np.uint64(11)) * (np.float64(1.) / np.float64(9007199254740992.)))
+
+    @njit(fastmath=True)
+    def _next_double_pcg64_nonzero(state):
+        '''Random double in the semi-open interval (0,1]'''
+        return np.float64((np.int64(_next_uint64_pcg64(state) >> np.uint64(11)) + np.int64(1))  * (np.float64(1.) / np.float64(9007199254740992.)))
+    
+    _next_float = {'zero': {np.float32:_next_float_pcg64, np.float64:_next_double_pcg64},
+                   'nonzero': {np.float32:_next_float_pcg64_nonzero, np.float64:_next_double_pcg64_nonzero},
+                  }
+    return _next_float
+
+_next_float = {}
+_next_float['PCG64'] = _generate_int_to_float(np.random.PCG64)
 
 if hasattr(np.random, 'PCG64DXSM'):
     # Numpy >= 1.21
-    _next_uint32_pcg64dxsm = np.random.PCG64DXSM().ctypes.next_uint32
-    @njit(fastmath=True)
-    def _next_float_pcg64dxsm(state):
-        return np.float32(np.int32(_next_uint32_pcg64dxsm(state) >> np.uint32(8)) * (np.float32(1.) / np.float32(16777216.)))
-    _next_float['PCG64DXSM'] = _next_float_pcg64dxsm
+    _next_float['PCG64XDSM'] = _generate_int_to_float(np.random.PCG64DXSM)
