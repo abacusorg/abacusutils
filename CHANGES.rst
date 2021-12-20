@@ -11,6 +11,11 @@ Fixes
 New Features
 ~~~~~~~~~~~~
 - Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
+- Add pack9 reader [#25]
+
+Enhancements 
+~~~~~~~~~~~~
+- Sped up RNG for reseeding [#24]
 
 Changes
 ~~~~~~~

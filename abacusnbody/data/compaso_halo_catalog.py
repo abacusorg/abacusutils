@@ -264,7 +264,7 @@ You can control the number of decompression threads with:
 from glob import glob
 import os
 import os.path
-# TODO: may be happier with pathlib
+from pathlib import PurePath
 from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, abspath, samefile
 import re
 import gc
@@ -323,7 +323,7 @@ class CompaSOHaloCatalog:
 
         Parameters
         ----------
-        path: str or list of str
+        path: path-like or list of path-like
             The halo catalog directory, like ``MySimulation/halos/z1.000/``.
             Or a single halo info file, or a list of halo info files.
             Will accept ``halo_info`` dirs or "redshift" dirs
@@ -506,6 +506,9 @@ class CompaSOHaloCatalog:
         '''Figure out what files the user is asking for
         '''
 
+        # For the moment, coerce pathlib to str
+        if isinstance(path, PurePath):
+            path = str(path)
         if type(path) is str:
             path = [path]  # dir or file
         else:

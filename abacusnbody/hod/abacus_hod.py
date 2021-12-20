@@ -223,6 +223,7 @@ from multiprocessing import Pool
 from astropy.io import ascii
 
 from .GRAND_HOD import *
+from .parallel_numpy_rng import *
 from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -381,6 +382,7 @@ class AbacusHOD:
         hmultis = np.empty([Nhalos_tot])
         hrandoms = np.empty([Nhalos_tot])
         hveldev = np.empty([Nhalos_tot])
+        hsigma3d = np.empty([Nhalos_tot])
         hdeltac = np.empty([Nhalos_tot])
         hfenv = np.empty([Nhalos_tot])
 
@@ -429,6 +431,7 @@ class AbacusHOD:
             halo_pos = maskedhalos["x_L2com"] # halo positions, Mpc / h
             halo_vels = maskedhalos['v_L2com'] # halo velocities, km/s
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
+            halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
@@ -445,6 +448,7 @@ class AbacusHOD:
             hmultis[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_multi
             hrandoms[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_randoms
             hveldev[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vel_dev
+            hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_sigma3d
             hdeltac[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_deltac
             hfenv[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_fenv
             halo_ticker += Nhalos[eslab]
@@ -494,6 +498,7 @@ class AbacusHOD:
                      "hmultis": hmultis, 
                      "hrandoms": hrandoms, 
                      "hveldev": hveldev, 
+                     "hsigma3d": hsigma3d, 
                      "hdeltac": hdeltac, 
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
@@ -519,8 +524,8 @@ class AbacusHOD:
         
         return halo_data, particle_data, params, mock_dir
 
-    
-    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16, verbose = False):
+    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
+        Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -533,6 +538,10 @@ class AbacusHOD:
         
         ``want_rsd``: bool 
             enable RSD? default ``True``.
+            
+        ``reseed``: int
+            re-generate random numbers? supply random number seed. This overwrites the pre-generated random numbers, at a performance cost.
+            Default ``None``.
 
         ``write_to_disk``: bool 
             output to disk? default ``False``. Setting to ``True`` decreases performance. 
@@ -558,13 +567,26 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-
+        if reseed:
+            start = time.time()
+            mtg = MTGenerator(np.random.PCG64(reseed))
+            r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
+            r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
+            self.halo_data['hrandoms'] = r1
+            self.halo_data['hveldev'] = r2
+            self.particle_data['prandoms'] = r3
+            
+            print("gen randoms took, ", time.time() - start)
+            
+        start = time.time()
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
             verbose = False)
+        print("gen mocks", time.time() - start)
 
         return mock_dict
 
@@ -631,7 +653,7 @@ class AbacusHOD:
     def _compute_ngal_lrg(logMbins, deltacbins, fenvbins, halo_mass_func,
                    logM_cut, logM1, sigma, alpha, kappa, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -658,7 +680,7 @@ class AbacusHOD:
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
                    logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -684,7 +706,7 @@ class AbacusHOD:
     def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, p_max,
                    logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
