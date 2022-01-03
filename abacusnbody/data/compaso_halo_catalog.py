@@ -1365,7 +1365,8 @@ class CompaSOHaloCatalog:
     
     @staticmethod
     def is_path_halo_lc(path):
-        return 'halo_light_cones' in path or bool(glob.glob(pjoin(path, 'lc_*.asdf')))
+        path = str(path)
+        return 'halo_light_cones' in path or bool(glob(pjoin(path, 'lc_*.asdf')))
         
 
     def __repr__(self):
