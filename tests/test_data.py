@@ -235,3 +235,44 @@ def test_pack9():
     
     p = read_asdf(pidfn, dtype=np.float32)
     assert p.colnames == ['pid']
+
+    
+def test_halo_lc():
+    '''Test loading halo light cones
+    '''
+    
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+
+    cat = CompaSOHaloCatalog(curdir / 'halo_light_cones/AbacusSummit_base_c000_ph001-abridged/z2.250/',
+                             fields='all',
+                             subsamples=True)
+    assert(cat.halo_lc == True)
+    
+    HALO_LC_CAT = refdir / 'halo_lc_cat.asdf'
+    HALO_LC_SUBSAMPLES = refdir / 'halo_lc_subsample.asdf'
+    
+    # generate reference
+    #ref = cat.halos
+    #ref.write(HALO_LC_CAT, format='asdf', all_array_storage='internal', all_array_compression='blsc')
+    
+    #ref = cat.subsamples
+    #ref.write(HALO_LC_SUBSAMPLES, format='asdf', all_array_storage='internal', all_array_compression='blsc')
+    
+    ref = Table.read(HALO_LC_CAT)
+    halos = cat.halos
+    for col in ref.colnames:
+        if issubclass(ref[col].dtype.type, numbers.Integral):
+            assert np.all(halos[col] == ref[col])
+        else:
+            assert np.allclose(halos[col], ref[col])        
+    assert halos.meta == ref.meta
+    
+    ref = Table.read(HALO_LC_SUBSAMPLES)
+    ss = cat.subsamples
+    for col in ref.colnames:
+        if issubclass(ref[col].dtype.type, numbers.Integral):
+            assert np.all(ss[col] == ref[col])
+        else:
+            assert np.allclose(ss[col], ref[col])
+            
+    assert ss.meta == ref.meta
