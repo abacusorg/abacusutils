@@ -1,8 +1,12 @@
 # abacusutils
 
-[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Build Status](https://travis-ci.com/abacusorg/abacusutils.svg?branch=master)](https://travis-ci.com/abacusorg/abacusutils)
+<p align="center">
+<img src="docs/images/icon_red.png" width="175px" alt="Abacus Logo">
+</p>
 
-abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
+[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Tests](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml/badge.svg)](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml)
+
+abacusutils is a package for reading and manipulating data products from the Abacus *N*-body project.
 In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io)
 suite of simulations.  We provide multiple interfaces: primarily Python 3, but also C/C++ [coming soon!] and
 language-agnostic interfaces like Unix pipes.
@@ -15,12 +19,13 @@ and new performance opportunities identified.
 
 ## Installation
 The Python abacusutils package is hosted on PyPI and can be installed
-by installing "abacusutils" and our fork of the ASDF library with the following command:
+by installing "abacusutils":
 ```
-pip install git+https://github.com/lgarrison/asdf.git abacusutils
+pip install abacusutils
 ```
 
 The Unix pipe interface (`pipe_asdf`) is also installed as part of the pip install.
+Note that our custom ASDF fork is no longer required as of abacusutils 1.0.0.
 
 The C/C++ code (coming soon!) can be downloaded directly by cloning
 this repository:
@@ -32,14 +37,8 @@ or by downloading a zip archive of the repository:
 wget https://github.com/abacusorg/abacusutils/archive/master.zip
 ```
 
-### Python Dependencies
-The Python dependencies are numpy, asdf (our fork), blosc, astropy, and numba.
-The only "unusual" dependency is asdf, because we require our fork of the project
-to be installed (located at: https://github.com/lgarrison/asdf/).  Our fork supports
-[blosc compression](https://blosc.org/pages/blosc-in-depth/).
-
 ## Usage
-abacusutil has multiple interfaces, summarized here and at <https://abacusutils.readthedocs.io/en/latest/usage.html>.
+abacusutils has multiple interfaces, summarized here and at <https://abacusutils.readthedocs.io/en/latest/usage.html>.
 
 Specific examples of how to use abacusutils to work with AbacusSummit data will soon
 be given at the AbacusSummit website: <https://abacussummit.readthedocs.io>

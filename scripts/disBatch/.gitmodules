@@ -1,0 +1,4 @@
+[submodule "kvsstcp"]
+	path = kvsstcp
+	url = https://github.com/flatironinstitute/kvsstcp
+	branch = master

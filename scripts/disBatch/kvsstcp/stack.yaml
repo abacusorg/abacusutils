@@ -1,0 +1,4 @@
+# For haskell stackage
+resolver: lts-11.8
+packages:
+- '.'

@@ -1,8 +1,61 @@
 Changelog
 =========
-
-1.0.0 (upcoming)
+1.1.0 (upcoming)
 ----------------
+
+Fixes
+~~~~~
+- Fixed issues with QSO incompleteness [#15]
+- Fix ``cleandir`` and propagate cleaning info in header [#18]
+
+New Features
+~~~~~~~~~~~~
+- Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
+- Add pack9 reader [#25]
+
+Enhancements 
+~~~~~~~~~~~~
+- Sped up RNG for reseeding [#24]
+
+Changes
+~~~~~~~
+- Migrate testing to GitHub CI; start some linting [#17]
+
+1.0.4 (2021-07-15)
+------------------
+
+Fixes
+~~~~~
+- Fix IC parameter in config file and ELG HOD generation
+
+1.0.3 (2021-06-16)
+------------------
+
+Fixes
+~~~~~
+- Fix HOD ``prepare_sim`` error when ``want_AB = False`` [#14]
+
+Changes
+~~~~~~~
+- Start testing Python 3.9 [#13]
+
+1.0.2 (2021-06-04)
+------------------
+
+Changes
+~~~~~~~
+- Relax numba version requirement for DESI Conda compatibility. Warning: ``numba<0.52`` not fully tested with ``abacusnbody.hod`` package.
+
+
+1.0.1 (2021-06-03)
+------------------
+
+Changes
+~~~~~~~
+- Use updated directory structure for cleaned catalogs.
+
+1.0.0 (2021-06-02)
+------------------
 
 Fixes
 ~~~~~
@@ -10,7 +63,7 @@ Fixes
   
 New Features
 ~~~~~~~~~~~~
-- ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned_halos=True`` (the default) [#6]
+- ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned=True`` (the default) [#6]
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -23,10 +76,14 @@ Enhancements
 
 - Printing a ``CompaSOHaloCatalog`` now shows the memory usage (also available with ``CompaSOHaloCatalog.nbytes()``) [#6]
 
+- Our custom fork of ASDF is no longer required [#10]
+
 Deprecations
 ~~~~~~~~~~~~
 - Passing a string to the ``load_subsamples`` argument of ``CompaSOHaloCatalog`` is deprecated;
   use a dict instead, like: ``load_subsamples=dict(A=True, rv=True)``. [#6]
+  
+- ``cleaned_halos`` renamed to ``cleaned``
 
 0.4.0 (2021-02-03)
 ------------------

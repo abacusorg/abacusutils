@@ -3,15 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
    
-.. figure:: images/icon_red.png
-  :width: 175
+.. image:: images/icon_red.png
+  :width: 175px
   :alt: Abacus logo
   :align: center
 
 abacusutils
 ===========
 
-abacusutils is a package for reading and manipulating data products from the Abacus N-body project.
+abacusutils is a package for reading and manipulating data products from the Abacus *N*-body project.
 In particular, these utilities are intended for use with the `AbacusSummit <https://abacussummit.readthedocs.io>`_
 suite of simulations.  We provide multiple interfaces: primarily Python 3, but also C/C++ [coming soon!] and
 language-agnostic interfaces like Unix pipes.

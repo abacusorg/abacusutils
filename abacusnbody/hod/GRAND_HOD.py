@@ -15,7 +15,7 @@ from numba import njit, types, jit
 from numba.typed import Dict
 
 # import yaml
-# config = yaml.load(open('config/abacus_hod.yaml'))
+# config = yaml.safe_load(open('config/abacus_hod.yaml'))
 # numba.set_num_threads(16)
 float_array = types.float64[:]
 int_array = types.int64[:]
@@ -47,7 +47,7 @@ def N_sat_generic(M_h, M_cut, kappa, M_1, alpha, A_s=1.):
     return A_s*((M_h-kappa*M_cut)/M_1)**alpha
 
 @njit(fastmath=True)
-def N_cen_ELG_v1(M_h, p_max, Q, logM_cut, sigma, gamma):
+def N_cen_ELG_v1(M_h, p_max, Q, logM_cut, sigma, gamma, Anorm = 1):
     """
     HOD function for ELG centrals taken from arXiv:1910.05095.
     """
@@ -55,7 +55,7 @@ def N_cen_ELG_v1(M_h, p_max, Q, logM_cut, sigma, gamma):
     phi = phi_fun(logM_h, logM_cut, sigma)
     Phi = Phi_fun(logM_h, logM_cut, sigma, gamma)
     A = A_fun(p_max, Q, phi, Phi)
-    return 2.*A*phi*Phi + 0.5/Q*(1 + math.erf((logM_h-logM_cut)*100))
+    return 2.*A*phi*Phi/Anorm + 0.5/Q*(1 + math.erf((logM_h-logM_cut)*100))
 
 @njit(fastmath=True)
 def N_cen_ELG_v2(M_h, p_max, logM_cut, sigma, gamma):
@@ -138,12 +138,14 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
         ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
-    alpha_c_E, Ac_E, Bc_E = ELG_decorations_array[0], ELG_decorations_array[6], ELG_decorations_array[8]
+    alpha_c_E, Ac_E, Bc_E, ic_E = ELG_decorations_array[0], ELG_decorations_array[6], ELG_decorations_array[8],\
+    ELG_decorations_array[10]
 
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
         QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
         QSO_design_array[5], QSO_design_array[6]
-    alpha_c_Q, Ac_Q, Bc_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8]
+    alpha_c_Q, Ac_Q, Bc_Q, ic_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8],\
+    QSO_decorations_array[10]
 
     H = len(mass)
 
@@ -165,11 +167,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             ELG_marker = LRG_marker
             if want_ELG:
                 logM_cut_E_temp = logM_cut_E + Ac_E * deltac[i] + Bc_E * fenv[i]
-                ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E_temp, sigma_E, gamma_E) * multis[i]
+                ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E_temp, sigma_E, gamma_E, A_E) * ic_E * multis[i]
             QSO_marker = ELG_marker
             if want_QSO:
                 logM_cut_Q_temp = logM_cut_Q + Ac_Q * deltac[i] + Bc_Q * fenv[i]
-                QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q)
+                QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q) * ic_Q * multis[i]
 
             if randoms[i] <= LRG_marker:
                 Nout[tid, 0, 0] += 1 # counting
@@ -326,18 +328,18 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
         ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
-    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
+    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E = \
         ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
         ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
-        ELG_decorations_array[9]
+        ELG_decorations_array[9], ELG_decorations_array[10]
 
     pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
         QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
         QSO_design_array[5], QSO_design_array[6]
-    alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q = \
+    alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
         QSO_decorations_array[1], QSO_decorations_array[2], QSO_decorations_array[3], QSO_decorations_array[4], \
         QSO_decorations_array[5], QSO_decorations_array[6], QSO_decorations_array[7], QSO_decorations_array[8], \
-        QSO_decorations_array[9]
+        QSO_decorations_array[9], QSO_decorations_array[10]
 
     H = len(hmass) # num of particles
 
@@ -368,7 +370,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 M1_E_temp = 10**(logM1_E + As_E * hdeltac[i] + Bs_E * hfenv[i])
                 logM_cut_E_temp = logM_cut_E + Ac_E * hdeltac[i] + Bc_E * hfenv[i]
                 base_p_E = N_sat_generic(
-                    hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E, A_E) * weights[i]
+                    hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E) * weights[i] * ic_E
                 if enable_ranks:
                     decorator_E = 1 + s_E * ranks[i] + s_v_E * ranksv[i] + s_p_E * ranksp[i] + s_r_E * ranksr[i]
                     exp_sat = base_p_E * decorator_E
@@ -380,7 +382,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 M1_Q_temp = 10**(logM1_Q + As_Q * hdeltac[i] + Bs_Q * hfenv[i])
                 logM_cut_Q_temp = logM_cut_Q + Ac_Q * hdeltac[i] + Bc_Q * hfenv[i]
                 base_p_Q = N_sat_generic(
-                    hmass[i], 10**logM_cut_Q_temp, kappa_Q, M1_Q_temp, alpha_Q, A_Q) * weights[i]
+                    hmass[i], 10**logM_cut_Q_temp, kappa_Q, M1_Q_temp, alpha_Q, A_Q) * weights[i] * ic_Q
                 if enable_ranks:
                     decorator_Q = 1 + s_Q * ranks[i] + s_v_Q * ranksv[i] + s_p_Q * ranksp[i] + s_r_Q * ranksr[i]
                     exp_sat = base_p_Q * decorator_Q
@@ -535,7 +537,7 @@ def fast_concatenate(array1, array2, Nthread):
         return final_array
 
     numba.set_num_threads(Nthread)
-    Nthread1 = int(np.floor(Nthread * N1 / (N1 + N2)))
+    Nthread1 = max(1, int(np.floor(Nthread * N1 / (N1 + N2))))
     Nthread2 = Nthread - Nthread1
     hstart1 = np.rint(np.linspace(0, N1, Nthread1 + 1))
     hstart2 = np.rint(np.linspace(0, N2, Nthread2 + 1)) + N1
@@ -632,7 +634,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'A_s'))
         ELG_design_array = np.array(
             [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E])
-        alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E = \
+        alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E = \
             map(ELG_HOD.get, ('alpha_c', 
                             'alpha_s',  
                             's', 
@@ -642,9 +644,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'Acent',
                             'Asat',
                             'Bcent',
-                            'Bsat'))
+                            'Bsat',
+                            'ic'))
         ELG_decorations_array = np.array(
-            [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E])
+            [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
         ELG_design_array = np.zeros(9)
@@ -664,7 +667,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'A_s'))
         QSO_design_array = np.array(
             [pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q])
-        alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q = \
+        alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
             map(QSO_HOD.get, ('alpha_c', 
                             'alpha_s',  
                             's', 
@@ -674,9 +677,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'Acent',
                             'Asat',
                             'Bcent',
-                            'Bsat'))
+                            'Bsat',
+                            'ic'))
         QSO_decorations_array = np.array(
-            [alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q])
+            [alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
         QSO_design_array = np.zeros(7)

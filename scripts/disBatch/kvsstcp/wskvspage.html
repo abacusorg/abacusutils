@@ -1,0 +1,285 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <style>
+      a:link {
+          color: black;
+          text-decoration: none;
+      }
+
+      a:visited {
+          color: black;
+          text-decoration: none;
+      }
+
+      a:hover {
+          color: blue;
+          text-decoration: none;
+      }
+
+      a:active {
+          color: blue;
+          text-decoration: none;
+      }
+
+      .kvsinfo {
+          font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+          width: 100%;
+          border-collapse: collapse;
+      }
+
+      .kvsinfo td, .kvsinfo th {
+          font-size: 1em;
+          border: 1px solid #22305D;
+          padding: 3px 7px 2px 7px;
+      }
+
+      td.right {
+          text-align: right;
+      }
+
+      .kvsinfo th {
+          font-size: 1.1em;
+          text-align: left;
+          padding-top: 5px;
+          padding-bottom: 4px;
+          background-color: #3A509C;
+          color: #ffffff;
+      }
+
+      .kvsinfo tr.alt td {
+          color: #000000;
+          background-color: #D7DCEB;
+      }
+
+      #keys span.type {
+        font-style: italic;
+        margin-right: 1ex;
+      }
+      #keys span.type::before {
+        content: "(";
+      }
+      #keys span.type::after {
+        content: ")";
+      }
+      #keys span.len {
+        font-style: italic;
+        margin-left: 1ex;
+      }
+      #keys span.len::before {
+        content: " [";
+      }
+      #keys span.len::after {
+        content: " bytes]";
+      }
+    </style>
+    <script type='text/javascript'>
+      /* sort comparison functions */
+      function by(f) {
+        return function(a, b) {
+          var fa = f(a), fb = f(b);
+          var d = fa - fb;
+          return isNaN(d) ? fa > fb ? 1 : fa < fb ? -1 : 0 : d;
+        };
+      }
+      var byKey = by(function(d) { return d.key; });
+      var byVal = by(function(d) { return d.val || d.len; });
+      var byCount = by(function(d) { return -d.waiters || +d.count; });
+
+      function renderJSON(e, j) {
+	if (typeof j === 'object') {
+	  if (Array.isArray(j)) {
+	    var f = document.createElement('ul');
+	    for (var x of j) {
+	      var g = document.createElement('li');
+	      renderJSON(g, x);
+	      f.appendChild(g);
+	    }
+	    e.appendChild(f);
+	  }
+	  else if (j) {
+	    var f = document.createElement('dl');
+	    for (var k in j) {
+	      var g = document.createElement('dt');
+	      g.textContent = k;
+	      f.appendChild(g);
+	      g = document.createElement('dd');
+	      renderJSON(g, j[k]);
+	      f.appendChild(g);
+	    }
+	    e.appendChild(f);
+	  }
+	} else
+	  e.appendChild(document.createTextNode(j));
+      }
+
+      var keytable, keytemplate;
+      var data = [];
+      var keys = {};
+      var sort = byKey;
+      var inputs = {};
+      function render() {
+        data.sort(sort);
+        var oldKeys = keys;
+        keys = {};
+        inputs = {};
+        var next = keytable.firstChild;
+        for (var d of data) {
+          if (d.key[0] === '.' || d.key in keys)
+            continue;
+          var row;
+          if (d.key in oldKeys) {
+            /* re-use prev row */
+            row = oldKeys[d.key];
+            delete oldKeys[d.key];
+          } else {
+            /* create new row */
+            row = keytemplate.cloneNode(true);
+            row.children[0].textContent = d.key;
+          }
+
+          /* populate */
+          if ('waiters' in d) {
+            var q = d.key.indexOf('?', 1);
+            if (q >= 0) {
+              var i = row.children[1].firstChild || document.createElement('input');
+              i.name = d.key;
+              i.type = 'text';
+              i.placeholder = d.key.substr(0, q);
+              row.children[1].appendChild(i);
+              inputs[d.key] = i;
+            }
+            row.children[2].textContent = '[waiting: ' + d.waiters + ']';
+          } else {
+            var cell = row.children[1];
+	    while (cell.firstChild)
+	      cell.removeChild(cell.firstChild);
+            if (d.type === 'HTML')
+              cell.innerHTML = d.val;
+	    else if (d.type === 'JSON')
+	      renderJSON(cell, d.val);
+            else {
+	      if (d.type !== 'ASTR') {
+		var t = document.createElement('span');
+		t.className = 'type';
+		t.textContent = d.type;
+		cell.appendChild(t);
+	      }
+	      if (d.val)
+		cell.appendChild(document.createTextNode(d.val));
+	      if (d.len != undefined) {
+		var l = document.createElement('span');
+		l.className = 'len';
+		l.textContent = d.len;
+		cell.appendChild(l);
+	      }
+	    }
+            row.children[2].textContent = d.count;
+          }
+
+          /* save ref for next time */
+          keys[d.key] = row;
+          /* put in proper place */
+          if (row === next)
+            next = row.nextSibling;
+          else
+            keytable.insertBefore(row, next);
+        }
+        for (var k in oldKeys)
+          keytable.removeChild(oldKeys[k]);
+      }
+
+      function main() {
+        keytable = document.getElementById('keys');
+        keytemplate = keytable.removeChild(keytable.firstChild);
+
+        if (!('WebSocket' in window)) {
+          // alert('WebSocket is supported by your Browser!');
+          return;
+        }
+        ws = new WebSocket('ws://' + document.location.host + '/', 'kvs');
+
+        ws.onopen = function() {
+          // alert('Connected.');
+          ws.send('dump');
+        };
+
+        ws.onmessage = function (evt) {
+          var received_msg = evt.data;
+          if (received_msg == 'bye') {
+            ws.send('bye');
+            ws.close();
+            return;
+          }
+
+          var msg = JSON.parse(received_msg);
+          // dump output: [stats, waiters, puts]
+
+          var stats = document.getElementById('stats');
+          var i;
+          for (i = 0; i < msg[0].length; i++)
+            stats.children[i].textContent = msg[0][i];
+          data = msg[1].map(function (w) {
+            // waiters: [key, count]
+            return { key: w[0], waiters: w[1] };
+          }).concat(msg[2].map(function (p) {
+            // puts: [key, count, vrep]
+            // vrep: [type, val?, len?]
+            var r = p[2];
+            p = { key: p[0], count: p[1], type: r[0], val: r[1], len: r[2] };
+	    if (p.type === 'ASTR' && p.val.substr(0,6).toLowerCase() === '<html>') {
+	      // backwards compatibility
+	      p.type = 'HTML';
+	      p.val = p.val.substr(6);
+	    } else if (p.type === 'JSON') {
+	      try {
+		p.val = JSON.parse(p.val);
+	      } catch (e) {
+		console.log("Couldn't parse JSON for " + p.key);
+		/* leave it as a string */
+	      }
+	    }
+	    return p;
+          }));
+          render();
+        };
+
+        ws.onclose = function() {
+          document.getElementById('bar').textContent = "KVS server has shut down.";
+        };
+
+        return true;
+      }
+
+      function send(ev) {
+        for (var k in inputs) {
+          if (inputs[k].value)
+            ws.send('put\0'+k+'\0'+inputs[k].value);
+        }
+        ws.send('dump');
+
+        ev.preventDefault();
+        return false;
+      }
+    </script>
+  </head>
+  <body onload="main()">
+    <form onsubmit="send(event)">
+      <div id='bar'>
+        <a href='javascript:ws.send("dump")'>&orarr;</a>
+      </div>
+      <div style='margin-top:10px'>
+        <table class="kvsinfo">
+          <caption>General Statistics</caption>
+          <tr><th>Gets</th><th>Puts</th><th>Views</th><th>Waits</td><th>Acquires</th><th>Releases</th></tr>
+          <tr id='stats'><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0</td></tr>
+        </table>
+        <table class="kvsinfo">
+          <caption>Current Contents</caption>
+          <thead><th onclick='sort=byKey;render()'>Key</th><th onclick='sort=byVal;render()'>Latest Value</th><th onclick='sort=byCount;render()'>Value Count</th></thead>
+          <tbody id='keys'><tr><td></td><td></td><td class="right"></td></tr></tbody>
+        </table>
+      </div>
+    </form>
+  </body>
+</html>

@@ -138,6 +138,7 @@ and organizes them into formats that are suited for the HOD code. This code can 
 approximately an hour depending on your configuration settings and system capabilities. 
 We recommend setting the ``Nthread_load`` parameter to ``min(sys_core_count, memoryGB_divided_by_30)``.
 You can run ``load_sims`` on command line with ::
+
     python -m abacusnbody.hod.prepare_sim --path2config PATH2CONFIG
 
 
@@ -153,10 +154,12 @@ with the ``emcee`` sampler.
 
 To use the given ``run_hod.py`` script to run a custom configuration file, you can
 simply run the given script in bash ::
+
     python run_hod.py --path2config PATH2CONFIG
 
 You can also consruct the AbacusHOD object yourself within Python and run HODs from
 there. Here we show the scripts within ``run_hod.py`` for reference.::
+
     import os
     import glob
     import time
@@ -169,7 +172,7 @@ there. Here we show the scripts within ``run_hod.py`` for reference.::
     path2config = 'config/abacus_hod.yaml' # path to config file
 
     # load the config file and parse in relevant parameters
-    config = yaml.load(open(path2config))
+    config = yaml.safe_load(open(path2config))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
@@ -220,6 +223,7 @@ from multiprocessing import Pool
 from astropy.io import ascii
 
 from .GRAND_HOD import *
+from .parallel_numpy_rng import *
 from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -262,11 +266,11 @@ class AbacusHOD:
                 * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file. 
 
         clustering_params: dict
-            Sumamry statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
+            Summary statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
                 * ``clustering_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
                 * ``bin_params``: dict, transverse scale binning. 
-                    * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}} in Mpc/h.
-                    * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}} in Mpc/h.
+                    * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}}` in Mpc/h.
+                    * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}}` in Mpc/h.
                     * ``nbins``: int, number of bins.
                 * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`. 
                 * ``pi_bin_size``: int, size of bins along of the line of sight. Need to be divisor of ``pimax``.
@@ -353,8 +357,8 @@ class AbacusHOD:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -378,6 +382,7 @@ class AbacusHOD:
         hmultis = np.empty([Nhalos_tot])
         hrandoms = np.empty([Nhalos_tot])
         hveldev = np.empty([Nhalos_tot])
+        hsigma3d = np.empty([Nhalos_tot])
         hdeltac = np.empty([Nhalos_tot])
         hfenv = np.empty([Nhalos_tot])
 
@@ -410,8 +415,8 @@ class AbacusHOD:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
-                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_MT'%eslab)            
+                halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -426,6 +431,7 @@ class AbacusHOD:
             halo_pos = maskedhalos["x_L2com"] # halo positions, Mpc / h
             halo_vels = maskedhalos['v_L2com'] # halo velocities, km/s
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
+            halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
@@ -442,6 +448,7 @@ class AbacusHOD:
             hmultis[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_multi
             hrandoms[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_randoms
             hveldev[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vel_dev
+            hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_sigma3d
             hdeltac[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_deltac
             hfenv[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_fenv
             halo_ticker += Nhalos[eslab]
@@ -491,6 +498,7 @@ class AbacusHOD:
                      "hmultis": hmultis, 
                      "hrandoms": hrandoms, 
                      "hveldev": hveldev, 
+                     "hsigma3d": hsigma3d, 
                      "hdeltac": hdeltac, 
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
@@ -516,8 +524,8 @@ class AbacusHOD:
         
         return halo_data, particle_data, params, mock_dir
 
-    
-    def run_hod(self, tracers = None, want_rsd = True, write_to_disk = False, Nthread = 16, verbose = False):
+    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
+        Nthread = 16, verbose = False):
         """
         Runs a custom HOD.
 
@@ -530,6 +538,10 @@ class AbacusHOD:
         
         ``want_rsd``: bool 
             enable RSD? default ``True``.
+            
+        ``reseed``: int
+            re-generate random numbers? supply random number seed. This overwrites the pre-generated random numbers, at a performance cost.
+            Default ``None``.
 
         ``write_to_disk``: bool 
             output to disk? default ``False``. Setting to ``True`` decreases performance. 
@@ -555,13 +567,26 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-
+        if reseed:
+            start = time.time()
+            mtg = MTGenerator(np.random.PCG64(reseed))
+            r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
+            r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
+            self.halo_data['hrandoms'] = r1
+            self.halo_data['hveldev'] = r2
+            self.particle_data['prandoms'] = r3
+            
+            print("gen randoms took, ", time.time() - start)
+            
+        start = time.time()
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
             enable_ranks = self.want_ranks, 
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
             verbose = False)
+        print("gen mocks", time.time() - start)
 
         return mock_dict
 
@@ -609,7 +634,7 @@ class AbacusHOD:
                     tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
                     tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod['A_s'],  
-                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], Nthread) 
+                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], tracer_hod['ic'], Nthread) 
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
@@ -618,7 +643,7 @@ class AbacusHOD:
                     tracer_hod['p_max'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
                     tracer_hod['alpha'], tracer_hod['A_s'],  
-                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], Nthread)         
+                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], tracer_hod['ic'], Nthread)         
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
         return ngal_dict, fsat_dict
@@ -628,7 +653,7 @@ class AbacusHOD:
     def _compute_ngal_lrg(logMbins, deltacbins, fenvbins, halo_mass_func,
                    logM_cut, logM1, sigma, alpha, kappa, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -653,9 +678,9 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, Nthread):
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -670,18 +695,18 @@ class AbacusHOD:
                     Mh_temp = 10**logMs[i]
                     logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
-                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma)
-                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, A_s)
-                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp
-                    ngal_sat += halo_mass_func[i, j, k] * nsat_temp
+                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma, A_s)
+                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha)
+                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
+                    ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
         return ngal_cent, ngal_sat
 
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, p_max,
-                   logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, Nthread):
+                   logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
-        internal helper to computer number of LRGs
+        internal helper to compute number of LRGs
         """
         numba.set_num_threads(Nthread)
 
@@ -846,8 +871,10 @@ class AbacusHOD:
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2:
+                    print(tr1+'_'+tr2)
                     clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
                 else:
+                    print(tr1+'_'+tr2)
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
