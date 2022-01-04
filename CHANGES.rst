@@ -20,6 +20,7 @@ Enhancements
 Changes
 ~~~~~~~
 - Migrate testing to GitHub CI; start some linting [#17]
+- Automatic versioning and releasing [#27]
 
 1.0.4 (2021-07-15)
 ------------------
