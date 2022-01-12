@@ -735,7 +735,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
 
 
 def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16, 
-    enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./", verbose = False):
+    enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./", verbose = False, fn_ext = None):
     """
     pass on inputs to the gen_gals function and takes care of I/O
 
@@ -769,6 +769,9 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     params : dict
         Dictionary of various simulation parameters. 
 
+    fn_ext: str
+        filename extension for saved files. Only relevant when ``write_to_disk = True``.
+
     Output
     ------
 
@@ -799,8 +802,11 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
                 rsd_string = "_rsd"
             else:
                 rsd_string = ""
-
-            outdir = (savedir) / ("galaxies"+rsd_string)
+            
+            if fn_ext is None:
+                outdir = (savedir) / ("galaxies"+rsd_string)
+            else:
+                outdir = (savedir) / ("galaxies"+rsd_string+fn_ext)
 
             # create directories if not existing
             os.makedirs(outdir, exist_ok = True)
