@@ -591,7 +591,7 @@ class AbacusHOD:
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
             verbose = False,
-            fn_ext)
+            fn_ext = fn_ext)
         print("gen mocks", time.time() - start)
 
         return mock_dict
