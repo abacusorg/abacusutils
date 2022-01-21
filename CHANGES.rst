@@ -1,7 +1,7 @@
 Changelog
 =========
-1.1.0 (upcoming)
-----------------
+1.1.0 (2022-01-21)
+------------------
 
 Fixes
 ~~~~~
@@ -12,6 +12,7 @@ New Features
 ~~~~~~~~~~~~
 - Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
 - Add pack9 reader [#25]
+- Add light cone catalog reading to ``CompaSOHaloCatalog`` [#11]
 
 Enhancements 
 ~~~~~~~~~~~~
