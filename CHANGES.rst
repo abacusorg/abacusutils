@@ -1,7 +1,16 @@
 Changelog
 =========
-1.1.0 (upcoming)
+
+1.2.0 (upcoming)
 ----------------
+
+New Features
+~~~~~~~~~~~~
+- Now supports Python 3.10 [#19]
+
+
+1.1.0 (2022-01-21)
+------------------
 
 Fixes
 ~~~~~
@@ -12,6 +21,7 @@ New Features
 ~~~~~~~~~~~~
 - Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
 - Add pack9 reader [#25]
+- Add light cone catalog reading to ``CompaSOHaloCatalog`` [#11]
 
 Enhancements 
 ~~~~~~~~~~~~
@@ -20,7 +30,7 @@ Enhancements
 Changes
 ~~~~~~~
 - Migrate testing to GitHub CI; start some linting [#17]
-- Start testing Python 3.10 [#19]
+- Automatic versioning and releasing [#27]
 
 1.0.4 (2021-07-15)
 ------------------

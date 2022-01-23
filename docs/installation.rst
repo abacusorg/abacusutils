@@ -28,6 +28,7 @@ then the recommendation is to clone the repo and install the package in
 pip "editable mode":
 
 ::
+    
     $ git clone https://github.com/abacusorg/abacusutils.git
     $ cd abacusutils
     $ pip install -e ./  # install from current dir in editable mode
