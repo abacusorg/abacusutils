@@ -335,7 +335,8 @@ class AbacusHOD:
 
         # load header to read parameters
         if self.halo_lc:
-            halo_info_fns = list(sim_dir / simname / ('z%4.3f'%self.z_mock) / 'lc_halo_info.asdf')
+            halo_info_fns = [str(sim_dir / simname / ('z%4.3f'%self.z_mock) / 'lc_halo_info.asdf')]
+            print(halo_info_fns)
         else:
             halo_info_fns = \
                             list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
