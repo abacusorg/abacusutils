@@ -282,6 +282,7 @@ class AbacusHOD:
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
         self.output_dir = sim_params['output_dir']
+        self.halo_lc = sim_params['halo_lc']
         
         # tracers
         tracer_flags = HOD_params['tracer_flags']
@@ -333,8 +334,11 @@ class AbacusHOD:
             Path(self.subsample_dir) / simname / ('z%4.3f'%self.z_mock)
 
         # load header to read parameters
-        halo_info_fns = \
-            list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
+        if self.halo_lc:
+            halo_info_fns = list(sim_dir / simname / ('z%4.3f'%self.z_mock) / 'lc_halo_info.asdf')
+        else:
+            halo_info_fns = \
+                            list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
         f = asdf.open(halo_info_fns[0], lazy_load=True, copy_arrays=False)
         header = f['header']
 

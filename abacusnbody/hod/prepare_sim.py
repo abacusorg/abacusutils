@@ -84,7 +84,7 @@ def subsample_particles(m, MT):
 #     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
 #     return Dtot / D_avg - 1
     
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed):
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -104,16 +104,25 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     # load the halo catalog slab
     print("loading halo catalog ")
-    slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
-    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+    if halo_lc:
+        slabname = simdir+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
+        id_key = 'index_halo'
+    else:
+        slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
+                   +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+        id_key = 'id'
 
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
+        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
         cleaned = cleaning)
+    assert halo_lc == cat.halo_lc
+    
     halos = cat.halos
     if cleaning:
         halos = halos[halos['N'] > 0]
-
+    if halo_lc:
+        halos['id'] = halos[id_key]
+        
     parts = cat.subsamples
     header = cat.header
     Lbox = cat.header['BoxSizeHMpc']
