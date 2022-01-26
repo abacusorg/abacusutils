@@ -238,7 +238,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                 lrg_z[j1] = pos[i,2]
                 lrg_vz[j1] = vel[i,2] + alpha_c_L * vdev[i] # velocity bias
                 # rsd only applies to the z direction
-                if rsd:
+                if rsd and origin != None:
                     nx = lrg_x[j1] - origin[0]
                     ny = lrg_y[j1] - origin[1]
                     nz = lrg_z[j1] - origin[2]
@@ -250,7 +250,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                     lrg_x[j1] = lrg_x[j1]+proj*nx
                     lrg_y[j1] = lrg_y[j1]+proj*ny
                     lrg_z[j1] = lrg_z[j1]+proj*nz
-                    #lrg_z[j1] = wrap(pos[i,2] + lrg_vz[j1] * inv_velz2kms, lbox)
+                elif rsd:
+                    lrg_z[j1] = wrap(pos[i,2] + lrg_vz[j1] * inv_velz2kms, lbox)
                 lrg_mass[j1] = mass[i]
                 lrg_id[j1] = ids[i]
                 j1 += 1
@@ -263,7 +264,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                 elg_z[j2] = pos[i,2]
                 elg_vz[j2] = vel[i,2] + alpha_c_E * vdev[i] # velocity bias
                 # rsd only applies to the z direction
-                if rsd:
+                if rsd and origin != None:
                     nx = elg_x[j2] - origin[0]
                     ny = elg_y[j2] - origin[1]
                     nz = elg_z[j2] - origin[2]
@@ -275,7 +276,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                     elg_x[j2] = elg_x[j2]+proj*nx
                     elg_y[j2] = elg_y[j2]+proj*ny
                     elg_z[j2] = elg_z[j2]+proj*nz
-                    #elg_z[j2] = wrap(pos[i,2] + elg_vz[j2] * inv_velz2kms, lbox)
+                elif rsd:
+                    elg_z[j2] = wrap(pos[i,2] + elg_vz[j2] * inv_velz2kms, lbox)
                 elg_mass[j2] = mass[i]
                 elg_id[j2] = ids[i]
                 j2 += 1
@@ -288,7 +290,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                 qso_z[j3] = pos[i,2]
                 qso_vz[j3] = vel[i,2] + alpha_c_Q * vdev[i] # velocity bias
                 # rsd only applies to the z direction
-                if rsd:
+                if rsd and origin != None:
                     nx = qso_x[j3] - origin[0]
                     ny = qso_y[j3] - origin[1]
                     nz = qso_z[j3] - origin[2]
@@ -300,7 +302,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                     qso_x[j3] = qso_x[j3]+proj*nx
                     qso_y[j3] = qso_y[j3]+proj*ny
                     qso_z[j3] = qso_z[j3]+proj*nz
-                    #qso_z[j3] = wrap(pos[i,2] + qso_vz[j3] * inv_velz2kms, lbox)
+                elif rsd:
+                    qso_z[j3] = wrap(pos[i,2] + qso_vz[j3] * inv_velz2kms, lbox)
                 qso_mass[j3] = mass[i]
                 qso_id[j3] = ids[i]
                 j3 += 1
@@ -486,7 +489,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 lrg_vy[j1] = hvel[i, 1] + alpha_s_L * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 lrg_z[j1] = ppos[i, 2]
                 lrg_vz[j1] = hvel[i, 2] + alpha_s_L * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                if rsd:
+                if rsd and origin != None:
                     nx = lrg_x[j1] - origin[0]
                     ny = lrg_y[j1] - origin[1]
                     nz = lrg_z[j1] - origin[2]
@@ -498,7 +501,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                     lrg_x[j1] = lrg_x[j1]+proj*nx
                     lrg_y[j1] = lrg_y[j1]+proj*ny
                     lrg_z[j1] = lrg_z[j1]+proj*nz
-                    #lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
+                elif rsd:
+                    lrg_z[j1] = wrap(lrg_z[j1] + lrg_vz[j1] * inv_velz2kms, lbox)
                 lrg_mass[j1] = hmass[i]
                 lrg_id[j1] = hid[i]
                 j1 += 1
@@ -509,7 +513,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 elg_vy[j2] = hvel[i, 1] + alpha_s_E * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 elg_z[j2] = ppos[i, 2]
                 elg_vz[j2] = hvel[i, 2] + alpha_s_E * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                if rsd:
+                if rsd and origin != None:
                     nx = elg_x[j2] - origin[0]
                     ny = elg_y[j2] - origin[1]
                     nz = elg_z[j2] - origin[2]
@@ -521,7 +525,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                     elg_x[j2] = elg_x[j2]+proj*nx
                     elg_y[j2] = elg_y[j2]+proj*ny
                     elg_z[j2] = elg_z[j2]+proj*nz
-                    #elg_z[j2] = wrap(elg_z[j2] + elg_vz[j2] * inv_velz2kms, lbox)
+                elif rsd:
+                    elg_z[j2] = wrap(elg_z[j2] + elg_vz[j2] * inv_velz2kms, lbox)
                 elg_mass[j2] = hmass[i]
                 elg_id[j2] = hid[i]
                 j2 += 1
@@ -532,7 +537,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 qso_vy[j3] = hvel[i, 1] + alpha_s_Q * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 qso_z[j3] = ppos[i, 2]
                 qso_vz[j3] = hvel[i, 2] + alpha_s_Q * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                if rsd:
+                if rsd and origin != None:
                     nx = qso_x[j3] - origin[0]
                     ny = qso_y[j3] - origin[1]
                     nz = qso_z[j3] - origin[2]
@@ -544,7 +549,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                     qso_x[j3] = qso_x[j3]+proj*nx
                     qso_y[j3] = qso_y[j3]+proj*ny
                     qso_z[j3] = qso_z[j3]+proj*nz
-                    #qso_z[j3] = wrap(qso_z[j3] + qso_vz[j3] * inv_velz2kms, lbox)
+                elif rsd:
+                    qso_z[j3] = wrap(qso_z[j3] + qso_vz[j3] * inv_velz2kms, lbox)
                 qso_mass[j3] = hmass[i]
                 qso_id[j3] = hid[i]
                 j3 += 1

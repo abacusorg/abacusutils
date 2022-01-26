@@ -352,7 +352,7 @@ class AbacusHOD:
         if self.halo_lc:
             params['origin'] = np.array(header['LightConeOrigins']).reshape(-1,3)[0]
         else:
-            params['origin'] = np.array([0., 0., -1000000.])
+            params['origin'] = None # observer at infinity in the -z direction
         params['numslabs'] = len(halo_info_fns)
         self.lbox = header['BoxSize']
 

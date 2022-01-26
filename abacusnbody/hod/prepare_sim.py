@@ -83,7 +83,87 @@ def subsample_particles(m, MT):
 #     # average number of particles per cell                                                                                         
 #     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
 #     return Dtot / D_avg - 1
+
+def get_vertices_cube(units=0.5,N=3):
+    vertices = 2*((np.arange(2**N)[:,None] & (1 << np.arange(N))) > 0) - 1
+    return vertices*units
+
+def is_in_cube(x_pos,y_pos,z_pos,verts):
+    x_min = np.min(verts[:,0])
+    x_max = np.max(verts[:,0])
+    y_min = np.min(verts[:,1])
+    y_max = np.max(verts[:,1])
+    z_min = np.min(verts[:,2])
+    z_max = np.max(verts[:,2])
+
+    mask = (x_pos > x_min) & (x_pos <= x_max) & (y_pos > y_min) & (y_pos <= y_max) & (z_pos > z_min) & (z_pos <= z_max)
+    return mask
+
+
+def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
+    # number of randoms to generate
+    N_rands = fac*N
+
+    # location of observer
+    origin = origins[0]
+
+    # generate randoms on the unit sphere 
+    costheta = np.random.rand(N_rands)*2.-1.
+    phi = np.random.rand(N_rands)*2.*np.pi
+    theta = np.arccos(costheta)
+    x_cart = np.sin(theta)*np.cos(phi)
+    y_cart = np.sin(theta)*np.sin(phi)
+    z_cart = np.cos(theta)
+    rands_chis = np.random.rand(N_rands)*(chi_max-chi_min)+chi_min
+
+    # multiply the unit vectors by that
+    x_cart *= rands_chis
+    y_cart *= rands_chis
+    z_cart *= rands_chis
+
+    # vector between centers of the cubes and origin in Mpc/h (i.e. placing observer at 0, 0, 0)
+    box0 = np.array([0., 0., 0.])-origin
+    box1 = np.array([0., 0., Lbox])-origin
+    box2 = np.array([0., Lbox, 0.])-origin
+
+    # vertices of a cube centered at 0, 0, 0
+    vert = get_vertices_cube(units=Lbox/2.)
+
+    # remove edges because this is inherent to the light cone catalogs
+    x_vert = vert[:, 0]
+    y_vert = vert[:, 1]
+    z_vert = vert[:, 2]
+    vert[x_vert < 0, 0] += offset
+    vert[x_vert > 0, 0] -= offset
+    vert[y_vert < 0, 1] += offset
+    vert[z_vert < 0, 2] += offset
+    if origins.shape[0] == 1: # true of the huge box where the origin is at the center
+        vert[y_vert > 0, 1] -= offset
+        vert[z_vert > 0, 2] -= offset
+
     
+    # vertices for all three boxes
+    vert0 = box0+vert
+    if origins.shape[0] > 1 or chi_max >= (Lbox-offset): # not true of only the huge boxes and at low zs for base
+        vert1 = box1+vert
+        vert2 = box2+vert
+
+    # mask for whether or not the coordinates are within the vertices
+    mask0 = is_in_cube(x_cart, y_cart, z_cart, vert0)
+    if origins.shape[0] > 1 or chi_max >= (Lbox-offset):
+        mask1 = is_in_cube(x_cart, y_cart, z_cart, vert1)
+        mask2 = is_in_cube(x_cart, y_cart, z_cart, vert2)
+        mask = mask0 | mask1 | mask2
+    else:
+        mask = mask0
+    print("masked randoms = ", np.sum(mask)*100./len(mask))
+
+    rands_pos = np.vstack((x_cart[mask], y_cart[mask], z_cart[mask])).T
+    rands_chis = rands_chis[mask]
+    rands_pos += origin
+
+    return rands_pos, rands_chis
+
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
@@ -146,7 +226,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     if want_AB:
         nbins = 100
         mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
-        rad_outer = 5. # TODO: MAYBE MOVE SOMEWHERE PRETTIER
+        rad_outer = 5. # TODO: maybe move to yaml file
 
         # # grid based environment calculation
         # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
@@ -172,10 +252,6 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             alldist = np.sqrt(np.sum((allpos-origins[0])**2., axis=1))
             offset = 10. # offset intrinsic to light cones catalogs
 
-            x_min = -(Lbox/2.-offset)
-            y_min = -(Lbox/2.-offset)
-            z_min = -(Lbox/2.-offset)
-            x_max = Lbox/2.-offset
             r_min = alldist.min()
             r_max = alldist.max()
             x_min_edge = -(Lbox/2.-offset-rad_outer)
@@ -185,13 +261,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             r_min_edge = alldist.min()+rad_outer
             r_max_edge = alldist.max()-rad_outer
             if origins.shape[0] == 1: # true only of the huge box where the origin is at the center
-                y_max = Lbox/2.-offset
-                z_max = Lbox/2.-offset
                 y_max_edge = Lbox/2.-offset-rad_outer
                 z_max_edge = Lbox/2.-offset-rad_outer
             else:
-                y_max = 3./2*Lbox
-                z_max = 3./2*Lbox
                 y_max_edge = 3./2*Lbox-rad_outer
                 z_max_edge = 3./2*Lbox-rad_outer
 
@@ -201,41 +273,28 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
             if len(index_bounds) > 0:
                 # factor of rands to generate
-                rand = 100
+                rand = 10
                 rand_N = allpos.shape[0]*rand
                 
-                # problem that extra copies are in L shape but only beyond Lbox maybe check dist!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                costheta = np.random.rand(rand_N)*2.-1.
-                phi = np.random.rand(rand_N)*2*np.pi
-                theta = np.arccos(costheta)
-                rand_x = np.sin(theta)*np.cos(phi)
-                rand_y = np.sin(theta)*np.sin(phi)
-                rand_z = np.cos(theta)
-                randdist = np.random.rand(rand_N)*(r_max-r_min)+r_min
-                rand_x *=randdist
-                rand_y *=randdist
-                rand_z *=randdist
+                # generate randoms in L shape
+                randpos, randdist = gen_rand(allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins)
                 rand_n = rand_N/(4./3.*np.pi*(r_max**3-r_min**3))
-                randpos = np.vstack((rand_x, rand_y, rand_z)).T
-                randpos += origins[0]
-                del rand_x, rand_y, rand_z
                 
                 # boundaries of the random particles for cutting
-                randbounds = ((x_min <= randpos[:, 0]) & (x_max >= randpos[:, 0]) & (y_min <= randpos[:, 1]) & (y_max >= randpos[:, 1]) & (z_min <= randpos[:, 2]) & (z_max >= randpos[:, 2]) & (r_min <= randdist) & (r_max >= randdist))
                 randbounds_edge = ((x_min_edge <= randpos[:, 0]) & (x_max_edge >= randpos[:, 0]) & (y_min_edge <= randpos[:, 1]) & (y_max_edge >= randpos[:, 1]) & (z_min_edge <= randpos[:, 2]) & (z_max_edge >= randpos[:, 2]) & (r_min_edge <= randdist) & (r_max_edge >= randdist))
-                randpos = randpos[randbounds & ~randbounds_edge]
-                del randbounds, randbounds_edge, randdist
-
+                randpos = randpos[~randbounds_edge]
+                del randbounds_edge, randdist
+                
                 # random points on the edges
                 rand_N = randpos.shape[0]
-                randpos_tree = KDTree(randpos) # TODO: needs to be periodic!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                randpos_tree = KDTree(randpos) # TODO: needs to be periodic, fix bug
                 randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
                 randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
                 rand_norm = np.zeros(len(index_bounds))
                 for ind in np.arange(len(index_bounds)):
                     rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
                 rand_norm /= ((rad_outer**3.- halos['r98_L2com'][index_bounds]**3.)*4./3.*np.pi * rand_n) # expected number
-        
+
         allpos_tree = KDTree(allpos)
         allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
         allinds_outer = allpos_tree.query_radius(allpos, r = rad_outer)
