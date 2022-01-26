@@ -282,7 +282,7 @@ class AbacusHOD:
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
         self.output_dir = sim_params['output_dir']
-        self.halo_lc = sim_params['halo_lc']
+        self.halo_lc = sim_params.get('halo_lc', False)
         
         # tracers
         tracer_flags = HOD_params['tracer_flags']
@@ -336,7 +336,6 @@ class AbacusHOD:
         # load header to read parameters
         if self.halo_lc:
             halo_info_fns = [str(sim_dir / simname / ('z%4.3f'%self.z_mock) / 'lc_halo_info.asdf')]
-            print(halo_info_fns)
         else:
             halo_info_fns = \
                             list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
@@ -350,6 +349,10 @@ class AbacusHOD:
         params['Lbox'] = header['BoxSize'] # Mpc / h, box size
         params['Mpart'] = header['ParticleMassHMsun']  # Msun / h, mass of each particle
         params['velz2kms'] = header['VelZSpace_to_kms']/params['Lbox']
+        if self.halo_lc:
+            params['origin'] = np.array(header['LightConeOrigins']).reshape(-1,3)[0]
+        else:
+            params['origin'] = np.array([0., 0., -1000000.])
         params['numslabs'] = len(halo_info_fns)
         self.lbox = header['BoxSize']
 
