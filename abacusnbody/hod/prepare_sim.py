@@ -123,8 +123,12 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
 
     # vector between centers of the cubes and origin in Mpc/h (i.e. placing observer at 0, 0, 0)
     box0 = np.array([0., 0., 0.])-origin
-    box1 = np.array([0., 0., Lbox])-origin
-    box2 = np.array([0., Lbox, 0.])-origin
+    if origins.shape[0] > 1: # not true of only the huge box where the origin is at the center
+        assert origins.shape[0] == 3
+        assert np.all(origins[1]+np.array([0., 0., Lbox]) == origins[0])
+        assert np.all(origins[2]+np.array([0., Lbox, 0.]) == origins[0])
+        box1 = np.array([0., 0., Lbox])-origin
+        box2 = np.array([0., Lbox, 0.])-origin
 
     # vertices of a cube centered at 0, 0, 0
     vert = get_vertices_cube(units=Lbox/2.)
@@ -144,13 +148,13 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     
     # vertices for all three boxes
     vert0 = box0+vert
-    if origins.shape[0] > 1 or chi_max >= (Lbox-offset): # not true of only the huge boxes and at low zs for base
+    if origins.shape[0] > 1 and chi_max >= (Lbox-offset): # not true of only the huge boxes and at low zs for base
         vert1 = box1+vert
         vert2 = box2+vert
 
     # mask for whether or not the coordinates are within the vertices
     mask0 = is_in_cube(x_cart, y_cart, z_cart, vert0)
-    if origins.shape[0] > 1 or chi_max >= (Lbox-offset):
+    if origins.shape[0] > 1 and chi_max >= (Lbox-offset):
         mask1 = is_in_cube(x_cart, y_cart, z_cart, vert1)
         mask2 = is_in_cube(x_cart, y_cart, z_cart, vert2)
         mask = mask0 | mask1 | mask2
@@ -250,7 +254,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             # origin dependent and simulation dependent
             origins = np.array(header['LightConeOrigins']).reshape(-1,3)
             alldist = np.sqrt(np.sum((allpos-origins[0])**2., axis=1))
-            offset = 10. # offset intrinsic to light cones catalogs
+            offset = 10. # offset intrinsic to light cones catalogs (removing edges +/- 10 Mpc/h from the sides of the box)
 
             r_min = alldist.min()
             r_max = alldist.max()
