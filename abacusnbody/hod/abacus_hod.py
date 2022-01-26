@@ -207,6 +207,17 @@ redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`): ::
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
     xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
+Light Cones
+===========
+AbacusHOD supports generating HOD mock catalogs from halo light cone catalogs
+(`PR #28 <https://github.com/abacusorg/abacusutils/pull/28>`_).  Details on the usage
+will be provided here soon.
+
+Notes
+~~~~~
+Currently, when RSD effects are enabled in the HOD code for the halo light cones, the
+factor ``velz2kms``, determining the size of the RSD correction to the position along
+the line of sight, is the same for all galaxies at a given redshift catalog.
 """
 import os
 import glob
