@@ -96,8 +96,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     outfilename_particles += '_new.h5'
     outfilename_halos += '_new.h5'
 
-    # TESTING!!!!!!!!!!!!!!
-    #np.random.seed(newseed + i)
+    np.random.seed(newseed + i)
     # if file already exists, just skip
     # if os.path.exists(outfilename_halos) \
     # and os.path.exists(outfilename_particles):
@@ -217,36 +216,19 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 rand_y *=randdist
                 rand_z *=randdist
                 rand_n = rand_N/(4./3.*np.pi*(r_max**3-r_min**3))
-                # og
-                #rand_n = rand_N/Lbox**3.
-                #rand_x = np.random.rand(rand_N)*Lbox - Lbox/2.
-                #rand_y = np.random.rand(rand_N)*Lbox - Lbox/2.
-                #rand_z = np.random.rand(rand_N)*Lbox - Lbox/2.
-                print("rand_n = ", rand_n)
                 randpos = np.vstack((rand_x, rand_y, rand_z)).T
                 randpos += origins[0]
-                print("rands generated")
                 del rand_x, rand_y, rand_z
-                # og
-                #randdist = np.sqrt(np.sum((randpos-origins[0])**2., axis=1)) # should be obsolete
                 
                 # boundaries of the random particles for cutting
                 randbounds = ((x_min <= randpos[:, 0]) & (x_max >= randpos[:, 0]) & (y_min <= randpos[:, 1]) & (y_max >= randpos[:, 1]) & (z_min <= randpos[:, 2]) & (z_max >= randpos[:, 2]) & (r_min <= randdist) & (r_max >= randdist))
                 randbounds_edge = ((x_min_edge <= randpos[:, 0]) & (x_max_edge >= randpos[:, 0]) & (y_min_edge <= randpos[:, 1]) & (y_max_edge >= randpos[:, 1]) & (z_min_edge <= randpos[:, 2]) & (z_max_edge >= randpos[:, 2]) & (r_min_edge <= randdist) & (r_max_edge >= randdist))
                 randpos = randpos[randbounds & ~randbounds_edge]
-                print("ARE THESE 8 TIMES THE SAME")
-                print(np.sum(randbounds & ~randbounds_edge))
-                print(np.sum(~randbounds_edge))
-                print(np.sum(randbounds_edge))
-                print(np.sum(randbounds))
                 del randbounds, randbounds_edge, randdist
 
                 # random points on the edges
                 rand_N = randpos.shape[0]
-                print("rand_N = ", rand_N)
-                print("building random tree")
                 randpos_tree = KDTree(randpos) # TODO: needs to be periodic!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                print("built random tree")
                 randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
                 randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
                 rand_norm = np.zeros(len(index_bounds))
@@ -484,7 +466,6 @@ def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc 
     savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
     cleaning = config['sim_params']['cleaned_halos']
     if 'halo_lc' in config['sim_params'].keys():
-        print("we got it")
         halo_lc = config['sim_params']['halo_lc']
 
     if halo_lc:
