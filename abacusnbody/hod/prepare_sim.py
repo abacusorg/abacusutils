@@ -83,8 +83,92 @@ def subsample_particles(m, MT):
 #     # average number of particles per cell                                                                                         
 #     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
 #     return Dtot / D_avg - 1
+
+def get_vertices_cube(units=0.5,N=3):
+    vertices = 2*((np.arange(2**N)[:,None] & (1 << np.arange(N))) > 0) - 1
+    return vertices*units
+
+def is_in_cube(x_pos,y_pos,z_pos,verts):
+    x_min = np.min(verts[:,0])
+    x_max = np.max(verts[:,0])
+    y_min = np.min(verts[:,1])
+    y_max = np.max(verts[:,1])
+    z_min = np.min(verts[:,2])
+    z_max = np.max(verts[:,2])
+
+    mask = (x_pos > x_min) & (x_pos <= x_max) & (y_pos > y_min) & (y_pos <= y_max) & (z_pos > z_min) & (z_pos <= z_max)
+    return mask
+
+
+def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
+    # number of randoms to generate
+    N_rands = fac*N
+
+    # location of observer
+    origin = origins[0]
+
+    # generate randoms on the unit sphere 
+    costheta = np.random.rand(N_rands)*2.-1.
+    phi = np.random.rand(N_rands)*2.*np.pi
+    theta = np.arccos(costheta)
+    x_cart = np.sin(theta)*np.cos(phi)
+    y_cart = np.sin(theta)*np.sin(phi)
+    z_cart = np.cos(theta)
+    rands_chis = np.random.rand(N_rands)*(chi_max-chi_min)+chi_min
+
+    # multiply the unit vectors by that
+    x_cart *= rands_chis
+    y_cart *= rands_chis
+    z_cart *= rands_chis
+
+    # vector between centers of the cubes and origin in Mpc/h (i.e. placing observer at 0, 0, 0)
+    box0 = np.array([0., 0., 0.])-origin
+    if origins.shape[0] > 1: # not true of only the huge box where the origin is at the center
+        assert origins.shape[0] == 3
+        assert np.all(origins[1]+np.array([0., 0., Lbox]) == origins[0])
+        assert np.all(origins[2]+np.array([0., Lbox, 0.]) == origins[0])
+        box1 = np.array([0., 0., Lbox])-origin
+        box2 = np.array([0., Lbox, 0.])-origin
+
+    # vertices of a cube centered at 0, 0, 0
+    vert = get_vertices_cube(units=Lbox/2.)
+
+    # remove edges because this is inherent to the light cone catalogs
+    x_vert = vert[:, 0]
+    y_vert = vert[:, 1]
+    z_vert = vert[:, 2]
+    vert[x_vert < 0, 0] += offset
+    vert[x_vert > 0, 0] -= offset
+    vert[y_vert < 0, 1] += offset
+    vert[z_vert < 0, 2] += offset
+    if origins.shape[0] == 1: # true of the huge box where the origin is at the center
+        vert[y_vert > 0, 1] -= offset
+        vert[z_vert > 0, 2] -= offset
+
     
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed):
+    # vertices for all three boxes
+    vert0 = box0+vert
+    if origins.shape[0] > 1 and chi_max >= (Lbox-offset): # not true of only the huge boxes and at low zs for base
+        vert1 = box1+vert
+        vert2 = box2+vert
+
+    # mask for whether or not the coordinates are within the vertices
+    mask0 = is_in_cube(x_cart, y_cart, z_cart, vert0)
+    if origins.shape[0] > 1 and chi_max >= (Lbox-offset):
+        mask1 = is_in_cube(x_cart, y_cart, z_cart, vert1)
+        mask2 = is_in_cube(x_cart, y_cart, z_cart, vert2)
+        mask = mask0 | mask1 | mask2
+    else:
+        mask = mask0
+    print("masked randoms = ", np.sum(mask)*100./len(mask))
+
+    rands_pos = np.vstack((x_cart[mask], y_cart[mask], z_cart[mask])).T
+    rands_chis = rands_chis[mask]
+    rands_pos += origin
+
+    return rands_pos, rands_chis
+
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -104,16 +188,28 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     # load the halo catalog slab
     print("loading halo catalog ")
-    slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
-    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+    if halo_lc:
+        slabname = simdir+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
+        id_key = 'index_halo'
+        pos_key = 'pos_interp'
+    else:
+        slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
+                   +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
+        id_key = 'id'
+        pos_key = 'x_L2com'
 
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', 'id', 'sigmav3d_L2com'], 
+        pos_key, 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
         cleaned = cleaning)
+    assert halo_lc == cat.halo_lc
+    
     halos = cat.halos
     if cleaning:
         halos = halos[halos['N'] > 0]
-
+    if halo_lc:
+        halos['id'] = halos[id_key]
+        halos['x_L2com'] = halos[pos_key]
+        
     parts = cat.subsamples
     header = cat.header
     Lbox = cat.header['BoxSizeHMpc']
@@ -134,6 +230,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     if want_AB:
         nbins = 100
         mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
+        rad_outer = 5. # TODO: maybe move to yaml file
 
         # # grid based environment calculation
         # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
@@ -148,19 +245,73 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         #         else:
         #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
         #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-        # halos['fenv_rank'] = fenv_rank
-
+        # halos['fenv_rank'] = fenv_rank            
+        
         allpos = halos['x_L2com']
         allmasses = halos['N']*Mpart
-        allpos_tree = KDTree(allpos)
 
+        if halo_lc:
+            # origin dependent and simulation dependent
+            origins = np.array(header['LightConeOrigins']).reshape(-1,3)
+            alldist = np.sqrt(np.sum((allpos-origins[0])**2., axis=1))
+            offset = 10. # offset intrinsic to light cones catalogs (removing edges +/- 10 Mpc/h from the sides of the box)
+
+            r_min = alldist.min()
+            r_max = alldist.max()
+            x_min_edge = -(Lbox/2.-offset-rad_outer)
+            y_min_edge = -(Lbox/2.-offset-rad_outer)
+            z_min_edge = -(Lbox/2.-offset-rad_outer)
+            x_max_edge = Lbox/2.-offset-rad_outer
+            r_min_edge = alldist.min()+rad_outer
+            r_max_edge = alldist.max()-rad_outer
+            if origins.shape[0] == 1: # true only of the huge box where the origin is at the center
+                y_max_edge = Lbox/2.-offset-rad_outer
+                z_max_edge = Lbox/2.-offset-rad_outer
+            else:
+                y_max_edge = 3./2*Lbox-rad_outer
+                z_max_edge = 3./2*Lbox-rad_outer
+
+            bounds_edge = ((x_min_edge <= allpos[:, 0]) & (x_max_edge >= allpos[:, 0]) & (y_min_edge <= allpos[:, 1]) & (y_max_edge >= allpos[:, 1]) & (z_min_edge <= allpos[:, 2]) & (z_max_edge >= allpos[:, 2]) & (r_min_edge <= alldist) & (r_max_edge >= alldist))
+            index_bounds = np.arange(allpos.shape[0], dtype=int)[~bounds_edge]
+            del bounds_edge, alldist
+
+            if len(index_bounds) > 0:
+                # factor of rands to generate
+                rand = 10
+                rand_N = allpos.shape[0]*rand
+                
+                # generate randoms in L shape
+                randpos, randdist = gen_rand(allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins)
+                rand_n = rand_N/(4./3.*np.pi*(r_max**3-r_min**3))
+
+                # boundaries of the random particles for cutting
+                randbounds_edge = ((x_min_edge <= randpos[:, 0]) & (x_max_edge >= randpos[:, 0]) & (y_min_edge <= randpos[:, 1]) & (y_max_edge >= randpos[:, 1]) & (z_min_edge <= randpos[:, 2]) & (z_max_edge >= randpos[:, 2]) & (r_min_edge <= randdist) & (r_max_edge >= randdist))
+                randpos = randpos[~randbounds_edge]
+                del randbounds_edge, randdist
+                
+                if randpos.shape[0] > 0:
+                    # random points on the edges
+                    rand_N = randpos.shape[0]
+                    randpos_tree = KDTree(randpos) # TODO: needs to be periodic, fix bug
+                    randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
+                    randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
+                    rand_norm = np.zeros(len(index_bounds))
+                    for ind in np.arange(len(index_bounds)):
+                        rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
+                    rand_norm /= ((rad_outer**3.- halos['r98_L2com'][index_bounds]**3.)*4./3.*np.pi * rand_n) # expected number
+                else:
+                    rand_norm = np.ones(len(index_bounds))
+
+        allpos_tree = KDTree(allpos)
         allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
-        allinds_outer = allpos_tree.query_radius(allpos, r = 5)
-        print("computng m stacks")
-        starttime = time.time()
+        allinds_outer = allpos_tree.query_radius(allpos, r = rad_outer)
+        print("computing m stacks")
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
             for ind in np.arange(len(halos))])
 
+        if halo_lc and len(index_bounds) > 0:
+            Menv[index_bounds] *= rand_norm
+        
         fenv_rank = np.zeros(len(Menv))
         for ibin in range(nbins):
             mmask = (halos['N']*Mpart > mbins[ibin]) \
@@ -365,7 +516,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config, params = None, alt_simname = None, newseed = 600):
+def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc = False):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
     config = yaml.safe_load(open(path2config))
@@ -380,9 +531,13 @@ def main(path2config, params = None, alt_simname = None, newseed = 600):
     z_mock = config['sim_params']['z_mock']
     savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
     cleaning = config['sim_params']['cleaned_halos']
+    if 'halo_lc' in config['sim_params'].keys():
+        halo_lc = config['sim_params']['halo_lc']
 
-    halo_info_fns = \
-    list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
+    if halo_lc:
+        halo_info_fns = [str(Path(simdir) / Path(simname) / ('z%4.3f'%z_mock) / 'lc_halo_info.asdf')]
+    else:
+        halo_info_fns = list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
     numslabs = len(halo_info_fns)
 
     tracer_flags = config['HOD_params']['tracer_flags']
@@ -397,9 +552,9 @@ def main(path2config, params = None, alt_simname = None, newseed = 600):
     
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
-        repeat(simdir), repeat(simname), repeat(z_mock), 
-        repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-        repeat(want_AB), repeat(cleaning), repeat(newseed)))
+                                repeat(simdir), repeat(simname), repeat(z_mock), 
+                                repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
+                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc)))
     p.close()
     p.join()
 
