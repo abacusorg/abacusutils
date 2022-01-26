@@ -283,21 +283,24 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 # generate randoms in L shape
                 randpos, randdist = gen_rand(allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins)
                 rand_n = rand_N/(4./3.*np.pi*(r_max**3-r_min**3))
-                
+
                 # boundaries of the random particles for cutting
                 randbounds_edge = ((x_min_edge <= randpos[:, 0]) & (x_max_edge >= randpos[:, 0]) & (y_min_edge <= randpos[:, 1]) & (y_max_edge >= randpos[:, 1]) & (z_min_edge <= randpos[:, 2]) & (z_max_edge >= randpos[:, 2]) & (r_min_edge <= randdist) & (r_max_edge >= randdist))
                 randpos = randpos[~randbounds_edge]
                 del randbounds_edge, randdist
                 
-                # random points on the edges
-                rand_N = randpos.shape[0]
-                randpos_tree = KDTree(randpos) # TODO: needs to be periodic, fix bug
-                randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
-                randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
-                rand_norm = np.zeros(len(index_bounds))
-                for ind in np.arange(len(index_bounds)):
-                    rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
-                rand_norm /= ((rad_outer**3.- halos['r98_L2com'][index_bounds]**3.)*4./3.*np.pi * rand_n) # expected number
+                if randpos.shape[0] > 0:
+                    # random points on the edges
+                    rand_N = randpos.shape[0]
+                    randpos_tree = KDTree(randpos) # TODO: needs to be periodic, fix bug
+                    randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
+                    randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
+                    rand_norm = np.zeros(len(index_bounds))
+                    for ind in np.arange(len(index_bounds)):
+                        rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
+                    rand_norm /= ((rad_outer**3.- halos['r98_L2com'][index_bounds]**3.)*4./3.*np.pi * rand_n) # expected number
+                else:
+                    rand_norm = np.ones(len(index_bounds))
 
         allpos_tree = KDTree(allpos)
         allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
