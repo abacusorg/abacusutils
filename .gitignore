@@ -5,3 +5,4 @@ __pycache__/
 *.egg-info/
 .ipynb_checkpoints/
 slurm-*.out
+abacusnbody/version.py
