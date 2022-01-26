@@ -1,6 +1,15 @@
 Changelog
 =========
-1.1.0 (upcoming)
+
+1.2.0 (upcoming)
+----------------
+
+New Features
+~~~~~~~~~~~~
+- Now supports Python 3.10 [#19]
+- HOD module now works with halo light cone catalogs [#28]
+  
+1.1.0 (2022-01-21)
 ----------------
 
 Fixes
@@ -12,7 +21,7 @@ New Features
 ~~~~~~~~~~~~
 - Add ``filter_func`` superslab filtering to ``CompaSOHaloCatalog`` [#16]
 - Add pack9 reader [#25]
-
+  
 Enhancements 
 ~~~~~~~~~~~~
 - Sped up RNG for reseeding [#24]
