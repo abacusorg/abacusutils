@@ -96,7 +96,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     outfilename_particles += '_new.h5'
     outfilename_halos += '_new.h5'
 
-    np.random.seed(newseed + i)
+    # TESTING!!!!!!!!!!!!!!
+    #np.random.seed(newseed + i)
     # if file already exists, just skip
     # if os.path.exists(outfilename_halos) \
     # and os.path.exists(outfilename_particles):
@@ -107,13 +108,15 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     if halo_lc:
         slabname = simdir+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
         id_key = 'index_halo'
+        pos_key = 'pos_interp'
     else:
         slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
                    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
         id_key = 'id'
+        pos_key = 'x_L2com'
 
     cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        'x_L2com', 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
+        pos_key, 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
         cleaned = cleaning)
     assert halo_lc == cat.halo_lc
     
@@ -122,6 +125,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         halos = halos[halos['N'] > 0]
     if halo_lc:
         halos['id'] = halos[id_key]
+        halos['x_L2com'] = halos[pos_key]
         
     parts = cat.subsamples
     header = cat.header
@@ -143,6 +147,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     if want_AB:
         nbins = 100
         mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
+        rad_outer = 5. # TODO: MAYBE MOVE SOMEWHERE PRETTIER
 
         # # grid based environment calculation
         # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
@@ -157,19 +162,108 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         #         else:
         #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
         #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-        # halos['fenv_rank'] = fenv_rank
-
+        # halos['fenv_rank'] = fenv_rank            
+        
         allpos = halos['x_L2com']
         allmasses = halos['N']*Mpart
-        allpos_tree = KDTree(allpos)
 
+        if halo_lc:
+            # origin dependent and simulation dependent
+            origins = np.array(header['LightConeOrigins']).reshape(-1,3)
+            alldist = np.sqrt(np.sum((allpos-origins[0])**2., axis=1))
+            offset = 10. # offset intrinsic to light cones catalogs
+
+            x_min = -(Lbox/2.-offset)
+            y_min = -(Lbox/2.-offset)
+            z_min = -(Lbox/2.-offset)
+            x_max = Lbox/2.-offset
+            r_min = alldist.min()
+            r_max = alldist.max()
+            x_min_edge = -(Lbox/2.-offset-rad_outer)
+            y_min_edge = -(Lbox/2.-offset-rad_outer)
+            z_min_edge = -(Lbox/2.-offset-rad_outer)
+            x_max_edge = Lbox/2.-offset-rad_outer
+            r_min_edge = alldist.min()+rad_outer
+            r_max_edge = alldist.max()-rad_outer
+            if origins.shape[0] == 1: # true only of the huge box where the origin is at the center
+                y_max = Lbox/2.-offset
+                z_max = Lbox/2.-offset
+                y_max_edge = Lbox/2.-offset-rad_outer
+                z_max_edge = Lbox/2.-offset-rad_outer
+            else:
+                y_max = 3./2*Lbox
+                z_max = 3./2*Lbox
+                y_max_edge = 3./2*Lbox-rad_outer
+                z_max_edge = 3./2*Lbox-rad_outer
+
+            bounds_edge = ((x_min_edge <= allpos[:, 0]) & (x_max_edge >= allpos[:, 0]) & (y_min_edge <= allpos[:, 1]) & (y_max_edge >= allpos[:, 1]) & (z_min_edge <= allpos[:, 2]) & (z_max_edge >= allpos[:, 2]) & (r_min_edge <= alldist) & (r_max_edge >= alldist))
+            index_bounds = np.arange(allpos.shape[0], dtype=int)[~bounds_edge]
+            del bounds_edge, alldist
+
+            if len(index_bounds) > 0:
+                # factor of rands to generate
+                rand = 100
+                rand_N = allpos.shape[0]*rand
+                
+                # problem that extra copies are in L shape but only beyond Lbox maybe check dist!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                costheta = np.random.rand(rand_N)*2.-1.
+                phi = np.random.rand(rand_N)*2*np.pi
+                theta = np.arccos(costheta)
+                rand_x = np.sin(theta)*np.cos(phi)
+                rand_y = np.sin(theta)*np.sin(phi)
+                rand_z = np.cos(theta)
+                randdist = np.random.rand(rand_N)*(r_max-r_min)+r_min
+                rand_x *=randdist
+                rand_y *=randdist
+                rand_z *=randdist
+                rand_n = rand_N/(4./3.*np.pi*(r_max**3-r_min**3))
+                # og
+                #rand_n = rand_N/Lbox**3.
+                #rand_x = np.random.rand(rand_N)*Lbox - Lbox/2.
+                #rand_y = np.random.rand(rand_N)*Lbox - Lbox/2.
+                #rand_z = np.random.rand(rand_N)*Lbox - Lbox/2.
+                print("rand_n = ", rand_n)
+                randpos = np.vstack((rand_x, rand_y, rand_z)).T
+                randpos += origins[0]
+                print("rands generated")
+                del rand_x, rand_y, rand_z
+                # og
+                #randdist = np.sqrt(np.sum((randpos-origins[0])**2., axis=1)) # should be obsolete
+                
+                # boundaries of the random particles for cutting
+                randbounds = ((x_min <= randpos[:, 0]) & (x_max >= randpos[:, 0]) & (y_min <= randpos[:, 1]) & (y_max >= randpos[:, 1]) & (z_min <= randpos[:, 2]) & (z_max >= randpos[:, 2]) & (r_min <= randdist) & (r_max >= randdist))
+                randbounds_edge = ((x_min_edge <= randpos[:, 0]) & (x_max_edge >= randpos[:, 0]) & (y_min_edge <= randpos[:, 1]) & (y_max_edge >= randpos[:, 1]) & (z_min_edge <= randpos[:, 2]) & (z_max_edge >= randpos[:, 2]) & (r_min_edge <= randdist) & (r_max_edge >= randdist))
+                randpos = randpos[randbounds & ~randbounds_edge]
+                print("ARE THESE 8 TIMES THE SAME")
+                print(np.sum(randbounds & ~randbounds_edge))
+                print(np.sum(~randbounds_edge))
+                print(np.sum(randbounds_edge))
+                print(np.sum(randbounds))
+                del randbounds, randbounds_edge, randdist
+
+                # random points on the edges
+                rand_N = randpos.shape[0]
+                print("rand_N = ", rand_N)
+                print("building random tree")
+                randpos_tree = KDTree(randpos) # TODO: needs to be periodic!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                print("built random tree")
+                randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
+                randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
+                rand_norm = np.zeros(len(index_bounds))
+                for ind in np.arange(len(index_bounds)):
+                    rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
+                rand_norm /= ((rad_outer**3.- halos['r98_L2com'][index_bounds]**3.)*4./3.*np.pi * rand_n) # expected number
+        
+        allpos_tree = KDTree(allpos)
         allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
-        allinds_outer = allpos_tree.query_radius(allpos, r = 5)
-        print("computng m stacks")
-        starttime = time.time()
+        allinds_outer = allpos_tree.query_radius(allpos, r = rad_outer)
+        print("computing m stacks")
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
             for ind in np.arange(len(halos))])
 
+        if halo_lc and len(index_bounds) > 0:
+            Menv[index_bounds] *= rand_norm
+        
         fenv_rank = np.zeros(len(Menv))
         for ibin in range(nbins):
             mmask = (halos['N']*Mpart > mbins[ibin]) \
@@ -374,7 +468,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config, params = None, alt_simname = None, newseed = 600):
+def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc = False):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
     config = yaml.safe_load(open(path2config))
@@ -389,9 +483,14 @@ def main(path2config, params = None, alt_simname = None, newseed = 600):
     z_mock = config['sim_params']['z_mock']
     savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
     cleaning = config['sim_params']['cleaned_halos']
+    if 'halo_lc' in config['sim_params'].keys():
+        print("we got it")
+        halo_lc = config['sim_params']['halo_lc']
 
-    halo_info_fns = \
-    list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
+    if halo_lc:
+        halo_info_fns = [str(Path(simdir) / Path(simname) / ('z%4.3f'%z_mock) / 'lc_halo_info.asdf')]
+    else:
+        halo_info_fns = list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
     numslabs = len(halo_info_fns)
 
     tracer_flags = config['HOD_params']['tracer_flags']
@@ -406,9 +505,9 @@ def main(path2config, params = None, alt_simname = None, newseed = 600):
     
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
-        repeat(simdir), repeat(simname), repeat(z_mock), 
-        repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-        repeat(want_AB), repeat(cleaning), repeat(newseed)))
+                                repeat(simdir), repeat(simname), repeat(z_mock), 
+                                repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
+                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc)))
     p.close()
     p.join()
 
