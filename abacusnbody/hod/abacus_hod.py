@@ -207,6 +207,17 @@ redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`): ::
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
     xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
+Light Cones
+===========
+AbacusHOD supports generating HOD mock catalogs from halo light cone catalogs
+(`PR #28 <https://github.com/abacusorg/abacusutils/pull/28>`_).  Details on the usage
+will be provided here soon.
+
+Notes
+~~~~~
+Currently, when RSD effects are enabled in the HOD code for the halo light cones, the
+factor ``velz2kms``, determining the size of the RSD correction to the position along
+the line of sight, is the same for all galaxies at a given redshift catalog.
 """
 import os
 import glob
@@ -282,6 +293,7 @@ class AbacusHOD:
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
         self.output_dir = sim_params['output_dir']
+        self.halo_lc = sim_params.get('halo_lc', False)
         
         # tracers
         tracer_flags = HOD_params['tracer_flags']
@@ -333,8 +345,11 @@ class AbacusHOD:
             Path(self.subsample_dir) / simname / ('z%4.3f'%self.z_mock)
 
         # load header to read parameters
-        halo_info_fns = \
-            list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
+        if self.halo_lc:
+            halo_info_fns = [str(sim_dir / simname / ('z%4.3f'%self.z_mock) / 'lc_halo_info.asdf')]
+        else:
+            halo_info_fns = \
+                            list((sim_dir / simname / 'halos' / ('z%4.3f'%self.z_mock) / 'halo_info').glob('*.asdf'))
         f = asdf.open(halo_info_fns[0], lazy_load=True, copy_arrays=False)
         header = f['header']
 
@@ -345,6 +360,10 @@ class AbacusHOD:
         params['Lbox'] = header['BoxSize'] # Mpc / h, box size
         params['Mpart'] = header['ParticleMassHMsun']  # Msun / h, mass of each particle
         params['velz2kms'] = header['VelZSpace_to_kms']/params['Lbox']
+        if self.halo_lc:
+            params['origin'] = np.array(header['LightConeOrigins']).reshape(-1,3)[0]
+        else:
+            params['origin'] = None # observer at infinity in the -z direction
         params['numslabs'] = len(halo_info_fns)
         self.lbox = header['BoxSize']
 

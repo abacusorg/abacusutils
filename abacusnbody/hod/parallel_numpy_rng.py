@@ -27,7 +27,7 @@ class MTGenerator:
     
     Usage
     -----
-    ```
+    ```python
     p = np.random.PCG64(123)  # or PCG64DXSM
     mtg = MTGenerator(p)
     r1 = mtg.random(size=16, nthread=2, dtype=np.float32)
@@ -230,9 +230,9 @@ def _boxmuller(states, starts, out, next_double):
 
     return cache[0]
 
+
 # TODO: there are now enough of these that they should live in their own module
 # TODO: for very low latency cases, there may be benefit to inlining these
-
 def _generate_int_to_float(bitgen):
     # initialize the numba functions to convert ints to floats
     _next_uint32_pcg64 = bitgen().ctypes.next_uint32

@@ -1,10 +1,10 @@
 """
 to test the hod code against reference, run 
-    $ pytest tests/test_hod.py
+    $ pytest tests/test_lc_hod.py
 from abacusutils/ 
 
 to generate new reference, run 
-    $ python tests/test_hod.py
+    $ python tests/test_lc_hod.py
 from abacusutils/
 
 """
@@ -19,17 +19,17 @@ import h5py
 import numpy as np
 from astropy.io import ascii
 
-EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
-EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
+EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'AbacusSummit_base_c000_ph001-abridged')
+EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_lc_hod.yaml')
 EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_oldfenv_MT_ref.h5')
+    'data_summit/AbacusSummit_base_c000_ph001-abridged/z2.250/halos_xcom_0_seed600_abacushod_oldfenv_MT_ref.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_oldfenv_MT_ref.h5')
+    'data_summit/AbacusSummit_base_c000_ph001-abridged/z2.250/particles_xcom_0_seed600_abacushod_oldfenv_MT_ref.h5')
 EXAMPLE_LRGS = os.path.join(os.path.dirname(__file__), 
-    'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/LRGs.dat')
+    'data_mocks_summit_new/AbacusSummit_base_c000_ph001-abridged/z2.250/galaxies_rsd/LRGs.dat')
 EXAMPLE_ELGS = os.path.join(os.path.dirname(__file__), 
-    'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/ELGs.dat')
-path2config = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
+    'data_mocks_summit_new/AbacusSummit_base_c000_ph001-abridged/z2.250/galaxies_rsd/ELGs.dat')
+path2config = os.path.join(os.path.dirname(__file__), 'abacus_lc_hod.yaml')
 
 # @pytest.mark.xfail
 def test_hod(tmp_path, reference_mode = False):
@@ -77,12 +77,12 @@ def test_hod(tmp_path, reference_mode = False):
         # check subsample file match
         prepare_sim.main(EXAMPLE_CONFIG, params = config)
 
-        newhalos = h5py.File(savedir+'/halos_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r')['halos']
+        newhalos = h5py.File(savedir+'/halos_xcom_0_seed600_abacushod_oldfenv_MT_new.h5', 'r')['halos']
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
         for i in range(len(newhalos)):
             for j in range(len(newhalos[i])):
                 assert np.array_equal(newhalos[i][j], temphalos[i][j])
-        newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r')['particles']
+        newparticles = h5py.File(savedir+'/particles_xcom_0_seed600_abacushod_oldfenv_MT_new.h5', 'r')['particles']
         tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
         for i in range(len(newparticles)):
             for j in range(len(newparticles[i])):
