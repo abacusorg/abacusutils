@@ -544,7 +544,7 @@ class AbacusHOD:
         return halo_data, particle_data, params, mock_dir
 
     def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
-        Nthread = 16, verbose = False):
+        Nthread = 16, verbose = False, fn_ext = None):
         """
         Runs a custom HOD.
 
@@ -570,6 +570,9 @@ class AbacusHOD:
 
         ``verbose``: bool, 
             detailed stdout? default ``False``.
+            
+        ``fn_ext``: str
+            filename extension for saved files. Only relevant when ``write_to_disk = True``.
 
         Returns
         -------
@@ -588,12 +591,14 @@ class AbacusHOD:
             tracers = self.tracers
         if reseed:
             start = time.time()
+            # np.random.seed(reseed)
             mtg = MTGenerator(np.random.PCG64(reseed))
+            rng = np.random.default_rng()
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
-            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)*self.halo_data['hsigma3d']/np.sqrt(3)
+            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
             self.halo_data['hrandoms'] = r1
-            self.halo_data['hveldev'] = r2
+            self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
             self.particle_data['prandoms'] = r3
             
             print("gen randoms took, ", time.time() - start)
@@ -604,7 +609,8 @@ class AbacusHOD:
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
-            verbose = False)
+            verbose = False,
+            fn_ext = fn_ext)
         print("gen mocks", time.time() - start)
 
         return mock_dict
