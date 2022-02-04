@@ -4,13 +4,12 @@
 # Simulation parameters
 sim_params:
     sim_name: 'AbacusSummit_base_c000_ph000'
-#    sim_dir: '/global/cscratch1/sd/boryanah/new_lc_halos/halo_light_cones/' # halo light cones
-    sim_dir: '/mnt/marvin1/boryanah/tutorial_lc/halo_light_cones/' # halo light cones
-    output_dir: '/mnt/marvin1/boryanah/tutorial_lc/mocks_lc/'
-    subsample_dir: '/mnt/marvin1/boryanah/tutorial_lc/subs_lc/'
+    sim_dir: '/global/project/projectdirs/desi/cosmosim/Abacus/halo_light_cones/' # halo light cones
+    output_dir: '/mnt/marvin1/boryanah/tutorial_lc/mocks_lc/' # mock catalog directory (need to change)
+    subsample_dir: '/mnt/marvin1/boryanah/tutorial_lc/subs_lc/' # subsample directory (need to change)
     cleaned_halos: '/global/project/projectdirs/desi/cosmosim/Abacus/cleaning/'
     z_mock: 0.200
-    halo_lc: True # enable for halo light cones TODO: can make automatic
+    halo_lc: True # IMPORTANT! enable for halo light cones
     
 prepare_sim:
     Nparallel_load: 1 # not sure if this makes a difference since we have a single slab
