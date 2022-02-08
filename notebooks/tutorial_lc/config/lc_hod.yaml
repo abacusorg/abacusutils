@@ -1,0 +1,118 @@
+# Comment out the probes you don't need
+# CAREFUL: yaml is super sensitive to spaces - don't use tabs
+
+# Simulation parameters
+sim_params:
+    sim_name: 'AbacusSummit_base_c000_ph000'
+    sim_dir: '/global/project/projectdirs/desi/cosmosim/Abacus/halo_light_cones/' # halo light cones
+    output_dir: '/mnt/marvin1/boryanah/tutorial_lc/mocks_lc/' # mock catalog directory (need to change)
+    subsample_dir: '/mnt/marvin1/boryanah/tutorial_lc/subs_lc/' # subsample directory (need to change)
+    cleaned_halos: '/global/project/projectdirs/desi/cosmosim/Abacus/cleaning/'
+    z_mock: 0.200
+    halo_lc: True # IMPORTANT! enable for halo light cones
+    
+prepare_sim:
+    Nparallel_load: 1 # not sure if this makes a difference since we have a single slab
+    
+# HOD parameters
+HOD_params:
+    want_ranks: True               # want to implement satellite profile flexiblities?
+    want_AB: True                  # want to implement assembly bias?
+    tracer_flags:                  # which tracer do we want?
+        LRG: True
+        ELG: False
+        QSO: False
+    want_rsd: True                 # want RSD? 
+    write_to_disk: True
+
+    # parameters for setting up the HOD of LRGs
+    LRG_params:
+        logM_cut: 13.1
+        logM1: 14.3
+        sigma: 0.3
+        alpha: 1.0
+        kappa: 1.2
+        alpha_c: 0
+        alpha_s: 1
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: -7.31189630e-01
+        Asat: -2.41898268e-01
+        Bcent: -9.37221616e-03
+        Bsat: 3.74532572e-02 
+        ic: 0.97
+
+    # parameters for setting up the HOD of ELGs
+    ELG_params:
+        p_max: 0.18
+        Q: 100.
+        logM_cut: 11.8
+        kappa: 1.8
+        sigma: 0.58
+        logM1: 13.73
+        alpha: 0.7
+        gamma: 6.12
+        A_s: 1.
+        alpha_c: 0
+        alpha_s: 1
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: -7.31189630e-01
+        Asat: -2.41898268e-01
+        Bcent: -9.37221616e-03
+        Bsat: 3.74532572e-02 
+        ic: 0.99
+
+    # parameters for setting up the HOD of ELGs
+    QSO_params:
+        p_max: 0.33
+        logM_cut: 12.21
+        kappa: 1.0
+        sigma: 0.56
+        logM1: 13.94
+        alpha: 0.4
+        A_s: 1.
+        alpha_c: 0
+        alpha_s: 1
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: -7.31189630e-01
+        Asat: -2.41898268e-01
+        Bcent: -9.37221616e-03
+        Bsat: 3.74532572e-02 
+        ic: 0.99
+
+# Parameters to be fitted in MCMC
+# [mapping_index, mean, min, max, std, tr_type]
+fit_params:
+    logM_cut: [0, 13.3, 13.0, 13.8, 0.05, 'LRG']
+    logM1: [1, 14.3, 13.7, 14.8, 0.05, 'LRG']
+    sigma: [2, 0.3, 0.1, 0.5, 0.05, 'LRG']
+
+
+# Configuration parameters for emcee
+ch_config_params:
+    path2output: chains/test
+    chainsPrefix: test
+    use_mpi: 0
+    rerun: 0
+    walkersRatio: 4
+    burninIterations: 2000
+    sampleIterations: 40000
+
+# clustering parameters
+clustering_params:
+#    power_type: 'wp'
+    clustering_type: 'xirppi'
+    bin_params:
+        logmin: -0.77288
+        logmax: 1.47712
+        nbins: 8
+    pimax: 30
+    pi_bin_size: 5
