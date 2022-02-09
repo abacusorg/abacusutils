@@ -101,8 +101,9 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
         # verbosity level
         verbose = kwargs.get('verbose', False)
 
-        # determine subsample fraction and add to header    
-        if header['OutputType'] == 'LightCone':
+        # determine subsample fraction and add to header
+        OutputType = header.get('OutputType', None)
+        if OutputType == 'LightCone':
             if header['SimSet'] == 'AbacusSummit':
                 SubsampleFraction = header['ParticleSubsampleA'] + header['ParticleSubsampleB']
                 header['SubsampleFraction'] = SubsampleFraction
