@@ -69,11 +69,11 @@ def N_cen_ELG_v2(M_h, p_max, logM_cut, sigma, gamma):
         return p_max*(M_h/10**logM_cut)**gamma/(2.5066283*sigma)
 
 @njit(fastmath=True)
-def N_cen_QSO(M_h, p_max, logM_cut, sigma):
+def N_cen_QSO(M_h, logM_cut, sigma):
     """
     HOD function (Zheng et al. (2005) with p_max) for QSO centrals taken from arXiv:2007.09012.
     """
-    return 0.5*p_max*(1 + math.erf((np.log10(M_h)-logM_cut)/1.41421356/sigma))
+    return 0.5*(1 + math.erf((np.log10(M_h)-logM_cut)/1.41421356/sigma))
 
 
 @njit(fastmath=True)
@@ -135,15 +135,14 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     ic_L, alpha_c_L, Ac_L, Bc_L = LRG_decorations_array[10], LRG_decorations_array[0], \
         LRG_decorations_array[6], LRG_decorations_array[8]
 
-    pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
+    pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
-        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7]
     alpha_c_E, Ac_E, Bc_E, ic_E = ELG_decorations_array[0], ELG_decorations_array[6], ELG_decorations_array[8],\
     ELG_decorations_array[10]
 
-    pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
-        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
-        QSO_design_array[5], QSO_design_array[6]
+    logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
+        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]
     alpha_c_Q, Ac_Q, Bc_Q, ic_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8],\
     QSO_decorations_array[10]
 
@@ -167,11 +166,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
             ELG_marker = LRG_marker
             if want_ELG:
                 logM_cut_E_temp = logM_cut_E + Ac_E * deltac[i] + Bc_E * fenv[i]
-                ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E_temp, sigma_E, gamma_E, A_E) * ic_E * multis[i]
+                ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E_temp, sigma_E, gamma_E) * ic_E * multis[i]
             QSO_marker = ELG_marker
             if want_QSO:
                 logM_cut_Q_temp = logM_cut_Q + Ac_Q * deltac[i] + Bc_Q * fenv[i]
-                QSO_marker += N_cen_QSO(mass[i], pmax_Q, logM_cut_Q, sigma_Q) * ic_Q * multis[i]
+                QSO_marker += N_cen_QSO(mass[i], logM_cut_Q, sigma_Q) * ic_Q * multis[i]
 
             if randoms[i] <= LRG_marker:
                 Nout[tid, 0, 0] += 1 # counting
@@ -361,17 +360,16 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
         LRG_decorations_array[5], LRG_decorations_array[6], LRG_decorations_array[7], LRG_decorations_array[8], \
         LRG_decorations_array[9], LRG_decorations_array[10]
 
-    pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
+    pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
-        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7]
     alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E = \
         ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
         ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
         ELG_decorations_array[9], ELG_decorations_array[10]
 
-    pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
-        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4],\
-        QSO_design_array[5], QSO_design_array[6]
+    logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
+        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]
     alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
         QSO_decorations_array[1], QSO_decorations_array[2], QSO_decorations_array[3], QSO_decorations_array[4], \
         QSO_decorations_array[5], QSO_decorations_array[6], QSO_decorations_array[7], QSO_decorations_array[8], \
@@ -418,7 +416,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 M1_Q_temp = 10**(logM1_Q + As_Q * hdeltac[i] + Bs_Q * hfenv[i])
                 logM_cut_Q_temp = logM_cut_Q + Ac_Q * hdeltac[i] + Bc_Q * hfenv[i]
                 base_p_Q = N_sat_generic(
-                    hmass[i], 10**logM_cut_Q_temp, kappa_Q, M1_Q_temp, alpha_Q, A_Q) * weights[i] * ic_Q
+                    hmass[i], 10**logM_cut_Q_temp, kappa_Q, M1_Q_temp, alpha_Q) * weights[i] * ic_Q
                 if enable_ranks:
                     decorator_Q = 1 + s_Q * ranks[i] + s_v_Q * ranksv[i] + s_p_Q * ranksp[i] + s_r_Q * ranksr[i]
                     exp_sat = base_p_Q * decorator_Q
@@ -671,19 +669,19 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                               'alpha', 
                               'kappa'))
         LRG_design_array = np.array([logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L])
+        
+        alpha_c = LRG_HOD.get('alpha_c', 0)
+        alpha_s = LRG_HOD.get('alpha_s', 1)
+        s = LRG_HOD.get('s', 0)
+        s_p = LRG_HOD.get('s_p', 0)
+        s_v = LRG_HOD.get('s_v', 0)
+        s_r = LRG_HOD.get('s_r', 0)
+        Ac = LRG_HOD.get('Acent', 0)
+        As = LRG_HOD.get('Asat', 0)
+        Bc = LRG_HOD.get('Bcent', 0)
+        Bs = LRG_HOD.get('Bsat', 0)
+        ic = LRG_HOD.get('ic', 1)
 
-        alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic = \
-            map(LRG_HOD.get, ('alpha_c', 
-                            'alpha_s',  
-                            's', 
-                            's_v', 
-                            's_p', 
-                            's_r',
-                            'Acent',
-                            'Asat',
-                            'Bcent',
-                            'Bsat',
-                            'ic'))
         LRG_decorations_array = np.array([alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
@@ -694,7 +692,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     if 'ELG' in tracers.keys():
         # ELG design
         want_ELG = True
-        pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
+        pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E = \
             map(ELG_HOD.get, ('p_max',
                             'Q',
                             'logM_cut',
@@ -702,61 +700,60 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'sigma',
                             'logM1',
                             'alpha',
-                            'gamma',
-                            'A_s'))
+                            'gamma'))
         ELG_design_array = np.array(
-            [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E])
-        alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E = \
-            map(ELG_HOD.get, ('alpha_c', 
-                            'alpha_s',  
-                            's', 
-                            's_v', 
-                            's_p', 
-                            's_r',
-                            'Acent',
-                            'Asat',
-                            'Bcent',
-                            'Bsat',
-                            'ic'))
+            [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E])
+        
+        alpha_c_E = ELG_HOD.get('alpha_c', 0)
+        alpha_s_E = ELG_HOD.get('alpha_s', 1)
+        s_E = ELG_HOD.get('s', 0)
+        s_p_E = ELG_HOD.get('s_p', 0)
+        s_v_E = ELG_HOD.get('s_v', 0)
+        s_r_E = ELG_HOD.get('s_r', 0)
+        Ac_E = ELG_HOD.get('Acent', 0)
+        As_E = ELG_HOD.get('Asat', 0)
+        Bc_E = ELG_HOD.get('Bcent', 0)
+        Bs_E = ELG_HOD.get('Bsat', 0)
+        ic_E = ELG_HOD.get('ic', 1)
+        
         ELG_decorations_array = np.array(
             [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
-        ELG_design_array = np.zeros(9)
-        ELG_decorations_array = np.zeros(10)
+        ELG_design_array = np.zeros(8)
+        ELG_decorations_array = np.zeros(11)
         want_ELG = False
         
     if 'QSO' in tracers.keys():
         # QSO design
         want_QSO = True
-        pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q = \
-            map(QSO_HOD.get, ('p_max',
-                            'logM_cut',
+        logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
+            map(QSO_HOD.get, ('logM_cut',
                             'kappa',
                             'sigma',
                             'logM1',
-                            'alpha',
-                            'A_s'))
+                            'alpha'))
         QSO_design_array = np.array(
-            [pmax_Q, logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q, A_Q])
-        alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
-            map(QSO_HOD.get, ('alpha_c', 
-                            'alpha_s',  
-                            's', 
-                            's_v', 
-                            's_p', 
-                            's_r',
-                            'Acent',
-                            'Asat',
-                            'Bcent',
-                            'Bsat',
-                            'ic'))
+            [logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q])
+        
+        alpha_c_Q = QSO_HOD.get('alpha_c', 0)
+        alpha_s_Q = QSO_HOD.get('alpha_s', 1)
+        s_Q = QSO_HOD.get('s', 0)
+        s_p_Q = QSO_HOD.get('s_p', 0)
+        s_v_Q = QSO_HOD.get('s_v', 0)
+        s_r_Q = QSO_HOD.get('s_r', 0)
+        Ac_Q = QSO_HOD.get('Acent', 0)
+        As_Q = QSO_HOD.get('Asat', 0)
+        Bc_Q = QSO_HOD.get('Bcent', 0)
+        Bs_Q = QSO_HOD.get('Bsat', 0)
+        ic_Q = QSO_HOD.get('ic', 1)
+        
         QSO_decorations_array = np.array(
             [alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
-        QSO_design_array = np.zeros(7)
-        QSO_decorations_array = np.zeros(10)
+        QSO_design_array = np.zeros(5)
+        QSO_decorations_array = np.zeros(11)
         want_QSO = False
     
     start = time.time()
