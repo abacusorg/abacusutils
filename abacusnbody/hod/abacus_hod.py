@@ -292,7 +292,7 @@ class AbacusHOD:
         self.sim_dir = sim_params['sim_dir']
         self.subsample_dir = sim_params['subsample_dir']
         self.z_mock = sim_params['z_mock']
-        self.output_dir = sim_params['output_dir']
+        self.output_dir = sim_params.get('output_dir', './')
         self.halo_lc = sim_params.get('halo_lc', False)
         
         # tracers
@@ -304,7 +304,7 @@ class AbacusHOD:
         self.tracers = tracers
 
         # HOD parameter choices
-        self.want_ranks = HOD_params['want_ranks']
+        self.want_ranks = HOD_params.get('want_ranks', False)
         self.want_rsd = HOD_params['want_rsd']
         
         if not clustering_params == None:
