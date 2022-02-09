@@ -98,6 +98,17 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
 
         Nmax = len(data)  # will shrink later
 
+        # verbosity level
+        verbose = kwargs.get('verbose', False)
+
+        # determine subsample fraction and add to header    
+        if header['OutputType'] == 'LightCone':
+            if header['SimSet'] == 'AbacusSummit':
+                SubsampleFraction = header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+                header['SubsampleFraction'] = SubsampleFraction
+                if verbose:
+                    print(f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction*100):d}% total)')
+        
         table = Table(meta=header)
         if 'pos' in load:
             table.add_column(np.empty((Nmax,3), dtype=dtype), copy=False, name='pos')
@@ -107,7 +118,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
             table.add_column(data, copy=False, name='aux')  # 'aux' is the raw aux field
         # For the PID columns, we'll let `unpack_pids` build those for us
         # Eventually, we'll need to be able to pass output arrays
-
+        
         if colname == 'rvint':
             _posout = table['pos'] if 'pos' in load else False
             _velout = table['vel'] if 'vel' in load else False
