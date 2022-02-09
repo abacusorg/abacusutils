@@ -30,7 +30,7 @@ __all__ = ['read_asdf']
 ASDF_DATA_KEY = 'data'
 ASDF_HEADER_KEY = 'header'
 
-def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
+def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwargs):
     '''
     Read an Abacus ASDF file.  The result will be returned in an Astropy table.
 
@@ -58,6 +58,9 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
     dtype: np.dtype, optional
         The precision in which to unpack any floating
         point arrays.  Default: np.float32
+
+    verbose: bool, optional
+        Print informational messages. Default: True
 
     Returns
     -------
@@ -97,9 +100,6 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, **kwargs):
         data = af.tree[data_key][colname]
 
         Nmax = len(data)  # will shrink later
-
-        # verbosity level
-        verbose = kwargs.get('verbose', False)
 
         # determine subsample fraction and add to header
         OutputType = header.get('OutputType', None)
