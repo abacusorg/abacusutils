@@ -192,23 +192,29 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         slabname = simdir+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
         id_key = 'index_halo'
         pos_key = 'pos_interp'
+        vel_key = 'vel_interp'
+        N_key = 'N_interp'
     else:
         slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
                    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
         id_key = 'id'
         pos_key = 'x_L2com'
+        vel_key = 'v_L2com'
+        N_key = 'N'
 
-    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        pos_key, 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
+    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = [N_key, 
+        pos_key, vel_key, 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
         cleaned = cleaning)
     assert halo_lc == cat.halo_lc
     
     halos = cat.halos
-    if cleaning:
-        halos = halos[halos['N'] > 0]
     if halo_lc:
         halos['id'] = halos[id_key]
         halos['x_L2com'] = halos[pos_key]
+        halos['v_L2com'] = halos[vel_key]
+        halos['N'] = halos[N_key]
+    if cleaning:
+        halos = halos[halos['N'] > 0]
         
     parts = cat.subsamples
     header = cat.header
