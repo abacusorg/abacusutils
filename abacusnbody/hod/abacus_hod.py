@@ -242,7 +242,7 @@ class AbacusHOD:
     """
     A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
     """
-    def __init__(self, sim_params, HOD_params, clustering_params):
+    def __init__(self, sim_params, HOD_params, clustering_params = None):
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
@@ -276,7 +276,7 @@ class AbacusHOD:
                 * ``ELG_params``: dict, HOD parameter values for ELGs. Default values are given in config file. 
                 * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file. 
 
-        clustering_params: dict
+        clustering_params: dict, optional
             Summary statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
                 * ``clustering_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
                 * ``bin_params``: dict, transverse scale binning. 
@@ -306,14 +306,15 @@ class AbacusHOD:
         # HOD parameter choices
         self.want_ranks = HOD_params['want_ranks']
         self.want_rsd = HOD_params['want_rsd']
+        
+        if not clustering_params == None:
+            # clusteringparameters
+            self.pimax = clustering_params.get('pimax', None)
+            self.pi_bin_size = clustering_params.get('pi_bin_size', None)
+            bin_params = clustering_params['bin_params']
+            self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
+            self.clustering_type = clustering_params.get('clustering_type', None)
 
-        # clusteringparameters
-        self.pimax = clustering_params['pimax']
-        self.pi_bin_size = clustering_params['pi_bin_size']
-        bin_params = clustering_params['bin_params']
-        self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
-        self.clustering_type = clustering_params['clustering_type']
-                
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
 
@@ -649,8 +650,8 @@ class AbacusHOD:
                 newngal = AbacusHOD._compute_ngal_lrg(
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func,
                     tracer_hod['logM_cut'], tracer_hod['logM1'], tracer_hod['sigma'], 
-                    tracer_hod['alpha'], tracer_hod['kappa'], tracer_hod['Acent'], 
-                    tracer_hod['Asat'], tracer_hod['Bcent'], tracer_hod['Bsat'], tracer_hod['ic'], Nthread)
+                    tracer_hod['alpha'], tracer_hod['kappa'], tracer_hod.get('Acent', 0), 
+                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'ELG':
@@ -658,17 +659,17 @@ class AbacusHOD:
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
                     tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
-                    tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod['A_s'],  
-                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], tracer_hod['ic'], Nthread) 
+                    tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('Acent', 0), 
+                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread) 
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
                 newngal = AbacusHOD._compute_ngal_qso(
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
-                    tracer_hod['p_max'], tracer_hod['logM_cut'], 
+                    tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
-                    tracer_hod['alpha'], tracer_hod['A_s'],  
-                    tracer_hod['Acent'],  tracer_hod['Asat'],  tracer_hod['Bcent'],  tracer_hod['Bsat'], tracer_hod['ic'], Nthread)         
+                    tracer_hod['alpha'], tracer_hod.get('Acent', 0), 
+                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread)         
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
         return ngal_dict, fsat_dict
@@ -703,7 +704,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -720,7 +721,7 @@ class AbacusHOD:
                     Mh_temp = 10**logMs[i]
                     logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
-                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma, A_s)
+                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma)
                     nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha)
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
                     ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
@@ -728,8 +729,8 @@ class AbacusHOD:
 
     @staticmethod
     @njit(fastmath = True, parallel = True)
-    def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, p_max,
-                   logM_cut, kappa, sigma, logM1, alpha, A_s, Acent, Asat, Bcent, Bsat, ic, Nthread):
+    def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, 
+                   logM_cut, kappa, sigma, logM1, alpha, Acent, Asat, Bcent, Bsat, ic, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -746,8 +747,8 @@ class AbacusHOD:
                     Mh_temp = 10**logMs[i]
                     logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
-                    ncent_temp = N_cen_QSO(Mh_temp, p_max, logM_cut_temp, sigma)
-                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, A_s)
+                    ncent_temp = N_cen_QSO(Mh_temp, logM_cut_temp, sigma)
+                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha)
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
                     ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
         return ngal_cent, ngal_sat
@@ -786,6 +787,8 @@ class AbacusHOD:
             clustering = self.compute_wp(mock_dict, *args, **kwargs)
         elif self.clustering_type == 'multipole':
             clustering = self.compute_multipole(mock_dict, *args, **kwargs)
+        else: 
+            raise ValueError('clustering_type not implemented or not specified, use xirppi, wp, multipole')
         return clustering
     
     def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
