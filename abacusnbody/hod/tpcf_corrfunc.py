@@ -101,6 +101,9 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
+        x2 = x2.astype(np.float32)
+        y2 = y2.astype(np.float32)
+        z2 = z2.astype(np.float32)
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
@@ -150,6 +153,9 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
         results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
+        x2 = x2.astype(np.float32)
+        y2 = y2.astype(np.float32)
+        z2 = z2.astype(np.float32)
         results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
             periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
