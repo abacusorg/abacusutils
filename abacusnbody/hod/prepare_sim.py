@@ -20,6 +20,8 @@ from scipy.ndimage import gaussian_filter
 from scipy.interpolate import NearestNDInterpolator
 from itertools import repeat
 import argparse
+from numba import njit, types, jit
+import numba
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
@@ -27,6 +29,7 @@ import multiprocessing
 from multiprocessing import Pool
 
 from sklearn.neighbors import KDTree
+from scipy.spatial import cKDTree
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -168,7 +171,28 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
 
     return rands_pos, rands_chis
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False):
+# @njit(fastmath=True, parallel = True)
+def calc_Menv(allmasses, allinds_outer, allinds_inner):
+    Menv = np.zeros(len(allinds_outer))
+    for ind in numba.prange(len(allinds_outer)):
+        print(allinds_outer[ind], allinds_inner[ind])
+        Menv[ind] = np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]])
+    return Menv
+    
+@njit(fastmath=True, parallel = True)
+def calc_fenv(Menv, mbins, nbins, halosM):
+    fenv_rank = np.zeros(len(Menv))
+    for ibin in numba.prange(nbins):
+        mmask = (halosM > mbins[ibin]) & (halosM < mbins[ibin + 1])
+        if np.sum(mmask) > 0:
+            if np.sum(mmask) == 1:
+                fenv_rank[mmask] = 0
+            else:
+                new_fenv_rank = Menv[mmask].argsort().argsort()
+                fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+    return fenv_rank
+
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False, nthread = 1):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -302,28 +326,32 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 else:
                     rand_norm = np.ones(len(index_bounds))
 
-        allpos_tree = KDTree(allpos)
-        allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
-        allinds_outer = allpos_tree.query_radius(allpos, r = rad_outer)
+        print("building kdtree")
+        allpos_tree = cKDTree(allpos)
+        allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'], workers = nthread)
+        allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer, workers = nthread)
         print("computing m stacks")
+        numba.set_num_threads(nthread)
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
             for ind in np.arange(len(halos))])
+        print(nthread, len(halos))
+        # Menv = calc_Menv(allmasses, allinds_outer, allinds_inner)
 
         if halo_lc and len(index_bounds) > 0:
             Menv[index_bounds] *= rand_norm
         
-        fenv_rank = np.zeros(len(Menv))
-        for ibin in range(nbins):
-            mmask = (halos['N']*Mpart > mbins[ibin]) \
-            & (halos['N']*Mpart < mbins[ibin + 1])
-            if np.sum(mmask) > 0:
-                if np.sum(mmask) == 1:
-                    fenv_rank[mmask] = 0
-                else:
-                    new_fenv_rank = Menv[mmask].argsort().argsort()
-                    fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+        # fenv_rank = np.zeros(len(Menv))
+        # for ibin in range(nbins):
+        #     mmask = (halos['N']*Mpart > mbins[ibin]) \
+        #     & (halos['N']*Mpart < mbins[ibin + 1])
+        #     if np.sum(mmask) > 0:
+        #         if np.sum(mmask) == 1:
+        #             fenv_rank[mmask] = 0
+        #         else:
+        #             new_fenv_rank = Menv[mmask].argsort().argsort()
+        #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
 
-        halos['fenv_rank'] = fenv_rank
+        halos['fenv_rank'] = calc_fenv(Menv, mbins, nbins, halos['N']*Mpart)
 
         # compute delta concentration
         print("computing c rank")
@@ -480,7 +508,6 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     # output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
     if os.path.exists(outfilename_halos):
         os.remove(outfilename_halos)
-    print(outfilename_halos, outfilename_particles)
     newfile = h5py.File(outfilename_halos, 'w')
     dataset = newfile.create_dataset('halos', data = halos[mask_halos])
     newfile.close()
@@ -516,7 +543,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc = False):
+def main(path2config, params = None, alt_simname = None, alt_z = None, newseed = 600, halo_lc = False):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
     config = yaml.safe_load(open(path2config))
@@ -525,7 +552,9 @@ def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc 
         config.update(params)
     if alt_simname: 
         config['sim_params']['sim_name'] = alt_simname
-
+    if alt_z: 
+        config['sim_params']['z_mock'] = alt_z
+    
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
     z_mock = config['sim_params']['z_mock']
@@ -547,6 +576,7 @@ def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc 
     want_ranks = config['HOD_params']['want_ranks']
     want_AB = config['HOD_params']['want_AB']
     # N_dim = config['HOD_params']['Ndim']
+    nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load']))
 
     os.makedirs(savedir, exist_ok = True)
     
@@ -554,7 +584,7 @@ def main(path2config, params = None, alt_simname = None, newseed = 600, halo_lc 
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
                                 repeat(simdir), repeat(simname), repeat(z_mock), 
                                 repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc)))
+                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc), repeat(nthread)))
     p.close()
     p.join()
 
@@ -571,6 +601,9 @@ if __name__ == "__main__":
     parser.add_argument('--alt_simname',
                         help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
                        )
+    parser.add_argument('--alt_z',
+                        help='alternative z to process, like "0.8"',
+                       )
     parser.add_argument('--newseed',
                         help='alternative random number seed, positive integer', default = 600
                        )
@@ -579,39 +612,8 @@ if __name__ == "__main__":
     main(**args)
 
     print("done")
-    # # run a series of simulations
-    # param_dict = {
-    # 'sim_params' :
-    #     {
-    #     'sim_name': 'AbacusSummit_base_c000_ph006',                                 # which simulation 
-    #     # 'sim_dir': '/mnt/gosling2/bigsims/',                                        # where is the simulation
-    #     'sim_dir': '/mnt/marvin1/syuan/scratch/bigsims/',                                        # where is the simulation
-    #     'output_dir': '/mnt/marvin1/syuan/scratch/data_mocks_georgios',          # where to output galaxy mocks
-    #     'subsample_dir': '/mnt/marvin1/syuan/scratch/data_summit/',                 # where to output subsample data
-    #     'z_mock': 0.5,                                                             # which redshift slice
-    #     'Nthread_load': 7,                                                          # number of thread for organizing simulation outputs (prepare_sim)
-    #     'cleaned_halos': False
-    #     }
-    # }
-    # for i in range(25):
-    #     param_dict['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
-    #     main(**args, params = param_dict)
 
-    # other_cosmologies = [
-    # 'AbacusSummit_base_c100_ph000',
-    # 'AbacusSummit_base_c101_ph000',
-    # 'AbacusSummit_base_c102_ph000',
-    # 'AbacusSummit_base_c103_ph000',
-    # 'AbacusSummit_base_c112_ph000',
-    # 'AbacusSummit_base_c113_ph000',
-    # 'AbacusSummit_base_c104_ph000',
-    # 'AbacusSummit_base_c105_ph000',
-    # 'AbacusSummit_base_c108_ph000',
-    # 'AbacusSummit_base_c109_ph000',
-    # 'AbacusSummit_base_c009_ph000'
-    # ]
- 
-    # for ecosmo in other_cosmologies:
-    #     print(ecosmo)
-    #     param_dict['sim_params']['sim_name'] = ecosmo
-    #     main(**args, params = param_dict)
+    # for i in [3,4]: # [20, 21, 22, 23, 24, 0, 1, 2]: 
+    #     simname = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
+    #     for z in [0.575]:
+    #         main(args['path2config'], alt_simname = simname, alt_z = z)
