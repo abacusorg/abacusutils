@@ -316,9 +316,10 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer)
         else:
             # note that periodicity exists only in y and z directions
-            allpos_tree = cKDTree(allpos+Lbox/2., boxsize=Lbox) # needs to be within 0 and Lbox for periodicity
-            allinds_inner = allpos_tree.query_ball_point(allpos+Lbox/2., r = halos['r98_L2com'])
-            allinds_outer = allpos_tree.query_ball_point(allpos+Lbox/2., r = rad_outer)
+            tmp = allpos+Lbox/2.
+            allpos_tree = cKDTree(tmp, boxsize=Lbox) # needs to be within 0 and Lbox for periodicity
+            allinds_inner = allpos_tree.query_ball_point(tmp, r = halos['r98_L2com'])
+            allinds_outer = allpos_tree.query_ball_point(tmp, r = rad_outer)
         print("computing m stacks")
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
             for ind in np.arange(len(halos))])
