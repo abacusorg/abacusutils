@@ -821,7 +821,7 @@ class CompaSOHaloCatalog:
                 f'Reading {len(raw_dependencies)} fields from disk. '
                 f'Computing {len(extra_fields)} intermediate fields.')
             if self.halo_lc:
-                print('\nFor more information on the halo light cone catalog fields, see https://abacussummit.readthedocs.io/en/latest/data-products.html#halo-statistics')
+                print('\nFor more information on the halo light cone catalog fields, see https://abacussummit.readthedocs.io/en/latest/data-products.html#halo-light-cone-catalogs')
 
         self.halos = Table(cols, copy=False)
         self.halos.meta.update(self.header)
