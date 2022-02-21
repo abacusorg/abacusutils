@@ -984,9 +984,9 @@ class CompaSOHaloCatalog:
         def lc_interp_loader(m, raw, halos):
             columns = {}
             interped = (raw['origin'] // 3).astype(bool)
-            if m[0] == 'pos_interp':
+            if m[0] == 'pos_interp' or 'pos_interp' in halos.colnames:
                 columns['pos_interp'] = np.where(interped[:, None], raw['pos_avg'], raw['pos_interp'])
-            if m[0] == 'vel_interp':
+            if m[0] == 'vel_interp' or 'vel_interp' in halos.colnames:
                 columns['vel_interp'] = np.where(interped[:, None], raw['vel_avg'], raw['vel_interp'])
             return columns
 
