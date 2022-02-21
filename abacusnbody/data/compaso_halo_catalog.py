@@ -421,7 +421,7 @@ class CompaSOHaloCatalog:
         if halo_lc == None:
             halo_lc = self.is_path_halo_lc(path)
             if verbose and halo_lc:
-                print('Detected halo light cone catalog')
+                print('Detected halo light cone catalog.')
         self.halo_lc = halo_lc
 
         # If loading halo light cones, turn off cleaning and bit unpacking because done already
@@ -820,6 +820,8 @@ class CompaSOHaloCatalog:
             print(f'{len(fields)} halo catalog fields ({len(cleaned_fields)} cleaned) requested. '
                 f'Reading {len(raw_dependencies)} fields from disk. '
                 f'Computing {len(extra_fields)} intermediate fields.')
+            if self.halo_lc:
+                print('\nFor more information on the halo light cone catalog fields, see https://abacussummit.readthedocs.io/en/latest/data-products.html#halo-statistics')
 
         self.halos = Table(cols, copy=False)
         self.halos.meta.update(self.header)
@@ -969,9 +971,26 @@ class CompaSOHaloCatalog:
         pat = re.compile(r'SO(?:_L2max)?(?:_central_density)')
         self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
 
-        # Halo light cone catalog specific fields
-        pat = re.compile(r'index_halo|origin|pos_avg|pos_interp|vel_avg|vel_interp|redshift_interp|N_interp')
+        # loader for halo light cone catalog specific fields
+        pat = re.compile(r'index_halo|pos_avg|vel_avg|redshift_interp|N_interp')
         self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]
+
+        # loader for halo light cone catalog field `origin`
+        pat = re.compile(r'origin')
+        self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]%3
+
+        # loader for halo light cone catalog fields: interpolated position and velocity        
+        pat = re.compile(r'(?P<pv>pos|vel)_interp')
+        def lc_interp_loader(m, raw, halos):
+            columns = {}
+            interped = (raw['origin'] // 3).astype(bool)
+            if m[0] == 'pos_interp':
+                columns['pos_interp'] = np.where(interped[:, None], raw['pos_avg'], raw['pos_interp'])
+            if m[0] == 'vel_interp':
+                columns['vel_interp'] = np.where(interped[:, None], raw['vel_avg'], raw['vel_interp'])
+            return columns
+
+        self.halo_field_loaders[pat] = lc_interp_loader
         
         # eigvecs loader
         pat = re.compile(r'(?P<rnv>sigma(?:r|n|v)_eigenvecs)(?P<which>Min|Mid|Maj)(?P<com>_(?:L2)?com)')
@@ -1722,3 +1741,4 @@ user_dt = np.dtype([('id', np.uint64),
                     ('sigmavtan_L2com', np.float32),
                     ('rvcirc_max_L2com', np.float32),
 ], align=True)
+ 
