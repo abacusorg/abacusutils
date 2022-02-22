@@ -81,6 +81,7 @@ def test_hod(tmp_path, reference_mode = False):
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
         for i in range(len(newhalos)):
             for j in range(len(newhalos[i])):
+                print(newhalos[i][j], temphalos[i][j])
                 assert np.array_equal(newhalos[i][j], temphalos[i][j])
         newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r')['particles']
         tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
