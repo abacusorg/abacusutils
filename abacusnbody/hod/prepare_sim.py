@@ -31,6 +31,7 @@ from multiprocessing import Pool
 from sklearn.neighbors import KDTree
 from scipy.spatial import cKDTree
 
+
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
@@ -216,23 +217,29 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         slabname = simdir+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
         id_key = 'index_halo'
         pos_key = 'pos_interp'
+        vel_key = 'vel_interp'
+        N_key = 'N_interp'
     else:
         slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
                    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
         id_key = 'id'
         pos_key = 'x_L2com'
+        vel_key = 'v_L2com'
+        N_key = 'N'
 
-    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = ['N', 
-        pos_key, 'v_L2com', 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
+    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = [N_key, 
+        pos_key, vel_key, 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
         cleaned = cleaning)
     assert halo_lc == cat.halo_lc
     
     halos = cat.halos
-    if cleaning:
-        halos = halos[halos['N'] > 0]
     if halo_lc:
         halos['id'] = halos[id_key]
         halos['x_L2com'] = halos[pos_key]
+        halos['v_L2com'] = halos[vel_key]
+        halos['N'] = halos[N_key]
+    if cleaning:
+        halos = halos[halos['N'] > 0]
         
     parts = cat.subsamples
     header = cat.header
@@ -316,7 +323,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 if randpos.shape[0] > 0:
                     # random points on the edges
                     rand_N = randpos.shape[0]
-                    randpos_tree = KDTree(randpos) # TODO: needs to be periodic, fix bug
+                    randpos_tree = KDTree(randpos)
                     randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
                     randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
                     rand_norm = np.zeros(len(index_bounds))
@@ -326,10 +333,18 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 else:
                     rand_norm = np.ones(len(index_bounds))
 
-        print("building kdtree")
-        allpos_tree = cKDTree(allpos)
-        allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'], workers = nthread)
-        allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer, workers = nthread)
+        if halo_lc:
+            # periodicity not needed for halo light cones
+            allpos_tree = cKDTree(allpos)
+            allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'], workers = nthread)
+            allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer, workers = nthread)
+        else:
+            # note that periodicity exists only in y and z directions
+            tmp = allpos+Lbox/2.
+            allpos_tree = cKDTree(tmp, boxsize=Lbox) # needs to be within 0 and Lbox for periodicity
+            allinds_inner = allpos_tree.query_ball_point(tmp, r = halos['r98_L2com'], workers = nthread)
+            allinds_outer = allpos_tree.query_ball_point(tmp, r = rad_outer, workers = nthread)
+            
         print("computing m stacks")
         numba.set_num_threads(nthread)
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
