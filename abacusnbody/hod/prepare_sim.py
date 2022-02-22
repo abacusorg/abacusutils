@@ -179,18 +179,16 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
 #         print(allinds_outer[ind], allinds_inner[ind])
 #         Menv[ind] = np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]])
 #     return Menv
-    
-@njit(fastmath=True, parallel = True)
+
+# have to disable the parallel for now cuz there is a bug in numba parallel argsort that returns nans. 
+@njit()
 def calc_fenv(Menv, mbins, nbins, halosM):
     fenv_rank = np.zeros(len(Menv))
     for ibin in numba.prange(nbins):
         mmask = (halosM > mbins[ibin]) & (halosM < mbins[ibin + 1])
-        if np.sum(mmask) > 0:
-            if np.sum(mmask) == 1:
-                fenv_rank[mmask] = 0
-            else:
-                new_fenv_rank = Menv[mmask].argsort().argsort()
-                fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+        if np.sum(mmask) > 1:
+            new_fenv_rank = Menv[mmask].argsort().argsort()
+            fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
     return fenv_rank
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False, nthread = 1):
