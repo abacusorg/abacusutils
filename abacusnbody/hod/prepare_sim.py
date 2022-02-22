@@ -322,8 +322,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     # random points on the edges
                     rand_N = randpos.shape[0]
                     randpos_tree = cKDTree(randpos)
-                    randinds_inner = randpos_tree.query_ball_point(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
-                    randinds_outer = randpos_tree.query_ball_point(allpos[index_bounds], r = rad_outer)
+                    randinds_inner = randpos_tree.query_ball_point(allpos[index_bounds], r = halos['r98_L2com'][index_bounds], n_jobs = nthread)
+                    randinds_outer = randpos_tree.query_ball_point(allpos[index_bounds], r = rad_outer, n_jobs = nthread)
                     rand_norm = np.zeros(len(index_bounds))
                     for ind in np.arange(len(index_bounds)):
                         rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
@@ -334,14 +334,14 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         if halo_lc:
             # periodicity not needed for halo light cones
             allpos_tree = cKDTree(allpos)
-            allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'], workers = nthread)
-            allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer, workers = nthread)
+            allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'], n_jobs = nthread)
+            allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer, n_jobs = nthread)
         else:
             # note that periodicity exists only in y and z directions
             tmp = allpos+Lbox/2.
             allpos_tree = cKDTree(tmp, boxsize=Lbox) # needs to be within 0 and Lbox for periodicity
-            allinds_inner = allpos_tree.query_ball_point(tmp, r = halos['r98_L2com'], workers = nthread)
-            allinds_outer = allpos_tree.query_ball_point(tmp, r = rad_outer, workers = nthread)
+            allinds_inner = allpos_tree.query_ball_point(tmp, r = halos['r98_L2com'], n_jobs = nthread)
+            allinds_outer = allpos_tree.query_ball_point(tmp, r = rad_outer, n_jobs = nthread)
             
         print("computing m stacks")
         numba.set_num_threads(nthread)
