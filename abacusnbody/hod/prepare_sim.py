@@ -299,7 +299,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 if randpos.shape[0] > 0:
                     # random points on the edges
                     rand_N = randpos.shape[0]
-                    randpos_tree = KDTree(randpos)
+                    randpos_tree = cKDTree(randpos)
                     randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
                     randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
                     rand_norm = np.zeros(len(index_bounds))
