@@ -26,7 +26,8 @@ from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 import multiprocessing
 from multiprocessing import Pool
 
-from sklearn.neighbors import KDTree
+from scipy.spatial import cKDTree
+
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -298,7 +299,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 if randpos.shape[0] > 0:
                     # random points on the edges
                     rand_N = randpos.shape[0]
-                    randpos_tree = KDTree(randpos) # TODO: needs to be periodic, fix bug
+                    randpos_tree = KDTree(randpos)
                     randinds_inner = randpos_tree.query_radius(allpos[index_bounds], r = halos['r98_L2com'][index_bounds])
                     randinds_outer = randpos_tree.query_radius(allpos[index_bounds], r = rad_outer)
                     rand_norm = np.zeros(len(index_bounds))
@@ -308,9 +309,17 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 else:
                     rand_norm = np.ones(len(index_bounds))
 
-        allpos_tree = KDTree(allpos)
-        allinds_inner = allpos_tree.query_radius(allpos, r = halos['r98_L2com'])
-        allinds_outer = allpos_tree.query_radius(allpos, r = rad_outer)
+        if halo_lc:
+            # periodicity not needed for halo light cones
+            allpos_tree = cKDTree(allpos)
+            allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'])
+            allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer)
+        else:
+            # note that periodicity exists only in y and z directions
+            tmp = allpos+Lbox/2.
+            allpos_tree = cKDTree(tmp, boxsize=Lbox) # needs to be within 0 and Lbox for periodicity
+            allinds_inner = allpos_tree.query_ball_point(tmp, r = halos['r98_L2com'])
+            allinds_outer = allpos_tree.query_ball_point(tmp, r = rad_outer)
         print("computing m stacks")
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
             for ind in np.arange(len(halos))])
