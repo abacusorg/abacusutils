@@ -171,13 +171,13 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
 
     return rands_pos, rands_chis
 
-# @njit(fastmath=True, parallel = True)
-def calc_Menv(allmasses, allinds_outer, allinds_inner):
-    Menv = np.zeros(len(allinds_outer))
-    for ind in numba.prange(len(allinds_outer)):
-        print(allinds_outer[ind], allinds_inner[ind])
-        Menv[ind] = np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]])
-    return Menv
+# # @njit(fastmath=True, parallel = True)
+# def calc_Menv(allmasses, allinds_outer, allinds_inner):
+#     Menv = np.zeros(len(allinds_outer))
+#     for ind in numba.prange(len(allinds_outer)):
+#         print(allinds_outer[ind], allinds_inner[ind])
+#         Menv[ind] = np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]])
+#     return Menv
     
 @njit(fastmath=True, parallel = True)
 def calc_fenv(Menv, mbins, nbins, halosM):
@@ -334,7 +334,6 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         numba.set_num_threads(nthread)
         Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
             for ind in np.arange(len(halos))])
-        print(nthread, len(halos))
         # Menv = calc_Menv(allmasses, allinds_outer, allinds_inner)
 
         if halo_lc and len(index_bounds) > 0:
