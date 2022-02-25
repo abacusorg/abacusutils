@@ -23,21 +23,24 @@ routines.
 
 Installing from Cloned Repository
 ---------------------------------
-If you want to hack on the abacusutils source code (or use the C/C++ code),
-then the recommendation is to clone the repo and install the package in
-pip "editable mode":
+If you want to hack on the abacusutils source code, then the recommendation is to clone
+the repo and install the package in pip "editable mode":
 
 ::
     
     $ git clone https://github.com/abacusorg/abacusutils.git
     $ cd abacusutils
-    $ pip install -e ./  # install from current dir in editable mode
+    $ pip install -e .[extra]  # install from current dir in editable mode, including extras
     
 The ``-e`` flag ("editable") is optional but recommended so that the installed copy is just a
 link to the cloned repo (and thus modifications to the Python code will be seen by code that
 imports abacusutils).
+
+The ``.[extra]`` syntax says to install from the current directory (``.``), including the
+set of "optional dependencies" called ``extra``.  This includes Python packages needed
+to run things in the ``scripts`` directory.
     
 .. warning::
-    If you download via pip and then later clone the repo, don't forget to
-    run ``pip install -e ./`` in the repo.  Otherwise, you will have two
-    copies of abacusutils: one cloned, and one downloaded via pip.
+    If you first install via pip and then later clone the repo, don't forget to
+    run ``pip install -e .[extra]`` in the repo.  Otherwise, you will have two
+    copies of abacusutils: one cloned, and one installed via pip.
