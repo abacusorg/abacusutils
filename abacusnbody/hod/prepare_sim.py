@@ -10,26 +10,23 @@ $ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.
 import os
 from pathlib import Path
 import yaml
-
-import numpy as np
+import multiprocessing
+from multiprocessing import Pool
 import random
 import time
+from itertools import repeat
+import argparse
+
+import numpy as np
 from astropy.table import Table
 import h5py
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import NearestNDInterpolator
-from itertools import repeat
-import argparse
 from numba import njit, types, jit
 import numba
+from scipy.spatial import cKDTree
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
-
-import multiprocessing
-from multiprocessing import Pool
-
-from sklearn.neighbors import KDTree
-from scipy.spatial import cKDTree
 
 
 DEFAULTS = {}
