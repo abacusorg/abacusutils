@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.3.0 (upcoming)
+----------------
+
+Changes
+~~~~~~~
+- Depedencies for tests and scripts now factorized under ``abacusutils[test]`` and ``abacusutils[extra]`` [#46]
+
 1.2.0 (2022-02-02)
 ------------------
 

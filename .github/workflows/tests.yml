@@ -20,7 +20,7 @@ jobs:
       run: |
         python -m pip install -U pip
         pip install flake8 pytest wheel numpy
-        pip install .
+        pip install .[test]
         make -C pipe_asdf
     - name: Lint with flake8
       run: |

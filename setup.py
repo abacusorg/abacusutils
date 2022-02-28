@@ -2,7 +2,13 @@ import os
 
 from setuptools import setup, find_namespace_packages
 
-install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy>=1.5.0','numba>=0.50','asdf>=2.8','h5py','emcee','schwimmbad','getdist','dynesty','sklearn']
+install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy>=1.5.0','numba>=0.50','asdf>=2.8','h5py','pyyaml']
+
+# enable "pip install abacusutils[test]" and "abacusutils[extra]"
+# "extra" will be everything not used by scripts but not the importable code
+extras_require = dict(test=['pytest'],
+                      extra=['emcee','schwimmbad','getdist','dynesty','dill'],
+                    )
 
 # If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
@@ -28,6 +34,7 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires = install_requires,
+    extras_require = extras_require,
     entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main'],
                   'asdf.extensions':['abacusutils = abacusnbody.data.asdf:AbacusExtension']}
 )
