@@ -4,9 +4,19 @@ Changelog
 1.3.0 (upcoming)
 ----------------
 
-Changes
-~~~~~~~
-- Depedencies for tests and scripts now factorized under ``abacusutils[test]`` and ``abacusutils[extra]`` [#46]
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Dependencies for tests and scripts now factorized under ``abacusutils[test]`` and ``abacusutils[extra]`` [#46]
+
+Fixes
+~~~~~
+- Fix periodicity in theory-box HOD, and add halo LC features [#41]
+- Fix read lc rv [#37]
+
+Enhancements
+~~~~~~~~~~~~
+- Some nice numba accelerations for fenv calculation [#45]
+- Made clustering_params optional, among some minor quality of life updates. [#39]
 
 1.2.0 (2022-02-02)
 ------------------
