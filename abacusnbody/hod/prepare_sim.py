@@ -169,23 +169,42 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
 
     return rands_pos, rands_chis
 
-# # @njit(fastmath=True, parallel = True)
-# def calc_Menv(allmasses, allinds_outer, allinds_inner):
-#     Menv = np.zeros(len(allinds_outer))
-#     for ind in numba.prange(len(allinds_outer)):
-#         print(allinds_outer[ind], allinds_inner[ind])
-#         Menv[ind] = np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]])
-#     return Menv
+def concat_to_arr(lists, dtype=np.int64):
+    '''Concatenate an iterable of lists to a flat Numpy array.
+    Returns the concatenated array and the index where each list starts.
+    '''
+    starts = np.empty(len(lists) + 1, dtype=np.int64)
+    starts[0] = 0
+    starts[1:] = np.cumsum(np.fromiter((len(l) for l in lists), count=len(lists), dtype=np.int64))
+    N = starts[-1]
+    res = np.fromiter(itertools.chain.from_iterable(lists), count=N, dtype=dtype)
+    return res, starts
 
-# have to disable the parallel for now cuz there is a bug in numba parallel argsort that returns nans. 
-@njit()
-def calc_fenv(Menv, mbins, nbins, halosM):
+@njit(parallel=False)
+def calc_Menv(masses, inner_arr, inner_starts, outer_arr, outer_starts):
+    N = len(inner_starts)-1
+    Menv = np.zeros(N, dtype=np.float32)
+    for p in numba.prange(N):
+        j = inner_starts[p]
+        k = inner_starts[p+1]
+        inner_mass = np.sum(masses[inner_arr[j:k]])
+
+        j = outer_starts[p]
+        k = outer_starts[p+1]
+        outer_mass = np.sum(masses[outer_arr[j:k]])
+
+        Menv[p] = outer_mass - inner_mass
+    return Menv
+
+@njit(parallel=False)
+def calc_fenv_opt(Menv, mbins, halosM):
     fenv_rank = np.zeros(len(Menv))
-    for ibin in numba.prange(nbins):
+    for ibin in numba.prange(len(mbins)-1):
         mmask = (halosM > mbins[ibin]) & (halosM < mbins[ibin + 1])
-        if np.sum(mmask) > 1:
+        Nmask = np.sum(mmask)
+        if Nmask > 1:
             new_fenv_rank = Menv[mmask].argsort().argsort()
-            fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+            fenv_rank[mmask] = new_fenv_rank / (Nmask-1) - 0.5  # max rank is always Nmask - 1
     return fenv_rank
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False, nthread = 1):
@@ -342,8 +361,13 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             
         print("computing m stacks")
         numba.set_num_threads(nthread)
-        Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
-            for ind in np.arange(len(halos))])
+        inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
+        outer_arr, outer_starts = concat_to_arr(allinds_outer)
+        print("starting Menv")
+        Menv = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
+        
+        # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
+        #     for ind in np.arange(len(halos))])
         # Menv = calc_Menv(allmasses, allinds_outer, allinds_inner)
 
         if halo_lc and len(index_bounds) > 0:
@@ -360,7 +384,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         #             new_fenv_rank = Menv[mmask].argsort().argsort()
         #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
 
-        halos['fenv_rank'] = calc_fenv(Menv, mbins, nbins, halos['N']*Mpart)
+        halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, halos['N']*Mpart)
 
         # compute delta concentration
         print("computing c rank")
