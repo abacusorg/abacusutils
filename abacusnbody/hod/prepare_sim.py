@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+False#!/usr/bin/env python3
 '''
 This is a script for loading simulation data and generating subsamples.
 
@@ -184,7 +184,7 @@ def concat_to_arr(lists, dtype=np.int64):
     res = np.fromiter(itertools.chain.from_iterable(lists), count=N, dtype=dtype)
     return res, starts
 
-@njit(parallel=True)
+@njit(parallel=False)
 def calc_Menv(masses, inner_arr, inner_starts, outer_arr, outer_starts):
     N = len(inner_starts)-1
     Menv = np.zeros(N, dtype=np.float32)
@@ -200,7 +200,7 @@ def calc_Menv(masses, inner_arr, inner_starts, outer_arr, outer_starts):
         Menv[p] = outer_mass - inner_mass
     return Menv
 
-@njit(parallel=True)
+@njit(parallel=False)
 def calc_fenv_opt(Menv, mbins, halosM):
     fenv_rank = np.zeros(len(Menv))
     for ibin in numba.prange(len(mbins)-1):
