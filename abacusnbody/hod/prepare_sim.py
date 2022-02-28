@@ -174,6 +174,9 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     return rands_pos, rands_chis
 
 def concat_to_arr(lists, dtype=np.int64):
+    '''Concatenate an iterable of lists to a flat Numpy array.
+    Returns the concatenated array and the index where each list starts.
+    '''
     starts = np.empty(len(lists) + 1, dtype=np.int64)
     starts[0] = 0
     starts[1:] = np.cumsum(np.fromiter((len(l) for l in lists), count=len(lists), dtype=np.int64))
