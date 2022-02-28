@@ -364,6 +364,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         numba.set_num_threads(nthread)
         inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
         outer_arr, outer_starts = concat_to_arr(allinds_outer)
+        print("starting Menv")
         Menv = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
         
         # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
