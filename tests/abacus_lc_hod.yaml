@@ -12,7 +12,7 @@ sim_params:
     cleaned_halos: True                                                     # load cleaned halos?
     halo_lc: True                                                   # want halo light cones?
 prepare_sim:
-    Nparallel_load: 2                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    Nparallel_load: 1                                                          # number of thread for organizing simulation outputs (prepare_sim)
 
 # HOD parameters
 HOD_params:
