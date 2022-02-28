@@ -14,6 +14,7 @@ import multiprocessing
 from multiprocessing import Pool
 import random
 import time
+import itertools
 from itertools import repeat
 import argparse
 
