@@ -884,6 +884,9 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
             # save to file 
             outdict = HOD_dict[tracer].pop('Ncent', None)
             table = Table(HOD_dict[tracer], meta = {'Ncent': Ncent, 'Gal_type': tracer, **tracers[tracer]})
-            ascii.write(table, outdir / ("%ss.dat"%tracer), overwrite = True, format = 'ecsv')
+            if params['chunk'] == -1:
+                ascii.write(table, outdir / (f"{tracer}s.dat"), overwrite = True, format = 'ecsv')
+            else:
+                ascii.write(table, outdir / (f"{tracer}s_chunk{params['chunk']:d}.dat"), overwrite = True, format = 'ecsv')
 
     return HOD_dict
