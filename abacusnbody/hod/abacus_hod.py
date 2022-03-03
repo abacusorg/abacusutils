@@ -242,7 +242,7 @@ class AbacusHOD:
     """
     A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
     """
-    def __init__(self, sim_params, HOD_params, clustering_params = None):
+    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, n_chunks=1):
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
@@ -285,7 +285,10 @@ class AbacusHOD:
                     * ``nbins``: int, number of bins.
                 * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`. 
                 * ``pi_bin_size``: int, size of bins along of the line of sight. Need to be divisor of ``pimax``.
-
+        chunk: int, optional
+            Index of current chunk. Must be between ``0`` and ``n_chunks-1``. Files associated with this chunk are written out as ``{tracer}s_{chunk}.dat``. Default is -1 (no chunking).
+        n_chunks: int, optional
+            Number of chunks to split the input from the halo+particle subsample and number of output files in which to write out the galaxy catalogs following the format ``{tracer}s_{chunk}.dat``.
         """
         # simulation details
         self.sim_name = sim_params['sim_name']
@@ -315,6 +318,11 @@ class AbacusHOD:
             self.rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
             self.clustering_type = clustering_params.get('clustering_type', None)
 
+        # setting up chunking
+        self.chunk = chunk
+        self.n_chunks = n_chunks
+        assert self.chunk < self.n_chunks, "Total number of chunks needs to be larger than current chunk index"
+        
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
 
@@ -365,14 +373,25 @@ class AbacusHOD:
             params['origin'] = np.array(header['LightConeOrigins']).reshape(-1,3)[0]
         else:
             params['origin'] = None # observer at infinity in the -z direction
-        params['numslabs'] = len(halo_info_fns)
+
+        # settitng up chunking
+        n_chunks = self.n_chunks
+        params['chunk'] = self.chunk
+        if self.chunk == -1:
+            chunk = 0
+        else:
+            chunk = self.chunk
+        n_jump = int(np.ceil(len(halo_info_fns)/n_chunks))
+        start = ((chunk)*n_jump)
+        end = ((chunk+1)*n_jump)
+        if end > len(halo_info_fns): end = len(halo_info_fns)
+        params['numslabs'] = n_jump
         self.lbox = header['BoxSize']
 
         # count ther number of halos and particles
         Nhalos = np.empty(params['numslabs'])
         Nparts = np.empty(params['numslabs'])        
-        for eslab in range(params['numslabs']):
-            
+        for eslab in range(start, end):
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
@@ -387,8 +406,10 @@ class AbacusHOD:
 
             newfile = h5py.File(halofilename, 'r')
             newpart = h5py.File(particlefilename, 'r')
-            Nhalos[eslab] = len(newfile['halos'])
-            Nparts[eslab] = len(newpart['particles'])
+
+            Nhalos[eslab-start] = len(newfile['halos'])
+            Nparts[eslab-start] = len(newpart['particles'])
+
         Nhalos = Nhalos.astype(int)
         Nparts = Nparts.astype(int)
         Nhalos_tot = int(np.sum(Nhalos))
@@ -428,7 +449,8 @@ class AbacusHOD:
         # load all the halo and particle data we need
         halo_ticker = 0
         parts_ticker = 0
-        for eslab in range(params['numslabs']):
+        for eslab in range(start, end):
+            
             print("Loading simulation by slab, ", eslab)
             
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
@@ -461,18 +483,18 @@ class AbacusHOD:
             halo_submask = maskedhalos['mask_subsample'].astype(bool)
             halo_randoms = maskedhalos['randoms']
 
-            hpos[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_pos
-            hvel[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vels
-            hmass[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_mass
-            hid[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_ids
-            hmultis[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_multi
-            hrandoms[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_randoms
-            hveldev[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_vel_dev
-            hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_sigma3d
-            hdeltac[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_deltac
-            hfenv[halo_ticker: halo_ticker + Nhalos[eslab]] = halo_fenv
-            halo_ticker += Nhalos[eslab]
-
+            hpos[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_pos
+            hvel[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_vels
+            hmass[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_mass
+            hid[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_ids
+            hmultis[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_multi
+            hrandoms[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_randoms
+            hveldev[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_vel_dev
+            hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_sigma3d
+            hdeltac[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_deltac
+            hfenv[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_fenv
+            halo_ticker += Nhalos[eslab-start]
+            
             # extract particle data that we need
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
@@ -492,25 +514,26 @@ class AbacusHOD:
                 part_ranksv = subsample['ranksv']
                 part_ranksp = subsample['ranksp']
                 part_ranksr = subsample['ranksr']
-                p_ranks[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranks
-                p_ranksv[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranksv
-                p_ranksp[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranksp
-                p_ranksr[parts_ticker: parts_ticker + Nparts[eslab]] = part_ranksr
 
+                p_ranks[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranks
+                p_ranksv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksv
+                p_ranksp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksp
+                p_ranksr[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksr
+                
             # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
             # particle_data = vstack([particle_data, new_part_table])
-            ppos[parts_ticker: parts_ticker + Nparts[eslab]] = part_pos
-            pvel[parts_ticker: parts_ticker + Nparts[eslab]] = part_vel
-            phvel[parts_ticker: parts_ticker + Nparts[eslab]] =  part_hvel
-            phmass[parts_ticker: parts_ticker + Nparts[eslab]] = part_halomass
-            phid[parts_ticker: parts_ticker + Nparts[eslab]] =  part_haloid
-            pNp[parts_ticker: parts_ticker + Nparts[eslab]] = part_Np
-            psubsampling[parts_ticker: parts_ticker + Nparts[eslab]] = part_subsample
-            prandoms[parts_ticker: parts_ticker + Nparts[eslab]] = part_randoms
-            pdeltac[parts_ticker: parts_ticker + Nparts[eslab]] = part_deltac
-            pfenv[parts_ticker: parts_ticker + Nparts[eslab]] = part_fenv
-            parts_ticker += Nparts[eslab]
-
+            ppos[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_pos
+            pvel[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_vel
+            phvel[parts_ticker: parts_ticker + Nparts[eslab-start]] =  part_hvel
+            phmass[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_halomass
+            phid[parts_ticker: parts_ticker + Nparts[eslab-start]] =  part_haloid
+            pNp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_Np
+            psubsampling[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_subsample
+            prandoms[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_randoms
+            pdeltac[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_deltac
+            pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
+            parts_ticker += Nparts[eslab-start]
+            
         halo_data = {"hpos": hpos, 
                      "hvel": hvel, 
                      "hmass": hmass, 
