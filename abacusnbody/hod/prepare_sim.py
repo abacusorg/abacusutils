@@ -17,6 +17,7 @@ import time
 import itertools
 from itertools import repeat
 import argparse
+import gc
 
 import numpy as np
 from astropy.table import Table
@@ -208,6 +209,40 @@ def calc_fenv_opt(Menv, mbins, halosM):
             fenv_rank[mmask] = new_fenv_rank / (Nmask-1) - 0.5  # max rank is always Nmask - 1
     return fenv_rank
 
+
+def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread):
+    '''Calculate a local mass environment by taking the difference in
+    total neighbor halo mass at two apertures
+    '''
+
+    if halo_lc:
+        querypos = allpos
+        treebox = None  # periodicity not needed for halo light cones
+    else:
+        # note that periodicity exists only in y and z directions
+        querypos = allpos+Lbox/2.  # needs to be within 0 and Lbox for periodicity
+        treebox = Lbox
+    
+    print("Building and querying trees for mass env calculation")
+    querypos_tree = cKDTree(querypos, boxsize=treebox)
+    allinds_inner = querypos_tree.query_ball_point(querypos, r = r_inner, n_jobs = nthread)
+    inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
+    del allinds_inner; gc.collect()
+    
+    allinds_outer = querypos_tree.query_ball_point(querypos, r = r_outer, n_jobs = nthread)
+    del querypos, querypos_tree; gc.collect()
+    
+    outer_arr, outer_starts = concat_to_arr(allinds_outer)
+    del allinds_outer; gc.collect()
+    
+    print("starting Menv")
+    numba.set_num_threads(nthread)
+    
+    Menv = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
+
+    return Menv
+
+
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False, nthread = 1):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
@@ -348,24 +383,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 else:
                     rand_norm = np.ones(len(index_bounds))
 
-        if halo_lc:
-            # periodicity not needed for halo light cones
-            allpos_tree = cKDTree(allpos)
-            allinds_inner = allpos_tree.query_ball_point(allpos, r = halos['r98_L2com'], n_jobs = nthread)
-            allinds_outer = allpos_tree.query_ball_point(allpos, r = rad_outer, n_jobs = nthread)
-        else:
-            # note that periodicity exists only in y and z directions
-            tmp = allpos+Lbox/2.
-            allpos_tree = cKDTree(tmp, boxsize=Lbox) # needs to be within 0 and Lbox for periodicity
-            allinds_inner = allpos_tree.query_ball_point(tmp, r = halos['r98_L2com'], n_jobs = nthread)
-            allinds_outer = allpos_tree.query_ball_point(tmp, r = rad_outer, n_jobs = nthread)
-            
-        print("computing m stacks")
-        numba.set_num_threads(nthread)
-        inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
-        outer_arr, outer_starts = concat_to_arr(allinds_outer)
-        print("starting Menv")
-        Menv = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
+        Menv = do_Menv_from_tree(allpos, allmasses, r_inner=halos['r98_L2com'], r_outer=rad_outer,
+                                    halo_lc=halo_lc, Lbox=Lbox, nthread=nthread)
+        gc.collect()
         
         # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
         #     for ind in np.arange(len(halos))])
@@ -385,14 +405,14 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         #             new_fenv_rank = Menv[mmask].argsort().argsort()
         #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
 
-        halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, halos['N']*Mpart)
+        halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, allmasses)
 
         # compute delta concentration
         print("computing c rank")
         halos_c = halos['r90_L2com']/halos['r25_L2com']
         deltac_rank = np.zeros(len(halos))
         for ibin in range(nbins):
-            mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
+            mmask = (allmasses > mbins[ibin]) & (allmasses < mbins[ibin + 1])
             if np.sum(mmask) > 0:
                 if np.sum(mmask) == 1:
                     deltac_rank[mmask] = 0
