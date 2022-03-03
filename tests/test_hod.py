@@ -22,9 +22,9 @@ from astropy.io import ascii
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'Mini_N64_L32')
 EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_hod.yaml')
 EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_oldfenv_MT_ref.h5')
+    'data_summit/Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_oldfenv_MT_new.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_oldfenv_MT_ref.h5')
+    'data_summit/Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5')
 EXAMPLE_LRGS = os.path.join(os.path.dirname(__file__), 
     'data_mocks_summit_new/Mini_N64_L32/z0.000/galaxies_rsd/LRGs.dat')
 EXAMPLE_ELGS = os.path.join(os.path.dirname(__file__), 
