@@ -242,7 +242,7 @@ class AbacusHOD:
     """
     A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
     """
-    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, chunks=1):
+    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, n_chunks=1):
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
@@ -285,7 +285,10 @@ class AbacusHOD:
                     * ``nbins``: int, number of bins.
                 * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`. 
                 * ``pi_bin_size``: int, size of bins along of the line of sight. Need to be divisor of ``pimax``.
-
+        chunk: int, optional
+            Index of current chunk. Must be between ``0`` and ``n_chunks-1``. Files associated with this chunk are written out as ``{tracer}s_{chunk}.dat``. Default is -1 (no chunking).
+        n_chunks: int, optional
+            Number of chunks to split the input from the halo+particle subsample and number of output files in which to write out the galaxy catalogs following the format ``{tracer}s_{chunk}.dat``.
         """
         # simulation details
         self.sim_name = sim_params['sim_name']
@@ -317,7 +320,8 @@ class AbacusHOD:
 
         # setting up chunking
         self.chunk = chunk
-        self.chunks = chunks
+        self.n_chunks = n_chunks
+        assert self.chunk < self.n_chunks, "Total number of chunks needs to be larger than current chunk index"
         
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
@@ -371,15 +375,16 @@ class AbacusHOD:
             params['origin'] = None # observer at infinity in the -z direction
 
         # settitng up chunking
-        chunks = self.chunks
+        n_chunks = self.n_chunks
         params['chunk'] = self.chunk
         if self.chunk == -1:
             chunk = 0
         else:
             chunk = self.chunk
-        n_jump = int(np.ceil(len(halo_info_fns)/chunks))
+        n_jump = int(np.ceil(len(halo_info_fns)/n_chunks))
         start = ((chunk)*n_jump)
         end = ((chunk+1)*n_jump)
+        if end > len(halo_info_fns): end = len(halo_info_fns)
         params['numslabs'] = n_jump
         self.lbox = header['BoxSize']
 
@@ -387,8 +392,6 @@ class AbacusHOD:
         Nhalos = np.empty(params['numslabs'])
         Nparts = np.empty(params['numslabs'])        
         for eslab in range(start, end):
-            if eslab >= len(halo_info_fns): continue
-            
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
@@ -447,7 +450,6 @@ class AbacusHOD:
         halo_ticker = 0
         parts_ticker = 0
         for eslab in range(start, end):
-            if eslab >= len(halo_info_fns): continue
             
             print("Loading simulation by slab, ", eslab)
             
