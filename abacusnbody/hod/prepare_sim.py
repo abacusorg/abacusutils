@@ -51,7 +51,7 @@ def subsample_particles(m_in, n_in, MT):
     x = np.log10(m_in)
     
     # a target number of particles
-    ntarget = 3+log(1+exp(200*(x-13)))
+    ntarget = 3+np.log(1+np.exp(200*(x-13)))
     
     # subsampling prob
     return np.minimum(1, ntarget / n_in)
@@ -272,7 +272,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     # # form a halo table of the columns i care about 
     # creating a mask of which halos to keep, which halos to drop
-    p_halos = subsample_halos(halos['N']*Mpart, MT, Mpart)
+    p_halos = subsample_halos(halos['N']*Mpart, MT)
     mask_halos = np.random.random(len(halos)) < p_halos
     print("total number of halos, ", len(halos), "keeping ", np.sum(mask_halos))
 
