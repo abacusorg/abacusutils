@@ -385,7 +385,7 @@ class AbacusHOD:
         start = ((chunk)*n_jump)
         end = ((chunk+1)*n_jump)
         if end > len(halo_info_fns): end = len(halo_info_fns)
-        params['numslabs'] = n_jump
+        params['numslabs'] = end-start
         self.lbox = header['BoxSize']
 
         # count ther number of halos and particles
