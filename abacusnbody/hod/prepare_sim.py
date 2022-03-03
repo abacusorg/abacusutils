@@ -47,11 +47,11 @@ def subsample_halos(m, MT):
     else:
         return 1.0/(1.0 + 0.1*np.exp(-(x - 12.6)*7)) # LRG only
 
-def subsample_particles(m_in, n_in, MT):
+def subsample_particles(m_in, n_in):
     x = np.log10(m_in)
     
     # a target number of particles
-    ntarget = 3+np.log(1+np.exp(200*(x-13)))
+    ntarget = 10 + np.log(1+np.exp(200*(x-13)))
     
     # subsampling prob
     return np.minimum(1, ntarget / n_in)
@@ -443,7 +443,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             print("halo id", j, end = '\r')
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
-            subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['N'][j], MT)
+            subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['N'][j])
             submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
             # updating the particles' masks, downsample factors, halo mass
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask

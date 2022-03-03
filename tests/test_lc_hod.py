@@ -22,9 +22,9 @@ from astropy.io import ascii
 EXAMPLE_SIM = os.path.join(os.path.dirname(__file__), 'AbacusSummit_base_c000_ph001-abridged')
 EXAMPLE_CONFIG = os.path.join(os.path.dirname(__file__), 'abacus_lc_hod.yaml')
 EXAMPLE_SUBSAMPLE_HALOS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/AbacusSummit_base_c000_ph001-abridged/z2.250/halos_xcom_0_seed600_abacushod_oldfenv_MT_ref.h5')
+    'data_summit/AbacusSummit_base_c000_ph001-abridged/z2.250/halos_xcom_0_seed600_abacushod_oldfenv_MT_new.h5')
 EXAMPLE_SUBSAMPLE_PARTS = os.path.join(os.path.dirname(__file__), 
-    'data_summit/AbacusSummit_base_c000_ph001-abridged/z2.250/particles_xcom_0_seed600_abacushod_oldfenv_MT_ref.h5')
+    'data_summit/AbacusSummit_base_c000_ph001-abridged/z2.250/particles_xcom_0_seed600_abacushod_oldfenv_MT_new.h5')
 EXAMPLE_LRGS = os.path.join(os.path.dirname(__file__), 
     'data_mocks_summit_new/AbacusSummit_base_c000_ph001-abridged/z2.250/galaxies_rsd/LRGs.dat')
 EXAMPLE_ELGS = os.path.join(os.path.dirname(__file__), 
