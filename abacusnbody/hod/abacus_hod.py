@@ -92,7 +92,7 @@ where the central velocity bias parameter :math:`\\alpha_c` sets the ratio of
 central velocity dispersion vs. halo velocity dispersion. The satellite 
 velocity bias parameter :math:`\\alpha_c` sets the ratio between the satellite
 peculiar velocity to the particle peculiar velocity. The default for these two
-parameters are 1. 
+parameters are 0 and 1, respectively. 
 
 We additionaly introduce a set of satellite profile parameters 
 :math:`(s, s_v, s_p, s_r)` that allow for flexibilities in how satellite 
