@@ -210,7 +210,7 @@ def calc_fenv_opt(Menv, mbins, halosM):
     return fenv_rank
 
 
-def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread):
+def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread, mcut = 2e11):
     '''Calculate a local mass environment by taking the difference in
     total neighbor halo mass at two apertures
     '''
@@ -223,13 +223,20 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
         querypos = allpos+Lbox/2.  # needs to be within 0 and Lbox for periodicity
         treebox = Lbox
     
+    mmask = allmasses > mcut
+    pos_cut = querypos[mmask]
+    
     print("Building and querying trees for mass env calculation")
     querypos_tree = cKDTree(querypos, boxsize=treebox)
-    allinds_inner = querypos_tree.query_ball_point(querypos, r = r_inner, n_jobs = nthread)
+    if isinstance(r_inner, (list, tuple, np.ndarray)):
+        r_inner = np.array(r_inner)[mmask]
+    allinds_inner = querypos_tree.query_ball_point(pos_cut, r = r_inner, n_jobs = nthread)
     inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
     del allinds_inner; gc.collect()
     
-    allinds_outer = querypos_tree.query_ball_point(querypos, r = r_outer, n_jobs = nthread)
+    if isinstance(r_outer, (list, tuple, np.ndarray)):
+        r_outer = np.array(r_outer)[mmask]
+    allinds_outer = querypos_tree.query_ball_point(pos_cut, r = r_outer, n_jobs = nthread)
     del querypos, querypos_tree; gc.collect()
     
     outer_arr, outer_starts = concat_to_arr(allinds_outer)
@@ -238,12 +245,13 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
     print("starting Menv")
     numba.set_num_threads(nthread)
     
-    Menv = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
-
+    Menv = np.zeros(len(allmasses))
+    Menv[mmask] = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
     return Menv
 
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, halo_lc=False, nthread = 1):
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, 
+                 halo_lc=False, nthread = 1, mcut = 2e11, rad_outer = 5.):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -310,8 +318,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     # only generate fenv ranks and c ranks if the user wants to enable secondary biases
     if want_AB:
         nbins = 100
-        mbins = np.logspace(np.log10(3e10), 15.5, nbins + 1)
-        rad_outer = 5. # TODO: maybe move to yaml file
+        mbins = np.logspace(np.log10(mcut), 15.5, nbins + 1)
 
         # # grid based environment calculation
         # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
@@ -630,7 +637,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     want_ranks = config['HOD_params']['want_ranks']
     want_AB = config['HOD_params']['want_AB']
     # N_dim = config['HOD_params']['Ndim']
-    nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load']))
+    nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load'])/2)
 
     os.makedirs(savedir, exist_ok = True)
     
