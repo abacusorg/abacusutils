@@ -644,7 +644,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     want_ranks = config['HOD_params']['want_ranks']
     want_AB = config['HOD_params']['want_AB']
     # N_dim = config['HOD_params']['Ndim']
-    nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load'])/2)
+    nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load']))
 
     os.makedirs(savedir, exist_ok = True)
     
