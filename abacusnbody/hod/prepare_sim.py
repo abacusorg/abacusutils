@@ -279,13 +279,13 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     # load the halo catalog slab
     print("loading halo catalog ")
     if halo_lc:
-        slabname = simdir+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
+        slabname = simdir+'/'+simname+'/z'+str(z_mock).ljust(5, '0')+'/lc_halo_info.asdf'
         id_key = 'index_halo'
         pos_key = 'pos_interp'
         vel_key = 'vel_interp'
         N_key = 'N_interp'
     else:
-        slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
+        slabname = simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
                    +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
         id_key = 'id'
         pos_key = 'x_L2com'
@@ -634,8 +634,11 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     if halo_lc:
         halo_info_fns = [str(Path(simdir) / Path(simname) / ('z%4.3f'%z_mock) / 'lc_halo_info.asdf')]
     else:
-        halo_info_fns = list((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf'))
+        halo_info_fns = list(sorted((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf')))
     numslabs = len(halo_info_fns)
+
+    if numslabs == 0:
+        raise ValueError('prepare_sim could not find any slabs!')
 
     tracer_flags = config['HOD_params']['tracer_flags']
     MT = False

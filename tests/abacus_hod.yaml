@@ -6,8 +6,8 @@
 sim_params:
     sim_name: 'Mini_N64_L32'                                 # which simulation 
     sim_dir: './tests/' 
-    output_dir: './tests/data_mocks_summit_new'          # where to output galaxy mocks
-    subsample_dir: './tests/data_summit/'                  # where to output subsample data
+    output_dir: './tests/ref_hod'          # where to output galaxy mocks
+    subsample_dir: './tests/ref_hod/'                  # where to output subsample data
     z_mock: 0.0                                                            # which redshift slice
     cleaned_halos: True                                                     # load cleaned halos?
 prepare_sim:
