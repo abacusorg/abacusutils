@@ -17,6 +17,7 @@ Enhancements
 ~~~~~~~~~~~~
 - Some nice numba accelerations for fenv calculation [#45]
 - Made clustering_params optional, among some minor quality of life updates. [#39]
+- Reduce memory usage in Menv tree queries [#51]
 
 1.2.0 (2022-02-02)
 ------------------
