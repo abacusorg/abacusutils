@@ -227,7 +227,7 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
         treebox = None  # periodicity not needed for halo light cones
     else:
         # note that periodicity exists only in y and z directions
-        querypos = allpos+Lbox/2.  # needs to be within 0 and Lbox for periodicity
+        querypos = (allpos+Lbox/2.) % Lbox  # needs to be within 0 and Lbox for periodicity
         treebox = Lbox
     
     mmask = allmasses > mcut
