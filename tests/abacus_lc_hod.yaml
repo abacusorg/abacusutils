@@ -6,8 +6,8 @@
 sim_params:
     sim_name: 'AbacusSummit_base_c000_ph001-abridged'                # which simulation 
     sim_dir: './tests/halo_light_cones/' 
-    output_dir: './tests/data_mocks_summit_new/'          # where to output galaxy mocks
-    subsample_dir: './tests/data_summit/'                  # where to output subsample data
+    output_dir: './tests/ref_hod/'          # where to output galaxy mocks
+    subsample_dir: './tests/ref_hod/'                  # where to output subsample data
     z_mock: 2.250                                                            # which redshift slice
     cleaned_halos: True                                                     # load cleaned halos?
     halo_lc: True                                                   # want halo light cones?

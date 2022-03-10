@@ -1,5 +1,8 @@
-import tempfile
-import filecmp
+'''
+This module tests `abacusnbody.data`: the basic interfaces to read halos and particles.
+The reference files are stored in `tests/ref_data`.
+'''
+
 from pathlib import Path
 import numbers
 
@@ -8,7 +11,7 @@ from astropy.table import Table
 import numpy as np
 
 curdir = Path(__file__).parent
-refdir = curdir / 'ref'
+refdir = curdir / 'ref_data'
 EXAMPLE_SIM = curdir / 'Mini_N64_L32'
 HALOS_OUTPUT_UNCLEAN = refdir / 'test_halos_unclean.asdf'
 PARTICLES_OUTPUT_UNCLEAN = refdir / 'test_subsamples_unclean.asdf'

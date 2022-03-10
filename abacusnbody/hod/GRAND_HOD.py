@@ -150,7 +150,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
     numba.set_num_threads(Nthread)
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
-    hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
+    hstart = np.rint(np.linspace(0, H, Nthread + 1)).astype(np.int64) # starting index of each thread
 
     keep = np.empty(H, dtype = np.int8) # mask array tracking which halos to keep
 
@@ -237,7 +237,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                 lrg_z[j1] = pos[i,2]
                 lrg_vz[j1] = vel[i,2] + alpha_c_L * vdev[i] # velocity bias
                 # rsd only applies to the z direction
-                if rsd and origin != None:
+                if rsd and origin is not None:
                     nx = lrg_x[j1] - origin[0]
                     ny = lrg_y[j1] - origin[1]
                     nz = lrg_z[j1] - origin[2]
@@ -263,7 +263,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
                 elg_z[j2] = pos[i,2]
                 elg_vz[j2] = vel[i,2] + alpha_c_E * vdev[i] # velocity bias
                 # rsd only applies to the z direction
-                if rsd and origin != None:
+                if rsd and origin is not None:
                     nx = elg_x[j2] - origin[0]
                     ny = elg_y[j2] - origin[1]
                     nz = elg_z[j2] - origin[2]
@@ -379,7 +379,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
 
     numba.set_num_threads(Nthread)
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
-    hstart = np.rint(np.linspace(0, H, Nthread + 1)) # starting index of each thread
+    hstart = np.rint(np.linspace(0, H, Nthread + 1)).astype(np.int64) # starting index of each thread
 
     keep = np.empty(H, dtype = np.int8) # mask array tracking which halos to keep
 
@@ -487,7 +487,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 lrg_vy[j1] = hvel[i, 1] + alpha_s_L * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 lrg_z[j1] = ppos[i, 2]
                 lrg_vz[j1] = hvel[i, 2] + alpha_s_L * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                if rsd and origin != None:
+                if rsd and origin is not None:
                     nx = lrg_x[j1] - origin[0]
                     ny = lrg_y[j1] - origin[1]
                     nz = lrg_z[j1] - origin[2]
@@ -511,7 +511,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 elg_vy[j2] = hvel[i, 1] + alpha_s_E * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 elg_z[j2] = ppos[i, 2]
                 elg_vz[j2] = hvel[i, 2] + alpha_s_E * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                if rsd and origin != None:
+                if rsd and origin is not None:
                     nx = elg_x[j2] - origin[0]
                     ny = elg_y[j2] - origin[1]
                     nz = elg_z[j2] - origin[2]
@@ -609,8 +609,8 @@ def fast_concatenate(array1, array2, Nthread):
     numba.set_num_threads(Nthread)
     Nthread1 = max(1, int(np.floor(Nthread * N1 / (N1 + N2))))
     Nthread2 = Nthread - Nthread1
-    hstart1 = np.rint(np.linspace(0, N1, Nthread1 + 1))
-    hstart2 = np.rint(np.linspace(0, N2, Nthread2 + 1)) + N1
+    hstart1 = np.rint(np.linspace(0, N1, Nthread1 + 1)).astype(np.int64)
+    hstart2 = np.rint(np.linspace(0, N2, Nthread2 + 1)).astype(np.int64) + N1
 
     for tid in numba.prange(Nthread): #numba.prange(Nthread):
         if tid < Nthread1:
