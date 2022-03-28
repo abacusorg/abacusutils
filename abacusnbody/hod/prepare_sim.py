@@ -36,32 +36,61 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
-# the subsampling curve for halos
+# # the subsampling curve for halos
 def subsample_halos(m, MT):
     x = np.log10(m)
     if MT:
         downfactors = np.zeros(len(x))
-        mask = x < 12.07
-        downfactors[mask] = 0.2/(1.0 + 10*np.exp(-(x[mask] - 11.2)*25))
-        downfactors[~mask] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask] - 12.6)*7))
+        mask1 = x < 11.6
+        mask2 = x < 12.2
+        mask3 = x < 12.9
+        downfactors[mask1] = 0.1/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
+        downfactors[mask2&(~mask1)] = 0.2/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.5)*25))
+        downfactors[mask3&(~mask2)] = 0.5/(1.0 + 0.1*np.exp(-(x[mask3&(~mask2)] - 12.6)*7))
+        downfactors[~mask3] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask3] - 13.2)*7))
         return downfactors
     else:
         return 1.0/(1.0 + 0.1*np.exp(-(x - 12.6)*7)) # LRG only
 
+# # testing a new subsmapling function that hopefully recovers elg satellites at small halo mass
+# def subsample_halos(m, MT): 
+#     x = np.log10(m)
+#     if MT:
+#         downfactors = np.zeros(len(x))
+#         mask = x < 11.5
+#         downfactors[mask] = 0.2/(1.0 + 10*np.exp(-(x[mask] - 11.2)*25))
+#         downfactors[~mask] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask] - 11.8)*13))
+#         return downfactors
+#     else:
+#         return 1.0/(1.0 + 0.1*np.exp(-(x - 12.6)*7)) # LRG only
+
+
+# def subsample_particles(m_in, n_in):
+#     x = np.log10(m_in)
+    
+#     if x > 13.3:
+#         return 0.03
+#     elif x > 12.8:
+#         return 0.05
+#     elif x > 12.3:
+#         return 0.1
+#     elif x > 11.9:
+#         return 0.2
+#     elif x > 11.7:
+#         return 0.3
+#     elif x > 11.5:
+#         return 0.5
+#     else:
+#         return 0.7
+    
 def subsample_particles(m_in, n_in):
     x = np.log10(m_in)
     
     # a target number of particles
-    ntarget = 10 + np.log(1+np.exp(200*(x-13)))
+    ntarget = 4 + 5*10**(x-13)/(1+np.exp(-(x-13)))# + np.log(1+np.exp(200*(x-13)))
     
     # subsampling prob
-    return np.minimum(1, ntarget / n_in)
-    
-    # # return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
-    # if MT:
-    #     return 0.03 # 4/(200.0 + np.exp(-(x - 13.2)*6)) # MT
-    # else:
-    #     return 4/(200.0 + np.exp(-(x - 13.7)*8)) # LRG only
+    return np.minimum(0.7, ntarget / n_in)
 
 # # these two functions are for grid based density calculation. We found the grid based definiton is disfavored by data
 # def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
@@ -258,7 +287,7 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
 
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, 
-                 halo_lc=False, nthread = 1, mcut = 2e11, rad_outer = 5.):
+                 halo_lc=False, nthread = 1, overwrite = 1, mcut = 2e11, rad_outer = 5.):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -272,9 +301,11 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     np.random.seed(newseed + i)
     # if file already exists, just skip
-    # if os.path.exists(outfilename_halos) \
-    # and os.path.exists(outfilename_particles):
-    #     return 0
+    overwrite = int(overwrite)
+    if (not overwrite) and (os.path.exists(outfilename_halos)) \
+    and (os.path.exists(outfilename_particles)):
+        print("files exists, skipping ", i)
+        return 0
 
     # load the halo catalog slab
     print("loading halo catalog ")
@@ -470,7 +501,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             print("halo id", j, end = '\r')
         if mask_halos[j]:
             # updating the mask tagging the particles we want to preserve
-            subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['N'][j])
+            subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j])
             submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
             # updating the particles' masks, downsample factors, halo mass
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask
@@ -611,7 +642,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def main(path2config, params = None, alt_simname = None, alt_z = None, newseed = 600, halo_lc = False):
+def main(path2config, params = None, alt_simname = None, alt_z = None, newseed = 600, halo_lc = False, overwrite = 1):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
     config = yaml.safe_load(open(path2config))
@@ -655,7 +686,8 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
                                 repeat(simdir), repeat(simname), repeat(z_mock), 
                                 repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc), repeat(nthread)))
+                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc), 
+                                repeat(nthread), repeat(overwrite)))
     p.close()
     p.join()
 
@@ -677,6 +709,9 @@ if __name__ == "__main__":
                        )
     parser.add_argument('--newseed',
                         help='alternative random number seed, positive integer', default = 600
+                       )
+    parser.add_argument('--overwrite',
+                        help='overwrite existing subsamples', default = 1
                        )
     args = vars(parser.parse_args())
 

@@ -405,6 +405,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 logM_cut_E_temp = logM_cut_E + Ac_E * hdeltac[i] + Bc_E * hfenv[i]
                 base_p_E = N_sat_generic(
                     hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E) * weights[i] * ic_E
+                # print(base_p_E, np.log10(hmass[i]), N_sat_generic(
+                # hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E), weights[i], ic_E)
                 if enable_ranks:
                     decorator_E = 1 + s_E * ranks[i] + s_v_E * ranksv[i] + s_p_E * ranksp[i] + s_r_E * ranksr[i]
                     exp_sat = base_p_E * decorator_E

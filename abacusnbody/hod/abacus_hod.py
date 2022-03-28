@@ -633,7 +633,7 @@ class AbacusHOD:
             rsd = want_rsd, 
             write_to_disk = write_to_disk, 
             savedir = self.mock_dir,
-            verbose = False,
+            verbose = verbose,
             fn_ext = fn_ext)
         print("gen mocks", time.time() - start)
 

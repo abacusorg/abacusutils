@@ -114,4 +114,4 @@ def test_hod(tmp_path, reference_mode = False):
             assert np.allclose(data[ekey], data1[ekey])
 
 if __name__ == '__main__':
-    test_hod(TESTDIR, reference_mode = True)
+    test_hod(TESTDIR, reference_mode = False)
