@@ -36,61 +36,60 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
-# # the subsampling curve for halos
 def subsample_halos(m, MT):
     x = np.log10(m)
+    downfactors = np.zeros(len(x))
     if MT:
-        downfactors = np.zeros(len(x))
-        mask1 = x < 11.6
-        mask2 = x < 12.2
-        mask3 = x < 12.9
-        downfactors[mask1] = 0.1/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
-        downfactors[mask2&(~mask1)] = 0.2/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.5)*25))
-        downfactors[mask3&(~mask2)] = 0.5/(1.0 + 0.1*np.exp(-(x[mask3&(~mask2)] - 12.6)*7))
-        downfactors[~mask3] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask3] - 13.2)*7))
+        mask1 = x < 11.4
+        mask2 = x < 11.6
+        downfactors[mask1] = 0.2/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
+        downfactors[mask2&(~mask1)] = 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.3)*25))
+        downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.7)*10))
+        # save all halos that could host a satellite
+        # downfactors[x>11.2] = 1
         return downfactors
     else:
-        return 1.0/(1.0 + 0.1*np.exp(-(x - 12.6)*7)) # LRG only
+        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.3)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
+        downfactors[x > 13.0] = 1
+        return downfactors
 
-# # testing a new subsmapling function that hopefully recovers elg satellites at small halo mass
-# def subsample_halos(m, MT): 
-#     x = np.log10(m)
-#     if MT:
-#         downfactors = np.zeros(len(x))
-#         mask = x < 11.5
-#         downfactors[mask] = 0.2/(1.0 + 10*np.exp(-(x[mask] - 11.2)*25))
-#         downfactors[~mask] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask] - 11.8)*13))
-#         return downfactors
-#     else:
-#         return 1.0/(1.0 + 0.1*np.exp(-(x - 12.6)*7)) # LRG only
-
-
-# def subsample_particles(m_in, n_in):
+# def subsample_particles(m_in, n_in, MT):
 #     x = np.log10(m_in)
     
-#     if x > 13.3:
-#         return 0.03
-#     elif x > 12.8:
-#         return 0.05
-#     elif x > 12.3:
-#         return 0.1
-#     elif x > 11.9:
-#         return 0.2
-#     elif x > 11.7:
-#         return 0.3
-#     elif x > 11.5:
-#         return 0.5
+#     if MT:
+#         if 10**x < 1e11:
+#             return 0.01
+#         else:
+#             # a target number of particles
+#             ntarget = 4 + 10**(x-13)/(1+np.exp(-(x-13)))# + np.log(1+np.exp(200*(x-13)))
+#             return np.minimum(0.7, ntarget / n_in)
 #     else:
-#         return 0.7
-    
-def subsample_particles(m_in, n_in):
+#         if 10**x < 1e12:
+#             return 0.01 # essentially removing particles in halos below Mmin
+#         else:
+#             ntarget = 2 + 1.5*10**(x-13)/(1+np.exp(-(x-13)))
+#             return np.minimum(1.0, ntarget / n_in)
+
+def submask_particles(m_in, n_in, MT):
     x = np.log10(m_in)
     
-    # a target number of particles
-    ntarget = 4 + 5*10**(x-13)/(1+np.exp(-(x-13)))# + np.log(1+np.exp(200*(x-13)))
-    
-    # subsampling prob
-    return np.minimum(0.7, ntarget / n_in)
+    if MT:
+        if 10**x < 1e11:
+            return np.zeros(n_in)
+        else:
+            # a target number of particles
+            ntarget = np.minimum(n_in, int(1 + 10**(x-13)))
+            submask = np.zeros(n_in).astype(int)
+            submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+            return submask
+    else:
+        if 10**x < 1e12:
+            return np.zeros(n_in) # essentially removing particles in halos below Mmin
+        else:
+            ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
+            submask = np.zeros(n_in).astype(int)
+            submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+            return submask
 
 # # these two functions are for grid based density calculation. We found the grid based definiton is disfavored by data
 # def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
@@ -246,7 +245,7 @@ def calc_fenv_opt(Menv, mbins, halosM):
     return fenv_rank
 
 
-def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread, mcut = 2e11):
+def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread, mcut = 1e11):
     '''Calculate a local mass environment by taking the difference in
     total neighbor halo mass at two apertures
     '''
@@ -287,7 +286,7 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
 
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, 
-                 halo_lc=False, nthread = 1, overwrite = 1, mcut = 2e11, rad_outer = 5.):
+                 halo_lc=False, nthread = 1, overwrite = 1, mcut = 1e11, rad_outer = 5.):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -429,7 +428,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     rand_norm = np.ones(len(index_bounds))
 
         Menv = do_Menv_from_tree(allpos, allmasses, r_inner=halos['r98_L2com'], r_outer=rad_outer,
-                                    halo_lc=halo_lc, Lbox=Lbox, nthread=nthread)
+                                    halo_lc=halo_lc, Lbox=Lbox, nthread=nthread, mcut = mcut)
         gc.collect()
         
         # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
@@ -496,13 +495,15 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("compiling particle subsamples")
     start_tracker = 0
+    print(len(halos), np.sum(mask_halos))
     for j in np.arange(len(halos)):
         if j % 10000 == 0:
             print("halo id", j, end = '\r')
-        if mask_halos[j]:
-            # updating the mask tagging the particles we want to preserve
-            subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j])
-            submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
+        if mask_halos[j] and halos['npoutA'][j] > 0:
+            # subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j], MT)
+            # submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
+            submask = submask_particles(halos['N'][j] * Mpart, halos['npoutA'][j], MT)
+
             # updating the particles' masks, downsample factors, halo mass
             mask_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = submask
             # print(j, halos_pstart, halos_pnum, p_halos, downsample_parts)
