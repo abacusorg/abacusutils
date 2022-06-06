@@ -12,13 +12,14 @@ To generate new reference, run:
 
 from os.path import dirname, join as pjoin
 import tempfile
-import numbers
 
 import yaml
 import pytest
 import h5py
 import numpy as np
 from astropy.io import ascii
+
+from common import check_close
 
 
 TESTDIR = dirname(__file__)
@@ -113,16 +114,6 @@ def test_hod(tmp_path, reference_mode = False):
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():
             assert check_close(data[ekey], data1[ekey])
-
-
-def check_close(arr1, arr2):
-    '''Checks exact equality for int arrays, and np.isclose for floats
-    '''
-    if issubclass(arr1.dtype.type, numbers.Integral):
-        assert issubclass(arr2.dtype.type, numbers.Integral)
-        return np.all(arr1 == arr2)
-    else:
-        return np.allclose(arr1, arr2)
 
 
 if __name__ == '__main__':

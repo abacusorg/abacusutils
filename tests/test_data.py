@@ -4,11 +4,12 @@ The reference files are stored in `tests/ref_data`.
 '''
 
 from pathlib import Path
-import numbers
 
 import pytest
 from astropy.table import Table
 import numpy as np
+
+from common import check_close
 
 curdir = Path(__file__).parent
 refdir = curdir / 'ref_data'
@@ -36,10 +37,7 @@ def test_halos_unclean(tmp_path):
 
     halos = cat.halos
     for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(halos[col] == ref[col])
-        else:
-            assert np.allclose(halos[col], ref[col])
+        assert check_close(ref[col], halos[col])
 
     assert halos.meta == ref.meta
 
@@ -59,10 +57,7 @@ def test_halos_clean(tmp_path):
 
     halos = cat.halos
     for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(halos[col] == ref[col])
-        else:
-            assert np.allclose(halos[col], ref[col])
+        assert check_close(ref[col], halos[col])
 
     # all haloindex values should point to this slab
     assert np.all((halos['haloindex']/1e12).astype(int) == cat.header['FullStepNumber'])
@@ -101,10 +96,7 @@ def test_subsamples_unclean(tmp_path):
 
     ss = cat.subsamples
     for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(ss[col] == ref[col])
-        else:
-            assert np.allclose(ss[col], ref[col])
+        assert check_close(ref[col], ss[col])
 
     assert cat.subsamples.meta == ref.meta
 
@@ -125,10 +117,7 @@ def test_subsamples_clean(tmp_path):
 
     ss = cat.subsamples
     for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(ss[col] == ref[col])
-        else:
-            assert np.allclose(ss[col], ref[col])
+        assert check_close(ref[col], ss[col])
 
     # total number of particles in ref should be equal to the sum total of npout{AB} in EXAMPLE_SIM
     assert len(ref) == np.sum(cat.halos['npoutA']) + np.sum(cat.halos['npoutB'])
@@ -264,18 +253,12 @@ def test_halo_lc():
     ref = Table.read(HALO_LC_CAT)
     halos = cat.halos
     for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(halos[col] == ref[col])
-        else:
-            assert np.allclose(halos[col], ref[col])        
+        assert check_close(ref[col], halos[col])
     assert halos.meta == ref.meta
     
     ref = Table.read(HALO_LC_SUBSAMPLES)
     ss = cat.subsamples
     for col in ref.colnames:
-        if issubclass(ref[col].dtype.type, numbers.Integral):
-            assert np.all(ss[col] == ref[col])
-        else:
-            assert np.allclose(ss[col], ref[col])
+        assert check_close(ref[col], ss[col])
             
     assert ss.meta == ref.meta
