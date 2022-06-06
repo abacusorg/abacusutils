@@ -11,12 +11,15 @@ To generate new reference, run:
 """
 
 from os.path import dirname, join as pjoin
+import tempfile
 
 import yaml
 import pytest
 import h5py
 import numpy as np
 from astropy.io import ascii
+
+from common import check_close
 
 
 TESTDIR = dirname(__file__)
@@ -78,13 +81,12 @@ def test_hod(tmp_path, reference_mode = False):
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
         for i in range(len(newhalos)):
             for j in range(len(newhalos[i])):
-                print(newhalos[i][j], temphalos[i][j])
-                assert np.array_equal(newhalos[i][j], temphalos[i][j])
+                assert check_close(newhalos[i][j], temphalos[i][j])
         newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r')['particles']
         tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
         for i in range(len(newparticles)):
             for j in range(len(newparticles[i])):
-                assert np.array_equal(newparticles[i][j], tempparticles[i][j])
+                assert check_close(newparticles[i][j], tempparticles[i][j])
 
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
@@ -104,14 +106,16 @@ def test_hod(tmp_path, reference_mode = False):
         data = ascii.read(EXAMPLE_LRGS)
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():
-            assert np.allclose(data[ekey], data1[ekey])
+            assert check_close(data[ekey], data1[ekey])
 
         savedir_gal = config['sim_params']['output_dir']\
             +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/ELGs.dat"
         data = ascii.read(EXAMPLE_ELGS)
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():
-            assert np.allclose(data[ekey], data1[ekey])
+            assert check_close(data[ekey], data1[ekey])
+
 
 if __name__ == '__main__':
-    test_hod(TESTDIR, reference_mode = False)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_hod(tmpdir, reference_mode = False)
