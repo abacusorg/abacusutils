@@ -11,6 +11,7 @@ To generate new reference, run:
 """
 
 from os.path import dirname, join as pjoin
+import tempfile
 
 import yaml
 import pytest
@@ -114,4 +115,5 @@ def test_hod(tmp_path, reference_mode = False):
             assert np.allclose(data[ekey], data1[ekey])
 
 if __name__ == '__main__':
-    test_hod(TESTDIR, reference_mode = False)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_hod(tmpdir, reference_mode = False)
