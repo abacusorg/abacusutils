@@ -225,6 +225,9 @@ import time
 import timeit
 from pathlib import Path
 
+import numba
+from numba import njit
+
 import numpy as np
 import h5py
 import asdf
@@ -237,6 +240,13 @@ from .GRAND_HOD import *
 from .parallel_numpy_rng import *
 from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
+
+@njit(parallel=True)
+def searchsorted_parallel(a, b):
+    res = np.empty(len(b), dtype = np.int64)
+    for i in numba.prange(len(b)):
+        res[i] = np.searchsorted(a, b[i])
+    return res
 
 class AbacusHOD:
     """
@@ -545,6 +555,9 @@ class AbacusHOD:
                      "hdeltac": hdeltac, 
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
+        # index from particles to halos, for conformity
+        assert np.all(hid[:-1] <= hid[1:])
+        pinds = searchsorted_parallel(hid, phid)
         particle_data = {"ppos": ppos, 
                          "pvel": pvel, 
                          "phvel": phvel, 
@@ -553,7 +566,8 @@ class AbacusHOD:
                          "pweights": pweights, 
                          "prandoms": prandoms, 
                          "pdeltac": pdeltac, 
-                         "pfenv": pfenv}
+                         "pfenv": pfenv,
+                         "pinds": pinds}
         if self.want_ranks:
             particle_data['pranks'] = p_ranks
             particle_data['pranksv'] = p_ranksv
