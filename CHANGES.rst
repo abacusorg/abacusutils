@@ -8,6 +8,10 @@ Breaking Changes
 ~~~~~~~~~~~~~~~~
 - Dependencies for tests and scripts now factorized under ``abacusutils[test]`` and ``abacusutils[extra]`` [#46]
 
+New Features
+~~~~~~~~~~~
+- ``abacusnbody.metadata`` added. Supports querying simulation parameters without downloading simulation data. []
+
 Fixes
 ~~~~~
 - Fix periodicity in theory-box HOD, and add halo LC features [#41]
