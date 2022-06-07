@@ -338,7 +338,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
     QSO_dict['vz'] = qso_vz
     QSO_dict['mass'] = qso_mass
     ID_dict['QSO'] = qso_id
-    return LRG_dict, ELG_dict, QSO_dict, ID_dict
+    return LRG_dict, ELG_dict, QSO_dict, ID_dict, keep
 
 
 @njit(parallel = True, fastmath = True)
@@ -346,7 +346,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     enable_ranks, ranks, ranksv, ranksp, ranksr, 
     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
     QSO_design_array, QSO_decorations_array,
-    rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO, Nthread, origin):
+    rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO, Nthread, origin, keep_cent):
 
     """
     Generate satellite galaxies in place in memory with a two pass numba parallel implementation. 
@@ -363,10 +363,10 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
         ELG_design_array[5], ELG_design_array[6], ELG_design_array[7]
-    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E = \
+    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, conf_a, conf_c = \
         ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
         ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
-        ELG_decorations_array[9], ELG_decorations_array[10]
+        ELG_decorations_array[9], ELG_decorations_array[10], ELG_decorations_array[11], ELG_decorations_array[12]
 
     logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
         QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]
@@ -376,7 +376,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
         QSO_decorations_array[9], QSO_decorations_array[10]
 
     H = len(hmass) # num of particles
-
+    
     numba.set_num_threads(Nthread)
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)).astype(np.int64) # starting index of each thread
@@ -402,6 +402,11 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
             ELG_marker = LRG_marker
             if want_ELG:
                 M1_E_temp = 10**(logM1_E + As_E * hdeltac[i] + Bs_E * hfenv[i])
+                # elg conformity
+                if keep_cent[i] == 1:
+                    M1_E_temp = M1_E_temp*10**conf_c
+                elif keep_cent[i] == 2:
+                    M1_E_temp = M1_E_temp*10**conf_a
                 logM_cut_E_temp = logM_cut_E + Ac_E * hdeltac[i] + Bc_E * hfenv[i]
                 base_p_E = N_sat_generic(
                     hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E) * weights[i] * ic_E
@@ -624,6 +629,7 @@ def fast_concatenate(array1, array2, Nthread):
     # final_array = np.concatenate((array1, array2))
     return final_array
 
+
 def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd, verbose):
     """
     parse hod parameters, pass them on to central and satellite generators 
@@ -718,8 +724,12 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         Bs_E = ELG_HOD.get('Bsat', 0)
         ic_E = ELG_HOD.get('ic', 1)
         
+        # conformity params
+        conf_a = ELG_HOD.get('conf_a', 0)
+        conf_c = ELG_HOD.get('conf_c', 0)
+        
         ELG_decorations_array = np.array(
-            [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E])
+            [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, conf_a, conf_c])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
         ELG_design_array = np.zeros(8)
@@ -765,14 +775,22 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     lbox = params['Lbox']
     origin = params['origin']
     # for each halo, generate central galaxies and output to file
-    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent = \
+    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
              halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread, origin)
     if verbose:
         print("generating centrals took ", time.time() - start)
-
+    
+    # if conf_a or conf_c: 
+    #     start = time.time()
+    #     assert np.all(halos_array['hid'][:-1] <= halos_array['hid'][1:])
+    #     # pkeeps = fast_keep(keep_cent, halos_array['hid'], subsample['phid'])
+    #     pinds = searchsorted_parallel(halos_array['hid'], subsample['phid'], Nthread)
+    #     pkeeps = keep_cent[subsample['pinds']]
+    #     print("gen pkeep took", time.time() - start)
+        
 
     start = time.time()
     LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
@@ -781,7 +799,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
              enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'],
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
-             want_LRG, want_ELG, want_QSO, Nthread, origin)
+             want_LRG, want_ELG, want_QSO, Nthread, origin, keep_cent[subsample['pinds']])
     if verbose:
         print("generating satellites took ", time.time() - start)
 
