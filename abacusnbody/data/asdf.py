@@ -59,7 +59,7 @@ class BloscCompressor(Compressor):
         clevel = kwargs.pop('clevel',1)  # compression level, usually only need lowest for zstd
         cname = kwargs.pop('cname','zstd')  # compressor name, default zstd, good performance/compression tradeoff
         
-        shuffle = kwargs.pop('shuffle', None)
+        shuffle = kwargs.pop('shuffle', 'shuffle')
         if shuffle == 'shuffle':
             shuffle = blosc.SHUFFLE
         elif shuffle == 'bitshuffle':
