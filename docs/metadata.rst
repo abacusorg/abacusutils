@@ -48,10 +48,10 @@ the pickled representation). Internally, the time-independent parameters are sep
 from the time-varying state values, but the two sets are combined into a single ``dict``
 that is passed to the user.
 
+API
+---
+
 .. automodule:: abacusnbody.metadata
    :members:
    :undoc-members:
    :show-inheritance:
-
-   API
-   ===

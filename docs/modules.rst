@@ -6,3 +6,4 @@ abacusnbody API
 
    abacusnbody.data
    abacusnbody.hod
+   abacusnbody.metadata
