@@ -10,7 +10,7 @@ Breaking Changes
 
 New Features
 ~~~~~~~~~~~
-- ``abacusnbody.metadata`` added. Supports querying simulation parameters without downloading simulation data. []
+- ``abacusnbody.metadata`` added. Supports querying simulation parameters without downloading simulation data. [#56]
 
 Fixes
 ~~~~~
@@ -22,7 +22,8 @@ Enhancements
 - Some nice numba accelerations for fenv calculation [#45]
 - Made clustering_params optional, among some minor quality of life updates. [#39]
 - Reduce memory usage in Menv tree queries [#51]
-- HOD now supports two new conformity parameters for ELGs, conf_a, conf_c
+- HOD now supports two new conformity parameters for ELGs, conf_a, conf_c [#54]
+
 1.2.0 (2022-02-02)
 ------------------
 
