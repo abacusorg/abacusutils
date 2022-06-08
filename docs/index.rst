@@ -38,6 +38,7 @@ and new performance opportunities identified.
    compaso
    hod
    pipes
+   metadata
 
 .. toctree::
    :maxdepth: 2

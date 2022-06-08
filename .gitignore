@@ -6,3 +6,9 @@ __pycache__/
 .ipynb_checkpoints/
 slurm-*.out
 abacusnbody/version.py
+.vscode/
+issues/
+venv/
+*.code-workspace
+/env*
+abacusnbody/metadata/abacussummit_headers.asdf
