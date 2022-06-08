@@ -3,7 +3,7 @@ Retrieve the cosmology and other code parameters associated with the
 AbacusSummit simulations.
 '''
 
-import importlib
+import importlib.resources
 import pickle
 
 import asdf
