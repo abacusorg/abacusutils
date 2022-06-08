@@ -6,6 +6,9 @@ for Abacus simulations like AbacusSummit. One can use this module to
 query information about simulations without actually downloading or
 opening any simulation files.
 
+The main entry point is the ``get_meta(simname, redshift=z)`` function.
+Examples and the API are below.
+
 Examples
 --------
 
@@ -23,7 +26,7 @@ Growth Factors in AbacusSummit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Growth factors in AbacusSummit are a bit of a special case, because the parameters
 actually contain a pre-computed table of :math:`D(z)` for all the output epochs
-and the ICs. This table is called ``GrowthTable``.  Since AbacusSummit input
+and the ICs. This table is a ``dict`` called ``GrowthTable``.  Since AbacusSummit input
 power spectra (i.e. CLASS power spectra) are generated at :math:`z=1`, one can
 compute the linear power spectrum at a different epoch via the ratio :math:`D(z)/D(1)`:
 
@@ -33,17 +36,17 @@ compute the linear power spectrum at a different epoch via the ratio :math:`D(z)
     meta = abacusnbody.metadata.get_meta('AbacusSummit_base_c000_ph000')
     Dz = meta['GrowthTable']
     ztarget = 0.1
-    initial_pk = meta['CLASS_power_spectrum']['P (Mpc/h)^3']  # at z=1
-    linear_pk = initial_pk * (Dz[ztarget] / Dz[1.])**2
+    linear_pk = input_pk * (Dz[ztarget] / Dz[1.])**2
 
 
 Developer Details
 -----------------
 The metadata is stored in an ASDF file in the ``abacusnbody/metadata``
-directory. The metadata files are built with ``scripts/metadata/gather_metadata.py``.
-Internally, the time-independent parameters are separated from the time-varying
-state values, but the two sets are combined into a single `dict` that is passed
-to the user.
+directory. The metadata files are built with ``scripts/metadata/gather_metadata.py``,
+and then compressed with ``scripts/metadata/compress.py`` (using compression on
+the pickled representation). Internally, the time-independent parameters are separated
+from the time-varying state values, but the two sets are combined into a single ``dict``
+that is passed to the user.
 
 .. automodule:: abacusnbody.metadata
    :members:

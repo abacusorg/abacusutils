@@ -4,11 +4,12 @@ AbacusSummit simulations.
 '''
 
 import importlib
+import pickle
 
 import asdf
 
 metadata = None
-metadata_fn = 'abacussummit_headers.asdf'
+metadata_fn = 'abacussummit_headers_compressed.asdf'
 
 def get_meta(simname, redshift=None):
     '''
@@ -36,13 +37,17 @@ def get_meta(simname, redshift=None):
     global metadata
     if metadata == None:
         with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
-            metadata = dict(af.tree)
+            if 'pickle' in af.tree:
+                metadata = pickle.loads(af['pickle'][:])
+            else:
+                metadata = dict(af.tree)
     
     if simname not in metadata:
         raise ValueError(f'Simulation "{simname}" is not in metadata file "{metadata_fn}"')
 
     res = dict(metadata[simname]['param'])
-    res['CLASS_power_spectrum'] = metadata[simname]['CLASS_power_spectrum']
+    if 'CLASS_power_spectrum' in metadata[simname]:
+        res['CLASS_power_spectrum'] = metadata[simname]['CLASS_power_spectrum']
 
     if redshift != None:
         if type(redshift) != str:
