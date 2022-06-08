@@ -7,6 +7,7 @@ Changelog
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 - Dependencies for tests and scripts now factorized under ``abacusutils[test]`` and ``abacusutils[extra]`` [#46]
+- Python 3.6 (EOL) support has been dropped [#56]
 
 New Features
 ~~~~~~~~~~~

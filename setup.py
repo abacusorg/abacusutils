@@ -33,7 +33,7 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires = install_requires,
     extras_require = extras_require,
     entry_points={'console_scripts':['pipe_asdf = abacusnbody.data.pipe_asdf:main'],
