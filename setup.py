@@ -28,6 +28,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/abacusorg/abacusutils",
     packages=find_namespace_packages(include=['abacusnbody.*']),
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
