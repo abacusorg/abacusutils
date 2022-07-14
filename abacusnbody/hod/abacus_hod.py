@@ -342,7 +342,10 @@ class AbacusHOD:
             np.log10(np.max(self.halo_data['hmass'])), 101)
         self.deltacbins = np.linspace(-0.5, 0.5, 101)
         self.fenvbins = np.linspace(-0.5, 0.5, 101)
-
+        
+        print(self.halo_data['hmultis'])
+        print(np.sum(self.halo_data['hmultis']))
+        print(np.sort(self.halo_data['hmultis']))
         self.halo_mass_func, edges = np.histogramdd(
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
@@ -504,7 +507,7 @@ class AbacusHOD:
             hdeltac[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_deltac
             hfenv[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_fenv
             halo_ticker += Nhalos[eslab-start]
-            
+        
             # extract particle data that we need
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
@@ -544,6 +547,22 @@ class AbacusHOD:
             pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
             parts_ticker += Nparts[eslab-start]
             
+        # sort halos by hid, important for conformity
+        if not np.all(hid[:-1] <= hid[1:]):
+            print("sorting halos for conformity calculation")
+            sortind = np.argsort(hid)
+            hpos = hpos[sortind]
+            hvel = hvel[sortind]
+            hmass = hmass[sortind]
+            hid = hid[sortind]
+            hmultis = hmultis[sortind]
+            hrandoms = hrandoms[sortind]
+            hveldev = hveldev[sortind]
+            hsigma3d = hsigma3d[sortind]
+            hdeltac = hdeltac[sortind]
+            hfenv = hfenv[sortind]
+        assert np.all(hid[:-1] <= hid[1:])
+            
         halo_data = {"hpos": hpos, 
                      "hvel": hvel, 
                      "hmass": hmass, 
@@ -555,8 +574,6 @@ class AbacusHOD:
                      "hdeltac": hdeltac, 
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
-        # index from particles to halos, for conformity
-        assert np.all(hid[:-1] <= hid[1:])
         pinds = searchsorted_parallel(hid, phid)
         particle_data = {"ppos": ppos, 
                          "pvel": pvel, 

@@ -49,7 +49,7 @@ def subsample_halos(m, MT):
         # downfactors[x>11.2] = 1
         return downfactors
     else:
-        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.3)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
+        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, default 12.3, set to 12.0 for z = 1.1
         downfactors[x > 13.0] = 1
         return downfactors
 
