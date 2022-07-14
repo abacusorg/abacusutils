@@ -343,7 +343,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
 @njit(parallel = True, fastmath = True)
 def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, 
-    enable_ranks, ranks, ranksv, ranksp, ranksr, 
+    enable_ranks, ranks, ranksv, ranksp, ranksr, ranksc,
     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
     QSO_design_array, QSO_decorations_array,
     rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO, Nthread, origin, keep_cent):
@@ -363,10 +363,11 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
         ELG_design_array[5], ELG_design_array[6], ELG_design_array[7]
-    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, conf_a, conf_c = \
+    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, delta_M1, delta_alpha, conf_c, s_c_E = \
         ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
         ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
-        ELG_decorations_array[9], ELG_decorations_array[10], ELG_decorations_array[11], ELG_decorations_array[12]
+        ELG_decorations_array[9], ELG_decorations_array[10], ELG_decorations_array[11], ELG_decorations_array[12], \
+        ELG_decorations_array[13], ELG_decorations_array[14]
 
     logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
         QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]
@@ -406,14 +407,16 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 if keep_cent[i] == 1:
                     M1_E_temp = M1_E_temp*10**conf_c
                 elif keep_cent[i] == 2:
-                    M1_E_temp = M1_E_temp*10**conf_a
+                    M1_E_temp = M1_E_temp*10**delta_M1
+                    alpha_E = alpha_E + delta_alpha
                 logM_cut_E_temp = logM_cut_E + Ac_E * hdeltac[i] + Bc_E * hfenv[i]
                 base_p_E = N_sat_generic(
                     hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E) * weights[i] * ic_E
                 # print(base_p_E, np.log10(hmass[i]), N_sat_generic(
                 # hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E), weights[i], ic_E)
                 if enable_ranks:
-                    decorator_E = 1 + s_E * ranks[i] + s_v_E * ranksv[i] + s_p_E * ranksp[i] + s_r_E * ranksr[i]
+                    decorator_E = 1 + s_E * ranks[i] + s_v_E * ranksv[i] + s_p_E * ranksp[i] + s_r_E * ranksr[i]\
+                    + s_c_E * ranksc[i]
                     exp_sat = base_p_E * decorator_E
                 else:
                     exp_sat = base_p_E
@@ -725,11 +728,13 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         ic_E = ELG_HOD.get('ic', 1)
         
         # conformity params
-        conf_a = ELG_HOD.get('conf_a', 0)
+        delta_M1 = ELG_HOD.get('delta_M1', 0)
+        delta_alpha = ELG_HOD.get('delta_alpha', 0)
         conf_c = ELG_HOD.get('conf_c', 0)
+        s_c = ELG_HOD.get('s_c', 0)
         
-        ELG_decorations_array = np.array(
-            [alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, conf_a, conf_c])
+        ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E,
+                            Ac_E, As_E, Bc_E, Bs_E, ic_E, delta_M1, delta_alpha, conf_c, s_c])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
         ELG_design_array = np.zeros(8)
@@ -796,7 +801,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'], 
              subsample['pweights'], subsample['prandoms'], subsample['pdeltac'], subsample['pfenv'], 
-             enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'],
+             enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'], subsample['pranksc'],
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
              want_LRG, want_ELG, want_QSO, Nthread, origin, keep_cent[subsample['pinds']])

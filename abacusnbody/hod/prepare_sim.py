@@ -49,7 +49,7 @@ def subsample_halos(m, MT):
         # downfactors[x>11.2] = 1
         return downfactors
     else:
-        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.3)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
+        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, default 12.3, set to 12.0 for z = 1.1
         downfactors[x > 13.0] = 1
         return downfactors
 
@@ -483,6 +483,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     ranksv_parts = np.full(len_old, -1.0)
     ranksr_parts = np.full(len_old, -1.0)
     ranksp_parts = np.full(len_old, -1.0)
+    ranksc_parts = np.full(len_old, -1.0)
     pos_parts = np.full((len_old, 3), -1.0)
     vel_parts = np.full((len_old, 3), -1.0)
     hvel_parts = np.full((len_old, 3), -1.0)
@@ -532,6 +533,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     ranksv_parts[indices_parts] = 0
                     ranksp_parts[indices_parts] = 0
                     ranksr_parts[indices_parts] = 0
+                    ranksc_parts[indices_parts] = 0
                     continue
                 
                 # make the rankings
@@ -541,6 +543,12 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 theseparts_vel = theseparts['vel']
                 theseparts_halo_pos = halos['x_L2com'][j]
                 theseparts_halo_vel = halos['v_L2com'][j]
+                
+                # construct particle tree to find nearest neighbors
+                parts_tree = cKDTree(theseparts_pos)
+                dist2_neighbors = parts_tree.query(theseparts_pos, k = 2)[0][:, 1]
+                newranksc = dist2_neighbors.argsort().argsort() 
+                ranksc_parts[indices_parts] = (newranksc - np.mean(newranksc)) / np.mean(newranksc)
 
                 dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
                 newranks = dist2_rel.argsort().argsort() 
@@ -622,6 +630,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         parts['ranksv'] = ranksv_parts[mask_parts]
         parts['ranksr'] = ranksr_parts[mask_parts]
         parts['ranksp'] = ranksp_parts[mask_parts]
+        parts['ranksc'] = ranksc_parts[mask_parts]
     parts['downsample_halo'] = downsample_parts[mask_parts]
     parts['halo_vel'] = hvel_parts[mask_parts]
     parts['halo_mass'] = Mh_parts[mask_parts]

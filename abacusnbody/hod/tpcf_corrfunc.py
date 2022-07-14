@@ -98,14 +98,14 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
 
     if autocorr == 1:    
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
-            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     else:
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
-            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
 
