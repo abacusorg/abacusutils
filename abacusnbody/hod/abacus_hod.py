@@ -457,6 +457,7 @@ class AbacusHOD:
             p_ranksv = np.empty([Nparts_tot])
             p_ranksp = np.empty([Nparts_tot])
             p_ranksr = np.empty([Nparts_tot])
+            p_ranksc = np.empty([Nparts_tot])
 
         # B.H. make into ASDF
         # load all the halo and particle data we need
@@ -527,11 +528,13 @@ class AbacusHOD:
                 part_ranksv = subsample['ranksv']
                 part_ranksp = subsample['ranksp']
                 part_ranksr = subsample['ranksr']
+                part_ranksc = subsample['ranksc']
 
                 p_ranks[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranks
                 p_ranksv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksv
                 p_ranksp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksp
                 p_ranksr[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksr
+                p_ranksc[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksc
                 
             # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
             # particle_data = vstack([particle_data, new_part_table])
@@ -590,11 +593,13 @@ class AbacusHOD:
             particle_data['pranksv'] = p_ranksv
             particle_data['pranksp'] = p_ranksp
             particle_data['pranksr'] = p_ranksr
+            particle_data['pranksc'] = p_ranksc
         else:
             particle_data['pranks'] = np.ones(Nparts_tot)
             particle_data['pranksv'] =  np.ones(Nparts_tot)
             particle_data['pranksp'] =  np.ones(Nparts_tot)
             particle_data['pranksr'] =  np.ones(Nparts_tot)
+            particle_data['pranksc'] =  np.ones(Nparts_tot)
         
         return halo_data, particle_data, params, mock_dir
 
