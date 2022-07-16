@@ -732,6 +732,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         delta_alpha = ELG_HOD.get('delta_alpha', 0)
         conf_c = ELG_HOD.get('conf_c', 0)
         s_c = ELG_HOD.get('s_c', 0)
+        print("s_c", s_c)
         
         ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E,
                             Ac_E, As_E, Bc_E, Bs_E, ic_E, delta_M1, delta_alpha, conf_c, s_c])

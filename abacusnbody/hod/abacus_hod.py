@@ -510,6 +510,7 @@ class AbacusHOD:
             halo_ticker += Nhalos[eslab-start]
         
             # extract particle data that we need
+            print(particlefilename)
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
             part_pos = subsample['pos']
@@ -524,11 +525,12 @@ class AbacusHOD:
             part_fenv = subsample['halo_fenv']
 
             if self.want_ranks:
-                part_ranks = subsample['ranks']
-                part_ranksv = subsample['ranksv']
-                part_ranksp = subsample['ranksp']
-                part_ranksr = subsample['ranksr']
-                part_ranksc = subsample['ranksc']
+                # print(subsample.names)
+                part_ranks = subsample.get('ranks', np.zeros(len(subsample)))
+                part_ranksv = subsample.get('ranksv', np.zeros(len(subsample)))
+                part_ranksp = subsample.get('ranksp', np.zeros(len(subsample)))
+                part_ranksr = subsample.get('ranksr', np.zeros(len(subsample)))
+                part_ranksc = subsample.get('ranksc', np.zeros(len(subsample)))
 
                 p_ranks[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranks
                 p_ranksv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksv

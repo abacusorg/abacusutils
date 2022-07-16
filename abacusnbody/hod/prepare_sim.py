@@ -545,7 +545,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 theseparts_halo_vel = halos['v_L2com'][j]
                 
                 # construct particle tree to find nearest neighbors
-                parts_tree = cKDTree(theseparts_pos)
+                parts_tree = cKDTree(parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]]['pos'])
                 dist2_neighbors = parts_tree.query(theseparts_pos, k = 2)[0][:, 1]
                 newranksc = dist2_neighbors.argsort().argsort() 
                 ranksc_parts[indices_parts] = (newranksc - np.mean(newranksc)) / np.mean(newranksc)
