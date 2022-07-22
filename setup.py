@@ -1,6 +1,6 @@
 import os
 
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 
 install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy>=1.5.0','numba>=0.50','asdf>=2.8','h5py','pyyaml']
 
@@ -27,7 +27,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/abacusorg/abacusutils",
-    packages=find_namespace_packages(include=['abacusnbody.*']),
+    packages=find_packages(include=['abacusnbody']),
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
