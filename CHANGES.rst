@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.3.1 (upcoming)
+----------------
+
+Enhancements
+~~~~~~~~~~~~
+- Add support for MacOS and add CI config [#59]
+
 1.3.0 (2022-06-08)
 ------------------
 

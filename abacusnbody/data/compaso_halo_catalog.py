@@ -290,10 +290,11 @@ except Exception as e:
     raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
 from . import bitpacked
+from ..common import maxthreads
 
 # Default to 4 decompression threads, or fewer if fewer cores are available
 DEFAULT_BLOSC_THREADS = 4
-DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
+DEFAULT_BLOSC_THREADS = max(1, min(maxthreads(), DEFAULT_BLOSC_THREADS))
 from . import asdf as _asdf
 _asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
@@ -1741,4 +1742,3 @@ user_dt = np.dtype([('id', np.uint64),
                     ('sigmavtan_L2com', np.float32),
                     ('rvcirc_max_L2com', np.float32),
 ], align=True)
- 
