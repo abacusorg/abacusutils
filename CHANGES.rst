@@ -1,8 +1,10 @@
 Changelog
 =========
 
+
 1.4.0 (upcoming)
 ----------------
+- HOD now supports a new ELG conformity model
 
 Fixes
 ~~~~~

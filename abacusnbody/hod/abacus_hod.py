@@ -361,9 +361,6 @@ class AbacusHOD:
         self.deltacbins = np.linspace(-0.5, 0.5, 101)
         self.fenvbins = np.linspace(-0.5, 0.5, 101)
         
-        print(self.halo_data['hmultis'])
-        print(np.sum(self.halo_data['hmultis']))
-        print(np.sort(self.halo_data['hmultis']))
         self.halo_mass_func, edges = np.histogramdd(
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
@@ -530,6 +527,7 @@ class AbacusHOD:
             # extract particle data that we need
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
+            part_fields = subsample.dtype.fields.keys()
             part_pos = subsample['pos']
             part_vel = subsample['vel']
             part_hvel = subsample['halo_vel']
@@ -542,11 +540,25 @@ class AbacusHOD:
             part_fenv = subsample['halo_fenv']
 
             if self.want_ranks:
+                assert 'ranks' in part_fields
+                assert 'ranksv' in part_fields
                 part_ranks = subsample['ranks']
                 part_ranksv = subsample['ranksv']
-                part_ranksp = subsample['ranksp']
-                part_ranksr = subsample['ranksr']
-                part_ranksc = subsample['ranksc']
+                
+                if 'ranksp' in part_fields:
+                    part_ranksp = subsample['ranksp']
+                else:
+                    part_ranksp = np.zeros(len(subsample))
+                    
+                if 'ranksr' in part_fields:
+                    part_ranksr = subsample['ranksr']
+                else:
+                    part_ranksr = np.zeros(len(subsample))
+                    
+                if 'ranksc' in part_fields:
+                    part_ranksc = subsample['ranksc']
+                else:
+                    part_ranksc = np.zeros(len(subsample))
 
                 p_ranks[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranks
                 p_ranksv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksv
@@ -736,8 +748,12 @@ class AbacusHOD:
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
                     tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
-                    tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('Acent', 0), 
-                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread) 
+                    tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('A_s', 1), 
+                    tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0), 
+                    tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), 
+                    tracer_hod.get('delta_M1', 0), tracer_hod.get('delta_alpha', 0), 
+                    tracer_hod.get('alpha1', 0), tracer_hod.get('beta', 0),  
+                    tracer_hod.get('ic', 1), Nthread) 
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
@@ -780,8 +796,9 @@ class AbacusHOD:
 
     @staticmethod
     @njit(fastmath = True, parallel = True)
-    def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, Acent, Asat, Bcent, Bsat, ic, Nthread):
+    def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q, 
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, As, Acent, Asat, Bcent, Bsat, 
+                   delta_M1, delta_alpha, alpha1, beta, ic, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -798,10 +815,15 @@ class AbacusHOD:
                     Mh_temp = 10**logMs[i]
                     logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
-                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma)
-                    nsat_temp = N_sat_generic(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha)
-                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
-                    ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
+                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma) * ic
+                    nsat_temp = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As) * ic
+                    # conformity treatment
+                    M1_conf = M1_temp*10**delta_M1
+                    alpha_conf = alpha + delta_alpha
+                    nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_conf, As, alpha1, beta) * ic
+                    
+                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp 
+                    ngal_sat += halo_mass_func[i, j, k] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
         return ngal_cent, ngal_sat
 
     @staticmethod
