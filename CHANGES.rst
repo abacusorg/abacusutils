@@ -1,6 +1,8 @@
 Changelog
 =========
 
+- HOD now supports a new ELG conformity model
+
 1.3.0 (2022-06-08)
 ------------------
 
