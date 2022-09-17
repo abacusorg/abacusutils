@@ -120,7 +120,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
 
 
 def calc_multipole_fast(x1, y1, z1, rpbins, 
-    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2, 4]):  # all r assumed to be in h-1 mpc units. 
+    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2]):  # all r assumed to be in h-1 mpc units. 
 
     ND1 = float(len(x1))
     if x2 is not None:
@@ -148,7 +148,7 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
     # else:
     #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, sample2 = np.array([x2, y2, z2]).T % lbox, period = lbox, num_threads = Nthread)
 
-    nbins_mu = 20
+    nbins_mu = 40
     if autocorr == 1: 
         results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']

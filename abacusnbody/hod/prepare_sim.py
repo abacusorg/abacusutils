@@ -36,6 +36,7 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
+# standard power law satellites
 def subsample_halos(m, MT):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
@@ -53,32 +54,57 @@ def subsample_halos(m, MT):
         downfactors[x > 13.0] = 1
         return downfactors
 
-# def subsample_particles(m_in, n_in, MT):
+# # new version for negative alpha ELG satellites
+# def subsample_halos(m, MT):
+#     x = np.log10(m)
+#     downfactors = np.zeros(len(x))
+#     if MT:
+#         mask1 = x < 11.35
+#         mask2 = x < 11.52
+#         downfactors[mask1] = 0.5/(1.0 + 10*np.exp(-(x[mask1] - 11.1)*25))
+#         downfactors[mask2&(~mask1)] = 0.8/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.25)*25))
+#         downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.6)*10))
+#         # save all halos that could host a satellite
+#         # downfactors[x>11.2] = 1
+#         return downfactors
+#     else:
+#         downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
+#         downfactors[x > 13.0] = 1
+#         return downfactors
+    
+# # standard satellites 
+# def submask_particles(m_in, n_in, MT):
 #     x = np.log10(m_in)
     
 #     if MT:
-#         if 10**x < 1e11:
-#             return 0.01
+#         if m_in < 1e11:
+#             return np.zeros(n_in)
 #         else:
 #             # a target number of particles
-#             ntarget = 4 + 10**(x-13)/(1+np.exp(-(x-13)))# + np.log(1+np.exp(200*(x-13)))
-#             return np.minimum(0.7, ntarget / n_in)
+#             ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
+#             submask = np.zeros(n_in).astype(int)
+#             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+#             return submask
 #     else:
 #         if 10**x < 1e12:
-#             return 0.01 # essentially removing particles in halos below Mmin
+#             return np.zeros(n_in) # essentially removing particles in halos below Mmin
 #         else:
-#             ntarget = 2 + 1.5*10**(x-13)/(1+np.exp(-(x-13)))
-#             return np.minimum(1.0, ntarget / n_in)
+#             ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
+#             submask = np.zeros(n_in).astype(int)
+#             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+#             return submask
 
+# conformity fix
 def submask_particles(m_in, n_in, MT):
     x = np.log10(m_in)
     
     if MT:
-        if 10**x < 1e11:
+        if m_in < 1e11:
             return np.zeros(n_in)
         else:
             # a target number of particles
-            ntarget = np.minimum(n_in, int(1 + 10**(x-13)))
+            ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-12.0)))
+            ntarget = np.minimum(ntarget, 100)
             submask = np.zeros(n_in).astype(int)
             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
             return submask
@@ -90,38 +116,7 @@ def submask_particles(m_in, n_in, MT):
             submask = np.zeros(n_in).astype(int)
             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
             return submask
-
-# # these two functions are for grid based density calculation. We found the grid based definiton is disfavored by data
-# def get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning):
-#     slabname = simdir+simname+'/halos/z'+str(z_mock).ljust(5, '0')\
-#     +'/halo_info/halo_info_'+str(i).zfill(3)+'.asdf'
-
-#     cat = CompaSOHaloCatalog(
-#         slabname, fields = ['N', 'x_L2com'], cleaned = cleaning)
-#     Lbox = cat.header['BoxSizeHMpc']
-#     halos = cat.halos
-
-#     if cleaning:
-#         halos = halos[halos['N'] > 0]
-
-#     # get a 3d histogram with number of objects in each cell                                                                       
-#     D, edges = np.histogramdd(halos['x_L2com'], weights = halos['N'],
-#         bins = N_dim, range = [[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2],[-Lbox/2, Lbox/2]])   
-#     return D
-
-
-# def get_smo_density(smo_scale, numslabs, simdir, simname, z_mock, N_dim, cleaning):   
-#     Dtot = 0
-#     for i in range(numslabs):
-#         Dtot += get_smo_density_oneslab(i, simdir, simname, z_mock, N_dim, cleaning)   
-
-#     # gaussian smoothing 
-#     Dtot = gaussian_filter(Dtot, sigma = smo_scale, mode = "wrap")
-
-#     # average number of particles per cell                                                                                         
-#     D_avg = np.sum(Dtot)/N_dim**3                                                                                                                                                                                                                              
-#     return Dtot / D_avg - 1
-
+        
 def get_vertices_cube(units=0.5,N=3):
     vertices = 2*((np.arange(2**N)[:,None] & (1 << np.arange(N))) > 0) - 1
     return vertices*units
@@ -496,7 +491,6 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("compiling particle subsamples")
     start_tracker = 0
-    print(len(halos), np.sum(mask_halos))
     for j in np.arange(len(halos)):
         if j % 10000 == 0:
             print("halo id", j, end = '\r')
