@@ -18,6 +18,10 @@ from astropy.io import ascii
 
 from common import check_close
 
+# required for pytest to work (see GH #60)
+import numba
+numba.config.THREADING_LAYER='forksafe'
+
 TESTDIR = dirname(__file__)
 REFDIR = pjoin(dirname(__file__), 'ref_hod')
 EXAMPLE_SIM = pjoin(TESTDIR, 'AbacusSummit_base_c000_ph001-abridged')

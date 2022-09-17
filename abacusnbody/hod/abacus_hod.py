@@ -218,6 +218,24 @@ Notes
 Currently, when RSD effects are enabled in the HOD code for the halo light cones, the
 factor ``velz2kms``, determining the size of the RSD correction to the position along
 the line of sight, is the same for all galaxies at a given redshift catalog.
+
+
+Parallelism
+===========
+Some of the HOD routines accept an ``Nthread`` argument to enable parallelism. This parallelism
+is backed by `Numba <https://numba.readthedocs.io/en/stable/user/index.html>`_, for the most part.
+
+This has implications if the HOD module is used as part of a larger code. Numba supports multiple
+`threading backends <https://numba.readthedocs.io/en/stable/user/threading-layer.html#selecting-a-threading-layer-for-safe-parallel-execution>`_,
+some of which will not work if the larger code uses other flavors of parallelism. In such cases,
+you may need to instruct Numba to use a fork-safe and/or thread-safe backend (called ``forksafe``
+and ``threadsafe``), depending on whether the larger code is forking subprocesses or spawning
+threads. This can be accomplished by setting the environment variable ``NUMBA_THREADING_LAYER=forksafe``
+or assigning ``numba.config.THREADING_LAYER='forksafe'`` in Python before importing the HOD
+code (likewise for ``threadsafe``).  There is also a ``safe`` backend that is both fork- and thread-safe,
+but it is only available if Intel TBB is available. See the `Numba threading layer docs <https://numba.readthedocs.io/en/stable/user/threading-layer.html>`_
+for more info.
+
 """
 import os
 import glob

@@ -1,7 +1,14 @@
 Changelog
 =========
 
+
+1.4.0 (upcoming)
+----------------
 - HOD now supports a new ELG conformity model
+
+Fixes
+~~~~~
+- Bump Numba requirement to fixed version and enable parallelism in env calc [#60]
 
 1.3.0 (2022-06-08)
 ------------------

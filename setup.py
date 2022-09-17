@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_namespace_packages
 
-install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy>=1.5.0','numba>=0.50','asdf>=2.8','h5py','pyyaml']
+install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy>=1.5.0','numba>=0.56','asdf>=2.8','h5py','pyyaml']
 
 # enable "pip install abacusutils[test]" and "abacusutils[extra]"
 # "extra" will be everything used by scripts but not the importable code
