@@ -260,13 +260,13 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
     querypos_tree = cKDTree(querypos, boxsize=treebox)
     if isinstance(r_inner, (list, tuple, np.ndarray)):
         r_inner = np.array(r_inner)[mmask]
-    allinds_inner = querypos_tree.query_ball_point(pos_cut, r = r_inner, n_jobs = nthread)
+    allinds_inner = querypos_tree.query_ball_point(pos_cut, r = r_inner, workers = nthread)
     inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
     del allinds_inner; gc.collect()
     
     if isinstance(r_outer, (list, tuple, np.ndarray)):
         r_outer = np.array(r_outer)[mmask]
-    allinds_outer = querypos_tree.query_ball_point(pos_cut, r = r_outer, n_jobs = nthread)
+    allinds_outer = querypos_tree.query_ball_point(pos_cut, r = r_outer, workers = nthread)
     del querypos, querypos_tree; gc.collect()
     
     outer_arr, outer_starts = concat_to_arr(allinds_outer)
@@ -413,8 +413,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     # random points on the edges
                     rand_N = randpos.shape[0]
                     randpos_tree = cKDTree(randpos)
-                    randinds_inner = randpos_tree.query_ball_point(allpos[index_bounds], r = halos['r98_L2com'][index_bounds], n_jobs = nthread)
-                    randinds_outer = randpos_tree.query_ball_point(allpos[index_bounds], r = rad_outer, n_jobs = nthread)
+                    randinds_inner = randpos_tree.query_ball_point(allpos[index_bounds], r = halos['r98_L2com'][index_bounds], workers = nthread)
+                    randinds_outer = randpos_tree.query_ball_point(allpos[index_bounds], r = rad_outer, workers = nthread)
                     rand_norm = np.zeros(len(index_bounds))
                     for ind in np.arange(len(index_bounds)):
                         rand_norm[ind] = (len(randinds_outer[ind]) - len(randinds_inner[ind]))
