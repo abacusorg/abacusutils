@@ -729,14 +729,14 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-
-        # used in z-evolving HOD
-        Delta_a = 1./(1+self.z_mock) - 1./(1+tracer_hod.get('z_pivot', self.z_mock))
             
         ngal_dict = {}
         fsat_dict = {}
         for etracer in tracers.keys():
             tracer_hod = tracers[etracer]
+            
+            # used in z-evolving HOD
+            Delta_a = 1./(1+self.z_mock) - 1./(1+tracer_hod.get('z_pivot', self.z_mock))
             if etracer == 'LRG':
                 newngal = AbacusHOD._compute_ngal_lrg(
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, tracer_hod['logM_cut'], tracer_hod['logM1'], tracer_hod['sigma'],
