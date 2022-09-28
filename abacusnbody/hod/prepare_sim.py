@@ -660,7 +660,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
-    z_mock = config['sim_params']['z_mock']
+    z_mock = float(config['sim_params']['z_mock'])
     savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
     cleaning = config['sim_params']['cleaned_halos']
     if 'halo_lc' in config['sim_params'].keys():
