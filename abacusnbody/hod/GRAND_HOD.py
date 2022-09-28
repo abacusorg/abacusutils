@@ -693,6 +693,12 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                               'sigma', 
                               'alpha', 
                               'kappa'))
+        # z-evolving HOD
+        Delta_a = 1./(1+params['z']) - 1./(1+LRG_HOD.get('z_pivot', params['z']))
+        logM_cut_pr = LRG_HOD.get('logM_cut_pr', 0) 
+        logM1_pr = LRG_HOD.get('logM1_pr', 0)
+        logM_cut_L = logM_cut_L + logM_cut_pr*Delta_a
+        logM1_L = logM1_L + logM1_pr*Delta_a
         LRG_design_array = np.array([logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L])
         
         alpha_c = LRG_HOD.get('alpha_c', 0)
@@ -727,6 +733,13 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'alpha',
                             'gamma'))
         A_E = ELG_HOD.get('A_s', 1)
+        
+        # z-evolving HOD
+        Delta_a = 1./(1+params['z']) - 1./(1+ELG_HOD.get('z_pivot', params['z']))
+        logM_cut_pr = ELG_HOD.get('logM_cut_pr', 0) 
+        logM1_pr = ELG_HOD.get('logM1_pr', 0)
+        logM_cut_E = logM_cut_E + logM_cut_pr*Delta_a
+        logM1_E = logM1_E + logM1_pr*Delta_a
         ELG_design_array = np.array(
             [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E])
         
@@ -766,6 +779,13 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'sigma',
                             'logM1',
                             'alpha'))
+        # z-evolving HOD
+        Delta_a = 1./(1+params['z']) - 1./(1+QSO_HOD.get('z_pivot', params['z']))
+        logM_cut_pr = QSO_HOD.get('logM_cut_pr', 0) 
+        logM1_pr = QSO_HOD.get('logM1_pr', 0)
+        logM_cut_Q = logM_cut_Q + logM_cut_pr*Delta_a
+        logM1_Q = logM1_Q + logM1_pr*Delta_a
+        
         QSO_design_array = np.array(
             [logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q])
         

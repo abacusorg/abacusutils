@@ -481,7 +481,6 @@ class AbacusHOD:
         for eslab in range(start, end):
             
             print("Loading simulation by slab, ", eslab)
-            
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
@@ -731,16 +730,18 @@ class AbacusHOD:
         if tracers == None:
             tracers = self.tracers
 
+        # used in z-evolving HOD
+        Delta_a = 1./(1+self.z_mock) - 1./(1+tracer_hod.get('z_pivot', self.z_mock))
+            
         ngal_dict = {}
         fsat_dict = {}
         for etracer in tracers.keys():
             tracer_hod = tracers[etracer]
             if etracer == 'LRG':
                 newngal = AbacusHOD._compute_ngal_lrg(
-                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func,
-                    tracer_hod['logM_cut'], tracer_hod['logM1'], tracer_hod['sigma'], 
-                    tracer_hod['alpha'], tracer_hod['kappa'], tracer_hod.get('Acent', 0), 
-                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread)
+                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, tracer_hod['logM_cut'], tracer_hod['logM1'], tracer_hod['sigma'],
+                    tracer_hod['alpha'], tracer_hod['kappa'], tracer_hod.get('logM_cut_pr', 0), tracer_hod.get('logM1_pr', 0), tracer_hod.get('Acent', 0), 
+                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Delta_a, Nthread)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'ELG':
@@ -748,21 +749,21 @@ class AbacusHOD:
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
                     tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'], 
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
-                    tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('A_s', 1), 
+                    tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('logM_cut_pr', 0),
+                    tracer_hod.get('logM1_pr', 0), tracer_hod.get('A_s', 1), 
                     tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0), 
                     tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), 
                     tracer_hod.get('delta_M1', 0), tracer_hod.get('delta_alpha', 0), 
                     tracer_hod.get('alpha1', 0), tracer_hod.get('beta', 0),  
-                    tracer_hod.get('ic', 1), Nthread) 
+                    tracer_hod.get('ic', 1), Delta_a, Nthread) 
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
                 newngal = AbacusHOD._compute_ngal_qso(
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
-                    tracer_hod['logM_cut'], 
-                    tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
-                    tracer_hod['alpha'], tracer_hod.get('Acent', 0), 
-                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread)         
+                    tracer_hod['logM_cut'], tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
+                    tracer_hod['alpha'], tracer_hod.get('logM_cut_pr', 0), tracer_hod.get('logM1_pr', 0), tracer_hod.get('Acent', 0), 
+                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Delta_a, Nthread)         
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
         return ngal_dict, fsat_dict
@@ -770,7 +771,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_lrg(logMbins, deltacbins, fenvbins, halo_mass_func,
-                   logM_cut, logM1, sigma, alpha, kappa, Acent, Asat, Bcent, Bsat, ic, Nthread):
+                          logM_cut, logM1, sigma, alpha, kappa, logM_cut_pr, logM1_pr, Acent, Asat, Bcent, Bsat, ic, Delta_a, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -781,6 +782,9 @@ class AbacusHOD:
         fenvs = 0.5*(fenvbins[1:] + fenvbins[:-1])
         ngal_cent = 0
         ngal_sat = 0
+        # z-evolving HOD
+        logM_cut = logM_cut + logM_cut_pr*Delta_a
+        logM1 = logM1 + logM1_pr*Delta_a
         for i in numba.prange(len(logMbins) - 1):
             for j in range(len(deltacbins) - 1):
                 for k in range(len(fenvbins) - 1):
@@ -797,8 +801,8 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q, 
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, As, Acent, Asat, Bcent, Bsat, 
-                   delta_M1, delta_alpha, alpha1, beta, ic, Nthread):
+                          logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As, Acent, Asat, Bcent, Bsat, 
+                          delta_M1, delta_alpha, alpha1, beta, ic, Delta_a, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -809,6 +813,9 @@ class AbacusHOD:
         fenvs = 0.5*(fenvbins[1:] + fenvbins[:-1])
         ngal_cent = 0
         ngal_sat = 0
+        # z-evolving HOD
+        logM_cut = logM_cut + logM_cut_pr*Delta_a
+        logM1 = logM1 + logM1_pr*Delta_a
         for i in numba.prange(len(logMbins) - 1):
             for j in range(len(deltacbins) - 1):
                 for k in range(len(fenvbins) - 1):
@@ -829,7 +836,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, 
-                   logM_cut, kappa, sigma, logM1, alpha, Acent, Asat, Bcent, Bsat, ic, Nthread):
+                          logM_cut, kappa, sigma, logM1, alpha, logM_cut_pr, logM1_pr, Acent, Asat, Bcent, Bsat, ic, Delta_a, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -840,6 +847,9 @@ class AbacusHOD:
         fenvs = 0.5*(fenvbins[1:] + fenvbins[:-1])
         ngal_cent = 0
         ngal_sat = 0
+        # z-evolving HOD
+        logM_cut = logM_cut + logM_cut_pr*Delta_a
+        logM1 = logM1 + logM1_pr*Delta_a
         for i in numba.prange(len(logMbins) - 1):
             for j in range(len(deltacbins) - 1):
                 for k in range(len(fenvbins) - 1):
