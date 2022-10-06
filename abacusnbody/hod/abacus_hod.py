@@ -256,7 +256,7 @@ from astropy.io import ascii
 
 from .GRAND_HOD import *
 from .parallel_numpy_rng import *
-from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
+from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast, calc_Pkmu
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 @njit(parallel=True)
@@ -353,7 +353,8 @@ class AbacusHOD:
         
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
-
+        
+        
         # determine the halo mass function
         self.logMbins = np.linspace(
             np.log10(np.min(self.halo_data['hmass'])), 
@@ -365,7 +366,6 @@ class AbacusHOD:
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
             weights = self.halo_data['hmultis'])
-
 
     def staging(self):
         """
@@ -886,7 +886,7 @@ class AbacusHOD:
         Returns
         -------
         clustering: dict
-            dicionary of summary statistics. Auto-correlations/spectra can be
+            dictionary of summary statistics. Auto-correlations/spectra can be
             accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
             accessed with keys such as ``'LRG_ELG'``. 
         """
@@ -924,7 +924,7 @@ class AbacusHOD:
         Returns
         -------
         clustering: dict
-            dicionary of summary statistics. Auto-correlations/spectra can be
+            dictionary of summary statistics. Auto-correlations/spectra can be
             accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
             accessed with keys such as ``'LRG_ELG'``. 
         """
@@ -972,6 +972,70 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
+    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, paste = 'TSC', num_cells = 550):
+        """
+        Computes :math:`P(k, mu)`.
+
+        TODO: parallelize, document, include deconvolution and aliasing, cross-correlations
+
+        Parameters
+        ----------
+        ``mock_dict``: dict
+            dictionary of tracer positions. Output of ``run_hod``. 
+
+        ``nbins_k``: int
+            number of k bin centers (same convention as other correlation functions).
+
+        ``nbins_mu``: int
+            number of mu bin centers (same convention as other correlation functions).
+
+        ``k_hMpc_max``: float
+            maximum wavemode k in units of [Mpc/h]^-1. Note that the minimum k mode is
+            currently set as the fundamental mode of the box
+
+        ``logk``: bool
+            flag determining whether the k bins are defined in log space or in normal space.
+
+        ``paste``: str
+            scheme for painting particles on a mesh. Can be one of ``TSC'' or ``CIC.''
+
+        ``num_cells``: int
+            number of cells per dimension adopted for the particle gridding.
+
+        Returns
+        -------
+        clustering: dict
+            dictionary of summary statistics. Auto-correlations/spectra can be
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
+            accessed with keys such as ``'LRG_ELG'``. Keys ``k_binc`` and ``mu_binc``
+            contain the bin centers of k and mu, respectively. 
+            Power spectrum array has a size of (nbins_k, nbins_mu).
+        """
+        clustering = {}
+        for i1, tr1 in enumerate(mock_dict.keys()):
+            x1 = mock_dict[tr1]['x']
+            y1 = mock_dict[tr1]['y']
+            z1 = mock_dict[tr1]['z']
+            for i2, tr2 in enumerate(mock_dict.keys()):
+                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 == i2:
+                    print(tr1+'_'+tr2)
+                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells)
+                    clustering[tr1+'_'+tr2] = pk3d
+                else:
+                    print(tr1+'_'+tr2)
+                    print("not implemented!!!!!!!!!!!")
+                    x2 = mock_dict[tr2]['x']
+                    y2 = mock_dict[tr2]['y']
+                    z2 = mock_dict[tr2]['z']
+                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells,
+                                                      x2 = x2, y2 = y2, z2 = z2)
+                    clustering[tr1+'_'+tr2] = pk3d
+                    clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+        clustering['k_binc'] = k_binc
+        clustering['mu_binc'] = mu_binc
+        return clustering
+
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`w_p`.
@@ -996,7 +1060,7 @@ class AbacusHOD:
         Returns
         -------
         clustering: dict
-            dicionary of summary statistics. Auto-correlations/spectra can be
+            dictionary of summary statistics. Auto-correlations/spectra can be
             accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
             accessed with keys such as ``'LRG_ELG'``. 
         """
@@ -1020,6 +1084,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
+    
     def gal_reader(self, output_dir = None, simname = None, 
         sim_dir = None, z_mock = None, want_rsd = None, tracers = None):
         """
