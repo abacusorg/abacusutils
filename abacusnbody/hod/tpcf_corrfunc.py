@@ -519,19 +519,16 @@ def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk)
     k_box = k_box.flatten()
     mu_box = mu_box.flatten()
 
-    # define k-binning (in 1/Mpc)
-    lnk_max = np.log(k_hMpc_max)
-
     # set minimum k to make sure we cover fundamental mode
     e_tol = 1.e-4
-    lnk_min = np.log((1.-e_tol)*np.min(k_box[k_box > 0.]))
-    lnk_bin_max = lnk_max + (lnk_max-lnk_min)/(n_k_bins-1)
-    if logk:
-        lnk_bin_edges = np.linspace(lnk_min, lnk_bin_max, n_k_bins+1)
-        k_bin_edges = np.exp(lnk_bin_edges)
-    else:
-        k_bin_edges = np.linspace(np.exp(lnk_min), np.exp(lnk_bin_max), n_k_bins+1)
+    k_hMpc_min = (1.-e_tol)*np.min(k_box[k_box > 0.])
 
+    # define k-binning (in 1/Mpc)
+    if logk:
+        k_bin_edges = np.geomspace(k_hMpc_min, k_hMpc_max, n_k_bins+1)
+    else:
+        k_bin_edges = np.linspace(k_hMpc_min, k_hMpc_max, n_k_bins+1)
+    
     # define mu-binning
     mu_bin_edges = np.linspace(0., 1., n_mu_bins + 1)
 
@@ -541,16 +538,19 @@ def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk)
 
     return k_box, mu_box, k_bin_edges, mu_bin_edges
 
-def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk):
+def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, compensated, W):
     """
     Calculate the P3D for a given field (in h/Mpc units). Answer returned in (Mpc/h)^3 units
     """
     # get Fourier modes from skewers grid
     fourier_modes = np.fft.fftn(field) / field.size
-
+    if compensated:
+        assert W is not None
+        fourier_modes /= W
+        
     # get raw power
     raw_p3d = (np.abs(fourier_modes)**2).flatten()
-
+        
     # get rid of k=0, mu=0 mode
     raw_p3d = raw_p3d[1:]
 
@@ -567,15 +567,7 @@ def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk):
     p3d_hMpc = binned_p3d * L_hMpc**3
     return p3d_hMpc
 
-
-def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, x2 = None, y2 = None, z2 = None):
-    """
-    Compute the 3D power spectrum given particle positions by first painting them on a mesh and then applying the fourier transforms and mode counting.
-    """
-
-    # assemble the positions and compute density field
-    pos = np.vstack((x1, y1, z1)).T
-    del x1, y1, z1; gc.collect()
+def get_field(pos, lbox, num_cells, paste):
     pos = pos.astype(np.float32)
     field = np.zeros((num_cells, num_cells, num_cells), dtype=np.float32)
     if paste == 'TSC':
@@ -584,12 +576,69 @@ def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_
         numba_cic_3D(pos, field, lbox)
     field /= (pos.shape[0]/num_cells**3.)
     field -= 1.
+    return field
+
+def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, x2 = None, y2 = None, z2 = None):
+    """
+    Compute the 3D power spectrum given particle positions by first painting them on a mesh and then applying the fourier transforms and mode counting.
+    """
+
+    # meshsize (assumes cube)
+    Nmesh = num_cells
+
+    # cell width
+    d = lbox / Nmesh
+
+    # nyquist frequency
+    kN = np.pi / d
+
+    # natural wavemodes
+    k = np.fft.fftfreq(Nmesh, d=d) * 2. * np.pi # h/Mpc
+    
+    # assemble the positions and compute density field
+    pos = np.zeros((len(x1), 3), dtype=np.float32)
+    pos[:, 0] = x1; pos[:, 1] = y1; pos[:, 2] = z1
+    del x1, y1, z1; gc.collect()
+    field = get_field(pos, lbox, num_cells, paste)
+    if interlaced:
+        import time
+        t = time.time()
+        pos += np.float32(0.5*d)
+        field_shift = get_field(pos, lbox, num_cells, paste)
+        field_fft = np.fft.fftn(field) / field.size
+        field_shift_fft = np.fft.fftn(field_shift) / field.size
+        kd = (k[:, np.newaxis, np.newaxis] + k[np.newaxis, :, np.newaxis] + k[np.newaxis, np.newaxis, :]) *d
+        field_fft = 0.5 * field_fft + 0.5 * field_shift_fft * np.exp(0.5 * 1j * kd)
+        field_fft *= field.size
+        field = np.fft.ifftn(field_fft)
+        del kd, field_fft, field_shift, field_shift_fft
+        print("time = ", time.time() - t)
     del pos; gc.collect()
 
+    # apply deconvolution
+    if compensated:
+        if interlaced:
+            if paste == 'TSC':
+                p = 3.
+            elif paste == 'CIC':
+                p = 2.
+            W = np.sinc(0.5*k/kN)**p # sinc def
+        else: # first order correction of interlacing (aka aliasing)
+            s = np.sin(0.5 * np.pi * k/kN)**2
+            if paste == 'TSC':
+                W = (1 - s + 2./15 * s**2) ** 0.5
+            elif paste == 'CIC':
+                W = (1 - 2./3 * s**2) ** 0.5
+            del s
+        W = W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :]
+        del k; gc.collect()
+    else:
+        W = None
+        
     # calculate power spectrum
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(lbox, field.shape[0], field.shape[2], nbins_k, nbins_mu, k_hMpc_max, logk)
-    pk3d = calc_pk3d(field, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk)
-    del field; gc.collect()
+    pk3d = calc_pk3d(field, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, compensated, W)
+    del field, W; gc.collect()
 
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5

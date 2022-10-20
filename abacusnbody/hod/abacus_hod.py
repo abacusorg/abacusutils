@@ -972,7 +972,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, paste = 'TSC', num_cells = 550):
+    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
         """
         Computes :math:`P(k, mu)`.
 
@@ -1002,6 +1002,12 @@ class AbacusHOD:
         ``num_cells``: int
             number of cells per dimension adopted for the particle gridding.
 
+        ``compensated``: bool
+            flag determining whether to apply the TSC/CIC grid deconvolution.
+
+        ``interlaced``: bool
+            flag determining whether to apply interlacing (i.e., aliasing).
+
         Returns
         -------
         clustering: dict
@@ -1020,7 +1026,7 @@ class AbacusHOD:
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells)
+                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced)
                     clustering[tr1+'_'+tr2] = pk3d
                 else:
                     print(tr1+'_'+tr2)
@@ -1028,7 +1034,7 @@ class AbacusHOD:
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
-                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells,
+                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced,
                                                       x2 = x2, y2 = y2, z2 = z2)
                     clustering[tr1+'_'+tr2] = pk3d
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
