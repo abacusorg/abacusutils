@@ -115,7 +115,7 @@ Short Example
 The first step is to create the configuration file such as ``config/abacus_hod.yaml``,
 which provides the full customizability of the HOD code. By default, it lives in your 
 current work directory under a subdirectory ``./config``. A template with 
-default settings are provided under ``abacusutils/scripts/config``.
+default settings are provided under ``abacusutils/scripts/hod/config``.
 
 With the first use, you should define which simulation box, which redshift,
 the path to simulation data, the path to output datasets, the various HOD 
