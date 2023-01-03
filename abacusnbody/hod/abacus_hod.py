@@ -972,7 +972,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
+    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
         """
         Computes :math:`P(k, mu)`.
 
@@ -996,6 +996,9 @@ class AbacusHOD:
         ``logk``: bool
             flag determining whether the k bins are defined in log space or in normal space.
 
+        ``poles``: list
+            list of integers determining which multipoles to compute. Default is [], i.e. none.
+
         ``paste``: str
             scheme for painting particles on a mesh. Can be one of ``TSC'' or ``CIC.''
 
@@ -1012,32 +1015,38 @@ class AbacusHOD:
         -------
         clustering: dict
             dictionary of summary statistics. Auto-correlations/spectra can be
-            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
-            accessed with keys such as ``'LRG_ELG'``. Keys ``k_binc`` and ``mu_binc``
-            contain the bin centers of k and mu, respectively. 
-            Power spectrum array has a size of (nbins_k, nbins_mu).
+            accessed with keys such as ``'LRG_LRG'`` and ``'LRG_LRG_ell'`` for the 
+            multipoles. Cross-correlations/spectra can be accessed with keys such 
+            as ``'LRG_ELG'`` and ``'LRG_ELG_ell'`` for the multipoels. Keys ``k_binc`` 
+            and ``mu_binc`` contain the bin centers of k and mu, respectively. 
+            The power spectrum P(k, mu) has a shape (nbins_k, nbins_mu), whereas
+            the multipole power spectrum has shape (len(poles), nbins_k).
         """
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
+            w1 = mock_dict[tr1].get('w', None)
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
+                    clustering[tr1+'_'+tr2+'_ell'] = binned_poles
                 else:
                     print(tr1+'_'+tr2)
-                    print("not implemented!!!!!!!!!!!")
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
-                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced,
-                                                      x2 = x2, y2 = y2, z2 = z2)
+                    w2 = mock_dict[tr2].get('w', None)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced,
+                                                      w = w1, x2 = x2, y2 = y2, z2 = z2, w2 = w2, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
+                    clustering[tr1+'_'+tr2+'_ell'] = binned_poles
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+                    clustering[tr2+'_'+tr1+'_ell'] = clustering[tr1+'_'+tr2+'_ell']
         clustering['k_binc'] = k_binc
         clustering['mu_binc'] = mu_binc
         return clustering

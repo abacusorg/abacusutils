@@ -506,7 +506,7 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
         for j in range(bins[1]):
             if N[i, j] > 0.:
                 H[i, j] /= N[i, j]
-    return H
+    return H, N
 
 
 def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk):
@@ -538,7 +538,7 @@ def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk)
 
     return k_box, mu_box, k_bin_edges, mu_bin_edges
 
-def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, compensated, W):
+def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, compensated, W, field2=None, poles=[]):
     """
     Calculate the P3D for a given field (in h/Mpc units). Answer returned in (Mpc/h)^3 units
     """
@@ -547,9 +547,18 @@ def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, com
     if compensated:
         assert W is not None
         fourier_modes /= W
+
+    if field2 is not None:
+        fourier_modes2 = np.fft.fftn(field2) / field2.size
+        if compensated:
+            assert W is not None
+            fourier_modes2 /= W
         
     # get raw power
-    raw_p3d = (np.abs(fourier_modes)**2).flatten()
+    if field2 is not None:
+        raw_p3d = (np.conj(fourier_modes)*fourier_modes2).real.flatten()
+    else:
+        raw_p3d = (np.abs(fourier_modes)**2).flatten()
         
     # get rid of k=0, mu=0 mode
     raw_p3d = raw_p3d[1:]
@@ -561,50 +570,67 @@ def calc_pk3d(field, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, com
     ranges = np.asarray(ranges).astype(np.float64)
 
     # power spectrum
-    binned_p3d = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d)
+    binned_p3d, N3d = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d)
 
+    # if poles is not empty, then compute P_ell for mu_box
+    binned_poles = []
+    Npoles = []
+    if len(poles) > 0:
+        ranges = ((k_bin_edges[0], k_bin_edges[-1]), (-1., 1.))
+        nbins2d = (len(k_bin_edges)-1, 1)
+        nbins2d = np.asarray(nbins2d).astype(np.int64)
+        ranges = np.asarray(ranges).astype(np.float64)
+        for i in range(len(poles)):
+            Ln = legendre(poles[i])
+            binned_pole, Npole = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d*Ln(mu_box)*(2.*poles[i]+1.)) # app
+            binned_poles.append(binned_pole * L_hMpc**3)
+        Npoles.append(Npole)
+        Npoles = np.array(Npoles)
+        binned_poles = np.array(binned_poles)
+            
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     p3d_hMpc = binned_p3d * L_hMpc**3
-    return p3d_hMpc
+    return p3d_hMpc, N3d, binned_poles, Npoles
 
-def get_field(pos, lbox, num_cells, paste):
+def get_field(pos, lbox, num_cells, paste, w=None):
+    if w is None:
+        w = np.empty(0)
+    else:
+        assert pos.shape[0] == len(w)
     pos = pos.astype(np.float32)
     field = np.zeros((num_cells, num_cells, num_cells), dtype=np.float32)
     if paste == 'TSC':
-        numba_tsc_3D(pos, field, lbox)
+        numba_tsc_3D(pos, field, lbox, weights=w)
     elif paste == 'CIC':
-        numba_cic_3D(pos, field, lbox)
-    field /= (pos.shape[0]/num_cells**3.)
+        numba_cic_3D(pos, field, lbox, weights=w)
+    field /= (pos.shape[0]/num_cells**3.) # same as passing "Value" to nbodykit (1+delta)(x) V(x)
     field -= 1.
     return field
 
-def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, x2 = None, y2 = None, z2 = None):
-    """
-    Compute the 3D power spectrum given particle positions by first painting them on a mesh and then applying the fourier transforms and mode counting.
-    """
-
-    # meshsize (assumes cube)
-    Nmesh = num_cells
+def get_field_fft(pos, lbox, num_cells, paste, w, compensated, interlaced):
 
     # cell width
-    d = lbox / Nmesh
+    d = lbox / num_cells
 
     # nyquist frequency
     kN = np.pi / d
 
     # natural wavemodes
-    k = np.fft.fftfreq(Nmesh, d=d) * 2. * np.pi # h/Mpc
-    
-    # assemble the positions and compute density field
+    k = np.fft.fftfreq(num_cells, d=d) * 2. * np.pi # h/Mpc
+
+    # get the window function
+    #W = (k, lbox, num_cells, paste, compensated, interlaced)
+
+
     pos = np.zeros((len(x1), 3), dtype=np.float32)
     pos[:, 0] = x1; pos[:, 1] = y1; pos[:, 2] = z1
     del x1, y1, z1; gc.collect()
-    field = get_field(pos, lbox, num_cells, paste)
+    field = get_field(pos, lbox, num_cells, paste, w)
     if interlaced:
         import time
         t = time.time()
         pos += np.float32(0.5*d)
-        field_shift = get_field(pos, lbox, num_cells, paste)
+        field_shift = get_field(pos, lbox, num_cells, paste, w)
         field_fft = np.fft.fftn(field) / field.size
         field_shift_fft = np.fft.fftn(field_shift) / field.size
         kd = (k[:, np.newaxis, np.newaxis] + k[np.newaxis, :, np.newaxis] + k[np.newaxis, np.newaxis, :]) *d
@@ -614,7 +640,15 @@ def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_
         del kd, field_fft, field_shift, field_shift_fft
         print("time = ", time.time() - t)
     del pos; gc.collect()
+    
+def get_W_compensated(k, lbox, num_cells, paste, compensated, interlaced):
 
+    # cell width
+    d = lbox / num_cells
+
+    # nyquist frequency
+    kN = np.pi / d
+    
     # apply deconvolution
     if compensated:
         if interlaced:
@@ -628,19 +662,80 @@ def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_
             if paste == 'TSC':
                 W = (1 - s + 2./15 * s**2) ** 0.5
             elif paste == 'CIC':
-                W = (1 - 2./3 * s**2) ** 0.5
+                W = (1 - 2./3 * s) ** 0.5 
             del s
         W = W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :]
-        del k; gc.collect()
     else:
         W = None
+    return W
+    
+def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, w = None, x2 = None, y2 = None, z2 = None, w2 = None, poles=[]):
+    """
+    Compute the 3D power spectrum given particle positions by first painting them on a cubic mesh and then applying the fourier transforms and mode counting.
+    """
+
+    # cell width
+    d = lbox / num_cells
+
+    # nyquist frequency
+    kN = np.pi / d
+
+    # natural wavemodes
+    k = np.fft.fftfreq(num_cells, d=d) * 2. * np.pi # h/Mpc
+
+    # get the window function
+    W = (k, lbox, num_cells, paste, compensated, interlaced)
+    
+    # assemble the positions and compute density field
+    pos = np.zeros((len(x1), 3), dtype=np.float32)
+    pos[:, 0] = x1; pos[:, 1] = y1; pos[:, 2] = z1
+    del x1, y1, z1; gc.collect()
+    field = get_field(pos, lbox, num_cells, paste, w)
+    if interlaced:
+        import time
+        t = time.time()
+        pos += np.float32(0.5*d)
+        field_shift = get_field(pos, lbox, num_cells, paste, w)
+        field_fft = np.fft.fftn(field) / field.size
+        field_shift_fft = np.fft.fftn(field_shift) / field.size
+        kd = (k[:, np.newaxis, np.newaxis] + k[np.newaxis, :, np.newaxis] + k[np.newaxis, np.newaxis, :]) *d
+        field_fft = 0.5 * field_fft + 0.5 * field_shift_fft * np.exp(0.5 * 1j * kd)
+        field_fft *= field.size
+        field = np.fft.ifftn(field_fft)
+        del kd, field_fft, field_shift, field_shift_fft
+        print("time = ", time.time() - t)
+    del pos; gc.collect()
+
+    if x2 is not None:
+        assert (y2 is not None) and (z2 is not None)
+        # assemble the positions and compute density field
+        pos = np.zeros((len(x2), 3), dtype=np.float32)
+        pos[:, 0] = x2; pos[:, 1] = y2; pos[:, 2] = z2
+        del x2, y2, z2; gc.collect()
+        field2 = get_field(pos, lbox, num_cells, paste, w2)
+        if interlaced:
+            import time
+            t = time.time()
+            pos += np.float32(0.5*d)
+            field_shift = get_field(pos, lbox, num_cells, paste, w2)
+            field_fft = np.fft.fftn(field2) / field2.size
+            field_shift_fft = np.fft.fftn(field_shift) / field2.size
+            kd = (k[:, np.newaxis, np.newaxis] + k[np.newaxis, :, np.newaxis] + k[np.newaxis, np.newaxis, :]) *d
+            field_fft = 0.5 * field_fft + 0.5 * field_shift_fft * np.exp(0.5 * 1j * kd)
+            field_fft *= field.size
+            field2 = np.fft.ifftn(field_fft)
+            del kd, field_fft, field_shift, field_shift_fft
+            print("time = ", time.time() - t)
+        del pos; gc.collect()
+    else:
+        field2 = None
         
     # calculate power spectrum
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(lbox, field.shape[0], field.shape[2], nbins_k, nbins_mu, k_hMpc_max, logk)
-    pk3d = calc_pk3d(field, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, compensated, W)
-    del field, W; gc.collect()
+    pk3d, N3d, binned_poles, Npoles = calc_pk3d(field, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, compensated, W, field2=field2, poles=poles)
+    del field, field2, W; gc.collect()
 
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:] + mu_bin_edges[:-1])*.5
-    return k_binc, mu_binc, pk3d
+    return k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles
