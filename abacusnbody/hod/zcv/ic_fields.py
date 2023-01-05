@@ -10,8 +10,11 @@ from pathlib import Path
 import numpy as np
 import yaml
 import asdf
+import argparse
 from fast_cksum.cksum_io import CksumWriter
 from abacusnbody.metadata import get_meta
+
+DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def compress_asdf(asdf_fn, table, header):
     """
@@ -233,7 +236,7 @@ def main(path2config):
         disp_x = gaussian_filter(disp_x, nmesh, Lbox, kcut)
         disp_y = gaussian_filter(disp_y, nmesh, Lbox, kcut)
         disp_z = gaussian_filter(disp_z, nmesh, Lbox, kcut)
-        print("dtype should be float32", dens.dtype, disp_x.dtype)
+        #print("dtype should be float32", dens.dtype, disp_x.dtype)
         
         # save filtered field using asdf compression
         header = {}
@@ -253,7 +256,7 @@ def main(path2config):
     
     # compute the fields
     d, d2, s2, n2 = get_fields(dens, Lbox, nmesh)
-    print("fields dtype (float32)", d.dtype, d2.dtype, s2.dtype, n2.dtype)
+    #print("fields dtype (float32)", d.dtype, d2.dtype, s2.dtype, n2.dtype)
     
     # save fields using asdf compression
     header = {}

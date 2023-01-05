@@ -238,6 +238,7 @@ for more info.
 
 """
 import os
+import gc
 import glob
 import time
 import timeit
@@ -256,7 +257,9 @@ from astropy.io import ascii
 
 from .GRAND_HOD import *
 from .parallel_numpy_rng import *
-from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast, calc_Pkmu
+from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast, calc_power
+from .zcv.advect_fields import advect
+from .zcv.tools_jdr import run_zcv
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 @njit(parallel=True)
@@ -972,9 +975,9 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
+    def compute_power(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
         """
-        Computes :math:`P(k, mu)`.
+        Computes :math:`P(k, \mu)` and/or :math:`P_\ell(k)`.
 
         TODO: parallelize, document, include deconvolution and aliasing, cross-correlations
 
@@ -1032,7 +1035,7 @@ class AbacusHOD:
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
                     clustering[tr1+'_'+tr2+'_ell'] = binned_poles
                 else:
@@ -1041,7 +1044,7 @@ class AbacusHOD:
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
                     w2 = mock_dict[tr2].get('w', None)
-                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced,
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced,
                                                       w = w1, x2 = x2, y2 = y2, z2 = z2, w2 = w2, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
                     clustering[tr1+'_'+tr2+'_ell'] = binned_poles
@@ -1051,6 +1054,39 @@ class AbacusHOD:
         clustering['mu_binc'] = mu_binc
         return clustering
 
+    def apply_zcv(self, mock_dict, config):
+        """
+        Apply control variates reduction of the variance to a power spectrum observable.
+        """
+        # compute real space and redshift space
+        assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
+        assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer"
+        assert len(config['power_params']['poles']) == 3, "Currently implemented only multipoles 0, 2, 4"
+        
+        # run version with rsd (make pretty)
+        for tr in mock_dict.keys():
+            # obtain the positions
+            tracer_pos = np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T
+            del mock_dict; gc.collect()
+
+            # advect fields for this tracer
+            pk_rsd_tr_dict, pk_rsd_ij_dict = advect(tracer_pos, config['HOD_params']['want_rsd'], config)
+        
+        # run version without rsd
+        mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False, 
+                                 Nthread=16, verbose=False, fn_ext=None)
+        for tr in mock_dict.keys():
+            # obtain the positions
+            tracer_pos = np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T
+            del mock_dict; gc.collect()
+
+            # advect fields for this tracer
+            pk_tr_dict, pk_ij_dict = advect(tracer_pos, want_rsd=False, config=config)
+
+        # run the final part and save
+        zcv_dict = run_zcv(pk_rsd_tr_dict, pk_rsd_ij_dict, pk_tr_dict, pk_ij_dict, config)
+        return zcv_dict
+    
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`w_p`.

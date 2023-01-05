@@ -508,7 +508,7 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
                 H[i, j] /= N[i, j]
     return H, N
 
-def get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+def get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk):
     
     # set minimum k to make sure we cover fundamental mode
     k_hMpc_min = (1.-1.e-4)*2.*np.pi/L_hMpc # tuks move to logk
@@ -679,7 +679,7 @@ def get_W_compensated(lbox, num_cells, paste, interlaced):
     W = W.astype(np.float32)
     return W
 
-def calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, w = None, x2 = None, y2 = None, z2 = None, w2 = None, poles=[]):
+def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, w = None, x2 = None, y2 = None, z2 = None, w2 = None, poles=[]):
     """
     Compute the 3D power spectrum given particle positions by first painting them on a cubic mesh and then applying the fourier transforms and mode counting.
     """

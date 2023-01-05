@@ -17,6 +17,8 @@ import asdf
 from classy import Class
 from zenbu_rsd import Zenbu_RSD
 from zenbu import Zenbu
+from abacusnbody.metadata import get_meta
+from abacusnbody.hod.tpcf_corrfunc import get_k_mu_edges
 
 from numba import jit
 
@@ -649,22 +651,44 @@ def read_power(power_fn, keynames):
     print("zeros = ", np.sum(pk_tt == 0.), np.sum(pk_ij_zz == 0.), np.sum(pk_ij_zt == 0.))
     return k, mu, pk_tt, pk_ij_zz, pk_ij_zt
 
-
-if __name__ == "__main__":
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames):
+    k = power_tr_dict['k_binc'].flatten()
+    mu = np.zeros((len(k), 1))
+    if want_rsd:
+        pk_tt = np.zeros((1, 3, len(k)))
+        pk_ij_zz = np.zeros((15, 3, len(k)))
+        pk_ij_zt = np.zeros((5, 3, len(k)))
+    else:
+        pk_tt = np.zeros((1, len(k), 1))
+        pk_ij_zz = np.zeros((15, len(k), 1))
+        pk_ij_zt = np.zeros((5, len(k), 1))
     
-    from classy import Class    
-    from abacusnbody.metadata import get_meta
+    if want_rsd:
+        pk_tt[0, :, :] = power_tr_dict['P_ell_tr_tr'].reshape(3, len(k))
+    else:
+        pk_tt[0, :, :] = power_tr_dict['P_kmu_tr_tr'].reshape(len(k), 1)
+    count = 0
+    for i in range(len(keynames)):
+        if want_rsd:
+            pk_ij_zt[i, :, :] = power_tr_dict[f'P_ell_{keynames[i]}_tr'].reshape(3, len(k))
+        else:
+            pk_ij_zt[i, :, :] = power_tr_dict[f'P_kmu_{keynames[i]}_tr'].reshape(len(k), 1)
+        for j in range(len(keynames)):
+            if i < j: continue
+            if want_rsd:
+                pk_ij_zz[count, :, :] = power_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'].reshape(3, len(k))
+            else:
+                pk_ij_zz[count, :, :] = power_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'].reshape(len(k), 1)
+            count += 1
+    
+    #print(k, mu, pk_tt, pk_ij_zz, pk_ij_zt)
+    print("zeros = ", np.sum(pk_tt == 0.), np.sum(pk_ij_zz == 0.), np.sum(pk_ij_zt == 0.))
+    return k, mu, pk_tt, pk_ij_zz, pk_ij_zt
 
-    # get a few parameters for the simulation
-    sim_name = "AbacusSummit_high_c000_ph100"
-    z_this = 3.0
+def get_cfg(sim_name, z_this, nmesh):
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
-    nmesh = 576
     k_Ny = np.pi*nmesh/Lbox
     kcut = 0.5*k_Ny
     cosmo = {}
@@ -679,13 +703,119 @@ if __name__ == "__main__":
     cosmo['n_s'] = meta['n_s']
     #cosmo['wa'] = meta['wa']
     #cosmo['w0'] = meta['w0']
-    pk_file = "/global/homes/b/boryanah/repos/AbacusSummit/Cosmologies/abacus_cosm000/abacus_cosm000.ic_pk_cb.dat"
-    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
-    save_dir = "/global/cscratch1/sd/boryanah/zcv/anew"
 
     # create a dict with everything you would ever need
-    cfg = {'lbox': Lbox, 'nmesh_in': nmesh, 'p_lin_ic_file': pk_file, 'Cosmology': cosmo, 'surrogate_gaussian_cutoff': kcut, 'z_ic': z_ic}
+    cfg = {'lbox': Lbox, 'Cosmology': cosmo, 'surrogate_gaussian_cutoff': kcut, 'z_ic': z_ic}
+    return cfg
 
+def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, config):
+
+    # read out some parameters from the config function
+    sim_name = config['sim_params']['sim_name']
+    z_this = config['sim_params']['z_mock']
+    zcv_dir = config['zcv_params']['zcv_dir']
+    nmesh = config['zcv_params']['nmesh']
+    want_rsd = config['HOD_params']['want_rsd']
+    rsd_str = "_rsd" if want_rsd else ""
+    
+    # power params
+    k_hMpc_max = config['power_params']['k_hMpc_max']
+    logk = config['power_params']['logk']
+    n_k_bins = config['power_params']['nbins_k']
+    n_mu_bins = config['power_params']['nbins_mu']
+    poles = config['power_params']['poles']
+    
+    # create save directory
+    save_dir = Path(zcv_dir) / sim_name
+    save_z_dir = save_dir / f"z{z_this:.3f}"
+
+    # name of files to read from
+    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt.npz"
+    pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
+    window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
+
+    # read the config params
+    cfg = get_cfg(sim_name, z_this, nmesh)
+    cfg['p_lin_ic_file'] = str(pk_lin_fn)
+    cfg['nmesh_in'] = nmesh
+    Lbox = cfg['lbox']
+    
+    # define k bins
+    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_binc = (k_bins[1:] + k_bins[:-1])*.5
+    
+    # field names
+    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
+
+    # red out the dictionaries
+    k, mu, pk_tt, pk_ij_zz, pk_ij_zt = read_power_dict(power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames)
+    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles = read_power_dict(power_rsd_tr_dict, power_rsd_ij_dict, want_rsd=True, keynames=keynames)
+    assert len(k) == len(k_binc)
+    
+    # load the linear power spectrum
+    p_in = np.genfromtxt(cfg['p_lin_ic_file'])
+    kth, p_m_lin = p_in[:,0], p_in[:,1]
+
+    # fit to get the biases
+    bvec_opt = measure_2pt_bias_rsd(k, pk_ij_zz_poles[:,:,:], pk_tt_poles[0,:,:], 0.15, ellmax=1)
+    bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz[:,:,0], pk_tt[0,:,0], 0.15)
+    print("bias zspace", bvec_opt['x'])
+    print("bias rspace", bvec_opt_rs['x'])
+
+    # load the presaved window function
+    data = np.load(window_fn)
+    window = data['window']
+    window_exact = False
+    # TESTING
+    #window = np.load("/global/homes/b/boryanah/repos/anzu/boryana/anew/window_nmesh576.npy")
+    
+    # load the presaved zenbu power spectra
+    data = np.load(zenbu_fn)
+    # TESTING
+    #data = np.load("/global/homes/b/boryanah/repos/anzu/boryana/anew/data/zenbu_data.npz")
+    pk_ij_zenbu = data['pk_ij_zenbu']
+    lptobj = data['lptobj']
+
+    # reduce variance of measurement
+    bias_vec = [1, *bvec_opt_rs['x']]
+    pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex,\
+    pk_nn_beta1, beta, beta_damp, beta_smooth, \
+    beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth,\
+    r_zt_smooth_nohex, pk_zn, pk_ij_zenbu_poles, pkclass = reduce_variance_tt(k_binc, pk_tt_poles[0,...], pk_ij_zt_poles,\
+                                                                              pk_ij_zz_poles, cfg, z_this,\
+                                                                              bias_vec, kth, p_m_lin, rsd=True, win_fac=1, kout=k_bins,
+                                                                              window=window, exact_window=window_exact,
+                                                                              pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
+
+    zcv_dict = {}
+    zcv_dict['k_binc'] = k_binc
+    zcv_dict['poles'] = poles
+    zcv_dict['rho_tr_ZD'] = r_zt_smooth
+    zcv_dict['Pk_ZD_ZD_ell'] = pk_zz
+    zcv_dict['Pk_tr_tr_ell'] = pk_tt_poles
+    zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
+    zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
+    return zcv_dict
+    
+    
+if __name__ == "__main__":
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    
+    from classy import Class    
+    from abacusnbody.metadata import get_meta
+
+    # get a few parameters for the simulation
+    sim_name = "AbacusSummit_high_c000_ph100"
+    z_this = 3.0
+    cfg = get_cfg(sim_name, z_this)
+    Lbox = cfg['lbox']
+    nmesh = cfg['nmesh']
+    
+    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
+    save_dir = "/global/cscratch1/sd/boryanah/zcv/anew"
+    
     # read power spectra
     power_fn = Path(save_dir) / f"power_{sim_name}_{nmesh:d}.asdf"
     power_rsd_fn = Path(save_dir) / f"power_rsd_{sim_name}_{nmesh:d}.asdf"

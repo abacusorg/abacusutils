@@ -7,14 +7,20 @@ Change format of zenbu_fn to something nicer
 Test no RSD
 Note that the linear power from abacus is cb and not m
 Make c000 reading nicer
+Fix the k-cut that matches zenbu to make prety
 """
 import os
 from pathlib import Path
-import yaml
 
-from zcv_tools import zenbu_spectra
+import yaml
+import argparse
+import numpy as np
+
+from .tools_jdr import zenbu_spectra, periodic_window_function
 from abacusnbody.metadata import get_meta
-from abacusnbody.hod.tpcf_corrfunc import get_k_mu_bins, periodic_window_function
+from abacusnbody.hod.tpcf_corrfunc import get_k_mu_edges
+
+DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def main(path2config):
 
@@ -30,8 +36,8 @@ def main(path2config):
     z_this = config['sim_params']['z_mock']
     k_hMpc_max = config['power_params']['k_hMpc_max']
     logk = config['power_params']['logk']
-    n_k_bins = config['power_params']['n_k_bins']
-    n_mu_bins = config['power_params']['n_mu_bins']
+    n_k_bins = config['power_params']['nbins_k']
+    n_mu_bins = config['power_params']['nbins_mu']
     rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if rsd else ""
     if not rsd:
@@ -41,10 +47,6 @@ def main(path2config):
     save_dir = Path(zcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
     os.makedirs(save_z_dir, exist_ok=True)
-
-    # define k bins
-    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
-    k_binc = (k_bins[1:] + k_bins[:-1])*.5
     
     # read meta data
     meta = get_meta(sim_name, redshift=z_this)
@@ -66,26 +68,36 @@ def main(path2config):
     #cosmo['wa'] = meta['wa']
     #cosmo['w0'] = meta['w0']
 
+    # define k bins
+    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_binc = (k_bins[1:] + k_bins[:-1])*.5
+    
     # name of file to save to
     zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt.npz"
     pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
     window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
     
     # load the power spectrum at z = 1
-    if os.path.exists(zenbu_fn):
+    if os.path.exists(pk_lin_fn):
         # load linear power spectrum
         p_in = np.loadtxt(pk_lin_fn)
         kth, p_m_lin = p_in[:, 0], p_in[:, 1]
     else:
         c = int((sim_name.split('_c')[-1]).split('_ph')[0])
-        kth, pk_1 = np.loadtxt(cosmo_dir / f"abacus_cosm{c:03d}" / "CLASS_power", unpack=True)
+        kth, pk_1 = np.loadtxt(Path(cosmo_dir) / f"abacus_cosm{c:03d}" / "CLASS_power", unpack=True)
         p_m_lin = D_ratio**2*pk_1
+        
+        # to match the lowest k-modes in zenbu (make pretty)
+        choice = kth > 1.e-05
+        kth = kth[choice]
+        p_m_lin = p_m_lin[choice]
         np.savetxt(pk_lin_fn, np.vstack((kth, p_m_lin)).T)
         
     # create a dict with everything you would ever need
     cfg = {'lbox': Lbox, 'nmesh_in': nmesh, 'p_lin_ic_file': pk_lin_fn, 'Cosmology': cosmo, 'surrogate_gaussian_cutoff': kcut, 'z_ic': z_ic}
                 
     # presave the zenbu power spectra
+    print("Generating ZeNBu output")
     if os.path.exists(zenbu_fn):
         print("Already saved zenbu for this simulation, redshift and RSD choice.")
     else:
@@ -98,6 +110,7 @@ def main(path2config):
         print("Saved zenbu for this simulation, redshift and RSD choice.")
         
     # presave the window function
+    print("Generating window function")
     if os.path.exists(window_fn):
         print("Already saved window for this choice of box and nmesh")
     else:
