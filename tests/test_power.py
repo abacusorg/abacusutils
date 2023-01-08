@@ -7,7 +7,7 @@ from abacusnbody.hod.power_spectrum import calc_power
 def test_power():
     # load data
     Lbox = 1000.
-    data = np.load("data_power/test_pos.npz")
+    data = np.load("tests/data_power/test_pos.npz")
     x = data['x']
     y = data['y']
     z = data['z']
@@ -31,7 +31,7 @@ def test_power():
                 # load presaved nbodykit computation
                 comp_str = "_compensated" if compensated else ""
                 int_str = "_interlaced" if interlaced else ""
-                fn = f"data_power/nbody_{paste}{comp_str}{int_str}.npz"
+                fn = f"tests/data_power/nbody_{paste}{comp_str}{int_str}.npz"
                 data = np.load(fn)
                 k_nbody = data['k']
                 Pkmu_nbody = data['power']
