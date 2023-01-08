@@ -709,16 +709,15 @@ if __name__ == "__main__":
                         help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
                        )
     parser.add_argument('--alt_z',
-                        help='alternative z to process, like "0.8"',
+                        help='alternative z to process, like "0.8"', type=float,
                        )
     parser.add_argument('--newseed',
-                        help='alternative random number seed, positive integer', default = 600
+                        help='alternative random number seed, positive integer', default = 600, type=int
                        )
     parser.add_argument('--overwrite',
-                        help='overwrite existing subsamples', default = 1
+                        help='overwrite existing subsamples', default = 1, type=int
                        )
     args = vars(parser.parse_args())
-
     main(**args)
 
     print("done")

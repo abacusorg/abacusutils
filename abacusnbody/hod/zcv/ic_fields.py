@@ -11,7 +11,6 @@ import numpy as np
 import yaml
 import asdf
 import argparse
-from fast_cksum.cksum_io import CksumWriter
 from abacusnbody.metadata import get_meta
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
@@ -33,7 +32,7 @@ def compress_asdf(asdf_fn, table, header):
     
     # set compression options here
     compression_kwargs=dict(typesize="auto", shuffle="shuffle", compression_block_size=12*1024**2, blosc_block_size=3*1024**2, nthreads=4)
-    with asdf.AsdfFile(data_tree) as af, CksumWriter(str(asdf_fn)) as fp: # where data_tree is the ASDF dict tree structure
+    with asdf.AsdfFile(data_tree) as af, open(asdf_fn, 'wb') as fp: # where data_tree is the ASDF dict tree structure
         af.write_to(fp, all_array_compression='blsc', compression_kwargs=compression_kwargs)
 
 def load_dens(ic_dir, sim_name, nmesh):
@@ -213,8 +212,8 @@ def main(path2config):
     print("k_Ny", k_Ny)
 
     # file to save the filtered ic
-    ic_fn = Path(save_dir) / f"ic_filt_{sim_name}_nmesh{nmesh:d}.asdf"
-    fields_fn = Path(save_dir) / f"fields_{sim_name}_nmesh{nmesh:d}.asdf"
+    ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
+    fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
 
     # check if filtered ic saved
     if os.path.exists(ic_fn):

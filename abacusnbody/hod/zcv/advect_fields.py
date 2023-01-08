@@ -10,12 +10,11 @@ from pathlib import Path
 import numpy as np
 import asdf
 import h5py
-from fast_cksum.cksum_io import CksumWriter
 from abacusnbody.metadata import get_meta
 from classy import Class
 
 from .ic_fields import compress_asdf
-from abacusnbody.hod.tpcf_corrfunc import get_k_mu_box_edges, get_field_fft, calc_pk3d, get_W_compensated
+from abacusnbody.hod.power_spectrum import get_k_mu_box_edges, get_field_fft, calc_pk3d, get_W_compensated
 
 def advect(tracer_pos, want_rsd, config):
 
@@ -82,15 +81,15 @@ def advect(tracer_pos, want_rsd, config):
     boltz.compute()
     
     # file to save to
-    ic_fn = Path(save_dir) / f"ic_filt_{sim_name}_nmesh{nmesh:d}.asdf"
-    fields_fn = Path(save_dir) / f"fields_{sim_name}_nmesh{nmesh:d}.asdf"
-    fields_fft_fn = Path(save_z_dir) / f"advected_fields{rsd_str}_fft_{sim_name}_nmesh{nmesh:d}.asdf"
-    power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_{sim_name}_nmesh{nmesh:d}.asdf"
-    power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_{sim_name}_nmesh{nmesh:d}.asdf"
+    ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
+    fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
+    fields_fft_fn = Path(save_z_dir) / f"advected_fields{rsd_str}_fft_nmesh{nmesh:d}.asdf"
+    power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_nmesh{nmesh:d}.asdf"
+    power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}.asdf"
     
     # create fft field for the tracer
     w = None
-    tracer_pos += Lbox/2.
+    tracer_pos += Lbox/2. # I think necessary for cross correlations
     tracer_pos %= Lbox
     """
     # TESTING
@@ -124,18 +123,18 @@ def advect(tracer_pos, want_rsd, config):
     print("D = ", D)
     
     # compute the galaxy auto rsd poles
-    pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
     pk_tr_dict = {}
+    pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
     pk_tr_dict['k_binc'] = k_binc
     pk_tr_dict['mu_binc'] = mu_binc
     pk_tr_dict['P_kmu_tr_tr'] = pk3d
     pk_tr_dict['N_kmu_tr_tr'] = N3d
     pk_tr_dict['P_ell_tr_tr'] = binned_poles
     pk_tr_dict['N_ell_tr_tr'] = Npoles
-
+    
     # check if pk_ij exists
     if os.path.exists(power_ij_fn):
-        pk_ij_dict = asdf.open(power_ij_fn)['data'] # tuks and fields in the dir names and get rid of sim name in saved files
+        pk_ij_dict = asdf.open(power_ij_fn)['data']
     else:
         pk_ij_dict = {}
         pk_ij_dict['k_binc'] = k_binc
@@ -178,11 +177,12 @@ def advect(tracer_pos, want_rsd, config):
         fields_fft = {}
         f = asdf.open(fields_fn)
         for i in range(len(keynames)):
+            print(keynames[i])
             if i == 0:
                 w = None
             else:
                 w = f['data'][keynames[i]][:, :, :].flatten()
-            field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced))
+            field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)) 
             del w; gc.collect()
             fields_fft[f'{keynames[i]}_Re'] = np.array(field_fft.real, dtype=np.float32)
             fields_fft[f'{keynames[i]}_Im'] = np.array(field_fft.imag, dtype=np.float32)

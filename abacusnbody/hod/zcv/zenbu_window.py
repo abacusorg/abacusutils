@@ -1,5 +1,4 @@
-"""
-Script for pre-saving zenbu for a given redshift and simulation
+"""Script for pre-saving zenbu for a given redshift and simulation
 
 TODO: Make the kbins nicer (and maybe read as a function here)
 Make the cosmology more correct (A_s and sigma8 are not specified)
@@ -8,6 +7,7 @@ Test no RSD
 Note that the linear power from abacus is cb and not m
 Make c000 reading nicer
 Fix the k-cut that matches zenbu to make prety
+
 """
 import os
 from pathlib import Path
@@ -18,7 +18,7 @@ import numpy as np
 
 from .tools_jdr import zenbu_spectra, periodic_window_function
 from abacusnbody.metadata import get_meta
-from abacusnbody.hod.tpcf_corrfunc import get_k_mu_edges
+from abacusnbody.hod.power_spectrum import get_k_mu_edges
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
@@ -40,8 +40,6 @@ def main(path2config):
     n_mu_bins = config['power_params']['nbins_mu']
     rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if rsd else ""
-    if not rsd:
-        print("PROCEED WITH CAUTION; RSD=FALSE NOT TESTED")
         
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
@@ -102,10 +100,13 @@ def main(path2config):
         print("Already saved zenbu for this simulation, redshift and RSD choice.")
     else:
         pk_ij_zenbu, lptobj = zenbu_spectra(k_binc, z_this, cfg, kth, p_m_lin, pkclass=None, rsd=rsd)
-        p0table = lptobj.p0ktable
-        p2table = lptobj.p2ktable
-        p4table = lptobj.p4ktable
-        lptobj = np.array([p0table, p2table, p4table])
+        if rsd:
+            p0table = lptobj.p0ktable
+            p2table = lptobj.p2ktable
+            p4table = lptobj.p4ktable
+            lptobj = np.array([p0table, p2table, p4table])
+        else:
+            lptobj = lptobj.pktable
         np.savez(zenbu_fn, pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
         print("Saved zenbu for this simulation, redshift and RSD choice.")
         

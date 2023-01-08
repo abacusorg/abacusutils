@@ -4,8 +4,7 @@ Tools for applying variance reduction (ZCV) by (mostly) Joe DeRose.
 import sys
 import os
 from pathlib import Path
-sys.path.append('/global/homes/b/boryanah/repos/velocileptors/')
-sys.path.append('/global/homes/b/boryanah/repos/ZeNBu/')
+sys.path.append('/global/homes/b/boryanah/repos/ZeNBu/') # tuks remove
 
 import numpy as np
 from scipy.optimize import minimize
@@ -18,7 +17,7 @@ from classy import Class
 from zenbu_rsd import Zenbu_RSD
 from zenbu import Zenbu
 from abacusnbody.metadata import get_meta
-from abacusnbody.hod.tpcf_corrfunc import get_k_mu_edges
+from abacusnbody.hod.power_spectrum import get_k_mu_edges
 
 from numba import jit
 
@@ -270,7 +269,7 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
             pk_ij_zenbu, lptobj = zenbu_spectra(kin, z, cfg, kth, p_m_lin, pkclass=pkclass, rsd=rsd)
         else:
             pk_ij_zenbu, lptobj = zenbu_spectra(k, z, cfg, kth, p_m_lin, pkclass=pkclass, rsd=rsd)
-        p0table = lptobj.p0ktable
+        p0table = lptobj.p0ktable  # [0, 2, 4]
         p2table = lptobj.p2ktable
         p4table = lptobj.p4ktable
         
@@ -290,7 +289,7 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
         pell_conv_list = []
 
         for i in range(pk_ij_zenbu.shape[0]):
-            pell_in = [p0table[:,i], p2table[:,i], p4table[:,i]] 
+            pell_in = [p0table[:,i], p2table[:,i], p4table[:,i]]  # [0, 2, 4]
             pell_conv_i, keff = conv_theory_window_function(nmesh_win, lbox, kout, pell_in, kth)
             pell_conv_list.append(pell_conv_i.reshape(3,-1))
 
@@ -299,13 +298,13 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
         pk_ij_zenbu[:,:,:pk_ij_zenbu_conv.shape[-1]] = pk_ij_zenbu_conv # if win fac is > 1 get rid of nans
         pk_ij_zenbu[:,:,pk_ij_zenbu_conv.shape[-1]:] = 0
         
-    pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn = compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zenbu, bias_vec, window=window, kin=kin, kout=kout, s_ell=s_ell, rsd=rsd, k0=0.618, dk=0.167, sg_window=sg_window)
+    pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn = compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zenbu, bias_vec, window=window, kin=kin, kout=kout, s_ell=s_ell, rsd=rsd, k0=0.618, dk=0.167, sg_window=sg_window, poles=cfg['poles'])
     return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn, pk_ij_zenbu, pkclass
 
 def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb, 
                                         bias_vec, window=None, kin=None, kout=None, 
                                         s_ell=[0.1, 10, 100], sg_window=21, rsd=False,
-                                        k0=0.618, dk=0.167, beta1_k=0.05):
+                                        k0=0.618, dk=0.167, beta1_k=0.05, poles=[0, 2, 4]):
     
     fields_z = ['1', 'd', 'd2', 's', 'n2']
     fields_zenbu = ['1', 'd', 'd2', 's']
@@ -335,9 +334,9 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     pk_zn = combine_cross_spectra(k, pk_ij_zn, bias_vec[1:], rsd=rsd)
 
     if rsd:
-        cov_zn = np.stack([multipole_cov(pk_zn, ell) for ell in [0,2,4]])
-        var_zz = np.stack([multipole_cov(pk_zz, ell) for ell in [0,2,4]])
-        var_nn = np.stack([multipole_cov(pk_nn, ell) for ell in [0,2,4]])
+        cov_zn = np.stack([multipole_cov(pk_zn, ell) for ell in poles])
+        var_zz = np.stack([multipole_cov(pk_zz, ell) for ell in poles])
+        var_nn = np.stack([multipole_cov(pk_nn, ell) for ell in poles])
     else:
         cov_zn = 2 * pk_zn ** 2
         var_zz = 2 * pk_zz ** 2
@@ -358,10 +357,16 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     beta_smooth_nohex = np.zeros_like(beta_damp)
     
     for i in range(beta_smooth.shape[0]):
-
-        beta_smooth[i,:] = savgol_filter(beta_damp.T[:,i], sg_window, 3) #splev(k, betaspl)    
+        # TESTING kinda ugly
+        try:
+            beta_smooth[i,:] = savgol_filter(beta_damp.T[:,i], sg_window, 3) #splev(k, betaspl)
+        except: # only when testing
+            beta_smooth[i,:] = savgol_filter(beta_damp.T[:,i], 3, 2)
         if i!=2:
-            beta_smooth_nohex[i,:] = savgol_filter(beta_damp.T[:,i], sg_window, 3)#splev(k, betaspl)  
+            try:
+                beta_smooth_nohex[i,:] = savgol_filter(beta_damp.T[:,i], sg_window, 3)#splev(k, betaspl)
+            except:
+                beta_smooth_nohex[i,:] = savgol_filter(beta_damp.T[:,i], 3, 2)
         else:
             beta_smooth_nohex[i,:] = 1
             
@@ -370,20 +375,23 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
 
     for i in range(r_zt.shape[0]):
         spl = splrep(k, r_zt.T[:,i], s=s_ell[i])
-        r_zt_smooth[i,:] = splev(k, spl)  #savgol_filter(r_zt.T[:,i], sg_window, 3)#splev(k, spl)    
+        r_zt_smooth[i,:] = splev(k, spl) 
         if i<1:
-            r_zt_smooth_nohex[i,:] = splev(k, spl)  #savgol_filter(r_zt.T[:,i], sg_window, 3)#splev(k, spl)  
+            r_zt_smooth_nohex[i,:] = splev(k, spl)
         else:
             r_zt_smooth_nohex[i,:] = 1
             
     if (window is not None):
 
         pk_zenbu = np.hstack(pk_zenbu)
-        pk_zenbu = np.dot(window.T, pk_zenbu).reshape(3,-1) # now zenbu has shape of theory
+        if rsd:
+            pk_zenbu = np.dot(window.T, pk_zenbu).reshape(len(poles),-1)
+        else:
+            pk_zenbu = np.dot(window[:window.shape[0]//len(poles), :window.shape[1]//len(poles)].T, pk_zenbu).reshape(pk_zz.shape)
     
     pk_nn_hat = pk_nn - beta_damp * (pk_zz - pk_zenbu) # pk_zz has shape of measurement nmesh/2
-    pk_nn_betasmooth = pk_nn - beta_smooth * (pk_zz - pk_zenbu)
-    pk_nn_betasmooth_nohex = pk_nn - beta_smooth * (pk_zz - pk_zenbu)
+    pk_nn_betasmooth = pk_nn - beta_smooth * (pk_zz - pk_zenbu) # joe says beta needs to be smooth
+    pk_nn_betasmooth_nohex = pk_nn - beta_smooth * (pk_zz - pk_zenbu) # same as above
     pk_nn_beta1 = pk_nn - (pk_zz - pk_zenbu)
         
     return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn
@@ -586,30 +594,45 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
     
     return window, keff
 
-def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3):
+def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3, kmin=0.0):
     
-    kidx = k.searchsorted(kmax)
-    kcut = k[:kidx]
-    pk_tt_kcut = pk_tt[:ellmax,:kidx]
-    pk_ij_heft_kcut = pk_ij_heft[:,:,:kidx]
+    kidx_max = k.searchsorted(kmax)
+    # TESTING
+    kmin = 0.01
+    kidx_min = k.searchsorted(kmin)
+    kcut = k[kidx_min:kidx_max]
+    pk_tt_kcut = pk_tt[:ellmax,kidx_min:kidx_max]
+    pk_ij_heft_kcut = pk_ij_heft[:,:,kidx_min:kidx_max]
     bvec0 = [1, 0, 0]#, 0, 0]
+    # adding more realistic noise: error on P(k) is sqrt(2/Nk) P(k)
+    #dk = kcut[1]-kcut[0]
+    #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
+    Nk = 1
     
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(10-len(bvec))]), rsd=True)[:ellmax,:])**2/(2 * pk_tt_kcut**2))
+    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(10-len(bvec))]), rsd=True)[:ellmax,:])**2/(2 * pk_tt_kcut**2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
     
     out = minimize(loss, bvec0)
     
     return out
 
-def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3):
+def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
     
-    kidx = k.searchsorted(kmax)
-    kcut = k[:kidx]
-    pk_tt_kcut = pk_tt[:kidx]
-    pk_ij_heft_kcut = pk_ij_heft[:,:kidx]
+    kidx_max = k.searchsorted(kmax)
+    # TESTING
+    kmin = 0.01
+    kidx_min = k.searchsorted(kmin)
+    
+    kcut = k[kidx_min:kidx_max]
+    pk_tt_kcut = pk_tt[kidx_min:kidx_max]
+    pk_ij_heft_kcut = pk_ij_heft[:,kidx_min:kidx_max]
     bvec0 = [1, 0, 0, 0, 5000]
-
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(5-len(bvec))])))**2/(2 * pk_tt_kcut**2))
+    # adding more realistic noise: error on P(k) is sqrt(2/Nk) P(k)
+    #dk = kcut[1]-kcut[0]
+    #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
+    Nk = 1
+    
+    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(5-len(bvec))])))**2/(2 * pk_tt_kcut**2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
     
     out = minimize(loss, bvec0)
@@ -651,32 +674,32 @@ def read_power(power_fn, keynames):
     print("zeros = ", np.sum(pk_tt == 0.), np.sum(pk_ij_zz == 0.), np.sum(pk_ij_zt == 0.))
     return k, mu, pk_tt, pk_ij_zz, pk_ij_zt
 
-def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames):
+def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
     k = power_tr_dict['k_binc'].flatten()
     mu = np.zeros((len(k), 1))
     if want_rsd:
-        pk_tt = np.zeros((1, 3, len(k)))
-        pk_ij_zz = np.zeros((15, 3, len(k)))
-        pk_ij_zt = np.zeros((5, 3, len(k)))
+        pk_tt = np.zeros((1, len(poles), len(k)))
+        pk_ij_zz = np.zeros((15, len(poles), len(k)))
+        pk_ij_zt = np.zeros((5, len(poles), len(k)))
     else:
         pk_tt = np.zeros((1, len(k), 1))
         pk_ij_zz = np.zeros((15, len(k), 1))
         pk_ij_zt = np.zeros((5, len(k), 1))
     
     if want_rsd:
-        pk_tt[0, :, :] = power_tr_dict['P_ell_tr_tr'].reshape(3, len(k))
+        pk_tt[0, :, :] = power_tr_dict['P_ell_tr_tr'].reshape(len(poles), len(k))
     else:
         pk_tt[0, :, :] = power_tr_dict['P_kmu_tr_tr'].reshape(len(k), 1)
     count = 0
     for i in range(len(keynames)):
         if want_rsd:
-            pk_ij_zt[i, :, :] = power_tr_dict[f'P_ell_{keynames[i]}_tr'].reshape(3, len(k))
+            pk_ij_zt[i, :, :] = power_tr_dict[f'P_ell_{keynames[i]}_tr'].reshape(len(poles), len(k))
         else:
             pk_ij_zt[i, :, :] = power_tr_dict[f'P_kmu_{keynames[i]}_tr'].reshape(len(k), 1)
         for j in range(len(keynames)):
             if i < j: continue
             if want_rsd:
-                pk_ij_zz[count, :, :] = power_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'].reshape(3, len(k))
+                pk_ij_zz[count, :, :] = power_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'].reshape(len(poles), len(k))
             else:
                 pk_ij_zz[count, :, :] = power_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'].reshape(len(k), 1)
             count += 1
@@ -738,8 +761,9 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     cfg = get_cfg(sim_name, z_this, nmesh)
     cfg['p_lin_ic_file'] = str(pk_lin_fn)
     cfg['nmesh_in'] = nmesh
+    cfg['poles'] = poles
     Lbox = cfg['lbox']
-    
+   
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
@@ -747,50 +771,67 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     # field names
     keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
-    # red out the dictionaries
-    k, mu, pk_tt, pk_ij_zz, pk_ij_zt = read_power_dict(power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames)
-    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles = read_power_dict(power_rsd_tr_dict, power_rsd_ij_dict, want_rsd=True, keynames=keynames)
+    # read out the dictionaries
+    if want_rsd: # then we need the no-rsd version (names are misleading)
+        k, mu, pk_tt, pk_ij_zz, pk_ij_zt = read_power_dict(power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames, poles=poles)
+    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles = read_power_dict(power_rsd_tr_dict, power_rsd_ij_dict, want_rsd=want_rsd, keynames=keynames, poles=poles)
     assert len(k) == len(k_binc)
     
     # load the linear power spectrum
     p_in = np.genfromtxt(cfg['p_lin_ic_file'])
     kth, p_m_lin = p_in[:,0], p_in[:,1]
 
-    # fit to get the biases
-    bvec_opt = measure_2pt_bias_rsd(k, pk_ij_zz_poles[:,:,:], pk_tt_poles[0,:,:], 0.15, ellmax=1)
-    bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz[:,:,0], pk_tt[0,:,0], 0.15)
-    print("bias zspace", bvec_opt['x'])
+    # fit to get the biases # ellmax = 1 fits to monopole only ; 0.15 might be too high; try going to 0.1 tuks (nbar P(k) for shotnoise) nabla get rid of;
+    kmax = 0.1 #0.15 # og
+    if want_rsd:
+        bvec_opt = measure_2pt_bias_rsd(k, pk_ij_zz_poles[:,:,:], pk_tt_poles[0,:,:], kmax, ellmax=1)
+        bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz[:,:,0], pk_tt[0,:,0], kmax)
+        print("bias zspace", bvec_opt['x'])
+    else:
+        # names are misleading
+        bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz_poles[:,:,0], pk_tt_poles[0,:,0], kmax)
     print("bias rspace", bvec_opt_rs['x'])
 
     # load the presaved window function
     data = np.load(window_fn)
     window = data['window']
     window_exact = False
-    # TESTING
-    #window = np.load("/global/homes/b/boryanah/repos/anzu/boryana/anew/window_nmesh576.npy")
     
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
-    # TESTING
-    #data = np.load("/global/homes/b/boryanah/repos/anzu/boryana/anew/data/zenbu_data.npz")
     pk_ij_zenbu = data['pk_ij_zenbu']
     lptobj = data['lptobj']
 
-    # reduce variance of measurement
-    bias_vec = [1, *bvec_opt_rs['x']]
+    # reduce variance of measurement # give only first element, set rest to 0 (use b1, b1+b2) tuks (shotnoise is last; not used)
+    bias_vec = np.array(bvec_opt_rs['x']) # b1, b2, bs, bn, shot
+    bias_vec[-2] = 0. # set to 0 if not using nabla
+    bias_vec = np.hstack(([1], bias_vec))
+    #bias_vec = [1, *bvec_opt_rs['x']]
+
+    # decide what to input depending on whether rsd requested or not
+    if want_rsd:
+        pk_tt_input = pk_tt_poles[0,...]
+        pk_ij_zz_input = pk_ij_zz_poles
+        pk_ij_zt_input = pk_ij_zt_poles
+    else:
+        pk_tt_input = pk_tt_poles[0, :, 0]
+        pk_ij_zz_input = pk_ij_zz_poles[:,:,0]
+        pk_ij_zt_input = pk_ij_zt_poles[:,:,0]
+    
     pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex,\
     pk_nn_beta1, beta, beta_damp, beta_smooth, \
     beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth,\
-    r_zt_smooth_nohex, pk_zn, pk_ij_zenbu_poles, pkclass = reduce_variance_tt(k_binc, pk_tt_poles[0,...], pk_ij_zt_poles,\
-                                                                              pk_ij_zz_poles, cfg, z_this,\
-                                                                              bias_vec, kth, p_m_lin, rsd=True, win_fac=1, kout=k_bins,
+    r_zt_smooth_nohex, pk_zn, pk_ij_zenbu_poles, pkclass = reduce_variance_tt(k_binc, pk_tt_input, pk_ij_zt_input,
+                                                                              pk_ij_zz_input, cfg, z_this,
+                                                                              bias_vec, kth, p_m_lin, rsd=want_rsd,
+                                                                              win_fac=1, kout=k_bins,
                                                                               window=window, exact_window=window_exact,
                                                                               pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
 
     zcv_dict = {}
     zcv_dict['k_binc'] = k_binc
     zcv_dict['poles'] = poles
-    zcv_dict['rho_tr_ZD'] = r_zt_smooth
+    zcv_dict['rho_tr_ZD'] = r_zt
     zcv_dict['Pk_ZD_ZD_ell'] = pk_zz
     zcv_dict['Pk_tr_tr_ell'] = pk_tt_poles
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
