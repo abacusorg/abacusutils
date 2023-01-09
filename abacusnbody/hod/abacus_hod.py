@@ -259,7 +259,7 @@ from .GRAND_HOD import *
 from .parallel_numpy_rng import *
 from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 from .power_spectrum import calc_power
-from .zcv.advect_fields import advect
+from .zcv.tracer_power import get_tracer_power
 from .zcv.tools_jdr import run_zcv
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -354,6 +354,7 @@ class AbacusHOD:
         self.chunk = chunk
         self.n_chunks = n_chunks
         assert self.chunk < self.n_chunks, "Total number of chunks needs to be larger than current chunk index"
+
         
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
@@ -370,7 +371,7 @@ class AbacusHOD:
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
             weights = self.halo_data['hmultis'])
-
+        
     def staging(self):
         """
         Constructor call this function to load the halo+particle subsamples onto memory. 
@@ -1073,11 +1074,12 @@ class AbacusHOD:
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) == 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
 
+        # create save directory
+        save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
+        save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
+        rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
+        
         if load_presaved:
-            # create save directory
-            save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
-            save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
-            rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
             pk_rsd_tr_dict = asdf.open(save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
             pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
             if config['HOD_params']['want_rsd']:
@@ -1090,11 +1092,12 @@ class AbacusHOD:
             # run version with rsd or without rsd
             for tr in mock_dict.keys():
                 # obtain the positions
-                tracer_pos = np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T
+                tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
                 del mock_dict; gc.collect()
 
-                # advect fields for this tracer
-                pk_rsd_tr_dict, pk_rsd_ij_dict = advect(tracer_pos, config['HOD_params']['want_rsd'], config)
+                # get power spectra for this tracer
+                pk_rsd_tr_dict = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config)
+                pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
 
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
@@ -1102,11 +1105,12 @@ class AbacusHOD:
                                          Nthread=16, verbose=False, fn_ext=None)
                 for tr in mock_dict.keys():
                     # obtain the positions
-                    tracer_pos = np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T
+                    tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
                     del mock_dict; gc.collect()
 
-                    # advect fields for this tracer
-                    pk_tr_dict, pk_ij_dict = advect(tracer_pos, want_rsd=False, config=config)
+                    # get power spectra for this tracer
+                    pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
+                    pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']         
             else:
                 pk_tr_dict, pk_ij_dict = None, None
                 

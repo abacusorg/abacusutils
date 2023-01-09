@@ -597,8 +597,6 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
 def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3, kmin=0.0):
     
     kidx_max = k.searchsorted(kmax)
-    # TESTING
-    kmin = 0.01
     kidx_min = k.searchsorted(kmin)
     kcut = k[kidx_min:kidx_max]
     pk_tt_kcut = pk_tt[:ellmax,kidx_min:kidx_max]
@@ -617,22 +615,20 @@ def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3, kmin=0.0
     return out
 
 def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
-    
+
     kidx_max = k.searchsorted(kmax)
-    # TESTING
-    kmin = 0.01
-    kidx_min = k.searchsorted(kmin)
-    
+    kidx_min = k.searchsorted(kmin)    
     kcut = k[kidx_min:kidx_max]
     pk_tt_kcut = pk_tt[kidx_min:kidx_max]
     pk_ij_heft_kcut = pk_ij_heft[:,kidx_min:kidx_max]
-    bvec0 = [1, 0, 0, 0, 5000]
+    bvec0 = [1, 0, 0, 0, 5000] # og
+    #bvec0 = [1, 0, 0] # TESTING
     # adding more realistic noise: error on P(k) is sqrt(2/Nk) P(k)
     #dk = kcut[1]-kcut[0]
     #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
     Nk = 1
     
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(5-len(bvec))])))**2/(2 * pk_tt_kcut**2 / Nk))
+    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(5-len(bvec))])))**2)#/(2 * pk_tt_kcut**2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
     
     out = minimize(loss, bvec0)
@@ -713,7 +709,6 @@ def get_cfg(sim_name, z_this, nmesh):
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
     k_Ny = np.pi*nmesh/Lbox
-    kcut = 0.5*k_Ny
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
@@ -728,7 +723,7 @@ def get_cfg(sim_name, z_this, nmesh):
     #cosmo['w0'] = meta['w0']
 
     # create a dict with everything you would ever need
-    cfg = {'lbox': Lbox, 'Cosmology': cosmo, 'surrogate_gaussian_cutoff': kcut, 'z_ic': z_ic}
+    cfg = {'lbox': Lbox, 'Cosmology': cosmo, 'z_ic': z_ic}
     return cfg
 
 def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, config):
@@ -738,6 +733,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     z_this = config['sim_params']['z_mock']
     zcv_dir = config['zcv_params']['zcv_dir']
     nmesh = config['zcv_params']['nmesh']
+    kcut = config['zcv_params']['kcut']
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if want_rsd else ""
     
@@ -753,7 +749,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     save_z_dir = save_dir / f"z{z_this:.3f}"
 
     # name of files to read from
-    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt.npz"
+    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
     pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
     window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
 
@@ -762,6 +758,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     cfg['p_lin_ic_file'] = str(pk_lin_fn)
     cfg['nmesh_in'] = nmesh
     cfg['poles'] = poles
+    cfg['surrogate_gaussian_cutoff'] = kcut
     Lbox = cfg['lbox']
    
     # define k bins
@@ -782,7 +779,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     kth, p_m_lin = p_in[:,0], p_in[:,1]
 
     # fit to get the biases # ellmax = 1 fits to monopole only ; 0.15 might be too high; try going to 0.1 tuks (nbar P(k) for shotnoise) nabla get rid of;
-    kmax = 0.1 #0.15 # og
+    kmax = 0.15 #0.15 # og
     if want_rsd:
         bvec_opt = measure_2pt_bias_rsd(k, pk_ij_zz_poles[:,:,:], pk_tt_poles[0,:,:], kmax, ellmax=1)
         bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz[:,:,0], pk_tt[0,:,0], kmax)
@@ -804,8 +801,9 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
 
     # reduce variance of measurement # give only first element, set rest to 0 (use b1, b1+b2) tuks (shotnoise is last; not used)
     bias_vec = np.array(bvec_opt_rs['x']) # b1, b2, bs, bn, shot
-    bias_vec[-2] = 0. # set to 0 if not using nabla
-    bias_vec = np.hstack(([1], bias_vec))
+    #bias_vec[-2] = 0. # set to 0 if not using nabla
+    bias_vec[1:] = 0. # set to 0 all but b1 and b2
+    bias_vec = np.hstack(([1.], bias_vec))
     #bias_vec = [1, *bvec_opt_rs['x']]
 
     # decide what to input depending on whether rsd requested or not

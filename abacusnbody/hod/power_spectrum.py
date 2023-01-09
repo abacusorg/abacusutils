@@ -6,6 +6,8 @@ from scipy.special import legendre
 from numba import njit
 import numba
 
+#from np.fft import fftfreq, fftn, ifftn
+from scipy.fft import fftfreq, fftn, ifftn
 
 def get_k_mu_box(L_hMpc, n_xy, n_z):
     """
@@ -13,11 +15,11 @@ def get_k_mu_box(L_hMpc, n_xy, n_z):
     """
     # cell width in (x,y) directions (Mpc/h)
     d_xy = L_hMpc / n_xy
-    k_xy = np.fft.fftfreq(n_xy, d=d_xy) * 2. * np.pi
+    k_xy = (fftfreq(n_xy, d=d_xy) * 2. * np.pi).astype(np.float32)
 
     # cell width in z direction (Mpc/h)
     d_z = L_hMpc / n_z
-    k_z = np.fft.fftfreq(n_z, d=d_z) * 2. * np.pi
+    k_z = (fftfreq(n_z, d=d_z) * 2. * np.pi).astype(np.float32)
     
     # h/Mpc
     x = k_xy[:, np.newaxis, np.newaxis]
@@ -29,8 +31,10 @@ def get_k_mu_box(L_hMpc, n_xy, n_z):
     mu_box = z/np.ones_like(k_box)
     mu_box[k_box > 0.] /= k_box[k_box > 0.]
     mu_box[k_box == 0.] = 0.
+
     # I believe the definition is that and it allows you to count all modes (agrees with nbodykit)
     mu_box = np.abs(mu_box)
+    print("k box, mu box", k_box.dtype, mu_box.dtype)
     return k_box, mu_box
 
 @numba.vectorize
@@ -369,7 +373,7 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
     p3d_hMpc = binned_p3d * L_hMpc**3
     return p3d_hMpc, N3d, binned_poles, Npoles
 
-def get_field(pos, lbox, num_cells, paste, w=None):
+def get_field(pos, lbox, num_cells, paste, w=None, d=0.):
     # check if weights are requested
     if w is None:
         w = np.empty(0)
@@ -378,9 +382,15 @@ def get_field(pos, lbox, num_cells, paste, w=None):
     pos = pos.astype(np.float32)
     field = np.zeros((num_cells, num_cells, num_cells), dtype=np.float32)
     if paste == 'TSC':
-        numba_tsc_3D(pos, field, lbox, weights=w)
+        if d != 0.:
+            numba_tsc_3D(pos + np.float32(d), field, lbox, weights=w)
+        else:
+            numba_tsc_3D(pos, field, lbox, weights=w)
     elif paste == 'CIC':
-        numba_cic_3D(pos, field, lbox, weights=w)
+        if d != 0.:
+            numba_cic_3D(pos + np.float32(d), field, lbox, weights=w)
+        else:
+            numba_cic_3D(pos, field, lbox, weights=w)
     if len(w) == 0: # in the zcv code the weights are already normalized, so don't normalize here
         field /= (pos.shape[0]/num_cells**3.) # same as passing "Value" to nbodykit (1+delta)(x) V(x)
         field -= 1. # leads to -1 in the complex field
@@ -395,35 +405,42 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
     kN = np.pi / d
 
     # natural wavemodes
-    k = np.fft.fftfreq(num_cells, d=d) * 2. * np.pi # h/Mpc
+    k = (fftfreq(num_cells, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
 
     # offset by half a cell
-    field_shift = get_field(pos+np.float32(0.5*d), lbox, num_cells, paste, w)
-    del pos; gc.collect()
+    field_shift = get_field(pos, lbox, num_cells, paste, w, d=0.5*d)
+    print("shift", field_shift.dtype, pos.dtype)
+    del pos, w; gc.collect()
 
     # fourier transform shifted field and sum them up
-    field_fft = np.fft.fftn(field) / field.size
-    field_shift_fft = np.fft.fftn(field_shift) / field.size
-    field_fft = 0.5 * field_fft + 0.5 * field_shift_fft * \
-                np.exp(0.5 * 1j * (k[:, np.newaxis, np.newaxis] + k[np.newaxis, :, np.newaxis] + k[np.newaxis, np.newaxis, :]) *d)
-
+    #field_fft = fftn(field) / field.size
+    #field_shift_fft = fftn(field_shift) / field.size
+    field_fft = np.zeros((len(k), len(k), len(k)), dtype=np.complex64)
+    field_fft[:, :, :] = fftn(field) + fftn(field_shift) * \
+                         np.exp(0.5 * 1j * (k[:, np.newaxis, np.newaxis] + \
+                                            k[np.newaxis, :, np.newaxis] + \
+                                            k[np.newaxis, np.newaxis, :]) *d)
+    field_fft *= 0.5 / field.size
+    print("field fft", field_fft.dtype)
+    
     # inverse fourier transform
     #field_fft *= field.size
-    #field = np.fft.ifftn(field_fft) # we work in fourier
+    #field = ifftn(field_fft) # we work in fourier
     return field_fft
     
 def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
 
     # get field in real space
     field = get_field(pos, lbox, num_cells, paste, w)
+    print("field, pos", field.dtype, pos.dtype)
     if interlaced:
         # get interlaced field
         field_fft = get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w)
-    else:        
+    else:
         # get Fourier modes from skewers grid
-        field_fft = np.fft.fftn(field) / field.size
+        field_fft = fftn(field) / field.size
     # get rid of pos, field
-    del pos, field; gc.collect()
+    del pos, w, field; gc.collect()
 
     # apply compensation filter
     if compensated:
@@ -443,7 +460,7 @@ def get_W_compensated(lbox, num_cells, paste, interlaced):
     kN = np.pi / d
 
     # natural wavemodes
-    k = np.fft.fftfreq(num_cells, d=d) * 2. * np.pi # h/Mpc
+    k = (fftfreq(num_cells, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
     
     # apply deconvolution
     if interlaced:
@@ -459,7 +476,7 @@ def get_W_compensated(lbox, num_cells, paste, interlaced):
         elif paste == 'CIC':
             W = (1 - 2./3 * s) ** 0.5 
         del s
-    W = W.astype(np.float32)
+    print(W.astype)
     return W
 
 def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, w = None, x2 = None, y2 = None, z2 = None, w2 = None, poles=[]):

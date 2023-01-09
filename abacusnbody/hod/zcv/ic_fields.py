@@ -175,20 +175,24 @@ def get_fields(delta_lin, Lbox, nmesh):
     delta_fft = np.fft.rfftn(delta_lin).astype(np.complex64)
     fmean = np.mean(delta_lin)
     d = delta_lin-fmean
-
+    print("generated delta")
+    
     # get delta^2
     d2 = delta_lin * delta_lin
     fmean = np.mean(d2)
     d2 -= fmean
     del delta_lin; gc.collect()
-
+    print("generated delta^2")
+    
     # get s^2
     s2 = get_dk_to_s2(delta_fft, nmesh, Lbox)
     fmean = np.mean(s2)
     s2 -= fmean
+    print("generated s_ij s^ij")
 
     # get n^2
     n2 = get_dk_to_n2(delta_fft, nmesh, Lbox)
+    print("generated nabla^2")
     return d, d2, s2, n2
 
 def main(path2config):
@@ -197,9 +201,10 @@ def main(path2config):
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
+    kcut = config['zcv_params']['kcut']
     sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock'] # doesn't matter
-
+    
     # create save directory
     save_dir = Path(zcv_dir) / sim_name 
     os.makedirs(save_dir, exist_ok=True)
@@ -208,7 +213,6 @@ def main(path2config):
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
     k_Ny = np.pi*nmesh/Lbox
-    kcut = 0.5*k_Ny
     print("k_Ny", k_Ny)
 
     # file to save the filtered ic

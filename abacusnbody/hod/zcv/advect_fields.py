@@ -10,19 +10,27 @@ from pathlib import Path
 import numpy as np
 import asdf
 import h5py
+import yaml
+import argparse
 from abacusnbody.metadata import get_meta
 from classy import Class
 
 from .ic_fields import compress_asdf
-from abacusnbody.hod.power_spectrum import get_k_mu_box_edges, get_field_fft, calc_pk3d, get_W_compensated
+from abacusnbody.hod.power_spectrum import get_k_mu_box_edges, get_field_fft, calc_pk3d, get_W_compensated, get_k_mu_edges
 
-def advect(tracer_pos, want_rsd, config):
+DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
+
+def main(path2config, want_rsd=False):
+    # field names
+    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
     # read zcv parameters
+    config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
     cosmo_dir = config['zcv_params']['cosmo_dir']
     nmesh = config['zcv_params']['nmesh']
+    kcut = config['zcv_params']['kcut']
 
     # power params
     sim_name = config['sim_params']['sim_name']
@@ -43,11 +51,10 @@ def advect(tracer_pos, want_rsd, config):
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
     k_Ny = np.pi*nmesh/Lbox
-    kcut = 0.5*k_Ny
     
     # define k, mu bins
     n_perp = n_los = nmesh
-    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
+    k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5
     
@@ -83,164 +90,142 @@ def advect(tracer_pos, want_rsd, config):
     # file to save to
     ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
     fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
-    fields_fft_fn = Path(save_z_dir) / f"advected_fields{rsd_str}_fft_nmesh{nmesh:d}.asdf"
-    power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_nmesh{nmesh:d}.asdf"
+    fields_fft_fn = []
+    for i in range(len(keynames)):
+        fields_fft_fn.append(Path(save_z_dir) / f"advected_{keynames[i]}_field{rsd_str}_fft_nmesh{nmesh:d}.asdf")
     power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}.asdf"
-    
-    # create fft field for the tracer
-    w = None
-    tracer_pos += Lbox/2. # I think necessary for cross correlations
-    tracer_pos %= Lbox
-    """
-    # TESTING
-    import h5py
-    tracer_fn = "/global/cscratch1/sd/boryanah/zcv/test.h5"
-    if want_rsd:
-        tracer_pos = h5py.File(tracer_fn)["pos_zspace"][:, :]
-    else:
-        tracer_pos = h5py.File(tracer_fn)["pos_rspace"][:, :]
-    """
-    print("min/max tracer pos", tracer_pos.min(), tracer_pos.max())
-    tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
-    del tracer_pos; gc.collect()
-    
-    # load density field and displacements
-    f = asdf.open(ic_fn)
-    disp_x = f['data']['disp_x'][:, :, :]
-    disp_y = f['data']['disp_y'][:, :, :]
-    disp_z = f['data']['disp_z'][:, :, :]
-    print("min/max disp pos", disp_x.min(), disp_x.max())
-    f.close()
-
+        
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)
     D /= boltz.scale_independent_growth_factor(z_ic)
     Ha = boltz.Hubble(z_this) * 299792.458
     if want_rsd:
-        f = boltz.scale_independent_growth_factor_f(z_this)
+        f_growth = boltz.scale_independent_growth_factor_f(z_this)
     else:
-        f = 0.
+        f_growth = 0.
     print("D = ", D)
     
-    # compute the galaxy auto rsd poles
-    pk_tr_dict = {}
-    pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
-    pk_tr_dict['k_binc'] = k_binc
-    pk_tr_dict['mu_binc'] = mu_binc
-    pk_tr_dict['P_kmu_tr_tr'] = pk3d
-    pk_tr_dict['N_kmu_tr_tr'] = N3d
-    pk_tr_dict['P_ell_tr_tr'] = binned_poles
-    pk_tr_dict['N_ell_tr_tr'] = Npoles
-    
+    # field names and growths
+    field_D = [1, D, D**2, D**2, D]
+
+    # save the advected fields
+    if np.product(np.array([os.path.exists(fn) for fn in fields_fft_fn])):
+        fields_fft = []
+        for i in range(len(keynames)):
+            fields_fft.append(asdf.open(fields_fft_fn[i])['data'])
+    else:
+        # load density field and displacements
+        f = asdf.open(ic_fn)
+        disp_pos = np.zeros((nmesh**3, 3), np.float32)
+        disp_pos[:, 0] = f['data']['disp_x'][:, :, :].flatten() * D
+        disp_pos[:, 1] = f['data']['disp_y'][:, :, :].flatten() * D
+        disp_pos[:, 2] = f['data']['disp_z'][:, :, :].flatten() * D * (1 + f_growth)
+        print("loaded displacements", disp_pos.dtype)
+        f.close(); gc.collect()
+
+        # read in displacements, rescale by D=D(z_this)/D(z_ini)
+        grid_x, grid_y, grid_z = np.meshgrid(
+            np.arange(nmesh, dtype=np.float32) / nmesh,
+            np.arange(nmesh, dtype=np.float32) / nmesh,
+            np.arange(nmesh, dtype=np.float32) / nmesh,
+            indexing="ij",
+        )
+        grid_x = grid_x.flatten()
+        grid_y = grid_y.flatten()
+        grid_z = grid_z.flatten()
+        
+        disp_pos[:, 0] += grid_x
+        disp_pos[:, 1] += grid_y
+        disp_pos[:, 2] += grid_z
+        del grid_x, grid_y, grid_z; gc.collect()
+        
+        disp_pos *= Lbox
+        disp_pos %= Lbox
+        print("box coordinates of the displacements", disp_pos.dtype)
+        
+        # Initiate fields
+        for i in range(len(keynames)):
+            
+            print(keynames[i])
+            if i == 0:
+                w = None
+            else:
+                f = asdf.open(fields_fn)
+                w = f['data'][keynames[i]][:, :, :].flatten()
+                f.close()
+            field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)) 
+            del w; gc.collect()
+            table = {}
+            table[f'{keynames[i]}_Re'] = np.array(field_fft.real, dtype=np.float32)
+            table[f'{keynames[i]}_Im'] = np.array(field_fft.imag, dtype=np.float32)
+            del field_fft; gc.collect()
+
+            # write out the advected fields
+            header = {}
+            header['sim_name'] = sim_name
+            header['Lbox'] = Lbox
+            header['nmesh'] = nmesh
+            header['kcut'] = kcut
+            header['compensated'] = compensated
+            header['interlaced'] = interlaced
+            header['paste'] = paste
+            compress_asdf(fields_fft_fn[i], table, header)
+            del table; gc.collect()
+        del disp_pos; gc.collect()
+    del W; gc.collect()
+
     # check if pk_ij exists
     if os.path.exists(power_ij_fn):
         pk_ij_dict = asdf.open(power_ij_fn)['data']
+        return pk_ij_dict
     else:
         pk_ij_dict = {}
         pk_ij_dict['k_binc'] = k_binc
         pk_ij_dict['mu_binc'] = mu_binc
     
-    # field names and growths
-    field_D = [1, D, D**2, D**2, D]
-    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
-    
-    # read in displacements, rescale by D=D(z_this)/D(z_ini)
-    grid = np.meshgrid(
-        np.arange(nmesh),
-        np.arange(nmesh),
-        np.arange(nmesh),
-        indexing="ij",
-    )
-    disp_x = ((grid[0] / nmesh + D * disp_x) % 1) * Lbox
-    disp_y = ((grid[1] / nmesh + D * disp_y) % 1) * Lbox
-    disp_z = ((grid[2] / nmesh + D * (1 + f) * disp_z) % 1) * Lbox       
-    del grid
-    gc.collect()
-
-    # combine into single array
-    disp_x = disp_x.flatten()
-    disp_y = disp_y.flatten()
-    disp_z = disp_z.flatten()
-    disp_pos = np.vstack((disp_x, disp_y, disp_z)).T
-    del disp_x, disp_y, disp_z; gc.collect()
-
-    if os.path.exists(fields_fft_fn):
-        f = asdf.open(fields_fft_fn)
-        fields_fft = f['data']
-        header = f['header']
-        assert np.isclose(header['kcut'], kcut), "Settings of the saved fields file are different from what's currently requested"
-        assert header['compensated'] == compensated, "Settings of the saved fields file are different from what's currently requested"
-        assert header['interlaced'] == interlaced, "Settings of the saved fields file are different from what's currently requested"
-        assert header['paste'] == paste, "Settings of the saved fields file are different from what's currently requested"
-    else:
-        # Initiate fields
-        fields_fft = {}
-        f = asdf.open(fields_fn)
-        for i in range(len(keynames)):
-            print(keynames[i])
-            if i == 0:
-                w = None
-            else:
-                w = f['data'][keynames[i]][:, :, :].flatten()
-            field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)) 
-            del w; gc.collect()
-            fields_fft[f'{keynames[i]}_Re'] = np.array(field_fft.real, dtype=np.float32)
-            fields_fft[f'{keynames[i]}_Im'] = np.array(field_fft.imag, dtype=np.float32)
-            del field_fft; gc.collect()
-        del disp_pos; gc.collect()
-        f.close()
-
-        # write out the advected fields
-        header = {}
-        header['sim_name'] = sim_name
-        header['Lbox'] = Lbox
-        header['nmesh'] = nmesh
-        header['kcut'] = kcut
-        header['compensated'] = compensated
-        header['interlaced'] = interlaced
-        header['paste'] = paste
-        compress_asdf(fields_fft_fn, fields_fft, header)
+    # get the box k and mu modes
+    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
     
     # initiate final arrays
     pk_auto = []
     pk_cross = []
-    pkcounter = 0
-    for i in range(len(keynames)):
-        print("Computing cross-correlation of tracer and ", keynames[i])
-        
-        # compute power
-        pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields_fft[f'{keynames[i]}_Re']+1j*fields_fft[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
-        pk3d *= field_D[i]
-        binned_poles *= field_D[i]
-        pk_cross.append(pk3d)
-        pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
-        pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
-        pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
-        pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
-        
+    for i in range(len(keynames)):        
         for j in range(len(keynames)):
             if i < j: continue
             print("Computing cross-correlation of", keynames[i], keynames[j])
 
-            if not os.path.exists(power_ij_fn):
-                pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields_fft[f'{keynames[i]}_Re']+1j*fields_fft[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=fields_fft[f'{keynames[j]}_Re']+1j*fields_fft[f'{keynames[j]}_Im'], poles=poles)
-                pk3d *= field_D[i]*field_D[j]
-                binned_poles *= field_D[i]*field_D[j]
-                pk_auto.append(pk3d)
-                pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
-                pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
-                pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
-                pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
-            else:
-                print("Skip since already saved")
-                
+            # load field
+            field_fft_i = asdf.open(fields_fft_fn[i])['data']
+            field_fft_j = asdf.open(fields_fft_fn[j])['data']
+
+            # compute power spectrum
+            pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
+            pk3d *= field_D[i]*field_D[j]
+            binned_poles *= field_D[i]*field_D[j]
+            pk_auto.append(pk3d)
+            pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
+            pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
+            pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
+            pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
+            del field_fft_i, field_fft_j; gc.collect()
+
+    # record power spectra
     header = {}
     header['sim_name'] = sim_name
     header['Lbox'] = Lbox
     header['nmesh'] = nmesh
     header['kcut'] = kcut
-    if not os.path.exists(power_ij_fn):
-        compress_asdf(str(power_ij_fn), pk_ij_dict, header)
-    compress_asdf(str(power_tr_fn), pk_tr_dict, header)
-    
-    return pk_tr_dict, pk_ij_dict
+    compress_asdf(str(power_ij_fn), pk_ij_dict, header)
+    return pk_ij_dict
+
+class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+    pass
+
+if __name__ == "__main__":
+
+    # parsing arguments
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
+    parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
+    parser.add_argument('--want_rsd', help='Include RSD effects?', action='store_true')
+    args = vars(parser.parse_args())
+    main(**args)

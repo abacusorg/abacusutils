@@ -30,6 +30,7 @@ def main(path2config):
     ic_dir = config['zcv_params']['ic_dir']
     cosmo_dir = config['zcv_params']['cosmo_dir']
     nmesh = config['zcv_params']['nmesh']
+    kcut = config['zcv_params']['kcut']
 
     # power params
     sim_name = config['sim_params']['sim_name']
@@ -52,7 +53,6 @@ def main(path2config):
     z_ic = meta['InitialRedshift']
     D_ratio = meta['GrowthTable'][z_ic]/meta['GrowthTable'][1.0]
     k_Ny = np.pi*nmesh/Lbox
-    kcut = 0.5*k_Ny
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
@@ -71,7 +71,7 @@ def main(path2config):
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
     
     # name of file to save to
-    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt.npz"
+    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
     pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
     window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
     
