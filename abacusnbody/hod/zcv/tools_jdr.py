@@ -4,7 +4,6 @@ Tools for applying variance reduction (ZCV) by (mostly) Joe DeRose.
 import sys
 import os
 from pathlib import Path
-sys.path.append('/global/homes/b/boryanah/repos/ZeNBu/') # tuks remove
 
 import numpy as np
 from scipy.optimize import minimize
@@ -14,8 +13,8 @@ from scipy.signal import savgol_filter
 import asdf
 
 from classy import Class
-from zenbu_rsd import Zenbu_RSD
-from zenbu import Zenbu
+from ZeNBu.zenbu_rsd import Zenbu_RSD
+from ZeNBu.zenbu import Zenbu
 from abacusnbody.metadata import get_meta
 from abacusnbody.hod.power_spectrum import get_k_mu_edges
 

@@ -8,7 +8,7 @@ install_requires = ['numpy>=1.16','blosc>=1.9.2','astropy>=4.0.0','scipy>=1.5.0'
 # "extra" will be everything used by scripts but not the importable code
 extras_require = dict(test=['pytest'],
                       extra=['emcee','schwimmbad','getdist','dynesty','dill', 'click'],
-                      zcv=['ZeNBu','classy']
+                      zcv=['git+https://github.com/sfschen/ZeNBu.git','classy']
                     )
 
 # If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
