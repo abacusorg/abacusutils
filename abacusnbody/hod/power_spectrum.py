@@ -271,8 +271,10 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
     Compute the mean number of modes per 2D bin.
     This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
     """
-    H = np.zeros((bins[0], bins[1]), dtype=np.float64)
-    N = np.zeros((bins[0], bins[1]), dtype=np.float64)
+    tracks = tracks.astype(dtype)
+    ranges = ranges.astype(dtype)
+    H = np.zeros((bins[0], bins[1]), dtype=dtype)
+    N = np.zeros((bins[0], bins[1]), dtype=dtype)
     if logk:
         delta0 = 1./(np.log(ranges[0, 1]/ranges[0, 0]) / bins[0])
     else:
@@ -286,8 +288,7 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
             i = (tracks[0, t] - ranges[0, 0]) * delta0
         j = (tracks[1, t] - ranges[1, 0]) * delta1
 
-        #if 0 <= i < bins[0] and 0 <= j < bins[1]: # og
-        if 0. <= i < bins[0] and 0. <= j < bins[1]: # ask Lehman (should be < bins), but I miss some modes compared with nbodykit
+        if 0. <= i < bins[0] and 0. <= j < bins[1]:
             N[int(i), int(j)] += 1.
             H[int(i), int(j)] += weights[t]
             
@@ -312,8 +313,9 @@ def get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk):
     
     # define mu-binning
     mu_bin_edges = np.linspace(0., 1., n_mu_bins + 1)
-    # ask Lehman but basically some numerical instability in mean2d; leads to better agreement with nbodykit
-    mu_bin_edges[-1] += 1.e-6
+    # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
+    mu_bin_edges[-1] += 1.e-6 
+    #k_bin_edges[1:] += 1.e-6 # includes the 2pi/L modes in the first bin, though I think they shouldn't be there...
     
     return k_bin_edges, mu_bin_edges
 
@@ -356,14 +358,14 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
     binned_poles = []
     Npoles = []
     if len(poles) > 0:
-        # ask Lehman; leads to better agreement with nbodykit
-        ranges = ((k_bin_edges[0], k_bin_edges[-1]), (0., 1.+1.e-6))
+        # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
+        ranges = ((k_bin_edges[0], k_bin_edges[-1]), (0., 1.+1.e-6)) # not doing this misses the +/- 1 mu modes in the first few bins
         nbins2d = (len(k_bin_edges)-1, 1)
         nbins2d = np.asarray(nbins2d).astype(np.int64)
         ranges = np.asarray(ranges).astype(np.float64)
         for i in range(len(poles)):
             Ln = legendre(poles[i])
-            binned_pole, Npole = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d*Ln(mu_box)*(2.*poles[i]+1.)) # ask Lehman
+            binned_pole, Npole = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d*Ln(mu_box)*(2.*poles[i]+1.)) # ask Lehman (I think the equation is (2 ell + 1)/2 but for some reason I don't need the division by 2)
             binned_poles.append(binned_pole * L_hMpc**3)
         Npoles.append(Npole)
         Npoles = np.array(Npoles)

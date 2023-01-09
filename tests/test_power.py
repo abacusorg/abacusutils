@@ -17,7 +17,7 @@ def test_power():
     nmesh = 576
     nbins_mu = 4
     logk = False
-    k_hMpc_max = np.pi*nmesh/Lbox
+    k_hMpc_max = np.pi*nmesh/Lbox + 1.e-6 # so that the first bin includes +/- 2pi/L which nbodykit does for this choice of nmesh
     nbins_k = nmesh//2
 
     # loop over choices
@@ -34,7 +34,8 @@ def test_power():
                 fn = f"tests/data_power/nbody_{paste}{comp_str}{int_str}.npz"
                 data = np.load(fn)
                 k_nbody = data['k']
-                Pkmu_nbody = data['power']
+                Pkmu_nbody = data['power'].real
+                Nkmu_nbody = data['modes']
 
                 # loop over all mu values
                 for i in range(Pkmu_nbody.shape[1]):
@@ -53,4 +54,4 @@ def test_power():
 
                     assert mean_diff < 0.1 # mean difference should be less than 0.1%
                     assert mean_diff < 5. # maximum difference shouldn't be more than 5%
-                    assert more_diff < 10 # less than 10 entries differing by more than 1%
+                    assert more_diff/nbins_k < 0.035 # less than 3.5% of entries differing by more than 1%
