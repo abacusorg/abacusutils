@@ -10,3 +10,4 @@ def test_meta():
     assert meta['SimName'] == 'AbacusSummit_base_c000_ph000'
     assert meta['OmegaNow_m'] == 0.379887444945823
     assert meta['GrowthTable'][1.] == 47.30480505646196
+    assert meta['CLASS_power_spectrum']['k (h/Mpc)'][0] == 2.097837747762e-07

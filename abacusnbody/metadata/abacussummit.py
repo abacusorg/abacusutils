@@ -4,7 +4,7 @@ AbacusSummit simulations.
 '''
 
 import importlib.resources
-import pickle
+import msgpack
 
 import asdf
 
@@ -35,12 +35,13 @@ def get_meta(simname, redshift=None):
         simname = 'AbacusSummit_' + simname
     
     global metadata
-    if metadata == None:
+    if metadata is None:
         with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
-            if 'pickle' in af.tree:
-                metadata = pickle.loads(af['pickle'][:])
-            else:
-                metadata = dict(af.tree)
+            metadata = dict(af.tree)
+            del metadata['asdf_library'], metadata['history']
+            for sim in metadata:
+                metadata[sim]['param'] = msgpack.loads(metadata[sim]['param'].data, strict_map_key=False)
+                metadata[sim]['state'] = msgpack.loads(metadata[sim]['state'].data, strict_map_key=False)
     
     if simname not in metadata:
         raise ValueError(f'Simulation "{simname}" is not in metadata file "{metadata_fn}"')
