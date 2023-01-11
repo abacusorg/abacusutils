@@ -4,19 +4,22 @@ Just run twice for rsd and no rsd
 CHECK: Syntax for load pk_ij
 Might not be necessary to save
 """
-import os, gc, sys, time
+import argparse
+import gc
+import os
 from pathlib import Path
 
-import numpy as np
 import asdf
-import h5py
+import numpy as np
 import yaml
-import argparse
-from abacusnbody.metadata import get_meta
 from classy import Class
 
+from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
+                                            get_k_mu_box_edges, get_k_mu_edges,
+                                            get_W_compensated)
+from abacusnbody.metadata import get_meta
+
 from .ic_fields import compress_asdf
-from abacusnbody.hod.power_spectrum import get_k_mu_box_edges, get_field_fft, calc_pk3d, get_W_compensated, get_k_mu_edges
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 

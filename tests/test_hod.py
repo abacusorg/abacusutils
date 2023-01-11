@@ -10,19 +10,19 @@ To generate new reference, run:
     $ python test_hod.py
 """
 
-from os.path import dirname, join as pjoin
 import tempfile
+from os.path import dirname
+from os.path import join as pjoin
 
-import yaml
-import pytest
 import h5py
+import numba
 import numpy as np
+import pytest
+import yaml
 from astropy.io import ascii
-
 from common import check_close
 
 # required for pytest to work (see GH #60)
-import numba
 numba.config.THREADING_LAYER='forksafe'
 
 TESTDIR = dirname(__file__)

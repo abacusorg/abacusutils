@@ -4,13 +4,15 @@ Script for saving the initial conditions fields.
 Possible speedups: save the fields separately to save space;
 Make the k arrays smaller and presave them
 """
-import os, gc
+import argparse
+import gc
+import os
 from pathlib import Path
 
+import asdf
 import numpy as np
 import yaml
-import asdf
-import argparse
+
 from abacusnbody.metadata import get_meta
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}

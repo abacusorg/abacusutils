@@ -1,13 +1,12 @@
-import os, sys, time, gc
+import gc
 
+import numba
 import numpy as np
+from numba import njit
+#from np.fft import fftfreq, fftn, ifftn
+from scipy.fft import fftfreq, fftn
 from scipy.special import legendre
 
-from numba import njit
-import numba
-
-#from np.fft import fftfreq, fftn, ifftn
-from scipy.fft import fftfreq, fftn, ifftn
 
 def get_k_mu_box(L_hMpc, n_xy, n_z):
     """

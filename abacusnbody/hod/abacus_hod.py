@@ -237,30 +237,24 @@ but it is only available if Intel TBB is available. See the `Numba threading lay
 for more info.
 
 """
-import os
 import gc
-import glob
 import time
-import timeit
 from pathlib import Path
 
-import numba
-from numba import njit
-
-import numpy as np
-import h5py
 import asdf
-import argparse
-import multiprocessing
-from multiprocessing import Pool
+import h5py
+import numba
+import numpy as np
 from astropy.io import ascii
+from numba import njit
+from parallel_numpy_rng import MTGenerator
 
 from .GRAND_HOD import *
-from .parallel_numpy_rng import *
-from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast
 from .power_spectrum import calc_power
-from .zcv.tracer_power import get_tracer_power
+from .tpcf_corrfunc import calc_multipole_fast, calc_wp_fast, calc_xirppi_fast
 from .zcv.tools_jdr import run_zcv
+from .zcv.tracer_power import get_tracer_power
+
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 @njit(parallel=True)
@@ -687,7 +681,6 @@ class AbacusHOD:
             start = time.time()
             # np.random.seed(reseed)
             mtg = MTGenerator(np.random.PCG64(reseed))
-            rng = np.random.default_rng()
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
             r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)

@@ -11,6 +11,8 @@ install_requires = ['numpy>=1.16',
                     'h5py',
                     'pyyaml',
                     'msgpack>=1',
+                    'parallel_numpy_rng>=0.1.2',
+                    'asdf-astropy>=0.3',
                     ]
 
 # enable "pip install abacusutils[test]" and "abacusutils[extra]"

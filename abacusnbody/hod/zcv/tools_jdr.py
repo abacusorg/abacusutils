@@ -1,24 +1,22 @@
 """
 Tools for applying variance reduction (ZCV) by (mostly) Joe DeRose.
 """
-import sys
 import os
 from pathlib import Path
 
-import numpy as np
-from scipy.optimize import minimize
-from scipy.interpolate import interp1d
-from scipy.interpolate import splrep, splev
-from scipy.signal import savgol_filter
 import asdf
-
+import numpy as np
 from classy import Class
-from ZeNBu.zenbu_rsd import Zenbu_RSD
-from ZeNBu.zenbu import Zenbu
-from abacusnbody.metadata import get_meta
-from abacusnbody.hod.power_spectrum import get_k_mu_edges
-
 from numba import jit
+from scipy.interpolate import interp1d, splev, splrep
+from scipy.optimize import minimize
+from scipy.signal import savgol_filter
+from ZeNBu.zenbu import Zenbu
+from ZeNBu.zenbu_rsd import Zenbu_RSD
+
+from abacusnbody.hod.power_spectrum import get_k_mu_edges
+from abacusnbody.metadata import get_meta
+
 
 def get_spectra_from_fields(fields1, fields2, neutrinos=True):
     spectra = []
@@ -840,8 +838,8 @@ if __name__ == "__main__":
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    
-    from classy import Class    
+    from classy import Class
+
     from abacusnbody.metadata import get_meta
 
     # get a few parameters for the simulation
