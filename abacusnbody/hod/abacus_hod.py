@@ -355,7 +355,6 @@ class AbacusHOD:
         self.n_chunks = n_chunks
         assert self.chunk < self.n_chunks, "Total number of chunks needs to be larger than current chunk index"
 
-        
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
         
@@ -371,7 +370,7 @@ class AbacusHOD:
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
             weights = self.halo_data['hmultis'])
-        
+
     def staging(self):
         """
         Constructor call this function to load the halo+particle subsamples onto memory. 

@@ -20,7 +20,7 @@ from abacusnbody.hod.power_spectrum import get_k_mu_box_edges, get_field_fft, ca
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
-def main(path2config, want_rsd=False):
+def main(path2config, want_rsd=False, alt_simname=None):
     # field names
     keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
@@ -33,7 +33,10 @@ def main(path2config, want_rsd=False):
     kcut = config['zcv_params']['kcut']
 
     # power params
-    sim_name = config['sim_params']['sim_name']
+    if alt_simname is not None:
+        sim_name = alt_simname
+    else:
+        sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock']
     k_hMpc_max = config['power_params']['k_hMpc_max']
     logk = config['power_params']['logk']
@@ -227,5 +230,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     parser.add_argument('--want_rsd', help='Include RSD effects?', action='store_true')
+    parser.add_argument('--alt_simname', help='Alternative simulation name')
     args = vars(parser.parse_args())
     main(**args)
