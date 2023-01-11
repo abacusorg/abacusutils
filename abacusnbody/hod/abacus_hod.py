@@ -970,7 +970,7 @@ class AbacusHOD:
         return clustering
 
     def compute_power(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
-        """
+        r"""
         Computes :math:`P(k, \mu)` and/or :math:`P_\ell(k)`.
 
         TODO: parallelize, document, include deconvolution and aliasing, cross-correlations
