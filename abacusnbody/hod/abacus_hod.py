@@ -115,7 +115,7 @@ Short Example
 The first step is to create the configuration file such as ``config/abacus_hod.yaml``,
 which provides the full customizability of the HOD code. By default, it lives in your 
 current work directory under a subdirectory ``./config``. A template with 
-default settings are provided under ``abacusutils/scripts/config``.
+default settings are provided under ``abacusutils/scripts/hod/config``.
 
 With the first use, you should define which simulation box, which redshift,
 the path to simulation data, the path to output datasets, the various HOD 
@@ -143,7 +143,7 @@ You can run ``load_sims`` on command line with ::
 
 
 Within Python, you can run the same script with ``from abacusnbody.hod import prepare_sim``
-and then ``prepare_sim.main(/path/to/config.yaml)``.
+and then ``prepare_sim.main("/path/to/config.yaml")``.
 
 If your config file lives in the default location, i.e. ``./config``, then you 
 can ignore the ``-path2config`` flag. 

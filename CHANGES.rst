@@ -10,6 +10,10 @@ Fixes
 ~~~~~
 - Bump Numba requirement to fixed version and enable parallelism in env calc [#60]
 
+Enhancements
+~~~~~~~~~~~~
+- Add power spectrum to `metadata` module [#69]
+
 1.3.0 (2022-06-08)
 ------------------
 
