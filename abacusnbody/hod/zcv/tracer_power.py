@@ -27,7 +27,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     # read zcv parameters
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
-    cosmo_dir = config['zcv_params']['cosmo_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
 

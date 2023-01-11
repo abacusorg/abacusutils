@@ -93,7 +93,6 @@ HOD_params:
 zcv_params:
     zcv_dir: "tests/data_zcv/"
     ic_dir: "/global/cfs/projectdirs/desi/cosmosim/Abacus/ic/"
-    cosmo_dir: "/global/homes/b/boryanah/repos/AbacusSummit/Cosmologies/" # need to ask Lehman where those are stored
     nmesh: 8
 
 power_params:

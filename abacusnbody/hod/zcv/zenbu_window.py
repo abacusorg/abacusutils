@@ -29,7 +29,6 @@ def main(path2config):
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
-    cosmo_dir = config['zcv_params']['cosmo_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
 
@@ -57,15 +56,12 @@ def main(path2config):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    cosmo['H0'] = meta['H0']
-    cosmo['omega_b'] = meta['omega_b']
-    cosmo['omega_cdm'] = meta['omega_cdm']
-    cosmo['omega_ncdm'] = meta['omega_ncdm']
-    cosmo['N_ncdm'] = meta['N_ncdm']
-    cosmo['N_ur'] = meta['N_ur']
-    cosmo['n_s'] = meta['n_s']
-    #cosmo['wa'] = meta['wa']
-    #cosmo['w0'] = meta['w0']
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+              ):
+        cosmo[k] = meta[k]
 
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
@@ -82,9 +78,10 @@ def main(path2config):
         p_in = np.loadtxt(pk_lin_fn)
         kth, p_m_lin = p_in[:, 0], p_in[:, 1]
     else:
-        c = int((sim_name.split('_c')[-1]).split('_ph')[0])
-        kth, pk_1 = np.loadtxt(Path(cosmo_dir) / f"abacus_cosm{c:03d}" / "CLASS_power", unpack=True)
-        p_m_lin = D_ratio**2*pk_1
+        # TODO: this code path maybe not tested since addition of CLASS_power_spectrum
+        kth = meta['CLASS_power_spectrum']['k (h/Mpc)']
+        pk_z1 = meta['CLASS_power_spectrum']['P (Mpc/h)^3']
+        p_m_lin = D_ratio**2*pk_z1
         
         # to match the lowest k-modes in zenbu (make pretty)
         choice = kth > 1.e-05

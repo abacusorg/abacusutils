@@ -31,7 +31,6 @@ def main(path2config, want_rsd=False):
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
-    cosmo_dir = config['zcv_params']['cosmo_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
 
