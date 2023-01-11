@@ -116,11 +116,10 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     w = None
     tracer_pos += Lbox/2. # I think necessary for cross correlations
     tracer_pos %= Lbox
-    
-    # TESTING
     """
+    # TESTING
     import h5py
-    tracer_fn = "/global/cscratch1/sd/boryanah/zcv/test_base_z3.000.h5" ##test_base.h5" # test.h5
+    tracer_fn = "/global/cscratch1/sd/boryanah/zcv/test_base.h5" #test_base_z3.000.h5" ##test_base.h5" # test.h5
     if want_rsd:
         tracer_pos = h5py.File(tracer_fn)["pos_zspace"][:, :]
     else:

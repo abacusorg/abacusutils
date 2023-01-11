@@ -163,7 +163,7 @@ def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nm
         pk_zenbu = pspline(k)
         
     else:
-        pspline, lptobj = _realspace_lpt_pk(kin, pin*(Dthis/Dic)**2)  
+        pspline, lptobj = _realspace_lpt_pk(kin, pin*(Dthis/Dic)**2, cutoff=cutoff)
         pk_zenbu = pspline(k)[1:]
 
     return pk_zenbu[:11], lptobj
@@ -261,6 +261,7 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
                        pkclass=None, pk_ij_zenbu=None, lptobj=None,
                        exact_window=True, win_fac=1):
 
+    # remove
     if pk_ij_zenbu is None:
         if kin is not None:
             pk_ij_zenbu, lptobj = zenbu_spectra(kin, z, cfg, kth, p_m_lin, pkclass=pkclass, rsd=rsd)
@@ -378,13 +379,16 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
         else:
             r_zt_smooth_nohex[i,:] = 1
             
-    if (window is not None):
+    if (window is not None) and rsd:
 
         pk_zenbu = np.hstack(pk_zenbu)
         if rsd:
             pk_zenbu = np.dot(window.T, pk_zenbu).reshape(len(poles),-1)
         else:
-            pk_zenbu = np.dot(window[:window.shape[0]//len(poles), :window.shape[1]//len(poles)].T, pk_zenbu).reshape(pk_zz.shape)
+            print("no window")
+            # no need to apply window in real space
+            #else:
+            #    pk_zenbu = np.dot(window[:window.shape[0]//len(poles), :window.shape[1]//len(poles)].T, pk_zenbu).reshape(pk_zz.shape)
     
     pk_nn_hat = pk_nn - beta_damp * (pk_zz - pk_zenbu) # pk_zz has shape of measurement nmesh/2
     pk_nn_betasmooth = pk_nn - beta_smooth * (pk_zz - pk_zenbu) # joe says beta needs to be smooth
@@ -828,6 +832,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dict['poles'] = poles
     zcv_dict['rho_tr_ZD'] = r_zt
     zcv_dict['Pk_ZD_ZD_ell'] = pk_zz
+    zcv_dict['Pk_tr_ZD_ell'] = pk_zn
     zcv_dict['Pk_tr_tr_ell'] = pk_tt_poles
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu

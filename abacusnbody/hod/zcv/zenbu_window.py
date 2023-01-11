@@ -23,7 +23,7 @@ from .tools_jdr import periodic_window_function, zenbu_spectra
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
-def main(path2config):
+def main(path2config, alt_simname=None):
 
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
@@ -33,7 +33,10 @@ def main(path2config):
     kcut = config['zcv_params']['kcut']
 
     # power params
-    sim_name = config['sim_params']['sim_name']
+    if alt_simname is not None:
+        sim_name = alt_simname
+    else:
+        sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock']
     k_hMpc_max = config['power_params']['k_hMpc_max']
     logk = config['power_params']['logk']
@@ -126,5 +129,6 @@ if __name__ == "__main__":
     # parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
+    parser.add_argument('--alt_simname', help='Alternative simulation name')
     args = vars(parser.parse_args())
     main(**args)

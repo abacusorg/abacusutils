@@ -197,14 +197,17 @@ def get_fields(delta_lin, Lbox, nmesh):
     print("generated nabla^2")
     return d, d2, s2, n2
 
-def main(path2config):
+def main(path2config, alt_simname=None):
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
-    sim_name = config['sim_params']['sim_name']
+    if alt_simname is not None:
+        sim_name = alt_simname
+    else:
+        sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock'] # doesn't matter
     
     # create save directory
@@ -258,24 +261,27 @@ def main(path2config):
 
     # not sure what the displacements are used for (maybe later?)
     del disp_x, disp_y, disp_z; gc.collect()
+
+    if os.path.exists(fields_fn):
+        print("Already saved fields for this simulation")
+    else:
+        # compute the fields
+        d, d2, s2, n2 = get_fields(dens, Lbox, nmesh)
+        #print("fields dtype (float32)", d.dtype, d2.dtype, s2.dtype, n2.dtype)
     
-    # compute the fields
-    d, d2, s2, n2 = get_fields(dens, Lbox, nmesh)
-    #print("fields dtype (float32)", d.dtype, d2.dtype, s2.dtype, n2.dtype)
-    
-    # save fields using asdf compression
-    header = {}
-    header['sim_name'] = sim_name
-    header['Lbox'] = Lbox
-    header['nmesh'] = nmesh
-    header['kcut'] = kcut
-    table = {}
-    table['delta'] = d
-    table['delta2'] = d2
-    table['nabla2'] = n2
-    table['tidal2'] = s2
-    compress_asdf(str(fields_fn), table, header)
-    print("Saved fields for this simulation")
+        # save fields using asdf compression
+        header = {}
+        header['sim_name'] = sim_name
+        header['Lbox'] = Lbox
+        header['nmesh'] = nmesh
+        header['kcut'] = kcut
+        table = {}
+        table['delta'] = d
+        table['delta2'] = d2
+        table['nabla2'] = n2
+        table['tidal2'] = s2
+        compress_asdf(str(fields_fn), table, header)
+        print("Saved fields for this simulation")
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
@@ -285,5 +291,6 @@ if __name__ == "__main__":
     # parsing arguments
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
+    parser.add_argument('--alt_simname', help='Alternative simulation name')
     args = vars(parser.parse_args())
     main(**args)
