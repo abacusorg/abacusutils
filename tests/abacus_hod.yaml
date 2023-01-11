@@ -94,6 +94,7 @@ zcv_params:
     zcv_dir: "tests/data_zcv/"
     ic_dir: "/global/cfs/projectdirs/desi/cosmosim/Abacus/ic/"
     nmesh: 8
+    kcut: 0.2261946710584651  # k_Ny/2
 
 power_params:
     nbins_k: 4 # nmesh/2
