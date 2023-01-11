@@ -12,7 +12,7 @@ install_requires = ['numpy>=1.16',
                     'pyyaml',
                     'msgpack>=1',
                     'parallel_numpy_rng>=0.1.2',
-                    'asdf-astropy>=0.3',
+                    "asdf-astropy>=0.3; python_version>='3.8'",
                     ]
 
 # enable "pip install abacusutils[test]" and "abacusutils[extra]"
