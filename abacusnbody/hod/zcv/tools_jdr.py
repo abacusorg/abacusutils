@@ -713,15 +713,12 @@ def get_cfg(sim_name, z_this, nmesh):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    cosmo['H0'] = meta['H0']
-    cosmo['omega_b'] = meta['omega_b']
-    cosmo['omega_cdm'] = meta['omega_cdm']
-    cosmo['omega_ncdm'] = meta['omega_ncdm']
-    cosmo['N_ncdm'] = meta['N_ncdm']
-    cosmo['N_ur'] = meta['N_ur']
-    cosmo['n_s'] = meta['n_s']
-    #cosmo['wa'] = meta['wa']
-    #cosmo['w0'] = meta['w0']
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', #'A_s', 'alpha_s',
+              #'wa', 'w0',
+              ):
+        cosmo[k] = meta[k]
 
     # create a dict with everything you would ever need
     cfg = {'lbox': Lbox, 'Cosmology': cosmo, 'z_ic': z_ic}

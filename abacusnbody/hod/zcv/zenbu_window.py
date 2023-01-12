@@ -1,13 +1,11 @@
 """Script for pre-saving zenbu for a given redshift and simulation
 
 TODO: Make the kbins nicer (and maybe read as a function here)
-Make the cosmology more correct (A_s and sigma8 are not specified)
 Change format of zenbu_fn to something nicer
 Test no RSD
 Note that the linear power from abacus is cb and not m
 Make c000 reading nicer
-Fix the k-cut that matches zenbu to make prety
-
+Fix the k-cut that matches zenbu to make pretty
 """
 import argparse
 import os
@@ -61,7 +59,7 @@ def main(path2config, alt_simname=None):
     cosmo['P_k_max_h/Mpc'] = 20.
     for k in ('H0', 'omega_b', 'omega_cdm',
               'omega_ncdm', 'N_ncdm', 'N_ur',
-              'n_s', 'A_s', 'alpha_s',
+              'n_s', #'A_s', 'alpha_s',
               #'wa', 'w0',
               ):
         cosmo[k] = meta[k]
