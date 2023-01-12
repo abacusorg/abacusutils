@@ -111,7 +111,7 @@ def generate_nbody(power_test_data, interlaced=False, compensated=False, paste='
     z = power_test_data['z']
     
     # specifications of the power spectrum computation
-    nmesh = 576
+    nmesh = 72
     nbins_mu = 4
     kmin = 0.
     dk = 2.*np.pi/Lbox
