@@ -372,7 +372,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
         ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
         ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
-    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, logM1_EE, alpha_EE, kappa_EE, conf_c = \
+    alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
         ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
         ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
         ELG_decorations_array[9], ELG_decorations_array[10], ELG_decorations_array[11], ELG_decorations_array[12], \
@@ -418,13 +418,13 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                         hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E, A_E) * weights[i] * ic_E
                 # elg conformity
                 if keep_cent[i] == 1:
-                    M1_E_temp = M1_E_temp*10**conf_c
+                    M1_E_temp = 10**(logM1_EL + As_E * hdeltac[i] + Bs_E * hfenv[i])
                     base_p_E = N_sat_elg(
-                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E, A_E) * weights[i] * ic_E
+                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EL, A_E) * weights[i] * ic_E
                 elif keep_cent[i] == 2:
                     M1_E_temp =  10**(logM1_EE + As_E * hdeltac[i] + Bs_E * hfenv[i]) # M1_E_temp*10**delta_M1
                     base_p_E = N_sat_elg(
-                        hmass[i], 10**logM_cut_E_temp, kappa_EE, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E   
+                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E   
                     # if base_p_E > 1:
                     #     print("ExE new p", base_p_E, np.log10(hmass[i]), N_sat_elg(
                     #     hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E_temp, A_E, alpha1, beta), weights[i], ic_E)
@@ -746,12 +746,11 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         # conformity params
         logM1_EE = ELG_HOD.get('logM1_EE', logM1_E)
         alpha_EE = ELG_HOD.get('alpha_EE', alpha_E)
-        kappa_EE = ELG_HOD.get('kappa_EE', kappa_E)
-        # beta = ELG_HOD.get('beta', 0)
-        conf_c = ELG_HOD.get('conf_c', 0)
+        logM1_EL = ELG_HOD.get('logM1_EL', logM1_E)
+        alpha_EL = ELG_HOD.get('alpha_EL', alpha_E)
         
         ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E,
-                            Ac_E, As_E, Bc_E, Bs_E, ic_E, logM1_EE, alpha_EE, kappa_EE, conf_c])
+                            Ac_E, As_E, Bc_E, Bs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL])
     else:
         # B.H. TODO: this will go when we switch to dictionaried and for loops
         ELG_design_array = np.zeros(8)

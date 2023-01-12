@@ -751,8 +751,10 @@ class AbacusHOD:
                     tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('A_s', 1), 
                     tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0), 
                     tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), 
-                    tracer_hod.get('logM1_EE', tracer_hod['logM1']), tracer_hod.get('alpha_EE', tracer_hod['alpha']), 
-                    tracer_hod.get('kappa_EE', tracer_hod['kappa']), 
+                    tracer_hod.get('logM1_EE', tracer_hod['logM1']), 
+                    tracer_hod.get('alpha_EE', tracer_hod['alpha']), 
+                    tracer_hod.get('logM1_EL', tracer_hod['logM1']), 
+                    tracer_hod.get('alpha_EL', tracer_hod['alpha']), 
                     tracer_hod.get('ic', 1), Nthread) 
                 print("newngal", newngal)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
@@ -799,7 +801,7 @@ class AbacusHOD:
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q, 
                    logM_cut, kappa, sigma, logM1, alpha, gamma, As, Acent, Asat, Bcent, Bsat, 
-                   logM1_EE, alpha_EE, kappa_EE, ic, Nthread):
+                   logM1_EE, alpha_EE, logM1_EL, alpha_EL, ic, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -820,7 +822,8 @@ class AbacusHOD:
                     nsat_temp = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As) * ic
                     # conformity treatment
                     M1_conf =  10**(logM1_EE + Asat * deltacs[j] + Bsat * fenvs[k])
-                    nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa_EE, M1_conf, alpha_EE, As) * ic
+                    nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_EE, As) * ic
+                    # we cannot calculate the number of EL conformal satellites with this approach, so we ignore it for now.
                     
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp 
                     ngal_sat += halo_mass_func[i, j, k] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
