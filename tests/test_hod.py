@@ -124,7 +124,7 @@ def test_hod(tmp_path, reference_mode = False):
         config['sim_params']['z_mock'] = 0.8 # so that meta can find it
         config['HOD_params']['want_rsd'] = False # so that it doesn't run twice
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd = config['HOD_params']['want_rsd'], write_to_disk = False, Nthread = 2)
-        mock_dict.pop('ELG') # drop ELG since zcv works with a single tracer currently
+        del mock_dict['ELG']  # drop ELG since zcv works with a single tracer currently
         zcv_dict = newBall.apply_zcv(mock_dict, config)
         
 if __name__ == '__main__':

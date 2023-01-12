@@ -1,19 +1,24 @@
 """
 Test the power spectrum module against nbodykit
 """
+
+from pathlib import Path
+
 import numpy as np
 import pytest
 
+_curdir = Path(__file__).parent
+DATA_POWER = _curdir / 'data_power'
 
 @pytest.fixture
 def power_test_data():
     return dict(Lbox=1000.,
-                **np.load("tests/data_power/test_pos.npz"),
+                **np.load(DATA_POWER / "test_pos.npz"),
                 )
 
-@pytest.mark.parametrize('interlaced',[False])
-@pytest.mark.parametrize('compensated',[False])
-@pytest.mark.parametrize('paste',['CIC'])
+@pytest.mark.parametrize('interlaced', [False,True], ids=['nointer','inter'])
+@pytest.mark.parametrize('compensated', [False,True], ids=['nocomp','comp'])
+@pytest.mark.parametrize('paste', ['CIC','TSC'])
 def test_power(power_test_data, interlaced, compensated, paste):
     from abacusnbody.hod.power_spectrum import calc_power
 
@@ -38,7 +43,7 @@ def test_power(power_test_data, interlaced, compensated, paste):
     # load presaved nbodykit computation
     comp_str = "_compensated" if compensated else ""
     int_str = "_interlaced" if interlaced else ""
-    fn = f"tests/data_power/nbody_{paste}{comp_str}{int_str}.npz"
+    fn = DATA_POWER / f"nbody_{paste}{comp_str}{int_str}.npz"
     data = np.load(fn)
     k_nbody = data['k']
     Pkmu_nbody = data['power'].real
