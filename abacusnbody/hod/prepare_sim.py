@@ -50,7 +50,7 @@ def subsample_halos(m, MT):
         # downfactors[x>11.2] = 1
         return downfactors
     else:
-        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, default 12.3, set to 12.0 for z = 1.1
+        downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 11.8)*10)) # LRG only, default 12.3, set to 12.0 for z = 1.1
         downfactors[x > 13.0] = 1
         return downfactors
 
@@ -103,7 +103,8 @@ def submask_particles(m_in, n_in, MT):
             return np.zeros(n_in)
         else:
             # a target number of particles
-            ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-12.0)))
+            # ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-11.8)))
+            ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-12.5)))
             ntarget = np.minimum(ntarget, 100)
             submask = np.zeros(n_in).astype(int)
             submask[np.random.choice(n_in, ntarget, replace = False)] = 1

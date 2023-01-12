@@ -119,8 +119,8 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     return xirppi
 
 
-def calc_multipole_fast(x1, y1, z1, rpbins, 
-    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2]):  # all r assumed to be in h-1 mpc units. 
+def calc_multipole_fast(x1, y1, z1, sbins, 
+    lbox, Nthread, nbins_mu = 50, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2]):  # all r assumed to be in h-1 mpc units. 
 
     ND1 = float(len(x1))
     if x2 is not None:
@@ -133,36 +133,27 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
     # single precision mode
     # to do: make this native 
     cf_start = time.time()
-    rpbins = rpbins.astype(np.float32)
+    sbins = sbins.astype(np.float32)
     x1 = x1.astype(np.float32)
     y1 = y1.astype(np.float32)
     z1 = z1.astype(np.float32)
     pos1 = np.array([x1, y1, z1]).T % lbox
     lbox = np.float32(lbox)
 
-    # mu_bins = np.linspace(0, 1, 20)
-
-    # if autocorr == 1: 
-    #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, period = lbox, num_threads = Nthread)
-    #     print("halotools ", xi_s_mu)
-    # else:
-    #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, sample2 = np.array([x2, y2, z2]).T % lbox, period = lbox, num_threads = Nthread)
-
-    nbins_mu = 40
     if autocorr == 1: 
-        results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
+        results = DDsmu(autocorr, Nthread, sbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+        results = DDsmu(autocorr, Nthread, sbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
             periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
-    DD_counts = DD_counts.reshape((len(rpbins) - 1, nbins_mu))
+    DD_counts = DD_counts.reshape((len(sbins) - 1, nbins_mu))
 
     mu_bins = np.linspace(0, 1, nbins_mu+1)
-    RR_counts = 2*np.pi/3*(rpbins[1:, None]**3 - rpbins[:-1, None]**3)*(mu_bins[None, 1:] - mu_bins[None, :-1]) / lbox**3 * ND1 * ND2 * 2
+    RR_counts = 2*np.pi/3*(sbins[1:, None]**3 - sbins[:-1, None]**3)*(mu_bins[None, 1:] - mu_bins[None, :-1]) / lbox**3 * ND1 * ND2 * 2
 
     xi_s_mu = DD_counts / RR_counts - 1
 

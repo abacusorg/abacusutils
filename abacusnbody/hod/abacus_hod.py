@@ -751,9 +751,10 @@ class AbacusHOD:
                     tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('A_s', 1), 
                     tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0), 
                     tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), 
-                    tracer_hod.get('delta_M1', 0), tracer_hod.get('delta_alpha', 0), 
-                    tracer_hod.get('alpha1', 0), tracer_hod.get('beta', 0),  
+                    tracer_hod.get('logM1_EE', tracer_hod['logM1']), tracer_hod.get('alpha_EE', tracer_hod['alpha']), 
+                    tracer_hod.get('kappa_EE', tracer_hod['kappa']), 
                     tracer_hod.get('ic', 1), Nthread) 
+                print("newngal", newngal)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
@@ -798,7 +799,7 @@ class AbacusHOD:
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q, 
                    logM_cut, kappa, sigma, logM1, alpha, gamma, As, Acent, Asat, Bcent, Bsat, 
-                   delta_M1, delta_alpha, alpha1, beta, ic, Nthread):
+                   logM1_EE, alpha_EE, kappa_EE, ic, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -818,12 +819,12 @@ class AbacusHOD:
                     ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma) * ic
                     nsat_temp = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As) * ic
                     # conformity treatment
-                    M1_conf = M1_temp*10**delta_M1
-                    alpha_conf = alpha + delta_alpha
-                    nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_conf, As, alpha1, beta) * ic
+                    M1_conf =  10**(logM1_EE + Asat * deltacs[j] + Bsat * fenvs[k])
+                    nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa_EE, M1_conf, alpha_EE, As) * ic
                     
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp 
                     ngal_sat += halo_mass_func[i, j, k] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
+                    # print(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As)
         return ngal_cent, ngal_sat
 
     @staticmethod
@@ -937,7 +938,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_multipole(self, mock_dict, rpbins, pimax, Nthread = 8):
+    def compute_multipole(self, mock_dict, rpbins, pimax, sbins, nbins_mu, Nthread = 8):
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
@@ -946,8 +947,8 @@ class AbacusHOD:
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
-                    new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
-                        self.lbox, Nthread)
+                    new_multi = calc_multipole_fast(x1, y1, z1, sbins,
+                        self.lbox, Nthread, nbins_mu = nbins_mu)
                     new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
                     clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
                 else:
