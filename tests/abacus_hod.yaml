@@ -89,6 +89,24 @@ HOD_params:
         Bsat: 0
         ic: 1.0
 
+
+zcv_params:
+    zcv_dir: "tests/data_zcv/"
+    ic_dir: "/global/cfs/projectdirs/desi/cosmosim/Abacus/ic/"
+    nmesh: 8
+    kcut: 0.2261946710584651  # k_Ny/2
+
+power_params:
+    nbins_k: 4 # nmesh/2
+    nbins_mu: 1 # since we care only about poles TODO: maybe make skippable
+    poles: [0, 2, 4]
+    k_hMpc_max: 0.4523893421169302 # k_Ny
+    paste: 'CIC'
+    compensated: True
+    interlaced: True
+    logk: False # linear or logarithmic bins
+    nmesh: 8
+
 # Power spectrum parameters
 clustering_params:
 #    power_type: 'wp'

@@ -10,19 +10,19 @@ To generate new reference, run:
     $ python test_hod.py
 """
 
-from os.path import dirname, join as pjoin
 import tempfile
+from os.path import dirname
+from os.path import join as pjoin
 
-import yaml
-import pytest
 import h5py
+import numba
 import numpy as np
+import pytest
+import yaml
 from astropy.io import ascii
-
 from common import check_close
 
 # required for pytest to work (see GH #60)
-import numba
 numba.config.THREADING_LAYER='forksafe'
 
 TESTDIR = dirname(__file__)
@@ -54,6 +54,7 @@ def test_hod(tmp_path, reference_mode = False):
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
 
+    
     # reference mode
     if reference_mode:
         print("Generating new reference files...")
@@ -98,7 +99,7 @@ def test_hod(tmp_path, reference_mode = False):
         rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
         pimax = clustering_params['pimax']
         pi_bin_size = clustering_params['pi_bin_size']
-        
+
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
         
@@ -110,7 +111,7 @@ def test_hod(tmp_path, reference_mode = False):
         data1 = ascii.read(savedir_gal)
         for ekey in data.keys():
             assert check_close(data[ekey], data1[ekey])
-
+            
         savedir_gal = config['sim_params']['output_dir']\
             +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/ELGs.dat"
         data = ascii.read(EXAMPLE_ELGS)
@@ -118,7 +119,14 @@ def test_hod(tmp_path, reference_mode = False):
         for ekey in data.keys():
             assert check_close(data[ekey], data1[ekey])
 
-
+        # smoke test for zcv
+        config['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph006' # so that meta can find it
+        config['sim_params']['z_mock'] = 0.8 # so that meta can find it
+        config['HOD_params']['want_rsd'] = False # so that it doesn't run twice
+        mock_dict = newBall.run_hod(newBall.tracers, want_rsd = config['HOD_params']['want_rsd'], write_to_disk = False, Nthread = 2)
+        del mock_dict['ELG']  # drop ELG since zcv works with a single tracer currently
+        zcv_dict = newBall.apply_zcv(mock_dict, config)
+        
 if __name__ == '__main__':
     with tempfile.TemporaryDirectory() as tmpdir:
         test_hod(tmpdir, reference_mode = False)

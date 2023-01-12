@@ -237,26 +237,24 @@ but it is only available if Intel TBB is available. See the `Numba threading lay
 for more info.
 
 """
-import os
-import glob
+import gc
 import time
-import timeit
 from pathlib import Path
 
-import numba
-from numba import njit
-
-import numpy as np
-import h5py
 import asdf
-import argparse
-import multiprocessing
-from multiprocessing import Pool
+import h5py
+import numba
+import numpy as np
 from astropy.io import ascii
+from numba import njit
+from parallel_numpy_rng import MTGenerator
 
 from .GRAND_HOD import *
-from .parallel_numpy_rng import *
-from .tpcf_corrfunc import calc_xirppi_fast, calc_wp_fast, calc_multipole_fast, calc_Pkmu
+from .power_spectrum import calc_power
+from .tpcf_corrfunc import calc_multipole_fast, calc_wp_fast, calc_xirppi_fast
+from .zcv.tools_jdr import run_zcv
+from .zcv.tracer_power import get_tracer_power
+
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 @njit(parallel=True)
@@ -350,7 +348,7 @@ class AbacusHOD:
         self.chunk = chunk
         self.n_chunks = n_chunks
         assert self.chunk < self.n_chunks, "Total number of chunks needs to be larger than current chunk index"
-        
+
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
         
@@ -682,7 +680,6 @@ class AbacusHOD:
             start = time.time()
             # np.random.seed(reseed)
             mtg = MTGenerator(np.random.PCG64(reseed))
-            rng = np.random.default_rng()
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
             r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
@@ -972,9 +969,9 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_Pkmu(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
-        """
-        Computes :math:`P(k, mu)`.
+    def compute_power(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
+        r"""
+        Computes :math:`P(k, \mu)` and/or :math:`P_\ell(k)`.
 
         TODO: parallelize, document, include deconvolution and aliasing, cross-correlations
 
@@ -996,6 +993,9 @@ class AbacusHOD:
         ``logk``: bool
             flag determining whether the k bins are defined in log space or in normal space.
 
+        ``poles``: list
+            list of integers determining which multipoles to compute. Default is [], i.e. none.
+
         ``paste``: str
             scheme for painting particles on a mesh. Can be one of ``TSC'' or ``CIC.''
 
@@ -1012,36 +1012,104 @@ class AbacusHOD:
         -------
         clustering: dict
             dictionary of summary statistics. Auto-correlations/spectra can be
-            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
-            accessed with keys such as ``'LRG_ELG'``. Keys ``k_binc`` and ``mu_binc``
-            contain the bin centers of k and mu, respectively. 
-            Power spectrum array has a size of (nbins_k, nbins_mu).
+            accessed with keys such as ``'LRG_LRG'`` and ``'LRG_LRG_ell'`` for the 
+            multipoles with number of modes per bin, ``'LRG_LRG[_ell]_modes'``. 
+            Cross-correlations/spectra can be accessed with keys such 
+            as ``'LRG_ELG'`` and ``'LRG_ELG_ell'`` for the multipoles 
+            with number of modes per bin, ``'LRG_LRG[_ell]_modes'``. Keys ``k_binc`` 
+            and ``mu_binc`` contain the bin centers of k and mu, respectively. 
+            The power spectrum P(k, mu) has a shape (nbins_k, nbins_mu), whereas
+            the multipole power spectrum has shape (len(poles), nbins_k). Cubic box only.
         """
+        Lbox = self.lbox
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
+            w1 = mock_dict[tr1].get('w', None)
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
+                    clustering[tr1+'_'+tr2+'_modes'] = N3d
+                    clustering[tr1+'_'+tr2+'_ell'] = binned_poles
+                    clustering[tr1+'_'+tr2+'_ell_modes'] = Npoles
                 else:
                     print(tr1+'_'+tr2)
-                    print("not implemented!!!!!!!!!!!")
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
-                    k_binc, mu_binc, pk3d = calc_Pkmu(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, self.lbox, paste, num_cells, compensated, interlaced,
-                                                      x2 = x2, y2 = y2, z2 = z2)
+                    w2 = mock_dict[tr2].get('w', None)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced,
+                                                      w = w1, x2 = x2, y2 = y2, z2 = z2, w2 = w2, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
+                    clustering[tr1+'_'+tr2+'_modes'] = N3d
+                    clustering[tr1+'_'+tr2+'_ell'] = binned_poles
+                    clustering[tr1+'_'+tr2+'_ell_modes'] = Npoles
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
+                    clustering[tr2+'_'+tr1+'_modes'] = clustering[tr1+'_'+tr2+'_modes']
+                    clustering[tr2+'_'+tr1+'_ell'] = clustering[tr1+'_'+tr2+'_ell']
+                    clustering[tr2+'_'+tr1+'_ell_modes'] = clustering[tr1+'_'+tr2+'_ell_modes']
         clustering['k_binc'] = k_binc
         clustering['mu_binc'] = mu_binc
         return clustering
 
+    def apply_zcv(self, mock_dict, config, load_presaved=False):
+        """
+        Apply control variates reduction of the variance to a power spectrum observable.
+        """
+        # compute real space and redshift space
+        #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
+        assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
+        assert len(config['power_params']['poles']) == 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+
+        # create save directory
+        save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
+        save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
+        rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
+        
+        if load_presaved:
+            pk_rsd_tr_dict = asdf.open(save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+            pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+            if config['HOD_params']['want_rsd']:
+                pk_tr_dict = asdf.open(save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+                pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+            else:
+                pk_tr_dict, pk_ij_dict = None, None
+                        
+        else:
+            # run version with rsd or without rsd
+            for tr in mock_dict.keys():
+                # obtain the positions
+                tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
+                del mock_dict; gc.collect()
+
+                # get power spectra for this tracer
+                pk_rsd_tr_dict = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config)
+                pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+
+            # run version without rsd if rsd was requested
+            if config['HOD_params']['want_rsd']:
+                mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False, 
+                                         Nthread=16, verbose=False, fn_ext=None)
+                for tr in mock_dict.keys():
+                    # obtain the positions
+                    tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
+                    del mock_dict; gc.collect()
+
+                    # get power spectra for this tracer
+                    pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
+                    pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']         
+            else:
+                pk_tr_dict, pk_ij_dict = None, None
+                
+        # run the final part and save
+        zcv_dict = run_zcv(pk_rsd_tr_dict, pk_rsd_ij_dict, pk_tr_dict, pk_ij_dict, config)
+        return zcv_dict
+    
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`w_p`.
