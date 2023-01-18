@@ -115,7 +115,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
     field_D = [1, D, D**2, D**2, D]
 
     # save the advected fields
-    if np.product(np.array([os.path.exists(fn) for fn in fields_fft_fn])):
+    if all(os.path.exists(fn) for fn in fields_fft_fn):
         fields_fft = []
         for i in range(len(keynames)):
             fields_fft.append(asdf.open(fields_fft_fn[i])['data'])
