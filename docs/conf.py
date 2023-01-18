@@ -17,9 +17,8 @@
 
 # -- Project information -----------------------------------------------------
 
-# TODO: author ordering? LHG adopted the ordering from the ALCC proposal
 project = 'abacusutils'
-copyright = '2021, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
+copyright = '2023, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
 author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
 
 
@@ -28,7 +27,12 @@ author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sown
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['readthedocs_ext.readthedocs', 'recommonmark', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.intersphinx', 'sphinx.ext.autosectionlabel']
+extensions = ['readthedocs_ext.readthedocs',
+              'sphinx.ext.autodoc',
+              'sphinx.ext.napoleon',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.autosectionlabel',
+            ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -46,7 +50,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #
 #html_theme = 'alabaster'
 #html_theme = 'default'
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -68,3 +72,4 @@ autosectionlabel_prefix_document = True
 
 autodoc_member_order = 'bysource'
 autodoc_mock_imports = ['Corrfunc',]
+autodoc_warningiserror = True

@@ -23,7 +23,7 @@ Breaking Changes
 - Python 3.6 (EOL) support has been dropped [#56]
 
 New Features
-~~~~~~~~~~~
+~~~~~~~~~~~~
 - ``abacusnbody.metadata`` added. Supports querying simulation parameters without downloading simulation data. [#56]
 
 Fixes
