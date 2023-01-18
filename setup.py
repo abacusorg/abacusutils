@@ -27,10 +27,21 @@ extras_require = dict(extra=['emcee',
                       zcv=['ZeNBu @ git+https://github.com/sfschen/ZeNBu.git',
                            'classy',
                            ],
+                      docs=['sphinx >= 3.0.3',
+                            'sphinx-book-theme >= 0.3',
+                            'Pygments >= 2.3.1',
+                            'setuptools >= 41.0.1',
+                            'docutils >= 0.14',
+                            'mock >= 1.0.1',
+                            'pillow >= 5.4.1',
+                            'alabaster >= 0.7',
+                            'commonmark >= 0.8.1',
+                            'readthedocs-sphinx-ext',
+                            ],
                     )
 extras_require['test'] = extras_require['zcv'] + ['pytest']
 
-# If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
+# If we're on ReadTheDocs, don't try to install packages with C dependencies, like Corrfunc
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     # This list must be kept synchronized with `autodoc_mock_imports` in docs/conf.py
