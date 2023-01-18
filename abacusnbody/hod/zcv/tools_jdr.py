@@ -6,16 +6,21 @@ from pathlib import Path
 
 import asdf
 import numpy as np
-from classy import Class
 from numba import jit
 from scipy.interpolate import interp1d, splev, splrep
 from scipy.optimize import minimize
 from scipy.signal import savgol_filter
-from ZeNBu.zenbu import Zenbu
-from ZeNBu.zenbu_rsd import Zenbu_RSD
 
 from abacusnbody.hod.power_spectrum import get_k_mu_edges
 from abacusnbody.metadata import get_meta
+
+try:
+    from classy import Class
+    from ZeNBu.zenbu import Zenbu
+    from ZeNBu.zenbu_rsd import Zenbu_RSD
+except ImportError as e:
+    raise ImportError('Missing imports for zcv. Install abacusutils with '
+        '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
 
 def get_spectra_from_fields(fields1, fields2, neutrinos=True):

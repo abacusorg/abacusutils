@@ -12,7 +12,6 @@ from pathlib import Path
 import asdf
 import numpy as np
 import yaml
-from classy import Class
 
 from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
                                             get_k_mu_box_edges, get_k_mu_edges,
@@ -20,6 +19,12 @@ from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
+
+try:
+    from classy import Class
+except ImportError as e:
+    raise ImportError('Could not import classy. Install abacusutils with '
+        '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 

@@ -18,8 +18,6 @@ from parallel_numpy_rng import MTGenerator
 from .GRAND_HOD import *
 from .power_spectrum import calc_power
 from .tpcf_corrfunc import calc_multipole_fast, calc_wp_fast, calc_xirppi_fast
-from .zcv.tools_jdr import run_zcv
-from .zcv.tracer_power import get_tracer_power
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -827,6 +825,11 @@ class AbacusHOD:
         """
         Apply control variates reduction of the variance to a power spectrum observable.
         """
+
+        # ZCV module has optional dependencies, don't import unless necessary
+        from .zcv.tools_jdr import run_zcv
+        from .zcv.tracer_power import get_tracer_power
+        
         # compute real space and redshift space
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
