@@ -6,8 +6,8 @@ Installation
 Requirements
 ------------
 abacusutils should work with Python 3.7-3.10 on all mainstream Linux distributions.
-MacOS support should be possible, but is presently not working and help is needed
-to finish adding Mac support (see
+MacOS support should be possible, but is presently not working and help would be
+needed to finish adding Mac support (see
 `this PR <https://github.com/abacusorg/abacusutils/pull/59>`_).
 
 Pip Installation
