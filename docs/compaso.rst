@@ -41,7 +41,7 @@ https://abacussummit.readthedocs.io
 
 
 Short Example
-=============
+-------------
 >>> from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 >>> # Load the RVs and PIDs for particle subsample A
 >>> cat = CompaSOHaloCatalog('/storage/AbacusSummit/AbacusSummit_base_c000_ph000/halos/z0.100', subsamples=dict(A=True,pos=True))
@@ -73,7 +73,7 @@ Short Example
 
 
 Catalog Structure
-=================
+-----------------
 The catalogs are stored in a directory structure that looks like:
 
 .. code-block:: none
@@ -111,7 +111,7 @@ at least 500 MB/s per core.
 
 
 Particle Subsamples
-===================
+-------------------
 We define two disjoint sets of "subsample" particles, called "subsample A" and
 "subsample B".  Subsample A is a few percent of all particles, with subsample B
 a few times larger than that.  Particles membership in each group is a function
@@ -133,7 +133,7 @@ But the memory usage and time to unpack will be lower.
 
 
 Halo File Types
-===============
+---------------
 Each file type (for halos, particles, etc) is grouped into a subdirectory.
 These subdirectories are:
 
@@ -164,7 +164,7 @@ we output particle subsamples and not just halo catalogs:
 
 
 Bit-packed Formats
-==================
+------------------
 The "RVint" format packs six fields (x,y,z, and vx,vy,vz) into three ints (12 bytes).
 Positions are stored to 20 bits (global), and velocities 12 bits (max 6000 km/s).
 
@@ -183,7 +183,7 @@ if necessary.
 
 
 Field Subset Loading
-====================
+--------------------
 Because the ASDF files are column-oriented, it is possible to load just one or a few
 columns (halo catalog fields) rather than the whole file.  This can save huge amounts
 of IO, memory, and CPU time (the latter due to the decompression).  Use the ``fields`` argument
@@ -204,7 +204,7 @@ dependency purposes.
 
 
 Superslab (Chunk) Processing
-============================
+----------------------------
 The halo catalogs are divided across multiple files, called "superslabs", which are
 typically planar chunks of the simulation volume (all y,z for some range of x, with
 a bit of overlap at the boundaries).  Applications that can process the volume
@@ -227,7 +227,7 @@ rolling fashion:
 
 
 Superslab Filtering
-===================
+-------------------
 Another way to save memory is to use the ``filter_func`` argument.  This function
 will be called for each superslab, and must return a mask representing the rows
 to keep.  For example, to drop all halos with less than 100 particles, use:
@@ -244,7 +244,7 @@ IO limited, so this won't add much overhead.
 
 
 Multi-threaded Decompression
-============================
+----------------------------
 The Blosc compression we use inside the ASDF files supports multi-threaded
 decompression.  We have packed AbacusSummit files with 4 Blosc blocks (each ~few MB)
 per ASDF block, so 4 Blosc threads is probably the optimal value.  This is the
@@ -264,7 +264,7 @@ You can control the number of decompression threads with:
 
 
 API
-===
+---
 
 .. automodule:: abacusnbody.data.compaso_halo_catalog
    :members:

@@ -51,7 +51,7 @@ The default threading is set to 16.
 
 
 Theory
-======
+------
 The baseline HOD for LRGs comes from Zheng et al. 2007:
 
 .. math:: \\bar{n}_{\\mathrm{cent}}(M) = \\frac{1}{2}\\mathrm{erfc} \\left[\\frac{\\ln(M_{\\mathrm{cut}}/M)}{\\sqrt{2}\\sigma}\\right],
@@ -112,7 +112,7 @@ layout are presented below, followed by the full module API.
 
 
 Short Example
-=============
+-------------
 
 The first step is to create the configuration file such as ``config/abacus_hod.yaml``,
 which provides the full customizability of the HOD code. By default, it lives in your
@@ -211,7 +211,7 @@ redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`): ::
     xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
 Light Cones
-===========
+-----------
 AbacusHOD supports generating HOD mock catalogs from halo light cone catalogs
 (`PR #28 <https://github.com/abacusorg/abacusutils/pull/28>`_).  Details on the usage
 will be provided here soon.
@@ -224,7 +224,7 @@ the line of sight, is the same for all galaxies at a given redshift catalog.
 
 
 Parallelism
-===========
+-----------
 Some of the HOD routines accept an ``Nthread`` argument to enable parallelism. This parallelism
 is backed by `Numba <https://numba.readthedocs.io/en/stable/user/index.html>`_, for the most part.
 
@@ -241,7 +241,7 @@ for more info.
 
 
 API
-===
+---
 
 .. automodule:: abacusnbody.hod.abacus_hod
    :members:
