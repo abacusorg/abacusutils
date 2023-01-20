@@ -6,6 +6,10 @@ Changelog
 ----------------
 - HOD now supports a new ELG conformity model
 
+New Features
+~~~~~~~~~~~~
+- Add a power spectrum module, and a zeldovich control variates (ZCV) module that uses it [#68]
+
 Fixes
 ~~~~~
 - Bump Numba requirement to fixed version and enable parallelism in env calc [#60]
@@ -13,6 +17,7 @@ Fixes
 Enhancements
 ~~~~~~~~~~~~
 - Add power spectrum to `metadata` module [#69]
+- Upgrade docs and CI [#71]
 
 1.3.0 (2022-06-08)
 ------------------
