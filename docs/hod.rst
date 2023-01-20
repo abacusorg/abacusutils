@@ -130,10 +130,11 @@ If you want to enable secondary bias, you need to set ``want_AB`` flag to true i
 config file. The local environment is defined by total mass within 5 Mpc/h but beyond
 ``r98``.
 
-IMPORTANT: Running this code is a two-part process. First, you need to run the ``prepare_sim``
-code, which generates the necessary data files for that simulation. Then you can run the actual
-HOD code. The first step only needs to be done once for a simulation box, but it can be slow,
-depending on the downsampling and the features you choose to enable.
+.. tip::
+   Running this code is a two-part process. First, you need to run the ``prepare_sim``
+   code, which generates the necessary data files for that simulation. Then you can run the actual
+   HOD code. The first step only needs to be done once for a simulation box, but it can be slow,
+   depending on the downsampling and the features you choose to enable.
 
 So first, you need to run the ``prepare_sim`` script, this extracts the simulation outputs
 and organizes them into formats that are suited for the HOD code. This code can take
@@ -238,10 +239,11 @@ code (likewise for ``threadsafe``).  There is also a ``safe`` backend that is bo
 but it is only available if Intel TBB is available. See the `Numba threading layer docs <https://numba.readthedocs.io/en/stable/user/threading-layer.html>`_
 for more info.
 
+
+API
+===
+
 .. automodule:: abacusnbody.hod.abacus_hod
    :members:
    :undoc-members:
    :show-inheritance:
-
-   API
-   ===

@@ -46,7 +46,7 @@ setup(
     name="abacusutils",
     author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan",
     author_email="lgarrison@flatironinstitute.org",
-    description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",
+    description="Python code to read halo catalogs and other Abacus N-body data products",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/abacusorg/abacusutils",

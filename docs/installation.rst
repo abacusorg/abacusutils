@@ -23,14 +23,16 @@ This command will also give access to the command-line :doc:`pipes` functionalit
 
 .. note::
     Previously, a custom fork of ASDF was required.  As of abacusutils 1.0.0,
-    this is no longer required, instead using the extension mechanism of ASDF 2.8.
+    this is no longer required, instead using the `extension mechanism
+    <https://asdf.readthedocs.io/en/stable/asdf/extending/extensions.html>`_
+    of ASDF 2.8.
 
 All the pip-installed functionality is pure-Python, using numba for any performance-intensive
 routines.
 
 Installing from Cloned Repository
 ---------------------------------
-If you want to hack on the abacusutils source code, then the recommendation is to clone
+If you want to hack on the abacusutils source code, we recommend that you clone
 the repo and install the package in pip "editable mode":
 
 ::

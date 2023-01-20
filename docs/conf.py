@@ -19,7 +19,6 @@
 
 project = 'abacusutils'
 copyright = '2023, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
-author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
 
 
 # -- General configuration ---------------------------------------------------
@@ -39,7 +38,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -55,11 +54,27 @@ html_theme = 'sphinx_book_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = ['custom.css']
 
+html_title = "abacusutils"
+html_logo = "images/icon_red.svg"
 html_favicon = 'images/icon_red.png'
 
-def setup(app):
-    app.add_css_file('custom.css')
+html_show_sourcelink = False
+html_theme_options = {
+    "repository_url": "https://github.com/abacusorg/abacusutils",
+    "repository_branch": "master",
+    # "launch_buttons": {
+    #     "binderhub_url": "https://mybinder.org",
+    #     "notebook_interface": "jupyterlab",
+    #     "colab_url": "https://colab.research.google.com/",
+    # },
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "use_download_button": False,
+    "use_fullscreen_button": False,
+}
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True

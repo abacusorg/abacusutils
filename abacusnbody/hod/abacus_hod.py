@@ -1,6 +1,11 @@
 '''
+'''
+
+'''
 The AbacusHOD module generates HOD tracers from Abacus simulations.
-A high-level overview of this module can be found in :doc:`hod`.
+A high-level overview of this module can be found in
+https://abacusutils.readthedocs.io/en/latest/hod.html
+or docs/hod.rst.
 '''
 
 import gc
@@ -20,13 +25,6 @@ from .power_spectrum import calc_power
 from .tpcf_corrfunc import calc_multipole_fast, calc_wp_fast, calc_xirppi_fast
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
-
-@njit(parallel=True)
-def searchsorted_parallel(a, b):
-    res = np.empty(len(b), dtype = np.int64)
-    for i in numba.prange(len(b)):
-        res[i] = np.searchsorted(a, b[i])
-    return res
 
 class AbacusHOD:
     """
@@ -368,7 +366,7 @@ class AbacusHOD:
                      "hdeltac": hdeltac, 
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
-        pinds = searchsorted_parallel(hid, phid)
+        pinds = _searchsorted_parallel(hid, phid)
         particle_data = {"ppos": ppos, 
                          "pvel": pvel, 
                          "phvel": phvel, 
@@ -986,4 +984,10 @@ class AbacusHOD:
             mockdict[tracer] = ascii.read(outdir/(tracer+'s.dat'))
         return mockdict
 
+@njit(parallel=True)
+def _searchsorted_parallel(a, b):
+    res = np.empty(len(b), dtype = np.int64)
+    for i in numba.prange(len(b)):
+        res[i] = np.searchsorted(a, b[i])
+    return res
 
