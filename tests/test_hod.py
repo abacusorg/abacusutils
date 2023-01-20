@@ -123,6 +123,8 @@ def test_hod(tmp_path, reference_mode = False):
         config['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph006' # so that meta can find it
         config['sim_params']['z_mock'] = 0.8 # so that meta can find it
         config['HOD_params']['want_rsd'] = False # so that it doesn't run twice
+        config['zcv_params']['zcv_dir'] = pjoin(TESTDIR, 'data_zcv')
+        config['zcv_params']['tracer_dir'] = pjoin(tmp_path, 'zcv_tracer_data')
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd = config['HOD_params']['want_rsd'], write_to_disk = False, Nthread = 2)
         del mock_dict['ELG']  # drop ELG since zcv works with a single tracer currently
         zcv_dict = newBall.apply_zcv(mock_dict, config)

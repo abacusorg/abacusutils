@@ -12,7 +12,6 @@ from pathlib import Path
 import asdf
 import numpy as np
 import yaml
-from classy import Class
 
 from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
                                             get_k_mu_box_edges, get_k_mu_edges,
@@ -20,6 +19,12 @@ from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
+
+try:
+    from classy import Class
+except ImportError as e:
+    raise ImportError('Could not import classy. Install abacusutils with '
+        '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
@@ -110,7 +115,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
     field_D = [1, D, D**2, D**2, D]
 
     # save the advected fields
-    if np.product(np.array([os.path.exists(fn) for fn in fields_fft_fn])):
+    if all(os.path.exists(fn) for fn in fields_fft_fn):
         fields_fft = []
         for i in range(len(keynames)):
             fields_fft.append(asdf.open(fields_fft_fn[i])['data'])
