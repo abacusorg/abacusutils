@@ -30,6 +30,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'sphinx.ext.intersphinx',
               'sphinx.ext.autosectionlabel',
+              'myst_nb',
             ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -39,6 +40,12 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build']
+
+root_doc = "index"
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.ipynb': 'myst-nb',
+}
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -87,3 +94,5 @@ autosectionlabel_prefix_document = True
 autodoc_member_order = 'bysource'
 autodoc_mock_imports = ['Corrfunc',]
 autodoc_warningiserror = True
+
+nb_execution_mode = 'off'

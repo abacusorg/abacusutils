@@ -36,6 +36,12 @@ and new features!
 
 .. toctree::
    :maxdepth: 2
+   :caption: Tutorials
+
+   tutorials/light_cones
+
+.. toctree::
+   :maxdepth: 2
    :caption: API Documentation
 
    modules

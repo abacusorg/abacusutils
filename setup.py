@@ -29,6 +29,7 @@ extras_require = dict(extra=['emcee',
                            ],
                       docs=['sphinx >= 4.2',
                             'sphinx-book-theme >= 0.3',
+                            'myst_nb >= 0.17.1',
                             ],
                     )
 extras_require['test'] = extras_require['zcv'] + ['pytest']
