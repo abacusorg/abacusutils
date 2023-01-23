@@ -54,8 +54,8 @@ Theory
 ------
 The baseline HOD for LRGs comes from Zheng et al. 2007:
 
-.. math:: \\bar{n}_{\\mathrm{cent}}(M) = \\frac{1}{2}\\mathrm{erfc} \\left[\\frac{\\ln(M_{\\mathrm{cut}}/M)}{\\sqrt{2}\\sigma}\\right],
-.. math:: \\bar{n}_{\\textrm{sat}}(M) = \\left[\\frac{M-\\kappa M_{\\textrm{cut}}}{M_1}\\right]^{\\alpha}\\bar{n}_{\\mathrm{cent}}(M),
+.. math:: \bar{n}_{\mathrm{cent}}(M) = \frac{1}{2}\mathrm{erfc} \left[\frac{\ln(M_{\mathrm{cut}}/M)}{\sqrt{2}\sigma}\right],
+.. math:: \bar{n}_{\textrm{sat}}(M) = \left[\frac{M-\kappa M_{\textrm{cut}}}{M_1}\right]^{\alpha}\bar{n}_{\mathrm{cent}}(M),
 
 The baseline HOD for ELGs and QSOs
 comes from Alam et al. 2020. The actual calculation
@@ -72,27 +72,27 @@ prescription of conformity.
 The secondary bias (assembly bias) extensions follow the recipes described in
 `Xu et al. 2020 <https://arxiv.org/abs/2007.05545>`_ , where the secondary halo
 property (concentration or local overdensity) is directly tied to the mass
-parameters in the baseline HOD (:math:`M_{\\mathrm{cut}}` and :math:`M_1`):
+parameters in the baseline HOD (:math:`M_{\mathrm{cut}}` and :math:`M_1`):
 
-.. math:: \\log_{10} M_{\\mathrm{cut}}^{\\mathrm{mod}} = \\log_{10} M_{\\mathrm{cut}} + A_c(c^{\\mathrm{rank}} - 0.5) + B_c(\\delta^{\\mathrm{rank}} - 0.5)
-.. math:: \\log_{10} M_{1}^{\\mathrm{mod}} = \\log_{10} M_{1} + A_s(c^{\\mathrm{rank}} - 0.5) + B_s(\\delta^{\\mathrm{rank}} - 0.5)
+.. math:: \log_{10} M_{\mathrm{cut}}^{\mathrm{mod}} = \log_{10} M_{\mathrm{cut}} + A_c(c^{\mathrm{rank}} - 0.5) + B_c(\delta^{\mathrm{rank}} - 0.5)
+.. math:: \log_{10} M_{1}^{\mathrm{mod}} = \log_{10} M_{1} + A_s(c^{\mathrm{rank}} - 0.5) + B_s(\delta^{\mathrm{rank}} - 0.5)
 
-where :math:`c` and :math:`\\delta` represent the halo concentration and local
+where :math:`c` and :math:`\delta` represent the halo concentration and local
 overdensity, respectively. These secondary properties are ranked within narrow
 halo mass bins, and the rank are normalized to range from 0 to 1, as noted by
-the :math:`\\mathrm{rank}` superscript. :math:`(A_c, B_c, A_s, B_s)` form the
+the :math:`\mathrm{rank}` superscript. :math:`(A_c, B_c, A_s, B_s)` form the
 four parameters describing secondary biases in the HOD model. The default for
 these parameters are 0.
 
 The velocity bias extension follows the common prescription as described in
 `Guo et al. 2015 <https://arxiv.org/abs/1407.4811>`_ .
 
-.. math:: \\sigma_c = \\alpha_c \\sigma_h
-.. math:: v_s - v_h = \\alpha_s (v_p - v_h)
+.. math:: \sigma_c = \alpha_c \sigma_h
+.. math:: v_s - v_h = \alpha_s (v_p - v_h)
 
-where the central velocity bias parameter :math:`\\alpha_c` sets the ratio of
+where the central velocity bias parameter :math:`\alpha_c` sets the ratio of
 central velocity dispersion vs. halo velocity dispersion. The satellite
-velocity bias parameter :math:`\\alpha_c` sets the ratio between the satellite
+velocity bias parameter :math:`\alpha_c` sets the ratio between the satellite
 peculiar velocity to the particle peculiar velocity. The default for these two
 parameters are 0 and 1, respectively.
 
@@ -199,7 +199,7 @@ there. Here we show the scripts within ``run_hod.py`` for reference.::
         print("Done iteration ", i, "took time ", time.time() - start)
 
 The class also provides fast 2PCF calculators. For example to compute the
-redshift-space 2PCF (:math:`\\xi(r_p, \\pi)`): ::
+redshift-space 2PCF (:math:`\xi(r_p, \pi)`): ::
 
     # load the rp pi binning from the config file
     bin_params = clustering_params['bin_params']
