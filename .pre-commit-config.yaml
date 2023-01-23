@@ -5,8 +5,9 @@ exclude: |
   (?x)(
     ^scripts/disBatch/|
     ^tests/Mini_N64_L32/|
-    \.asdf$
-  )'
+    \.asdf$|
+    \.svg$
+  )
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

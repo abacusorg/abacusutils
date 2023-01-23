@@ -1,5 +1,5 @@
 import numpy as np
-from nbodykit.lab import *
+from nbodykit.lab import ArrayCatalog, FFTPower
 
 def CompensateTSC(w, v):
     """
@@ -68,7 +68,7 @@ def CompensateTSCShotnoise(w, v):
     """
     for i in range(3):
         wi = w[i]
-        s = numpy.sin(0.5 * wi)**2
+        s = np.sin(0.5 * wi)**2
         v = v / (1 - s + 2./15 * s**2) ** 0.5
     return v
 
@@ -92,7 +92,7 @@ def CompensateCICShotnoise(w, v):
     """
     for i in range(3):
         wi = w[i]
-        s = numpy.sin(0.5 * wi)**2
+        s = np.sin(0.5 * wi)**2
         v = v / (1 - 2. / 3. * s) ** 0.5
     return v
 
