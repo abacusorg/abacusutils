@@ -410,7 +410,7 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     if rsd:
         var_nn_nosn = np.stack([multipole_cov(pk_nn_nosn, ell) for i_ell, ell in enumerate(poles)])
     else:
-        var_nn_nosn = 2. * (pk_nn-shotnoise[0])**2
+        var_nn_nosn = 2. * (pk_nn_nosn)**2
     r_zt_sn_lim = var_nn_nosn / np.sqrt(var_nn * var_nn_nosn)
     
     beta = cov_zn / var_zz
