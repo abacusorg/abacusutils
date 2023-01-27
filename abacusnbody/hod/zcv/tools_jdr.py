@@ -944,4 +944,3 @@ if __name__ == "__main__":
     ax[0].set_ylim([-100, 3000])
     plt.savefig(f"second_nmesh{nmesh:d}.png")
     plt.close()
-

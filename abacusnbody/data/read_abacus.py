@@ -16,13 +16,13 @@ file names, Astropy tables, etc.
 # TODO: generator to iterate over files
 # TODO: load multiple files into concatenated table
 
-from os.path import basename
 import warnings
+from os.path import basename
 
 import numpy as np
 from astropy.table import Table
 
-from .bitpacked import unpack_rvint, unpack_pids
+from .bitpacked import unpack_pids, unpack_rvint
 from .pack9 import unpack_pack9
 
 __all__ = ['read_asdf']

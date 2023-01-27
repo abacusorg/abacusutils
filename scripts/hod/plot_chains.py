@@ -1,11 +1,11 @@
+import argparse
 import os
 
-import numpy as np
-import matplotlib.pyplot as plt
-import argparse
 import getdist
-from getdist import plots, MCSamples
+import matplotlib.pyplot as plt
+import numpy as np
 import yaml
+from getdist import MCSamples, plots
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -61,4 +61,3 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     main(**args)
-

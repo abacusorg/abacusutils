@@ -1,14 +1,17 @@
 # allsims testhod rsd
-import numpy as np
-import os, sys, time, gc
+import gc
+import time
+
 import Corrfunc
+import numba
+import numpy as np
 # from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
 # from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
 # from Corrfunc.theory.DDrppi import
-from Corrfunc.theory import wp, xi, DDsmu, DDrppi
-from scipy.special import legendre
+from Corrfunc.theory import DDrppi, DDsmu, wp, xi
 from numba import njit
-import numba
+from scipy.special import legendre
+
 
 def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
     r"""
@@ -222,4 +225,3 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     xirppi = DD_counts / RR_counts[:, None] - 1
 
     return 2*np.sum(xirppi, axis = 1)
-

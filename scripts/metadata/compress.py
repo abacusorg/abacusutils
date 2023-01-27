@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
-import pickle
 import json
+import pickle
+from pathlib import Path
 
-import click
 import asdf
+import click
 import numpy as np
+
 
 @click.command()
 @click.argument('fn')

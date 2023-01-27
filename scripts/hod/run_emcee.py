@@ -1,15 +1,15 @@
 #! /usr/bin/env python
 
-import os
-import time
-import sys
-
-import numpy as np
 import argparse
-import emcee
-import yaml
+import os
+import sys
+import time
 
+import emcee
+import numpy as np
+import yaml
 from likelihood import PowerData
+
 from abacusnbody.hod.abacus_hod import AbacusHOD
 
 DEFAULTS = {}
@@ -222,4 +222,3 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     main(**args)
-

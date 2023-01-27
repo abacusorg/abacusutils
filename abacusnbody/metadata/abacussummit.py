@@ -4,9 +4,9 @@ AbacusSummit simulations.
 '''
 
 import importlib.resources
-import msgpack
 
 import asdf
+import msgpack
 
 metadata = None
 metadata_fn = 'abacussummit_headers_compressed.asdf'

@@ -990,4 +990,3 @@ def _searchsorted_parallel(a, b):
     for i in numba.prange(len(b)):
         res[i] = np.searchsorted(a, b[i])
     return res
-

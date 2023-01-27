@@ -1,6 +1,7 @@
 import numpy as np
 from nbodykit.lab import ArrayCatalog, FFTPower
 
+
 def CompensateTSC(w, v):
     """
     Return the Fourier-space kernel that accounts for the convolution of

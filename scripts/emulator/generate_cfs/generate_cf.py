@@ -7,19 +7,18 @@ $ ./generate_cf.py --help
 
 '''
 
-import os
-import gc
 import argparse
+import gc
+import os
 from pathlib import Path
 from time import perf_counter
 
-import numpy as np
-import Corrfunc
-from astropy.table import Table
 import asdf
+import Corrfunc
+import numpy as np
+from astropy.table import Table
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
-
 
 DEFAULT_NDENS = 1e-4
 DEFAULT_NTHREAD = len(os.sched_getaffinity(0))  # guess based on affinity mask

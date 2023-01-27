@@ -7,8 +7,8 @@ Most users will not use this module directly, but will instead use the
 :func:`abacusnbody.data.read_abacus.read_asdf` function.
 '''
 
-import numpy as np
 import numba as nb
+import numpy as np
 
 __all__ = ['unpack_pack9']
 

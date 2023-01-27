@@ -13,29 +13,30 @@ https://abacusutils.readthedocs.io/en/latest/compaso.html
 or docs/compaso.rst.
 """
 
-from glob import glob
+import gc
 import os
 import os.path
-from pathlib import PurePath
-from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, abspath, samefile
 import re
-import gc
 import warnings
-from time import perf_counter as timer
-
 from collections import defaultdict
+from glob import glob
+from os.path import abspath, basename, dirname, isdir, isfile
+from os.path import join as pjoin
+from os.path import normpath, samefile
+from pathlib import PurePath
 
 # Stop astropy from trying to download time data; nodes on some clusters are not allowed to access the internet directly
 from astropy.utils import iers
+
 iers.conf.auto_download = False
 
-import numpy as np
-import numba as nb
-import astropy.table
-from astropy.table import Table
 import asdf
-
 import asdf.compression
+import astropy.table
+import numba as nb
+import numpy as np
+from astropy.table import Table
+
 try:
     asdf.compression.validate('blsc')
 except Exception as e:
@@ -47,6 +48,7 @@ from . import bitpacked
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
 from . import asdf as _asdf
+
 _asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
@@ -1493,4 +1495,3 @@ user_dt = np.dtype([('id', np.uint64),
                     ('sigmavtan_L2com', np.float32),
                     ('rvcirc_max_L2com', np.float32),
 ], align=True)
- 

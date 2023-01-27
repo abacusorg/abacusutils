@@ -3,11 +3,10 @@
 import os
 from pathlib import Path
 
-import click
 import asdf
-from tqdm import tqdm
-
+import click
 from Abacus.InputFile import InputFile
+from tqdm import tqdm
 
 ABACUSSUMMIT = Path(os.getenv('CFS', '/global/cfs/cdirs')) / 'desi/cosmosim/Abacus'
 COSMOLOGIES = Path(os.getenv('ABACUS')) / 'external/AbacusSummit/Cosmologies'

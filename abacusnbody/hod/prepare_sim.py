@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 '''
 This is a script for loading simulation data and generating subsamples.
 
@@ -7,29 +6,25 @@ Usage
 $ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.yaml
 '''
 
-import os
-from pathlib import Path
-import yaml
-import multiprocessing
-from multiprocessing import Pool
-import random
-import time
-import itertools
-from itertools import repeat
 import argparse
 import gc
+import itertools
+import multiprocessing
+import os
+from itertools import repeat
+from pathlib import Path
 
-import numpy as np
-from astropy.table import Table
 import h5py
-from scipy.ndimage import gaussian_filter
-from scipy.interpolate import NearestNDInterpolator
-from numba import njit, types, jit
 import numba
+import numpy as np
+import yaml
+from astropy.table import Table
+from numba import jit, njit, types
+from scipy.interpolate import NearestNDInterpolator
+from scipy.ndimage import gaussian_filter
 from scipy.spatial import cKDTree
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
-
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'

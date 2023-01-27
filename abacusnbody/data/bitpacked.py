@@ -7,8 +7,8 @@ Most users will not use this module directly, but will instead use
 :func:`abacusnbody.data.read_abacus.read_asdf`.
 '''
 
-import numpy as np
 import numba as nb
+import numpy as np
 
 __all__ = ['unpack_rvint', 'unpack_pids']
 

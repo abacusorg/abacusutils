@@ -5,10 +5,9 @@ The reference files are stored in `tests/ref_data`.
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 from astropy.table import Table
-import numpy as np
-
 from common import check_close
 
 curdir = Path(__file__).parent
@@ -167,8 +166,8 @@ def test_unpack_bits():
     '''Test unpack_bits
     '''
 
-    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
     from abacusnbody.data.bitpacked import PID_FIELDS
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, unpack_bits=True, fields='N')
     assert set(PID_FIELDS) <= set(cat.subsamples.colnames)  # check subset

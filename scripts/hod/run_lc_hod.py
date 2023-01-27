@@ -10,13 +10,11 @@ Usage
 $ python ./run_hod.py --help
 '''
 
-import os
-import glob
+import argparse
 import time
 
-import yaml
 import numpy as np
-import argparse
+import yaml
 
 from abacusnbody.hod.abacus_hod import AbacusHOD
 

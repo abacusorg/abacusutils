@@ -7,13 +7,10 @@ Usage
 $ python ./run_lc_hod.py --help
 '''
 
-import os
-import glob
-import time
-
-import yaml
-import numpy as np
 import argparse
+
+import numpy as np
+import yaml
 
 from abacusnbody.hod.abacus_hod import AbacusHOD
 

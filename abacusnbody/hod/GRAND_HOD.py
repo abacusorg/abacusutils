@@ -1,17 +1,12 @@
-import os
-import sys
-import time
-from pathlib import Path
-import pkgutil
 import math
-from math import erfc
-
-import numpy as np
-from astropy.table import Table
-from astropy.io import ascii
+import os
+import time
 
 import numba
-from numba import njit, types, jit
+import numpy as np
+from astropy.io import ascii
+from astropy.table import Table
+from numba import jit, njit, types
 from numba.typed import Dict
 
 # import yaml

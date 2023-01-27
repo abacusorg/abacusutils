@@ -1,17 +1,15 @@
 #! /usr/bin/env python
 
-import os
-import time
-import sys
-
-import numpy as np
 import argparse
-from dynesty import NestedSampler
-import yaml
+import os
+
 import dill
+import numpy as np
+import yaml
+from dynesty import NestedSampler
+from likelihood import PowerData
 from scipy import stats
 
-from likelihood import PowerData
 from abacusnbody.hod.abacus_hod import AbacusHOD
 
 DEFAULTS = {}
@@ -121,4 +119,3 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     main(**args)
-

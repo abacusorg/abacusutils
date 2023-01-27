@@ -8,14 +8,15 @@ It contains the reference to the Compressor subclass that knows how to
 handle Blosc compression.
 '''
 
-import time
 import struct
-
-import numpy as np
-import blosc
-from asdf.extension import Extension, Compressor
+import time
 
 import asdf
+import blosc
+import numpy as np
+from asdf.extension import Compressor, Extension
+
+
 def _monkey_patch(*args,**kwargs):
     raise Exception("Please use abacusnbody.data.asdf.set_nthreads(nthreads)")
 

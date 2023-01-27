@@ -5,15 +5,18 @@ CHECK: Syntax for load pk_ij
 Might not be necessary to save
 """
 import gc
-import os
 from pathlib import Path
 
 import asdf
 import numpy as np
 
-from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
-                                            get_k_mu_box_edges, get_k_mu_edges,
-                                            get_W_compensated)
+from abacusnbody.hod.power_spectrum import (
+    calc_pk3d,
+    get_field_fft,
+    get_k_mu_box_edges,
+    get_k_mu_edges,
+    get_W_compensated,
+)
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
