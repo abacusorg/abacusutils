@@ -24,8 +24,6 @@ from .ic_fields import compress_asdf
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def main(path2config, want_rsd=False, alt_simname=None):
-    # field names
-    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
@@ -33,6 +31,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
     ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
+    keynames = config['zcv_params']['fields']
 
     # power params
     if alt_simname is not None:
@@ -79,12 +78,22 @@ def main(path2config, want_rsd=False, alt_simname=None):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    for k in ('H0', 'omega_b', 'omega_cdm',
-              'omega_ncdm', 'N_ncdm', 'N_ur',
-              'n_s', #'A_s', 'alpha_s',
-              #'wa', 'w0',
-              ):
-        cosmo[k] = meta[k]
+    # TESTING!!!!!!!!!!!!!!!
+    phase = int(sim_name.split('ph')[-1])
+    if phase <= 6 and z_this == 0.8: # case old convention:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', #'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
+    else:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', 'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
     boltz.set(cosmo)
     boltz.compute()
     
@@ -94,7 +103,15 @@ def main(path2config, want_rsd=False, alt_simname=None):
     fields_fft_fn = []
     for i in range(len(keynames)):
         fields_fft_fn.append(Path(save_z_dir) / f"advected_{keynames[i]}_field{rsd_str}_fft_nmesh{nmesh:d}.asdf")
-    power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}.asdf"
+    if not logk:
+        dk = k_bin_edges[1]-k_bin_edges[0]
+    else:
+        dk = np.log(k_bin_edges[1]/k_bin_edges[0])
+    if n_k_bins == nmesh//2:
+        power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}.asdf"
+    else:
+        power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}_dk{dk:.3f}.asdf"
+        print("power file", str(power_ij_fn))
         
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)

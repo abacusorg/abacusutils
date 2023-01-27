@@ -11,6 +11,7 @@ from pathlib import Path
 import asdf
 import numpy as np
 from classy import Class
+from scipy.fft import fftn
 
 from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
                                             get_k_mu_box_edges, get_k_mu_edges,
@@ -21,14 +22,13 @@ from .ic_fields import compress_asdf
 
 
 def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
-    # field names
-    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
     # read zcv parameters
     zcv_dir = config['zcv_params']['zcv_dir']
     ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
+    keynames = config['zcv_params']['fields']
 
     # power params
     sim_name = config['sim_params']['sim_name']
@@ -77,12 +77,22 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    for k in ('H0', 'omega_b', 'omega_cdm',
-              'omega_ncdm', 'N_ncdm', 'N_ur',
-              'n_s', #'A_s', 'alpha_s',
-              #'wa', 'w0',
-              ):
-        cosmo[k] = meta[k]
+    # TESTING!!!!!!!!!!!!!!!
+    phase = int(sim_name.split('ph')[-1])
+    if phase <= 6 and z_this == 0.8: # case old convention:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', #'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
+    else:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', 'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
     boltz.set(cosmo)
     boltz.compute()
     
@@ -93,7 +103,14 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     for i in range(len(keynames)):
         fields_fft_fn.append(Path(save_z_dir) / f"advected_{keynames[i]}_field{rsd_str}_fft_nmesh{nmesh:d}.asdf")
     tr_field_fft_fn = Path(save_z_dir) / f"tr_field{rsd_str}_fft_nmesh{nmesh:d}.asdf"
-    power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_nmesh{nmesh:d}.asdf"
+    if not logk:
+        dk = k_bin_edges[1]-k_bin_edges[0]
+    else:
+        dk = np.log(k_bin_edges[1]/k_bin_edges[0])
+    if n_k_bins == nmesh//2:
+        power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_nmesh{nmesh:d}.asdf"
+    else:
+        power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_nmesh{nmesh:d}_dk{dk:.3f}.asdf"
 
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)
@@ -175,6 +192,142 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
         pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
         del field_fft_i; gc.collect()
+                        
+    header = {}
+    header['sim_name'] = sim_name
+    header['Lbox'] = Lbox
+    header['nmesh'] = nmesh
+    header['kcut'] = kcut
+    if want_save:
+        compress_asdf(str(power_tr_fn), pk_tr_dict, header)
+    return pk_tr_dict
+
+def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True):
+    # field names
+    keynames = ['delta', 'deltamu2']
+
+    # read lcv parameters
+    lcv_dir = config['lcv_params']['lcv_dir']
+    ic_dir = config['lcv_params']['ic_dir']
+    nmesh = config['lcv_params']['nmesh']
+    kcut = config['lcv_params']['kcut']
+    rec_algo = config['HOD_params']['rec_algo']
+
+    # power params
+    sim_name = config['sim_params']['sim_name']
+    z_this = config['sim_params']['z_mock']
+    k_hMpc_max = config['power_params']['k_hMpc_max']
+    logk = config['power_params']['logk']
+    n_k_bins = config['power_params']['nbins_k']
+    n_mu_bins = config['power_params']['nbins_mu']
+    poles = config['power_params']['poles']
+    paste = config['power_params']['paste']
+    compensated = config['power_params']['compensated']
+    interlaced = config['power_params']['interlaced']
+    #want_rsd = config['HOD_params']['want_rsd']
+    rsd_str = "_rsd" if want_rsd else ""
+
+    # get a few parameters for the simulation
+    meta = get_meta(sim_name, redshift=z_this)
+    Lbox = meta['BoxSize']
+    z_ic = meta['InitialRedshift']
+    k_Ny = np.pi*nmesh/Lbox
+    
+    # define k, mu bins
+    n_perp = n_los = nmesh
+    k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
+    mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5
+
+    # start dictionary with power spectra
+    pk_tr_dict = {}
+    pk_tr_dict['k_binc'] = k_binc
+    pk_tr_dict['mu_binc'] = mu_binc
+    
+    # create save directory
+    save_dir = Path(lcv_dir) / sim_name
+    save_z_dir = save_dir / f"z{z_this:.3f}"
+    os.makedirs(save_z_dir, exist_ok=True)
+
+    # get the window function of TSC/CIC
+    if compensated:
+        W = get_W_compensated(Lbox, nmesh, paste, interlaced)
+    else:
+        W = None
+        
+    # file to save to
+    ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
+    tr_field_fft_fn = Path(save_z_dir) / f"tr_field{rsd_str}_fft_nmesh{nmesh:d}.asdf" # overwrites
+    if not logk:
+        dk = k_bin_edges[1]-k_bin_edges[0]
+    else:
+        dk = np.log(k_bin_edges[1]/k_bin_edges[0])
+    if n_k_bins == nmesh//2:
+        power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_{rec_algo}_lin_nmesh{nmesh:d}.asdf"
+    else:
+        power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_{rec_algo}_lin_nmesh{nmesh:d}_dk{dk:.3f}.asdf"
+
+    # create fft field for the tracer
+    w = None
+    print("min/max tracer pos", tracer_pos.min(), tracer_pos.max(), tracer_pos.shape)
+    tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
+    if random_pos is not None:
+        rn_field_fft = get_field_fft(random_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
+        tr_field_fft -= rn_field_fft
+        del random_pos, rn_field_fft; gc.collect()
+    del tracer_pos; gc.collect()
+
+    if want_save:
+        # save the tracer field
+        header = {}
+        header['sim_name'] = sim_name
+        header['Lbox'] = Lbox
+        header['nmesh'] = nmesh
+        header['compensated'] = compensated
+        header['interlaced'] = interlaced
+        header['paste'] = paste
+        table = {}
+        table['tr_field_fft_Re'] = np.array(tr_field_fft.real, dtype=np.float32)
+        table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
+        compress_asdf(tr_field_fft_fn, table, header)
+        del table; gc.collect()
+
+    # TESTING
+    #tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
+
+    # load density field
+    f = asdf.open(ic_fn)
+    delta = f['data']['dens'][:, :, :]
+    print("mean delta", np.mean(delta))
+
+    # do fourier transform
+    delta_fft = fftn(delta)/nmesh**3
+    del delta; gc.collect()
+    
+    # get the box k and mu modes
+    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
+
+    # do mu_box**2 delta and get the three power spectra from this
+    fields = {'delta': delta_fft, 'deltamu2': delta_fft*mu_box.reshape(delta_fft.shape)**2}
+    
+    # compute the galaxy auto rsd poles
+    print("Computing auto-correlation of tracer")
+    pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
+    pk_tr_dict['P_kmu_tr_tr'] = pk3d
+    pk_tr_dict['N_kmu_tr_tr'] = N3d
+    pk_tr_dict['P_ell_tr_tr'] = binned_poles
+    pk_tr_dict['N_ell_tr_tr'] = Npoles
+    
+    # initiate final arrays
+    for i in range(len(keynames)):
+        print("Computing cross-correlation of tracer and ", keynames[i])
+        
+        # compute power spectrum
+        pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields[keynames[i]], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
+        pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
+        pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
+        pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
+        pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
                         
     header = {}
     header['sim_name'] = sim_name

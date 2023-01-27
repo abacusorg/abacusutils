@@ -1,8 +1,8 @@
-"""
-Script for saving the initial conditions fields.
+"""Script for saving the initial conditions fields.
 
-Possible speedups: save the fields separately to save space;
-Make the k arrays smaller and presave them
+Possible speedups: save the fields separately to save space;Make the k
+arrays smaller and presave them
+
 """
 import argparse
 import gc
@@ -15,7 +15,7 @@ import yaml
 
 from abacusnbody.metadata import get_meta
 
-DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
+DEFAULTS = {'path2config': 'config/abacus_hod.yaml', 'cv_type': 'zcv'}
 
 def compress_asdf(asdf_fn, table, header):
     """
@@ -197,13 +197,19 @@ def get_fields(delta_lin, Lbox, nmesh):
     print("generated nabla^2")
     return d, d2, s2, n2
 
-def main(path2config, alt_simname=None):
+def main(path2config, cv_type, alt_simname=None):
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
-    zcv_dir = config['zcv_params']['zcv_dir']
-    ic_dir = config['zcv_params']['ic_dir']
-    nmesh = config['zcv_params']['nmesh']
-    kcut = config['zcv_params']['kcut']
+    if cv_type == "zcv":
+        zcv_dir = config['zcv_params']['zcv_dir']
+        ic_dir = config['zcv_params']['ic_dir']
+        nmesh = config['zcv_params']['nmesh']
+        kcut = config['zcv_params']['kcut']
+    elif cv_type == "lcv":
+        zcv_dir = config['lcv_params']['lcv_dir']
+        ic_dir = config['lcv_params']['ic_dir']
+        nmesh = config['lcv_params']['nmesh']
+        kcut = config['lcv_params']['kcut']
     if alt_simname is not None:
         sim_name = alt_simname
     else:
@@ -292,5 +298,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     parser.add_argument('--alt_simname', help='Alternative simulation name')
+    parser.add_argument('--cv_type', help='Type of control variates to use (ZelDovich or Linear)', default=DEFAULTS['cv_type'])
     args = vars(parser.parse_args())
     main(**args)

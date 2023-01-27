@@ -57,21 +57,40 @@ def main(path2config, alt_simname=None):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    for k in ('H0', 'omega_b', 'omega_cdm',
-              'omega_ncdm', 'N_ncdm', 'N_ur',
-              'n_s', #'A_s', 'alpha_s',
-              #'wa', 'w0',
-              ):
-        cosmo[k] = meta[k]
+    # TESTING!!!!!!!!!!!!!!!
+    phase = int(sim_name.split('ph')[-1])
+    if phase <= 6 and z_this == 0.8: # case old convention:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', #'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
+    else:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', 'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
 
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
     
     # name of file to save to
-    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
+    
+    if not logk:
+        dk = k_bins[1]-k_bins[0]
+    else:
+        dk = np.log(k_bins[1]/k_bins[0])
+    if n_k_bins == nmesh//2:
+        zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
+        window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
+    else:
+        zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}_dk{dk:.3f}.npz"
+        window_fn = save_dir / f"window_nmesh{nmesh:d}_dk{dk:.3f}.npz"
     pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
-    window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
     
     # load the power spectrum at z = 1
     if os.path.exists(pk_lin_fn):
@@ -108,7 +127,7 @@ def main(path2config, alt_simname=None):
             lptobj = lptobj.pktable
         np.savez(zenbu_fn, pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
         print("Saved zenbu for this simulation, redshift and RSD choice.")
-        
+
     # presave the window function
     print("Generating window function")
     if os.path.exists(window_fn):

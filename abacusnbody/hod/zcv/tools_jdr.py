@@ -128,6 +128,66 @@ def combine_cross_spectra(k, spectra, bias_params, rsd=False):
         pk = combine_real_space_cross_spectra(k, spectra, bias_params)
     return pk
 
+def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=False):
+    """
+    kinda slow smoothing
+    """    
+    if rec_algo == "recsym":
+        # < D (b delta + f mu2 delta, tr > = D * (b < delta, tr> + f < mu2 delta, tr >)
+        if rsd:
+            pk = D * (bias * spectra_dict['P_ell_delta_tr'] + f_growth * spectra_dict['P_ell_deltamu2_tr'])
+        else:
+            pk = D * (bias * spectra_dict['P_kmu_delta_tr'] + f_growth * spectra_dict['P_kmu_deltamu2_tr'])
+    elif rec_algo == "reciso":
+        # < D ((b+f mu^2)(1-S) + bS) delta, tr > = D * (b < delta, tr > + f (1-S) < delta, mu^2 >)
+        assert R is not None
+        S = get_smoothing(k, R)
+        f_eff = f_growth * (1.-S)
+        if rsd:
+            f_eff = f_eff.reshape(1, len(k), 1)
+            print(f_eff.shape, spectra_dict['P_ell_delta_tr'].shape)
+            pk = D * (bias * spectra_dict['P_ell_delta_tr'] + f_eff * spectra_dict['P_ell_deltamu2_tr'])
+        else:
+            pk = D * (bias * spectra_dict['P_kmu_delta_tr'] + f_eff * spectra_dict['P_kmu_deltamu2_tr'])
+    return pk
+
+def combine_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=False):
+    """
+    kinda slow
+    """
+    if rec_algo == "recsym":
+        # < D (b delta + f mu2 delta, D (b delta + f mu2 delta) > = D^2 (b^2 < delta, delta> + f^2 < mu2 delta, mu2 delta > + 2 b f < delta, mu2 delta >)
+        if rsd:
+            pk = D**2 * (2. * bias * f_growth * spectra_dict['P_ell_deltamu2_delta'] + f_growth**2 * spectra_dict['P_ell_deltamu2_deltamu2'] + bias**2 * spectra_dict['P_ell_delta_delta'])
+        else:
+            pk = D**2 * (2. * bias * f_growth * spectra_dict['P_kmu_deltamu2_delta'] + f_growth**2 * spectra_dict['P_kmu_deltamu2_deltamu2'] + bias**2 * spectra_dict['P_kmu_delta_delta'])
+    elif rec_algo == "reciso":
+        # ((b+f mu^2)(1-S) + bS) delta = (b + f (1-S) mu2) delta
+        # < D ((b+f mu^2)(1-S) + bS) delta, D ((b+f mu^2)(1-S) + bS) delta > = D^2 (b^2 < delta, delta> + fefff^2 < mu2 delta, mu2 delta > + 2 b feff < delta, mu2 delta >)
+        assert R is not None
+        S = get_smoothing(k, R) # tuks
+        f_eff = f_growth * (1.-S)
+        if rsd:
+            f_eff = f_eff.reshape(1, len(k), 1)
+            print(f_eff.shape, spectra_dict['P_ell_delta_delta'].shape)
+            pk = D**2 * (2. * bias * f_eff * spectra_dict['P_ell_deltamu2_delta'] + f_eff**2 * spectra_dict['P_ell_deltamu2_deltamu2'] + bias**2 * spectra_dict['P_ell_delta_delta'])
+        else:
+            pk = D**2 * (2. * bias * f_eff * spectra_dict['P_kmu_deltamu2_delta'] + f_eff**2 * spectra_dict['P_kmu_deltamu2_deltamu2'] + bias**2 * spectra_dict['P_kmu_delta_delta'])
+    return pk
+
+def get_poles(k, pk, D, bias, f_growth, poles=[0, 2, 4]):
+    beta = f_growth/bias
+    p_ell = []
+    if 0 in poles:
+        p_ell.append((1. + 2./3.*beta + 1./5*beta**2)*pk)
+    if 2 in poles:
+        p_ell.append((4./3.*beta + 4./7*beta**2)*pk)
+    if 4 in poles:
+        p_ell.append((8./35*beta**2)*pk)
+    p_ell = np.array(p_ell)
+    p_ell *= bias**2 * D**2
+    return k, p_ell
+
 @jit(nopython=True)
 def meshgrid(x, y, z):
     xx = np.empty(shape=(y.size, x.size, z.size), dtype=x.dtype)
@@ -296,8 +356,8 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
         pk_ij_zenbu[:,:,:pk_ij_zenbu_conv.shape[-1]] = pk_ij_zenbu_conv # if win fac is > 1 get rid of nans
         pk_ij_zenbu[:,:,pk_ij_zenbu_conv.shape[-1]:] = 0
         
-    pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn = compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zenbu, bias_vec, window=window, kin=kin, kout=kout, s_ell=s_ell, rsd=rsd, k0=0.618, dk=0.167, sg_window=sg_window, poles=cfg['poles'])
-    return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn, pk_ij_zenbu, pkclass
+    pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn, r_zt_sn_lim = compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zenbu, bias_vec, window=window, kin=kin, kout=kout, s_ell=s_ell, rsd=rsd, k0=0.618, dk=0.167, sg_window=sg_window, poles=cfg['poles'])
+    return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn, pk_ij_zenbu, pkclass, r_zt_sn_lim
 
 def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb, 
                                         bias_vec, window=None, kin=None, kout=None, 
@@ -306,7 +366,7 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     
     fields_z = ['1', 'd', 'd2', 's', 'n2']
     fields_zenbu = ['1', 'd', 'd2', 's']
-
+    
     # parsing
     component_spectra_zz = get_spectra_from_fields(fields_z, fields_z, neutrinos=False)
     pk_ij_zz_dict = dict(zip(component_spectra_zz, pk_ij_zz))
@@ -339,6 +399,19 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
         cov_zn = 2 * pk_zn ** 2
         var_zz = 2 * pk_zz ** 2
         var_nn = 2 * pk_nn ** 2
+
+    # sketchy stuff TESTING!!!!
+    # P_epseps = <(delta_t(k)-delta_z(k))(delta_t(-k)-delta_z(-k))> = Ptt-2Pzt+Pzz
+    shotnoise = (pk_nn - 2. * pk_zn + pk_zz)[0]
+    #shotnoise = 1.048156031502e+03
+    pk_nn_nosn = pk_nn.copy()
+    pk_nn_nosn[0] -= shotnoise
+    #print("shotnoise estimate", shotnoise)
+    if rsd:
+        var_nn_nosn = np.stack([multipole_cov(pk_nn_nosn, ell) for i_ell, ell in enumerate(poles)])
+    else:
+        var_nn_nosn = 2. * (pk_nn-shotnoise[0])**2
+    r_zt_sn_lim = var_nn_nosn / np.sqrt(var_nn * var_nn_nosn)
     
     beta = cov_zn / var_zz
     beta_damp = 1/2 * (1 - np.tanh((k - k0)/dk)) * beta
@@ -395,7 +468,85 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     pk_nn_betasmooth_nohex = pk_nn - beta_smooth * (pk_zz - pk_zenbu) # same as above
     pk_nn_beta1 = pk_nn - (pk_zz - pk_zenbu)
         
-    return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn
+    return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn, r_zt_sn_lim
+
+
+def reduce_variance_lin(k, pk_tt, pk_lt, pk_ll, p_m_lin, window=None,
+                        s_ell=[0.1, 10, 100], sg_window=21, rsd=False,
+                        k0=0.618, dk=0.167, beta1_k=0.05, poles=[0, 2, 4]):
+    
+    if rsd:
+        cov_lt = np.stack([multipole_cov(pk_lt, ell) for ell in poles])
+        var_ll = np.stack([multipole_cov(pk_ll, ell) for ell in poles])
+        var_tt = np.stack([multipole_cov(pk_tt, ell) for ell in poles])
+    else:
+        cov_lt = 2 * pk_lt ** 2
+        var_ll = 2 * pk_ll ** 2
+        var_tt = 2 * pk_tt ** 2
+
+    # sketchy stuff TESTING!!!!
+    # P_epseps = <(delta_t(k)-delta_z(k))(delta_t(-k)-delta_z(-k))> = Ptt-2Pzt+Pzz
+    shotnoise = (pk_tt - 2. * pk_lt + pk_ll)[0]
+    pk_tt_nosn = pk_tt.copy()
+    pk_tt_nosn[0] -= shotnoise
+    #print("shotnoise estimate", shotnoise)
+    #shotnoise = [1.048156031502e+03, 0, 0]
+    #print("shotnoise theory", shotnoise)
+    if rsd:
+        var_tt_nosn = np.stack([multipole_cov(pk_tt_nosn, ell) for i_ell, ell in enumerate(poles)])
+    else:
+        var_tt_nosn = 2. * (pk_tt-shotnoise[0])**2
+    r_lt_sn_lim = var_tt_nosn / np.sqrt(var_tt * var_tt_nosn)
+        
+    beta = cov_lt / var_ll
+    beta_damp = 1/2 * (1 - np.tanh((k - k0)/dk)) * beta
+
+    r_lt = cov_lt / np.sqrt(var_ll * var_tt)
+    beta_damp = np.atleast_2d(beta_damp)
+    beta_damp[beta_damp != beta_damp] = 0
+    beta_damp[:, :k.searchsorted(beta1_k)] = 1
+    
+    r_lt = np.atleast_2d(r_lt)
+    r_lt[r_lt != r_lt] = 0
+
+    beta_smooth = np.zeros_like(beta_damp)
+    beta_smooth_nohex = np.zeros_like(beta_damp)
+    
+    for i in range(beta_smooth.shape[0]):
+        # TESTING kinda ugly
+        try:
+            beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
+        except: # only when running the smoke test
+            beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], 3, 2)
+        if i != 2:
+            try:
+                beta_smooth_nohex[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
+            except:
+                beta_smooth_nohex[i, :] = savgol_filter(beta_damp.T[:, i], 3, 2)
+        else:
+            beta_smooth_nohex[i, :] = 1
+            
+    r_lt_smooth = np.zeros_like(r_lt)
+    r_lt_smooth_nohex = np.zeros_like(r_lt)
+
+    for i in range(r_lt.shape[0]):
+        spl = splrep(k, r_lt.T[:, i], s=s_ell[i])
+        r_lt_smooth[i, :] = splev(k, spl) 
+        if i<1:
+            r_lt_smooth_nohex[i, :] = splev(k, spl)
+        else:
+            r_lt_smooth_nohex[i, :] = 1
+            
+    if (window is not None) and rsd:
+        p_m_lin = np.hstack(p_m_lin)
+        if rsd:
+            p_m_lin = np.dot(window.T, p_m_lin).reshape(len(poles), -1)
+    
+    pk_tt_hat = pk_tt - beta_damp * (pk_ll - p_m_lin)
+    pk_tt_betasmooth = pk_tt - beta_smooth * (pk_ll - p_m_lin)
+    pk_tt_betasmooth_nohex = pk_tt - beta_smooth * (pk_ll - p_m_lin)
+    pk_tt_beta1 = pk_tt - (pk_ll - p_m_lin)
+    return pk_tt_hat, pk_tt_betasmooth, pk_tt_betasmooth_nohex, pk_tt_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_ll, p_m_lin, r_lt, r_lt_smooth, r_lt_smooth_nohex, pk_lt, r_lt_sn_lim
 
 
 def multipole_cov(pell, ell):
@@ -622,8 +773,7 @@ def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
     kcut = k[kidx_min:kidx_max]
     pk_tt_kcut = pk_tt[kidx_min:kidx_max]
     pk_ij_heft_kcut = pk_ij_heft[:,kidx_min:kidx_max]
-    bvec0 = [1, 0, 0, 0, 5000] # og
-    #bvec0 = [1, 0, 0] # TESTING
+    bvec0 = [1, 0, 0, 0, 5000] # og b1, b2, bs, bn, sn
     # adding more realistic noise: error on P(k) is sqrt(2/Nk) P(k)
     #dk = kcut[1]-kcut[0]
     #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
@@ -633,8 +783,43 @@ def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
     
     out = minimize(loss, bvec0)
-    
     return out
+
+def get_smoothing(k, R):
+    return np.exp(-k**2*R**2/2.)
+
+def measure_2pt_bias_lin(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rsd, rec_algo, R, ellmax=2, kmin=0.0):
+    pk_tt = power_rsd_tr_dict['P_ell_tr_tr'][:ellmax, :, 0]
+    kidx_max = k.searchsorted(kmax)
+    kidx_min = k.searchsorted(kmin)
+    kcut = k[kidx_min:kidx_max]
+    pk_tt_kcut = pk_tt[:ellmax, kidx_min:kidx_max]
+    power_lin_dict = power_dict.copy()
+    for key in power_lin_dict.keys():
+        if "P_ell" not in key: continue
+        power_lin_dict[key] = power_lin_dict[key][:, kidx_min:kidx_max]
+    loss = lambda bias: np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0])**2/(2 * pk_tt_kcut**2))
+    out = minimize(loss, 1.)
+    return out
+
+def measure_2pt_bias_cross_lin(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rsd, rec_algo, R, ellmax=2, kmin=0.0): 
+    kidx_max = k.searchsorted(kmax)
+    kidx_min = k.searchsorted(kmin)
+    kcut = k[kidx_min:kidx_max]
+    power_rsd_dict = power_rsd_tr_dict.copy()
+    power_lin_dict = power_dict.copy()
+    for key in power_lin_dict.keys():
+        if "P_ell" not in key: continue
+        power_lin_dict[key] = power_lin_dict[key][:, kidx_min:kidx_max]
+    for key in power_rsd_dict.keys():
+        if "P_ell" not in key: continue
+        power_rsd_dict[key] = power_rsd_dict[key][:, kidx_min:kidx_max]
+    loss = lambda bias: np.sum((combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0] -
+                                combine_cross_kaiser_spectra(kcut, power_rsd_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0])**2/
+                               (2 * combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0]**2))
+    out = minimize(loss, 1.)
+    return out
+    
 
 def read_power(power_fn, keynames):
     f = asdf.open(str(power_fn))
@@ -685,8 +870,11 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
     
     if want_rsd:
         pk_tt[0, :, :] = power_tr_dict['P_ell_tr_tr'].reshape(len(poles), len(k))
+        nmodes = power_tr_dict['N_ell_tr_tr'].flatten()
     else:
         pk_tt[0, :, :] = power_tr_dict['P_kmu_tr_tr'].reshape(len(k), 1)
+        nmodes = power_tr_dict['N_kmu_tr_tr'].flatten()
+    
     count = 0
     for i in range(len(keynames)):
         if want_rsd:
@@ -703,7 +891,7 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
     
     #print(k, mu, pk_tt, pk_ij_zz, pk_ij_zt)
     print("zeros = ", np.sum(pk_tt == 0.), np.sum(pk_ij_zz == 0.), np.sum(pk_ij_zt == 0.))
-    return k, mu, pk_tt, pk_ij_zz, pk_ij_zt
+    return k, mu, pk_tt, pk_ij_zz, pk_ij_zt, nmodes
 
 def get_cfg(sim_name, z_this, nmesh):
     meta = get_meta(sim_name, redshift=z_this)
@@ -713,12 +901,23 @@ def get_cfg(sim_name, z_this, nmesh):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    for k in ('H0', 'omega_b', 'omega_cdm',
-              'omega_ncdm', 'N_ncdm', 'N_ur',
-              'n_s', #'A_s', 'alpha_s',
-              #'wa', 'w0',
-              ):
-        cosmo[k] = meta[k]
+    # TESTING!!!!!!!!!!!!!!!
+    phase = int(sim_name.split('ph')[-1])
+    if phase <= 6 and z_this == 0.8: # case old convention:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', #'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
+    else:
+        for k in ('H0', 'omega_b', 'omega_cdm',
+                  'omega_ncdm', 'N_ncdm', 'N_ur',
+                  'n_s', 'A_s', 'alpha_s',
+                  #'wa', 'w0',
+        ):
+            cosmo[k] = meta[k]
+            
 
     # create a dict with everything you would ever need
     cfg = {'lbox': Lbox, 'Cosmology': cosmo, 'z_ic': z_ic}
@@ -732,6 +931,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dir = config['zcv_params']['zcv_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
+    keynames = config['zcv_params']['fields']
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if want_rsd else ""
     
@@ -746,10 +946,8 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     save_dir = Path(zcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
 
-    # name of files to read from
-    zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
+    # linear power
     pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
-    window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
 
     # read the config params
     cfg = get_cfg(sim_name, z_this, nmesh)
@@ -758,26 +956,36 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     cfg['poles'] = poles
     cfg['surrogate_gaussian_cutoff'] = kcut
     Lbox = cfg['lbox']
-   
+
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
     
-    # field names
-    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
-
-    # read out the dictionaries
+    # name of files to read from
+    if not logk:
+        dk = k_bins[1]-k_bins[0]
+    else:
+        dk = np.log(k_bins[1]/k_bins[0])
+    if n_k_bins == nmesh//2:
+        zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
+        window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
+    else:
+        zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}_dk{dk:.3f}.npz"
+        window_fn = save_dir / f"window_nmesh{nmesh:d}_dk{dk:.3f}.npz"
+   
+    
+    # read out the dictionaries 
     if want_rsd: # then we need the no-rsd version (names are misleading)
-        k, mu, pk_tt, pk_ij_zz, pk_ij_zt = read_power_dict(power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames, poles=poles)
-    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles = read_power_dict(power_rsd_tr_dict, power_rsd_ij_dict, want_rsd=want_rsd, keynames=keynames, poles=poles)
+        k, mu, pk_tt, pk_ij_zz, pk_ij_zt, nmodes = read_power_dict(power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames, poles=poles)
+    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles, nmodes = read_power_dict(power_rsd_tr_dict, power_rsd_ij_dict, want_rsd=want_rsd, keynames=keynames, poles=poles)
     assert len(k) == len(k_binc)
     
     # load the linear power spectrum
     p_in = np.genfromtxt(cfg['p_lin_ic_file'])
     kth, p_m_lin = p_in[:,0], p_in[:,1]
 
-    # fit to get the biases # ellmax = 1 fits to monopole only ; 0.15 might be too high; try going to 0.1 tuks (nbar P(k) for shotnoise) nabla get rid of;
-    kmax = 0.15 #0.15 # og
+    # fit to get the biases
+    kmax = 0.15
     if want_rsd:
         bvec_opt = measure_2pt_bias_rsd(k, pk_ij_zz_poles[:,:,:], pk_tt_poles[0,:,:], kmax, ellmax=1)
         bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz[:,:,0], pk_tt[0,:,0], kmax)
@@ -797,13 +1005,15 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     pk_ij_zenbu = data['pk_ij_zenbu']
     lptobj = data['lptobj']
 
-    # reduce variance of measurement # give only first element, set rest to 0 (use b1, b1+b2) tuks (shotnoise is last; not used)
-    bias_vec = np.array(bvec_opt_rs['x']) # b1, b2, bs, bn, shot
-    #bias_vec[-2] = 0. # set to 0 if not using nabla
-    bias_vec[1:] = 0. # set to 0 all but b1 and b2
+    # reduce variance of measurement
+    bias_vec = np.array(bvec_opt_rs['x']) # b1, b2, bs, bn, shot (not used)
+    bias_vec[1:] = 0. # set to 0 all but b1
+    #bias_vec[2:] = 0. # set to 0 all but b1 and b2
+    #bias_vec[3:] = 0. # set to 0 all but b1, b2, bs
     bias_vec = np.hstack(([1.], bias_vec))
     #bias_vec = [1, *bvec_opt_rs['x']]
-
+    #bias_vec[1] = 1.05 # TESTING
+    
     # decide what to input depending on whether rsd requested or not
     if want_rsd:
         pk_tt_input = pk_tt_poles[0,...]
@@ -817,7 +1027,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex,\
     pk_nn_beta1, beta, beta_damp, beta_smooth, \
     beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth,\
-    r_zt_smooth_nohex, pk_zn, pk_ij_zenbu_poles, pkclass = reduce_variance_tt(k_binc, pk_tt_input, pk_ij_zt_input,
+    r_zt_smooth_nohex, pk_zn, pk_ij_zenbu_poles, pkclass, r_zt_sn_lim = reduce_variance_tt(k_binc, pk_tt_input, pk_ij_zt_input,
                                                                               pk_ij_zz_input, cfg, z_this,
                                                                               bias_vec, kth, p_m_lin, rsd=want_rsd,
                                                                               win_fac=1, kout=k_bins,
@@ -828,115 +1038,151 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dict['k_binc'] = k_binc
     zcv_dict['poles'] = poles
     zcv_dict['rho_tr_ZD'] = r_zt
+    zcv_dict['rho_tr_ZD_sn_lim'] = r_zt_sn_lim
     zcv_dict['Pk_ZD_ZD_ell'] = pk_zz
     zcv_dict['Pk_tr_ZD_ell'] = pk_zn
     zcv_dict['Pk_tr_tr_ell'] = pk_tt_poles
+    zcv_dict['Nk_tr_tr_ell'] = nmodes
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
     return zcv_dict
+
+def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
+
+    # read out some parameters from the config function
+    sim_name = config['sim_params']['sim_name']
+    z_this = config['sim_params']['z_mock']
+    lcv_dir = config['lcv_params']['lcv_dir']
+    nmesh = config['lcv_params']['nmesh']
+    kcut = config['lcv_params']['kcut']
+    want_rsd = config['HOD_params']['want_rsd']
+    rsd_str = "_rsd" if want_rsd else ""
     
+    # power params
+    k_hMpc_max = config['power_params']['k_hMpc_max']
+    logk = config['power_params']['logk']
+    n_k_bins = config['power_params']['nbins_k']
+    n_mu_bins = config['power_params']['nbins_mu']
+    poles = config['power_params']['poles']
+
+    # reconstruction algorithm
+    rec_algo = config['HOD_params']['rec_algo']
+    if rec_algo == 'recsym':
+        R = None
+    elif rec_algo == "reciso":
+        R = config['HOD_params']['smoothing']
     
-if __name__ == "__main__":
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    from classy import Class
+    # create save directory
+    save_dir = Path(lcv_dir) / sim_name
+    save_z_dir = save_dir / f"z{z_this:.3f}"
 
-    from abacusnbody.metadata import get_meta
-
-    # get a few parameters for the simulation
-    sim_name = "AbacusSummit_high_c000_ph100"
-    z_this = 3.0
-    cfg = get_cfg(sim_name, z_this)
-    Lbox = cfg['lbox']
-    nmesh = cfg['nmesh']
+    # read meta data
+    meta = get_meta(sim_name, redshift=z_this)
+    Lbox = meta['BoxSize']
+    z_ic = meta['InitialRedshift']
+    D_ratio = meta['GrowthTable'][z_ic]/meta['GrowthTable'][1.0]
+    k_Ny = np.pi*nmesh/Lbox
+    cosmo = {}
+    cosmo['output'] = 'mPk mTk'
+    cosmo['P_k_max_h/Mpc'] = 20.
+    phase = int(sim_name.split('ph')[-1])
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+    ):
+        cosmo[k] = meta[k]
     
-    keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
-    save_dir = "/global/cscratch1/sd/boryanah/zcv/anew"
+    # load input linear power
+    kth = meta['CLASS_power_spectrum']['k (h/Mpc)']
+    pk_z1 = meta['CLASS_power_spectrum']['P (Mpc/h)^3']
+    print("how many ks are saved", len(kth))
+    p_m_lin = D_ratio**2*pk_z1
+
+    # apply gaussian cutoff to linear power
+    p_m_lin *= np.exp(-(kth/kcut)**2)
     
-    # read power spectra
-    power_fn = Path(save_dir) / f"power_{sim_name}_{nmesh:d}.asdf"
-    power_rsd_fn = Path(save_dir) / f"power_rsd_{sim_name}_{nmesh:d}.asdf"
-    k, mu, pk_tt, pk_ij_zz, pk_ij_zt = read_power(power_fn, keynames)
-    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles = read_power(power_rsd_fn, keynames)
-
-    # load the linear power spectrum
-    p_in = np.genfromtxt(cfg['p_lin_ic_file'])
-    kth, p_m_lin = p_in[:,0], p_in[:,1]
-
-    # fit to get the biases
-    bvec_opt = measure_2pt_bias_rsd(k, pk_ij_zz_poles[:,:,:], pk_tt_poles[0,:,:], 0.15, ellmax=1)
-    bvec_opt_rs = measure_2pt_bias(k, pk_ij_zz[:,:,0], pk_tt[0,:,0], 0.15)
-    print("bias zspace", bvec_opt['x'])
-    print("bias rspace", bvec_opt_rs['x'])
-
-    # kout is kedges
-    dk = np.diff(k)[0]
-    kout = k-dk/2.
-    kout = np.hstack((kout, kout[-1]+dk))
-
-    # let's make a window
-    fn_win = f"window_nmesh{nmesh:d}.npy"
-    if os.path.exists(fn_win):
-        window = np.load(fn_win)
+    # compute growth factor
+    pkclass = Class()
+    pkclass.set(cosmo)
+    pkclass.compute()
+    D = pkclass.scale_independent_growth_factor(z_this)
+    D /= pkclass.scale_independent_growth_factor(z_ic)
+    Ha = pkclass.Hubble(z_this) * 299792.458
+    if want_rsd:
+        f_growth = pkclass.scale_independent_growth_factor_f(z_this)
     else:
-        window, keff = periodic_window_function(nmesh, Lbox, kout, k, k2weight=True) # I think this should have the right shape now
-        print("finished with window")
-        np.save(fn_win, window)
-    window_exact = False
-    #window_exact = True
-
-    # presave the zenbu power spectra
-    zenbu_fn = "data/zenbu_data.npz"
-    if os.path.exists(zenbu_fn):
-        data = np.load(zenbu_fn)
-        pk_ij_zenbu = data['pk_ij_zenbu']
-        lptobj = data['lptobj']
+        f_growth = 0.
+    print("D, f = ", D, f_growth)
+   
+    # define k bins
+    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_binc = (k_bins[1:] + k_bins[:-1])*.5
+    if not logk:
+        dk = k_bins[1]-k_bins[0]
     else:
-        pk_ij_zenbu, lptobj = zenbu_spectra(k, z_this, cfg, kth, p_m_lin, pkclass=None, rsd=True)
-        p0table = lptobj.p0ktable
-        p2table = lptobj.p2ktable
-        p4table = lptobj.p4ktable
-        lptobj = np.array([p0table, p2table, p4table])
-        np.savez(zenbu_fn, pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
+        dk = np.log(k_bins[1]/k_bins[0])
 
-    # to pass the pre-saved window window_exact=False (note that it overwrite window even if passed)
-    # more accurate if you don't pass the window function
-    bias_vec = [1, *bvec_opt_rs['x']]
-    pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex,\
-    pk_nn_beta1, beta, beta_damp, beta_smooth, \
-    beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth,\
-    r_zt_smooth_nohex, pk_zn, pk_ij_zenbu_poles, pkclass = reduce_variance_tt(k, pk_tt_poles[0,...], pk_ij_zt_poles,\
-                                                                              pk_ij_zz_poles, cfg, z_this,\
-                                                                              bias_vec, kth, p_m_lin, rsd=True, win_fac=1, kout=kout, window=window, exact_window=window_exact, pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
+    # name of files to read from
+    if n_k_bins == nmesh//2:
+        window_fn = save_dir / f"window_nmesh{nmesh:d}.npz"
+    else:
+        window_fn = save_dir / f"window_nmesh{nmesh:d}_dk{dk:.3f}.npz"
+        
+    # get the bias
+    kmax = 0.08 
+    bvec_opt = measure_2pt_bias_lin(k_binc, power_lin_dict, power_rsd_tr_dict, D, f_growth, kmax, want_rsd, rec_algo, R, ellmax=1)
+    #bvec_opt = measure_2pt_bias_cross_lin(k_binc, power_lin_dict, power_rsd_tr_dict, D, f_growth, kmax, want_rsd, rec_algo, R, ellmax=1)
+    bias = np.array(bvec_opt['x'])[0]
+    print("bias", bias)
+    print(bvec_opt)
+    #bias = 2.05 # used for 009 cause gives weird bias and 023
+    
+    # get linear prediction
+    # TESTING!!!!
+    if rec_algo == "reciso":
+        S = get_smoothing(kth, R)
+        f_eff = f_growth*(1.-S)
+    elif rec_algo == "recsym":
+        f_eff = f_growth
+    kth, p_m_lin_poles = get_poles(kth, p_m_lin, D, bias, f_eff, poles=poles)
+    if want_rsd:
+        p_m_lin_input = []
+        for i in range(len(poles)):
+            p_m_lin_input.append(interp1d(kth, p_m_lin_poles[i], fill_value='extrapolate')(k_binc))
+        p_m_lin_input = np.array(p_m_lin_input)
+    else:
+        print("not implemented"); quit()
+    
+    # convert into kaiser-corrected power spectra
+    print(p_m_lin_input.shape)
+    print(power_rsd_tr_dict['P_ell_tr_tr'].shape, len(k_binc))
+    pk_ll_input = combine_kaiser_spectra(k_binc, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=want_rsd).reshape(len(poles), len(k_binc))
+    pk_tl_input = combine_cross_kaiser_spectra(k_binc, power_rsd_tr_dict, D, bias, f_growth, rec_algo, R, rsd=want_rsd).reshape(len(poles), len(k_binc))
+    pk_tt_input = power_rsd_tr_dict['P_ell_tr_tr'].reshape(len(poles), len(k_binc))
+    nmodes = power_rsd_tr_dict['N_ell_tr_tr'].flatten()
+    
+    # load the presaved window function
+    data = np.load(window_fn)
+    window = data['window']
 
-    # save these things
-    print("correlation coefficient", r_zt)
-    print("kout", kout)
-    print(kout.shape, r_zt.shape)
-    np.savez(f"corr_coeff_nmesh{nmesh:d}.npz", kout=kout, r_zt=r_zt)
-    print("reduced variance tt")
-
-    # plotting
-    f, ax = plt.subplots(1, 2, sharex=True, sharey=True)
-    sidx = 0
-    for ell in range(2):
-        #ax[ell].plot(k, pk_zz[ell,:]/pk_zenbu[ell,:] - 1)
-        ax[ell].plot(k, k*pk_zz[ell,:])
-        ax[ell].plot(k, k*pk_zenbu[ell,:])
-    #ax[0].set_ylim([-0.2, 0.2])
-    ax[0].set_xlim([0, 0.5])
-    plt.savefig(f"first_nmesh{nmesh:d}.png")
-    plt.close()
-
-    f, ax = plt.subplots(1, 2, sharex=True, sharey=True)
-    for ell in range(2):
-        ax[ell].plot(k, k * pk_tt_poles[0,ell,:])   
-        ax[ell].plot(k, k * pk_nn_betasmooth[ell,:])
-        ax[ell].plot(k, k * pk_zenbu[ell,:])
-
-    ax[0].set_xlim([0, 0.5])
-    ax[0].set_ylim([-100, 3000])
-    plt.savefig(f"second_nmesh{nmesh:d}.png")
-    plt.close()
-
+    # reduce variance
+    pk_tt_hat, pk_tt_betasmooth, pk_tt_betasmooth_nohex,\
+    pk_tt_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex,\
+    pk_ll, p_m_lin, r_tl, r_tl_smooth, r_tl_smooth_nohex, pk_tl, r_tl_sn_lim = reduce_variance_lin(k_binc, pk_tt_input, pk_tl_input, pk_ll_input, p_m_lin_input, window=window,
+                                                                                      s_ell=[0.1, 10, 100], sg_window=21, rsd=want_rsd,
+                                                                                      k0=0.618, dk=0.167, beta1_k=0.05, poles=poles)
+    
+    # save output in a dictionary
+    lcv_dict = {}
+    lcv_dict['k_binc'] = k_binc
+    lcv_dict['poles'] = poles
+    lcv_dict['rho_tr_lf'] = r_tl
+    lcv_dict['rho_tr_lf_sn_lim'] = r_tl_sn_lim
+    lcv_dict['Pk_lf_lf_ell'] = pk_ll_input
+    lcv_dict['Pk_tr_lf_ell'] = pk_tl_input
+    lcv_dict['Pk_tr_tr_ell'] = pk_tt_input
+    lcv_dict['Nk_tr_tr_ell'] = nmodes
+    lcv_dict['Pk_tr_tr_ell_lcv'] = pk_tt_betasmooth
+    lcv_dict['Pk_lf_lf_ell_CLASS'] = p_m_lin_input
+    return lcv_dict
