@@ -7,7 +7,7 @@ abacusutils contains a Python namespace package called ``abacusnbody``.
 This is the name to import (not ``abacusutils``, which is just the name of the PyPI package).
 For example, to import the ``compaso_halo_catalog`` module, use
 ::
-    
+
     import abacusnbody.data.compaso_halo_catalog
 
 The :doc:`compaso` page has the documentation and API for this module.

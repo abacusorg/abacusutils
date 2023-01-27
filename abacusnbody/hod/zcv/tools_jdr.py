@@ -29,7 +29,7 @@ def get_spectra_from_fields(fields1, fields2, neutrinos=True):
         for j, fj in enumerate(fields2):
             if (i<j) | (neutrinos & (i==1) & (j==0)): continue
             spectra.append((fi, fj))
-                      
+
     return spectra
 
 def combine_real_space_spectra(k, spectra, bias_params, cross=False, numerical_nabla=False):
@@ -62,37 +62,37 @@ def combine_real_space_spectra(k, spectra, bias_params, cross=False, numerical_n
     p = np.einsum('b, bk->k', bterms, pkvec)
     if not cross:
         p += sn
-    return p    
+    return p
 
 def combine_rsd_spectra(k, spectra_poles, bias_params, ngauss=3):
 
     pkvec = np.zeros((17, spectra_poles.shape[1], spectra_poles.shape[2]))
     pkvec[:10, ...] = spectra_poles[:10,...]
-      
+
     b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4 = bias_params
     bias_monomials = np.array([1, 2*b1, b1**2, b2, b1*b2, 0.25*b2**2, 2*bs, 2*b1*bs, b2*bs, bs**2, alpha0, alpha2, alpha4,alpha6,sn,sn2,sn4])
-    
+
     nus, ws = np.polynomial.legendre.leggauss(2*ngauss)
     nus_calc = nus[0:ngauss]
     nus = nus[0:ngauss]
     ws = ws[:ngauss]
     n_nu = ngauss
     leggauss = True
-        
+
     L0 = np.polynomial.legendre.Legendre((1))(nus)
     L2 = np.polynomial.legendre.Legendre((0,0,1))(nus)
-    L4 = np.polynomial.legendre.Legendre((0,0,0,0,1))(nus)        
-        
-    pk_stoch = np.zeros((3, n_nu, spectra_poles.shape[2]))    
-    
+    L4 = np.polynomial.legendre.Legendre((0,0,0,0,1))(nus)
+
+    pk_stoch = np.zeros((3, n_nu, spectra_poles.shape[2]))
+
     pk_stoch[0,:,:] = 1
-    pk_stoch[1,:,:] = k[np.newaxis,:]**2 * nus[:, np.newaxis]**2 
+    pk_stoch[1,:,:] = k[np.newaxis,:]**2 * nus[:, np.newaxis]**2
     pk_stoch[2,:,:] = k[np.newaxis,:]**4 * nus[:, np.newaxis]**4
-    
+
     pkvec[14:,0,...] = 0.5 * np.sum((ws*L0)[np.newaxis,:ngauss,np.newaxis]*pk_stoch,axis=1)
     pkvec[14:,1,...] = 2.5 * np.sum((ws*L2)[np.newaxis,:ngauss,np.newaxis]*pk_stoch,axis=1)
-    pkvec[14:,2,...] = 4.5 * np.sum((ws*L4)[np.newaxis,:ngauss,np.newaxis]*pk_stoch,axis=1) 
-    
+    pkvec[14:,2,...] = 4.5 * np.sum((ws*L4)[np.newaxis,:ngauss,np.newaxis]*pk_stoch,axis=1)
+
     p0 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,0,:], axis=0)
     p2 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,1,:], axis=0)
     p4 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,2,:], axis=0)
@@ -147,26 +147,26 @@ def meshgrid(x, y, z):
     return zz, yy, xx
 
 def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nmax=6, ngauss=6):
-    
+
     if pkclass==None:
         pkclass = Class()
         pkclass.set(cfg["Cosmology"])
         pkclass.compute()
-        
+
     cutoff = cfg['surrogate_gaussian_cutoff']
     cutoff = float(cfg['surrogate_gaussian_cutoff'])
-        
+
     Dthis = pkclass.scale_independent_growth_factor(z)
     Dic = pkclass.scale_independent_growth_factor(cfg['z_ic'])
     f = pkclass.scale_independent_growth_factor_f(z)
-    
+
     if rsd:
-        lptobj, p0spline, p2spline, p4spline, pspline = _lpt_pk(kin, pin*(Dthis/Dic)**2, 
-                                                               f, cutoff=cutoff, 
+        lptobj, p0spline, p2spline, p4spline, pspline = _lpt_pk(kin, pin*(Dthis/Dic)**2,
+                                                               f, cutoff=cutoff,
                                                                third_order=False, one_loop=False,
                                                                jn=jn, N=N, nmax=nmax, ngauss=ngauss)
         pk_zenbu = pspline(k)
-        
+
     else:
         pspline, lptobj = _realspace_lpt_pk(kin, pin*(Dthis/Dic)**2, cutoff=cutoff)
         pk_zenbu = pspline(k)[1:]
@@ -202,15 +202,15 @@ def _lpt_pk(k, p_lin, f, cleftobj=None,
         cleftobt: CLEFT object
             CLEFT object used to compute basis spectra.
     '''
-    
-    
+
+
     lpt  = Zenbu_RSD(k, p_lin, jn=jn, N=N, cutoff=cutoff)
     lpt.make_pltable(f, kv=k, nmax=nmax, ngauss=ngauss)
-        
+
     p0table = lpt.p0ktable
     p2table = lpt.p2ktable
     p4table = lpt.p4ktable
-    
+
     pktable = np.zeros((len(p0table), 3, p0table.shape[-1]))
     pktable[:,0,:] = p0table
     pktable[:,1,:] = p2table
@@ -222,7 +222,7 @@ def _lpt_pk(k, p_lin, f, cleftobj=None,
     p4spline = interp1d(k, p4table.T, fill_value='extrapolate')#, kind='cubic')
 
 
-    return lpt, p0spline, p2spline, p4spline, pellspline 
+    return lpt, p0spline, p2spline, p4spline, pellspline
 
 
 def _realspace_lpt_pk(k, p_lin, D=None, cleftobj=None, cutoff=np.pi*700/525.):
@@ -250,7 +250,7 @@ def _realspace_lpt_pk(k, p_lin, D=None, cleftobj=None, cutoff=np.pi*700/525.):
             Spline that computes basis spectra as a function of k.
         cleftobt: CLEFT object
             CLEFT object used to compute basis spectra.
-    '''        
+    '''
 
     zobj = Zenbu(k, p_lin, cutoff=cutoff, N=3000, jn=15)
     zobj.make_ptable(kvec=k)
@@ -275,17 +275,17 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
         p0table = lptobj.p0ktable  # [0, 2, 4]
         p2table = lptobj.p2ktable
         p4table = lptobj.p4ktable
-        
+
     if exact_window & rsd:
         print('Convolving theory with exact window')
-        
+
         lbox = cfg['lbox']
         nmesh_win = int(cfg['nmesh_in'] / win_fac)
-        
+
         if kout is None:
             dk = 2 * np.pi / lbox
             kmax = np.pi*cfg['nmesh_in']/lbox + dk/2
-            kout = np.arange(dk, np.pi*cfg['nmesh_in']/lbox + dk/2, dk)        
+            kout = np.arange(dk, np.pi*cfg['nmesh_in']/lbox + dk/2, dk)
             assert(len(k) == (len(kout)-1))
 
         window = None
@@ -297,18 +297,18 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
             pell_conv_list.append(pell_conv_i.reshape(3,-1))
 
         pk_ij_zenbu_conv = np.stack(pell_conv_list)
-        temp = np.zeros_like(pk_ij_zenbu) 
+        temp = np.zeros_like(pk_ij_zenbu)
         pk_ij_zenbu[:,:,:pk_ij_zenbu_conv.shape[-1]] = pk_ij_zenbu_conv # if win fac is > 1 get rid of nans
         pk_ij_zenbu[:,:,pk_ij_zenbu_conv.shape[-1]:] = 0
-        
+
     pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn = compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zenbu, bias_vec, window=window, kin=kin, kout=kout, s_ell=s_ell, rsd=rsd, k0=0.618, dk=0.167, sg_window=sg_window, poles=cfg['poles'])
     return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn, pk_ij_zenbu, pkclass
 
-def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb, 
-                                        bias_vec, window=None, kin=None, kout=None, 
+def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
+                                        bias_vec, window=None, kin=None, kout=None,
                                         s_ell=[0.1, 10, 100], sg_window=21, rsd=False,
                                         k0=0.618, dk=0.167, beta1_k=0.05, poles=[0, 2, 4]):
-    
+
     fields_z = ['1', 'd', 'd2', 's', 'n2']
     fields_zenbu = ['1', 'd', 'd2', 's']
 
@@ -320,12 +320,12 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     if rsd:
         if len(bias_vec)<11:
             bias_vec = np.hstack([bias_vec, np.zeros(11-len(bias_vec))])
-            
+
     else:
         if len(bias_vec)<6:
-            bias_vec = np.hstack([bias_vec, np.zeros(6-len(bias_vec))])        
-    
-    # first element of bias vec should always be one, so don't pass this 
+            bias_vec = np.hstack([bias_vec, np.zeros(6-len(bias_vec))])
+
+    # first element of bias vec should always be one, so don't pass this
     # to our usual component spectra summation functions
 
     pk_zz = combine_spectra(k, pk_ij_zz, bias_vec[1:], rsd=rsd)
@@ -333,7 +333,7 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
         pk_zenbu = combine_spectra(kin, pk_ij_zb, bias_vec[1:], rsd=rsd)
     else:
         pk_zenbu = combine_spectra(k, pk_ij_zb, bias_vec[1:], rsd=rsd)
-        
+
     pk_zn = combine_cross_spectra(k, pk_ij_zn, bias_vec[1:], rsd=rsd)
 
     if rsd:
@@ -344,7 +344,7 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
         cov_zn = 2 * pk_zn ** 2
         var_zz = 2 * pk_zz ** 2
         var_nn = 2 * pk_nn ** 2
-    
+
     beta = cov_zn / var_zz
     beta_damp = 1/2 * (1 - np.tanh((k - k0)/dk)) * beta
 
@@ -352,13 +352,13 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
     beta_damp = np.atleast_2d(beta_damp)
     beta_damp[beta_damp != beta_damp] = 0
     beta_damp[:,:k.searchsorted(beta1_k)] = 1
-    
+
     r_zt = np.atleast_2d(r_zt)
     r_zt[r_zt != r_zt] = 0
 
     beta_smooth = np.zeros_like(beta_damp)
     beta_smooth_nohex = np.zeros_like(beta_damp)
-    
+
     for i in range(beta_smooth.shape[0]):
         # TESTING kinda ugly
         try:
@@ -372,18 +372,18 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
                 beta_smooth_nohex[i,:] = savgol_filter(beta_damp.T[:,i], 3, 2)
         else:
             beta_smooth_nohex[i,:] = 1
-            
+
     r_zt_smooth = np.zeros_like(r_zt)
     r_zt_smooth_nohex = np.zeros_like(r_zt)
 
     for i in range(r_zt.shape[0]):
         spl = splrep(k, r_zt.T[:,i], s=s_ell[i])
-        r_zt_smooth[i,:] = splev(k, spl) 
+        r_zt_smooth[i,:] = splev(k, spl)
         if i<1:
             r_zt_smooth_nohex[i,:] = splev(k, spl)
         else:
             r_zt_smooth_nohex[i,:] = 1
-            
+
     if (window is not None) and rsd:
 
         pk_zenbu = np.hstack(pk_zenbu)
@@ -394,20 +394,20 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
             # no need to apply window in real space
             #else:
             #    pk_zenbu = np.dot(window[:window.shape[0]//len(poles), :window.shape[1]//len(poles)].T, pk_zenbu).reshape(pk_zz.shape)
-    
+
     pk_nn_hat = pk_nn - beta_damp * (pk_zz - pk_zenbu) # pk_zz has shape of measurement nmesh/2
     pk_nn_betasmooth = pk_nn - beta_smooth * (pk_zz - pk_zenbu) # joe says beta needs to be smooth
     pk_nn_betasmooth_nohex = pk_nn - beta_smooth * (pk_zz - pk_zenbu) # same as above
     pk_nn_beta1 = pk_nn - (pk_zz - pk_zenbu)
-        
+
     return pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex, pk_nn_beta1, beta, beta_damp, beta_smooth, beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth, r_zt_smooth_nohex, pk_zn
 
 
 def multipole_cov(pell, ell):
-    
+
     if ell==0:
         cov = 2 * pell[0,:]**2 + 2/5 * pell[1,:]**2 + 2/9 * pell[2,:]**2
-        
+
     elif ell==2:
         cov = 2/5 * pell[0,:]**2 + 6/35 * pell[1,:]**2 + 3578/45045 * pell[2,:]**2 \
                + 8/35 * pell[0,:] * pell[1,:] + 8/35 * pell[0,:] * pell[2,:] + 48/385 * pell[1,:] * pell[2,:]
@@ -415,12 +415,12 @@ def multipole_cov(pell, ell):
     elif ell==4:
         cov = 2/9 * pell[0,:]**2 + 3578/45045 * pell[1,:]**2 + 1058/17017 * pell[2,:]**2 \
                + 80/693 * pell[0,:] * pell[1,:] + 72/1001 * pell[0,:] * pell[2,:] + 80/1001 * pell[1,:] * pell[2,:]
-        
+
     return cov
 
 @jit(nopython=True)
 def conv_theory_window_function(nmesh, lbox, kout, plist, kth):
-    """Exactly convolve the periodic box window function, without any 
+    """Exactly convolve the periodic box window function, without any
         bin averaging uncertainty by evaluating a theory power spectrum
         at the k modes in the box.
 
@@ -430,43 +430,43 @@ def conv_theory_window_function(nmesh, lbox, kout, plist, kth):
         kout (np.array): k bins used for power spectrum measurement
         plist (list of np.arrays): List of theory multipoles evaluated at kth
         kth (np.array): k values that theory is evaluated at
-        
+
     Returns:
         pell_conv : window convolved theory prediction
-        keff: Effective k value of each output k bin. 
-        
+        keff: Effective k value of each output k bin.
+
     """
-    
+
     kvals = np.zeros(nmesh, dtype=np.float32)
     kvals[:nmesh//2] = np.arange(0, 2 * np.pi * nmesh / lbox / 2, 2 * np.pi / lbox, dtype=np.float32)
     kvals[nmesh//2:] = np.arange(-2 * np.pi * nmesh / lbox / 2, 0, 2 * np.pi / lbox, dtype=np.float32)
-    kvalsr = np.arange(0, 2 * np.pi * nmesh / lbox / 2, 2 * np.pi / lbox, dtype=np.float32) 
-    kx, ky, kz = meshgrid(kvals, kvals, kvalsr)    
+    kvalsr = np.arange(0, 2 * np.pi * nmesh / lbox / 2, 2 * np.pi / lbox, dtype=np.float32)
+    kx, ky, kz = meshgrid(kvals, kvals, kvalsr)
     knorm = np.sqrt(kx**2 + ky**2 + kz**2)
     mu = kz / knorm
     mu[0,0,0] = 0
-    
+
     ellmax = 3
-    
+
     nkout = len(kout) - 1
     idx_o = np.digitize(knorm, kout) - 1
     nmodes_out = np.zeros(nkout * 3)
-  
+
     pell_conv = np.zeros((nkout * 3), dtype=np.float32)
     keff = np.zeros(nkout, dtype=np.float32)
-    
+
     ellmax_in = len(plist)
 
     pells = []
     for i in range(ellmax_in):
         pells.append(np.interp(knorm, kth, plist[i]))
         pells[i][0,0,0] = 0
-        
+
     L0 = np.ones_like(mu, dtype=np.float32)
     L2 = (3 * mu**2 - 1) / 2
     L4 = (35 * mu**4 - 30 * mu**2 + 3) / 8
     L6 = (231 * mu**6 - 315 * mu**4 + 105 * mu**2 - 5) / 16
-    
+
 #    pk = (p0 * L0 + p2 * L2 + p4 * L4)
 
     legs = [L0, L2, L4, L6]
@@ -475,7 +475,7 @@ def conv_theory_window_function(nmesh, lbox, kout, plist, kth):
     for i in range(kx.shape[0]):
         for j in range(kx.shape[1]):
             for k in range(kx.shape[2]):
-                if (idx_o[i,j,k]>=nkout): 
+                if (idx_o[i,j,k]>=nkout):
                     pass
                 else:
                     if k==0:
@@ -483,7 +483,7 @@ def conv_theory_window_function(nmesh, lbox, kout, plist, kth):
                         keff[idx_o[i,j,k]] += knorm[i,j,k]
                     else:
                         nmodes_out[idx_o[i,j,k]::nkout] += 2
-                        keff[idx_o[i,j,k]] += 2 * knorm[i,j,k]      
+                        keff[idx_o[i,j,k]] += 2 * knorm[i,j,k]
                     for ell in range(ellmax):
                         for ellp in range(ellmax_in):
                             if k!=0:
@@ -495,13 +495,13 @@ def conv_theory_window_function(nmesh, lbox, kout, plist, kth):
     norm_out[nmodes_out==0] = 0
     pell_conv = pell_conv * norm_out
     keff = keff * norm_out[:nkout]
-    
-    return pell_conv, keff 
+
+    return pell_conv, keff
 
 @jit(nopython=True)
 def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
     """Returns matrix appropriate for convolving a finely evaluated
-    theory prediction with the 
+    theory prediction with the
 
     Args:
         nmesh (int): Size of the mesh used for power spectrum measurement
@@ -514,29 +514,29 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
         window : np.dot(window, pell_th) gives convovled theory
         keff: Effective k value of each output k bin.
     """
-    
+
     kvals = np.zeros(nmesh, dtype=np.float32)
     kvals[:nmesh//2] = np.arange(0, 2 * np.pi * nmesh / lbox / 2, 2 * np.pi / lbox, dtype=np.float32)
     kvals[nmesh//2:] = np.arange(-2 * np.pi * nmesh / lbox / 2, 0, 2 * np.pi / lbox, dtype=np.float32)
 
-    kvalsr = np.arange(0, 2 * np.pi * nmesh / lbox / 2, 2 * np.pi / lbox, dtype=np.float32) 
-    kx, ky, kz = meshgrid(kvals, kvals, kvalsr)    
+    kvalsr = np.arange(0, 2 * np.pi * nmesh / lbox / 2, 2 * np.pi / lbox, dtype=np.float32)
+    kx, ky, kz = meshgrid(kvals, kvals, kvalsr)
     knorm = np.sqrt(kx**2 + ky**2 + kz**2)
     mu = kz / knorm
     mu[0,0,0] = 0
-    
+
     ellmax = 3
-    
+
     nkin = len(kin)
-        
+
     if k2weight:
         dk = np.zeros_like(kin)
         dk[:-1] = kin[1:] - kin[:-1]
         dk[-1] = dk[-2]
-    
+
     nkout = len(kout) - 1
     dkin = (kin[1:] - kin[:-1])[0]
-    
+
     idx_o = np.digitize(knorm, kout) - 1
     nmodes_out = np.zeros(nkout * 3)
 
@@ -549,28 +549,28 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
             nmodes_in[i] = np.sum(kin[idx]**2 * dk[idx])
         else:
             nmodes_in[i] = np.sum(idx)
-            
+
     norm_in = 1/nmodes_in
     norm_in[nmodes_in==0] = 0
     norm_in_allell = np.zeros(3 * len(norm_in))
     norm_in_allell[:nkout] = norm_in
     norm_in_allell[nkout:2*nkout] = norm_in
     norm_in_allell[2*nkout:3*nkout] = norm_in
-    
+
     window = np.zeros((nkout * 3, nkin * 3), dtype=np.float32)
     keff = np.zeros(nkout, dtype=np.float32)
-    
+
     L0 = np.ones_like(mu, dtype=np.float32)
     L2 = (3 * mu**2 - 1) / 2
     L4 = (35 * mu**4 - 30 * mu**2 + 3) / 8
-        
+
     legs = [L0, L2, L4]
     pref = [1, (2 * 2 + 1), (2 * 4 + 1)]
-    
+
     for i in range(kx.shape[0]):
         for j in range(kx.shape[1]):
             for k in range(kx.shape[2]):
-                if (idx_o[i,j,k]>=nkout): 
+                if (idx_o[i,j,k]>=nkout):
                     pass
                 else:
                     if k==0:
@@ -585,7 +585,7 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
                             w = kin[beta]**2 * dk[beta]
                         else:
                             w = 1
-                        if (idx_i[beta] == idx_o[i,j,k]):               
+                        if (idx_i[beta] == idx_o[i,j,k]):
                             for ell in range(ellmax):
                                 for ellp in range(ellmax):
                                     if k!=0:
@@ -597,11 +597,11 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
     norm_out[nmodes_out==0] = 0
     window = window * norm_out.reshape(-1, 1) * norm_in_allell.reshape(-1, 1)
     keff = keff * norm_out[:nkout]
-    
+
     return window, keff
 
 def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3, kmin=0.0):
-    
+
     kidx_max = k.searchsorted(kmax)
     kidx_min = k.searchsorted(kmin)
     kcut = k[kidx_min:kidx_max]
@@ -612,18 +612,18 @@ def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3, kmin=0.0
     #dk = kcut[1]-kcut[0]
     #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
     Nk = 1
-    
+
     loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(10-len(bvec))]), rsd=True)[:ellmax,:])**2/(2 * pk_tt_kcut**2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
-    
+
     out = minimize(loss, bvec0)
-    
+
     return out
 
 def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
 
     kidx_max = k.searchsorted(kmax)
-    kidx_min = k.searchsorted(kmin)    
+    kidx_min = k.searchsorted(kmin)
     kcut = k[kidx_min:kidx_max]
     pk_tt_kcut = pk_tt[kidx_min:kidx_max]
     pk_ij_heft_kcut = pk_ij_heft[:,kidx_min:kidx_max]
@@ -633,12 +633,12 @@ def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
     #dk = kcut[1]-kcut[0]
     #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
     Nk = 1
-    
+
     loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(5-len(bvec))])))**2)#/(2 * pk_tt_kcut**2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
-    
+
     out = minimize(loss, bvec0)
-    
+
     return out
 
 def read_power(power_fn, keynames):
@@ -653,7 +653,7 @@ def read_power(power_fn, keynames):
         pk_tt = np.zeros((1, len(k), 1))
         pk_ij_zz = np.zeros((15, len(k), 1))
         pk_ij_zt = np.zeros((5, len(k), 1))
-    
+
     if "rsd" in str(power_fn):
         pk_tt[0, :, :] = f['data']['P_ell_tr_tr'].reshape(3, len(k))
     else:
@@ -687,7 +687,7 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
         pk_tt = np.zeros((1, len(k), 1))
         pk_ij_zz = np.zeros((15, len(k), 1))
         pk_ij_zt = np.zeros((5, len(k), 1))
-    
+
     if want_rsd:
         pk_tt[0, :, :] = power_tr_dict['P_ell_tr_tr'].reshape(len(poles), len(k))
     else:
@@ -705,7 +705,7 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
             else:
                 pk_ij_zz[count, :, :] = power_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'].reshape(len(k), 1)
             count += 1
-    
+
     #print(k, mu, pk_tt, pk_ij_zz, pk_ij_zt)
     print("zeros = ", np.sum(pk_tt == 0.), np.sum(pk_ij_zz == 0.), np.sum(pk_ij_zt == 0.))
     return k, mu, pk_tt, pk_ij_zz, pk_ij_zt
@@ -739,14 +739,14 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     kcut = config['zcv_params']['kcut']
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if want_rsd else ""
-    
+
     # power params
     k_hMpc_max = config['power_params']['k_hMpc_max']
     logk = config['power_params']['logk']
     n_k_bins = config['power_params']['nbins_k']
     n_mu_bins = config['power_params']['nbins_mu']
     poles = config['power_params']['poles']
-    
+
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
@@ -763,11 +763,11 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     cfg['poles'] = poles
     cfg['surrogate_gaussian_cutoff'] = kcut
     Lbox = cfg['lbox']
-   
+
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
-    
+
     # field names
     keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
@@ -776,7 +776,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
         k, mu, pk_tt, pk_ij_zz, pk_ij_zt = read_power_dict(power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames, poles=poles)
     k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles = read_power_dict(power_rsd_tr_dict, power_rsd_ij_dict, want_rsd=want_rsd, keynames=keynames, poles=poles)
     assert len(k) == len(k_binc)
-    
+
     # load the linear power spectrum
     p_in = np.genfromtxt(cfg['p_lin_ic_file'])
     kth, p_m_lin = p_in[:,0], p_in[:,1]
@@ -796,7 +796,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     data = np.load(window_fn)
     window = data['window']
     window_exact = False
-    
+
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
@@ -818,7 +818,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
         pk_tt_input = pk_tt_poles[0, :, 0]
         pk_ij_zz_input = pk_ij_zz_poles[:,:,0]
         pk_ij_zt_input = pk_ij_zt_poles[:,:,0]
-    
+
     pk_nn_hat, pk_nn_betasmooth, pk_nn_betasmooth_nohex,\
     pk_nn_beta1, beta, beta_damp, beta_smooth, \
     beta_smooth_nohex, pk_zz, pk_zenbu, r_zt, r_zt_smooth,\
@@ -839,8 +839,8 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
     return zcv_dict
-    
-    
+
+
 if __name__ == "__main__":
     import matplotlib
     matplotlib.use("Agg")
@@ -855,10 +855,10 @@ if __name__ == "__main__":
     cfg = get_cfg(sim_name, z_this)
     Lbox = cfg['lbox']
     nmesh = cfg['nmesh']
-    
+
     keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
     save_dir = "/global/cscratch1/sd/boryanah/zcv/anew"
-    
+
     # read power spectra
     power_fn = Path(save_dir) / f"power_{sim_name}_{nmesh:d}.asdf"
     power_rsd_fn = Path(save_dir) / f"power_rsd_{sim_name}_{nmesh:d}.asdf"
@@ -936,7 +936,7 @@ if __name__ == "__main__":
 
     f, ax = plt.subplots(1, 2, sharex=True, sharey=True)
     for ell in range(2):
-        ax[ell].plot(k, k * pk_tt_poles[0,ell,:])   
+        ax[ell].plot(k, k * pk_tt_poles[0,ell,:])
         ax[ell].plot(k, k * pk_nn_betasmooth[ell,:])
         ax[ell].plot(k, k * pk_zenbu[ell,:])
 

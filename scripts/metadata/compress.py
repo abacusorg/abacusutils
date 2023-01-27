@@ -34,10 +34,10 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
         for sim in meta:
             meta[sim]['state'] = np.frombuffer(pickle.dumps(meta[sim]['state']), dtype=np.byte)
             meta[sim]['param'] = np.frombuffer(pickle.dumps(meta[sim]['param']), dtype=np.byte)
-        
+
         # p = pickle.dumps(meta)
         # meta = dict(pickle=np.frombuffer(p, dtype=np.byte))
-    
+
     if domsgpack:
         import msgpack
         for sim in meta:
@@ -48,7 +48,7 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
         for sim in meta:
             meta[sim]['state'] = np.frombuffer(json.dumps(meta[sim]['state']).encode(), dtype=np.byte)
             meta[sim]['param'] = np.frombuffer(json.dumps(meta[sim]['param']).encode(), dtype=np.byte)
-        
+
         # p = pickle.dumps(meta)
         # meta = dict(pickle=np.frombuffer(p, dtype=np.byte))
 
@@ -62,7 +62,7 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
                     if np.array_equal(pk1[col], pk2[col]):
                         pk2.replace_column(col, pk1[col], copy=False)
 
-    
+
     with asdf.AsdfFile(tree=meta) as af:
         # the following needs https://github.com/astropy/asdf-astropy/issues/156
         # for sim in meta:

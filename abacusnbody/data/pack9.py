@@ -15,23 +15,23 @@ __all__ = ['unpack_pack9']
 def unpack_pack9(data, boxsize, velzspace_to_kms, float_dtype=np.float32, posout=None, velout=None):
     data = np.asanyarray(data, dtype=np.ubyte)
     Nmax = len(data)  # some pack9s will be cell headers
-    
+
     if posout is None:
         _posout = np.empty((Nmax,3), dtype=float_dtype)
     elif posout is False:
         _posout = None
     else:
         _posout = posout
-    
+
     if velout is None:
         _velout = np.empty((Nmax,3), dtype=float_dtype)
     elif velout is False:
         _velout = None
     else:
         _velout = velout
-        
+
     npart = _unpack_pack9(data, boxsize, velzspace_to_kms, _posout, _velout, float_dtype)
-    
+
     ret = []
     if posout is None:
         ret += [_posout[:npart]]
@@ -39,14 +39,14 @@ def unpack_pack9(data, boxsize, velzspace_to_kms, float_dtype=np.float32, posout
         ret += [0]
     else:
         ret += [npart]
-        
+
     if velout is None:
         ret += [_velout[:npart]]
     elif velout is False:
         ret += [0]
     else:
         ret += [npart]
-        
+
     return tuple(ret)
 
 @nb.njit
@@ -56,7 +56,7 @@ def _unpack_pack9(data, boxsize, velzspace_to_kms, posout, velout, dtype):
     boxsize = dtype(boxsize)
     velzspace_to_kms = dtype(velzspace_to_kms)
     halfbox = boxsize/2
-    
+
     # header state
     csize = dtype(np.nan)  # in user units
     vscale = dtype(np.nan)
@@ -64,13 +64,13 @@ def _unpack_pack9(data, boxsize, velzspace_to_kms, posout, velout, dtype):
     celly = dtype(np.nan)
     cellz = dtype(np.nan)
     pscale = dtype(np.nan)
-    
+
     # each coord is packed in 12 bits, which we will expand to 16 and store in shorts
     sh = np.empty(6, dtype=np.int16)
-    
+
     dop = posout is not None
     dov = velout is not None
-    
+
     for i in range(N):
         p9 = data[i]
         _expand_to_short(p9, sh)
@@ -97,7 +97,7 @@ def _unpack_pack9(data, boxsize, velzspace_to_kms, posout, velout, dtype):
                 velout[w,1] = sh[4]*vscale
                 velout[w,2] = sh[5]*vscale
             w += 1
-    
+
     return w
 
 
@@ -112,6 +112,6 @@ def _expand_to_short(c, s):
     s[3] = ((c[4] & 0xf0) << 4) | c[5]
     s[4] = (c[7] & 0x0f) | (c[6] << 4)
     s[5] = ((c[7] & 0xf0) << 4) | c[8]
-    
+
     for i in range(6):
         s[i] -= 2048

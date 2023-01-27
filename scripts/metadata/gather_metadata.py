@@ -54,7 +54,7 @@ def main(small=False):
                     zheader = dict(InputFile(zdir / 'header'))
                 except:
                     continue  # nothing!
-            
+
             state[zdir.name] = {k:v for k,v in zheader.items() if k not in param}
 
         if 'small' in sim.name:
@@ -65,7 +65,7 @@ def main(small=False):
         with asdf.open(_icdir / sim.name / 'ic_dens_N576.asdf', lazy_load=True, copy_arrays=True) as af:
             icparam = af['header'].copy()
             class_pk = af['CLASS_power_spectrum'].copy()
-        
+
         icparam.update(param)  # conflicts revert to param
         param = icparam
 
@@ -74,12 +74,12 @@ def main(small=False):
             assert k not in param
             assert k not in state
             param[k] = class_ini[k]
-        
+
         headers[sim.name] = {}
         headers[sim.name]['param'] = param
         headers[sim.name]['state'] = state
         headers[sim.name]['CLASS_power_spectrum'] = class_pk
-    
+
     af = asdf.AsdfFile(tree=headers)
     af.write_to('headers.asdf')
 

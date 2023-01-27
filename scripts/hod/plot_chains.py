@@ -58,7 +58,7 @@ class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentD
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', dest='path2config', type=str, help='Path to config file.', default=DEFAULTS['path2config'])
-    
-    args = vars(parser.parse_args())    
+
+    args = vars(parser.parse_args())
     main(**args)
 

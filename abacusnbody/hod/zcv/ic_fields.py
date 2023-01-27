@@ -19,7 +19,7 @@ DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def compress_asdf(asdf_fn, table, header):
     """
-    Given the file name of the asdf file, the table and the header, compress the table info and save as `asdf_fn' 
+    Given the file name of the asdf file, the table and the header, compress the table info and save as `asdf_fn'
     """
     # cram into a dictionary
     data_dict = {}
@@ -31,7 +31,7 @@ def compress_asdf(asdf_fn, table, header):
         "data": data_dict,
         "header": header,
     }
-    
+
     # set compression options here
     compression_kwargs=dict(typesize="auto", shuffle="shuffle", compression_block_size=12*1024**2, blosc_block_size=3*1024**2, nthreads=4)
     with asdf.AsdfFile(data_tree) as af, open(asdf_fn, 'wb') as fp: # where data_tree is the ASDF dict tree structure
@@ -77,7 +77,7 @@ def gaussian_filter(field, nmesh, lbox, kcut):
     kvalsr = np.fft.rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
     kvals = kvals.astype(np.float32)
     kvalsr = kvalsr.astype(np.float32)
-    
+
     # multiply by filter in fourier space
     kx, ky, kz = np.meshgrid(kvals, kvals, kvalsr)
     knorm = kx**2 + ky**2 + kz**2
@@ -178,14 +178,14 @@ def get_fields(delta_lin, Lbox, nmesh):
     fmean = np.mean(delta_lin)
     d = delta_lin-fmean
     print("generated delta")
-    
+
     # get delta^2
     d2 = delta_lin * delta_lin
     fmean = np.mean(d2)
     d2 -= fmean
     del delta_lin; gc.collect()
     print("generated delta^2")
-    
+
     # get s^2
     s2 = get_dk_to_s2(delta_fft, nmesh, Lbox)
     fmean = np.mean(s2)
@@ -209,11 +209,11 @@ def main(path2config, alt_simname=None):
     else:
         sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock'] # doesn't matter
-    
+
     # create save directory
-    save_dir = Path(zcv_dir) / sim_name 
+    save_dir = Path(zcv_dir) / sim_name
     os.makedirs(save_dir, exist_ok=True)
-    
+
     # get a few parameters for the simulation
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
@@ -245,7 +245,7 @@ def main(path2config, alt_simname=None):
         disp_y = gaussian_filter(disp_y, nmesh, Lbox, kcut)
         disp_z = gaussian_filter(disp_z, nmesh, Lbox, kcut)
         #print("dtype should be float32", dens.dtype, disp_x.dtype)
-        
+
         # save filtered field using asdf compression
         header = {}
         header['sim_name'] = sim_name
@@ -268,7 +268,7 @@ def main(path2config, alt_simname=None):
         # compute the fields
         d, d2, s2, n2 = get_fields(dens, Lbox, nmesh)
         #print("fields dtype (float32)", d.dtype, d2.dtype, s2.dtype, n2.dtype)
-    
+
         # save fields using asdf compression
         header = {}
         header['sim_name'] = sim_name

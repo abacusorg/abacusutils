@@ -21,7 +21,7 @@ float_array = types.float64[:]
 int_array = types.int64[:]
 
 @njit(fastmath=True)
-def n_sat_LRG_modified(M_h, logM_cut, M_cut, M_1, sigma, alpha, kappa): 
+def n_sat_LRG_modified(M_h, logM_cut, M_cut, M_1, sigma, alpha, kappa):
     """
     Standard Zheng et al. (2005) satellite HOD parametrization for LRGs, modified with n_cent_LRG
     """
@@ -31,7 +31,7 @@ def n_sat_LRG_modified(M_h, logM_cut, M_cut, M_1, sigma, alpha, kappa):
 
 
 @njit(fastmath=True)
-def n_cen_LRG(M_h, logM_cut, sigma): 
+def n_cen_LRG(M_h, logM_cut, sigma):
     """
     Standard Zheng et al. (2005) central HOD parametrization for LRGs.
     """
@@ -99,7 +99,7 @@ def Phi_fun(logM_h, logM_cut, sigma, gamma):
     x = gamma*(logM_h-logM_cut)/sigma
     Phi = 0.5*(1 + math.erf(x/np.sqrt(2)))
     return Phi
-    
+
 @njit(fastmath=True)
 def A_fun(p_max, Q, phi, Phi):
     """
@@ -107,7 +107,7 @@ def A_fun(p_max, Q, phi, Phi):
     """
     A = (p_max-1./Q)
     return A
-    
+
 @njit(fastmath=True)
 def Gaussian_fun(x, mean, sigma):
     """
@@ -128,15 +128,15 @@ def wrap(x, L):
 
 
 @njit(parallel=True, fastmath=True)
-def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, 
-    LRG_design_array, LRG_decorations_array, ELG_design_array, 
-    ELG_decorations_array, QSO_design_array, QSO_decorations_array, 
+def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
+    LRG_design_array, LRG_decorations_array, ELG_design_array,
+    ELG_decorations_array, QSO_design_array, QSO_decorations_array,
     rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread, origin):
     """
-    Generate central galaxies in place in memory with a two pass numba parallel implementation. 
+    Generate central galaxies in place in memory with a two pass numba parallel implementation.
     """
 
-    # parse out the hod parameters 
+    # parse out the hod parameters
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
         LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
     ic_L, alpha_c_L, Ac_L, Bc_L = LRG_decorations_array[10], LRG_decorations_array[0], \
@@ -349,16 +349,16 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv,
 
 
 @njit(parallel = True, fastmath = True)
-def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, 
+def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
     enable_ranks, ranks, ranksv, ranksp, ranksr, ranksc,
     LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
     QSO_design_array, QSO_decorations_array,
     rsd, inv_velz2kms, lbox, Mpart, want_LRG, want_ELG, want_QSO, Nthread, origin, keep_cent):
 
     """
-    Generate satellite galaxies in place in memory with a two pass numba parallel implementation. 
+    Generate satellite galaxies in place in memory with a two pass numba parallel implementation.
     """
-    
+
     # standard hod design
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
         LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
@@ -384,7 +384,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
         QSO_decorations_array[9], QSO_decorations_array[10]
 
     H = len(hmass) # num of particles
-    
+
     numba.set_num_threads(Nthread)
     Nout = np.zeros((Nthread, 3, 8), dtype = np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)).astype(np.int64) # starting index of each thread
@@ -399,7 +399,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
             if want_LRG:
                 M1_L_temp = 10**(logM1_L + As_L * hdeltac[i] + Bs_L * hfenv[i])
                 logM_cut_L_temp = logM_cut_L + Ac_L * hdeltac[i] + Bc_L * hfenv[i]
-                base_p_L = n_sat_LRG_modified(hmass[i], logM_cut_L_temp, 
+                base_p_L = n_sat_LRG_modified(hmass[i], logM_cut_L_temp,
                     10**logM_cut_L_temp, M1_L_temp, sigma_L, alpha_L, kappa_L) * weights[i] * ic_L
                 if enable_ranks:
                     decorator_L = 1 + s_L * ranks[i] + s_v_L * ranksv[i] + s_p_L * ranksp[i] + s_r_L * ranksr[i]
@@ -407,7 +407,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 else:
                     exp_sat = base_p_L
                 LRG_marker += exp_sat
-                
+
             ELG_marker = LRG_marker
             if want_ELG:
                 M1_E_temp = 10**(logM1_E + As_E * hdeltac[i] + Bs_E * hfenv[i])
@@ -424,7 +424,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                     M1_E_temp = M1_E_temp*10**delta_M1
                     alpha_E_temp = alpha_E + delta_alpha
                     base_p_E = N_sat_elg(
-                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E_temp, A_E, alpha1, beta) * weights[i] * ic_E                    
+                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E_temp, A_E, alpha1, beta) * weights[i] * ic_E
                     # if base_p_E > 1:
                     #     print("ExE new p", base_p_E, np.log10(hmass[i]), N_sat_elg(
                     #     hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E_temp, A_E, alpha1, beta), weights[i], ic_E)
@@ -434,7 +434,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                     base_p_E = base_p_E * decorator_E
 
                 ELG_marker += base_p_E
-                
+
             QSO_marker = ELG_marker
             if want_QSO:
                 M1_Q_temp = 10**(logM1_Q + As_Q * hdeltac[i] + Bs_Q * hfenv[i])
@@ -456,7 +456,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 keep[i] = 2
             elif randoms[i] <= QSO_marker:
                 Nout[tid, 2, 0] += 1 # counting
-                keep[i] = 3    
+                keep[i] = 3
             else:
                 keep[i] = 0
 
@@ -649,13 +649,13 @@ def fast_concatenate(array1, array2, Nthread):
 
 def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd, verbose):
     """
-    parse hod parameters, pass them on to central and satellite generators 
-    and then format the results 
+    parse hod parameters, pass them on to central and satellite generators
+    and then format the results
 
     Parameters
     ----------
 
-    halos_array : dictionary of arrays 
+    halos_array : dictionary of arrays
         a dictionary of halo properties (pos, vel, mass, id, randoms, ...)
 
     subsample : dictionary of arrays
@@ -665,13 +665,13 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         Dictionary of multi-tracer HODs
 
     enable_ranks : boolean
-        Flag of whether to implement particle ranks. 
+        Flag of whether to implement particle ranks.
 
     rsd : boolean
-        Flag of whether to implement RSD. 
+        Flag of whether to implement RSD.
 
     params : dict
-        Dictionary of various simulation parameters. 
+        Dictionary of various simulation parameters.
 
     """
 
@@ -688,19 +688,19 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         want_LRG = True
         # LRG design and decorations
         logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
-            map(LRG_HOD.get, ('logM_cut', 
-                              'logM1', 
-                              'sigma', 
-                              'alpha', 
+            map(LRG_HOD.get, ('logM_cut',
+                              'logM1',
+                              'sigma',
+                              'alpha',
                               'kappa'))
         # z-evolving HOD
         Delta_a = 1./(1+params['z']) - 1./(1+LRG_HOD.get('z_pivot', params['z']))
-        logM_cut_pr = LRG_HOD.get('logM_cut_pr', 0) 
+        logM_cut_pr = LRG_HOD.get('logM_cut_pr', 0)
         logM1_pr = LRG_HOD.get('logM1_pr', 0)
         logM_cut_L = logM_cut_L + logM_cut_pr*Delta_a
         logM1_L = logM1_L + logM1_pr*Delta_a
         LRG_design_array = np.array([logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L])
-        
+
         alpha_c = LRG_HOD.get('alpha_c', 0)
         alpha_s = LRG_HOD.get('alpha_s', 1)
         s = LRG_HOD.get('s', 0)
@@ -719,7 +719,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         want_LRG = False
         LRG_design_array = np.zeros(5)
         LRG_decorations_array = np.zeros(11)
-        
+
     if 'ELG' in tracers.keys():
         # ELG design
         want_ELG = True
@@ -733,16 +733,16 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'alpha',
                             'gamma'))
         A_E = ELG_HOD.get('A_s', 1)
-        
+
         # z-evolving HOD
         Delta_a = 1./(1+params['z']) - 1./(1+ELG_HOD.get('z_pivot', params['z']))
-        logM_cut_pr = ELG_HOD.get('logM_cut_pr', 0) 
+        logM_cut_pr = ELG_HOD.get('logM_cut_pr', 0)
         logM1_pr = ELG_HOD.get('logM1_pr', 0)
         logM_cut_E = logM_cut_E + logM_cut_pr*Delta_a
         logM1_E = logM1_E + logM1_pr*Delta_a
         ELG_design_array = np.array(
             [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E])
-        
+
         alpha_c_E = ELG_HOD.get('alpha_c', 0)
         alpha_s_E = ELG_HOD.get('alpha_s', 1)
         s_E = ELG_HOD.get('s', 0)
@@ -754,14 +754,14 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         Bc_E = ELG_HOD.get('Bcent', 0)
         Bs_E = ELG_HOD.get('Bsat', 0)
         ic_E = ELG_HOD.get('ic', 1)
-        
+
         # conformity params
         delta_M1 = ELG_HOD.get('delta_M1', 0)
         delta_alpha = ELG_HOD.get('delta_alpha', 0)
         alpha1 = ELG_HOD.get('alpha1', 0)
         beta = ELG_HOD.get('beta', 0)
         conf_c = ELG_HOD.get('conf_c', 0)
-        
+
         ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E,
                             Ac_E, As_E, Bc_E, Bs_E, ic_E, delta_M1, delta_alpha, alpha1, beta, conf_c])
     else:
@@ -769,7 +769,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         ELG_design_array = np.zeros(8)
         ELG_decorations_array = np.zeros(11)
         want_ELG = False
-        
+
     if 'QSO' in tracers.keys():
         # QSO design
         want_QSO = True
@@ -781,14 +781,14 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
                             'alpha'))
         # z-evolving HOD
         Delta_a = 1./(1+params['z']) - 1./(1+QSO_HOD.get('z_pivot', params['z']))
-        logM_cut_pr = QSO_HOD.get('logM_cut_pr', 0) 
+        logM_cut_pr = QSO_HOD.get('logM_cut_pr', 0)
         logM1_pr = QSO_HOD.get('logM1_pr', 0)
         logM_cut_Q = logM_cut_Q + logM_cut_pr*Delta_a
         logM1_Q = logM1_Q + logM1_pr*Delta_a
-        
+
         QSO_design_array = np.array(
             [logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q])
-        
+
         alpha_c_Q = QSO_HOD.get('alpha_c', 0)
         alpha_s_Q = QSO_HOD.get('alpha_s', 1)
         s_Q = QSO_HOD.get('s', 0)
@@ -800,7 +800,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         Bc_Q = QSO_HOD.get('Bcent', 0)
         Bs_Q = QSO_HOD.get('Bsat', 0)
         ic_Q = QSO_HOD.get('ic', 1)
-        
+
         QSO_decorations_array = np.array(
             [alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q])
     else:
@@ -808,7 +808,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         QSO_design_array = np.zeros(5)
         QSO_decorations_array = np.zeros(11)
         want_QSO = False
-    
+
     start = time.time()
 
     velz2kms = params['velz2kms']
@@ -817,26 +817,26 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     origin = params['origin']
     # for each halo, generate central galaxies and output to file
     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = \
-    gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'], 
-             halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'], 
-             LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array, 
+    gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'],
+             halos_array['hrandoms'], halos_array['hveldev'], halos_array['hdeltac'], halos_array['hfenv'],
+             LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array,
              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread, origin)
     if verbose:
         print("generating centrals took ", time.time() - start)
-    
-    # if conf_a or conf_c: 
+
+    # if conf_a or conf_c:
     #     start = time.time()
     #     assert np.all(halos_array['hid'][:-1] <= halos_array['hid'][1:])
     #     # pkeeps = fast_keep(keep_cent, halos_array['hid'], subsample['phid'])
     #     pinds = searchsorted_parallel(halos_array['hid'], subsample['phid'], Nthread)
     #     pkeeps = keep_cent[subsample['pinds']]
     #     print("gen pkeep took", time.time() - start)
-        
+
 
     start = time.time()
     LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
-    gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'], 
-             subsample['pweights'], subsample['prandoms'], subsample['pdeltac'], subsample['pfenv'], 
+    gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'],
+             subsample['pweights'], subsample['prandoms'], subsample['pdeltac'], subsample['pfenv'],
              enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'], subsample['pranksc'],
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
@@ -847,8 +847,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     # B.H. TODO: need a for loop above so we don't need to do this by hand
     HOD_dict_sat = {'LRG': LRG_dict_sat, 'ELG': ELG_dict_sat, 'QSO': QSO_dict_sat}
     HOD_dict_cent = {'LRG': LRG_dict_cent, 'ELG': ELG_dict_cent, 'QSO': QSO_dict_cent}
-    
-    # do a concatenate in numba parallel 
+
+    # do a concatenate in numba parallel
     start = time.time()
     HOD_dict = {}
     for tracer in tracers:
@@ -865,7 +865,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     return HOD_dict
 
 
-def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16, 
+def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     enable_ranks = False, rsd = True, write_to_disk = False, savedir = "./", verbose = False, fn_ext = None):
     """
     pass on inputs to the gen_gals function and takes care of I/O
@@ -873,7 +873,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     Parameters
     ----------
 
-    halos_data : dictionary of arrays 
+    halos_data : dictionary of arrays
         a dictionary of halo properties (pos, vel, mass, id, randoms, ...)
 
     particle_data : dictionary of arrays
@@ -883,22 +883,22 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
         Dictionary of multi-tracer HODs
 
     enable_ranks : boolean
-        Flag of whether to implement particle ranks. 
+        Flag of whether to implement particle ranks.
 
     rsd : boolean
-        Flag of whether to implement RSD. 
+        Flag of whether to implement RSD.
 
     write_to_disk : boolean
-        Flag of whether to output to disk. 
+        Flag of whether to output to disk.
 
     verbose : boolean
-        Whether to output detailed outputs. 
+        Whether to output detailed outputs.
 
     savedir : str
-        where to save the output if write_to_disk == True. 
+        where to save the output if write_to_disk == True.
 
     params : dict
-        Dictionary of various simulation parameters. 
+        Dictionary of various simulation parameters.
 
     fn_ext: str
         filename extension for saved files. Only relevant when ``write_to_disk = True``.
@@ -907,7 +907,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
     ------
 
     HOD_dict : dictionary of dictionaries
-        Dictionary of the format: {tracer1_dict, tracer2_dict, ...}, 
+        Dictionary of the format: {tracer1_dict, tracer2_dict, ...},
         where tracer1_dict = {x, y, z, vx, vy, vz, mass, id}
 
     """
@@ -917,14 +917,14 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
 
     # find the halos, populate them with galaxies and write them to files
     HOD_dict = gen_gals(halo_data, particle_data, tracers, params, Nthread, enable_ranks, rsd, verbose)
-    
+
     # how many galaxies were generated and write them to disk
     for tracer in tracers.keys():
         Ncent = HOD_dict[tracer]['Ncent']
         if verbose:
-            print("generated %ss:"%tracer, len(HOD_dict[tracer]['x']), 
+            print("generated %ss:"%tracer, len(HOD_dict[tracer]['x']),
                 "satellite fraction ", 1 - Ncent/len(HOD_dict[tracer]['x']))
-        
+
         if write_to_disk:
             if verbose:
                 print("outputting galaxies to disk")
@@ -933,7 +933,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
                 rsd_string = "_rsd"
             else:
                 rsd_string = ""
-            
+
             if fn_ext is None:
                 outdir = (savedir) / ("galaxies"+rsd_string)
             else:
@@ -942,7 +942,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
             # create directories if not existing
             os.makedirs(outdir, exist_ok = True)
 
-            # save to file 
+            # save to file
             outdict = HOD_dict[tracer].pop('Ncent', None)
             table = Table(HOD_dict[tracer], meta = {'Ncent': Ncent, 'Gal_type': tracer, **tracers[tracer]})
             if params['chunk'] == -1:

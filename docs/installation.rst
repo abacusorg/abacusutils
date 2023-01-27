@@ -16,7 +16,7 @@ For access to the Python functionality of abacusutils, you can either install vi
 or clone from GitHub.  The pip installation is recommended if you don't need to modify
 the source:
 ::
-    
+
     $ pip install abacusutils
 
 This command will also give access to the command-line :doc:`pipes` functionality.
@@ -36,11 +36,11 @@ If you want to hack on the abacusutils source code, we recommend that you clone
 the repo and install the package in pip "editable mode":
 
 ::
-    
+
     $ git clone https://github.com/abacusorg/abacusutils.git
     $ cd abacusutils
     $ pip install -e .[extra]  # install from current dir in editable mode, including extras
-    
+
 The ``-e`` flag ("editable") is optional but recommended so that the installed copy is just a
 link to the cloned repo (and thus modifications to the Python code will be seen by code that
 imports abacusutils).
@@ -48,7 +48,7 @@ imports abacusutils).
 The ``.[extra]`` syntax says to install from the current directory (``.``), including the
 set of "optional dependencies" called ``extra``.  This includes Python packages needed
 to run things in the ``scripts`` directory.
-    
+
 .. warning::
     If you first install via pip and then later clone the repo, don't forget to
     run ``pip install -e .[extra]`` in the repo.  Otherwise, you will have two

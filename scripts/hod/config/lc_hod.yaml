@@ -11,10 +11,10 @@ sim_params:
     cleaned_halos: '/global/project/projectdirs/desi/cosmosim/Abacus/cleaning/'
     z_mock: 0.100
     halo_lc: True # enable for halo light cones TODO: can make automatic
-    
+
 prepare_sim:
     Nparallel_load: 1 # not sure if this makes a difference since we have a single slab
-    
+
 # HOD parameters
 HOD_params:
     want_ranks: True               # want to implement satellite profile flexiblities?
@@ -23,7 +23,7 @@ HOD_params:
         LRG: True
         ELG: False
         QSO: False
-    want_rsd: True                 # want RSD? 
+    want_rsd: True                 # want RSD?
     write_to_disk: True
 
     # parameters for setting up the HOD of LRGs
@@ -42,7 +42,7 @@ HOD_params:
         Acent: -7.31189630e-01
         Asat: -2.41898268e-01
         Bcent: -9.37221616e-03
-        Bsat: 3.74532572e-02 
+        Bsat: 3.74532572e-02
         ic: 0.97
 
     # parameters for setting up the HOD of ELGs
@@ -65,7 +65,7 @@ HOD_params:
         Acent: -7.31189630e-01
         Asat: -2.41898268e-01
         Bcent: -9.37221616e-03
-        Bsat: 3.74532572e-02 
+        Bsat: 3.74532572e-02
         ic: 0.99
 
     # parameters for setting up the HOD of ELGs
@@ -86,7 +86,7 @@ HOD_params:
         Acent: -7.31189630e-01
         Asat: -2.41898268e-01
         Bcent: -9.37221616e-03
-        Bsat: 3.74532572e-02 
+        Bsat: 3.74532572e-02
         ic: 0.99
 
 # Parameters to be fitted in MCMC

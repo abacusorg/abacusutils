@@ -4,7 +4,7 @@ import os, sys, time, gc
 import Corrfunc
 # from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
 # from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
-# from Corrfunc.theory.DDrppi import 
+# from Corrfunc.theory.DDrppi import
 from Corrfunc.theory import wp, xi, DDsmu, DDrppi
 from scipy.special import legendre
 from numba import njit
@@ -70,8 +70,8 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
 
     return result
 
-def calc_xirppi_fast(x1, y1, z1, rpbins, pimax, 
-    pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
+def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
+    pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.
     start = time.time()
     if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
@@ -87,9 +87,9 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     else:
         autocorr = 1
         ND2 = ND1
-    
+
     # single precision mode
-    # to do: make this native 
+    # to do: make this native
     cf_start = time.time()
     rpbins = rpbins.astype(np.float32)
     pimax = np.float32(pimax)
@@ -98,7 +98,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     z1 = z1.astype(np.float32)
     lbox = np.float32(lbox)
 
-    if autocorr == 1:    
+    if autocorr == 1:
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
@@ -106,7 +106,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
@@ -121,8 +121,8 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     return xirppi
 
 
-def calc_multipole_fast(x1, y1, z1, rpbins, 
-    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2]):  # all r assumed to be in h-1 mpc units. 
+def calc_multipole_fast(x1, y1, z1, rpbins,
+    lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2]):  # all r assumed to be in h-1 mpc units.
 
     ND1 = float(len(x1))
     if x2 is not None:
@@ -131,9 +131,9 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
     else:
         autocorr = 1
         ND2 = ND1
-    
+
     # single precision mode
-    # to do: make this native 
+    # to do: make this native
     cf_start = time.time()
     rpbins = rpbins.astype(np.float32)
     x1 = x1.astype(np.float32)
@@ -144,21 +144,21 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
 
     # mu_bins = np.linspace(0, 1, 20)
 
-    # if autocorr == 1: 
+    # if autocorr == 1:
     #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, period = lbox, num_threads = Nthread)
     #     print("halotools ", xi_s_mu)
     # else:
     #     xi_s_mu = s_mu_tpcf(pos1, rpbins, mu_bins, sample2 = np.array([x2, y2, z2]).T % lbox, period = lbox, num_threads = Nthread)
 
     nbins_mu = 40
-    if autocorr == 1: 
+    if autocorr == 1:
         results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+        results = DDsmu(autocorr, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
             periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     DD_counts = DD_counts.reshape((len(rpbins) - 1, nbins_mu))
@@ -177,8 +177,8 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
     return xi_array
 
 
-def calc_wp_fast(x1, y1, z1, rpbins, pimax, 
-    lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
+def calc_wp_fast(x1, y1, z1, rpbins, pimax,
+    lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.
     if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
 
@@ -191,7 +191,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         ND2 = ND1
 
     # single precision mode
-    # to do: make this native 
+    # to do: make this native
     cf_start = time.time()
     rpbins = rpbins.astype(np.float32)
     pimax = np.float32(pimax)
@@ -200,7 +200,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     z1 = z1.astype(np.float32)
     lbox = np.float32(lbox)
 
-    if autocorr == 1:    
+    if autocorr == 1:
         print("sample size", len(x1))
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
@@ -210,7 +210,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)

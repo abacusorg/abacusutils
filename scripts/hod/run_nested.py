@@ -19,13 +19,13 @@ DEFAULTS['path2config'] = 'config/boss_lrg_wp.yaml'
 
 
 def lnprob(p, param_mapping, param_tracer, Data, Ball):
-    # read the parameters 
+    # read the parameters
     for key in param_mapping.keys():
         mapping_idx = param_mapping[key]
         tracer_type = param_tracer[key]
         #tracer_type = param_tracer[params[mapping_idx, -1]]
         Ball.tracers[tracer_type][key] = p[mapping_idx]
-        
+
     # pass them to the mock dictionary
     mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread = 64)
 
@@ -48,8 +48,8 @@ def main(path2config):
     clustering_params = config['clustering_params']
     data_params = config['data_params']
     dynesty_config_params = config['dynesty_config_params']
-    fit_params = config['dynesty_fit_params']    
-    
+    fit_params = config['dynesty_fit_params']
+
     # create a new abacushod object and load the subsamples
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
@@ -74,7 +74,7 @@ def main(path2config):
             os.makedirs(os.path.expanduser(dynesty_config_params['path2output']))
         except:
             pass
-        
+
     # dynesty parameters
     nlive = dynesty_config_params['nlive']
     maxcall = dynesty_config_params['maxcall']
@@ -90,9 +90,9 @@ def main(path2config):
     if (not found_file) or (not dynesty_config_params['rerun']):
 
         # initialize our nested sampler
-        sampler = NestedSampler(lnprob, prior_transform, nparams, 
-            logl_args = [param_mapping, param_tracer, newData, newBall], 
-            ptform_args = [params[:, 0], params[:, 1]], 
+        sampler = NestedSampler(lnprob, prior_transform, nparams,
+            logl_args = [param_mapping, param_tracer, newData, newBall],
+            ptform_args = [params[:, 0], params[:, 1]],
             nlive=nlive, sample = method, rstate = np.random.RandomState(dynesty_config_params['rseed']))
             # first_update = {'min_eff': 20})
 
@@ -118,7 +118,7 @@ class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentD
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', dest='path2config', type=str, help='Path to config file.', default=DEFAULTS['path2config'])
-    
-    args = vars(parser.parse_args())    
+
+    args = vars(parser.parse_args())
     main(**args)
 

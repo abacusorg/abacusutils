@@ -61,13 +61,13 @@ def main(path2config, want_rsd=False, alt_simname=None):
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
     k_Ny = np.pi*nmesh/Lbox
-    
+
     # define k, mu bins
     n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5
-    
+
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
@@ -78,7 +78,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
         W = get_W_compensated(Lbox, nmesh, paste, interlaced)
     else:
         W = None
-    
+
     # set up cosmology
     boltz = Class()
     cosmo = {}
@@ -92,7 +92,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
         cosmo[k] = meta[k]
     boltz.set(cosmo)
     boltz.compute()
-    
+
     # file to save to
     ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
     fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
@@ -100,7 +100,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
     for i in range(len(keynames)):
         fields_fft_fn.append(Path(save_z_dir) / f"advected_{keynames[i]}_field{rsd_str}_fft_nmesh{nmesh:d}.asdf")
     power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}.asdf"
-        
+
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)
     D /= boltz.scale_independent_growth_factor(z_ic)
@@ -110,7 +110,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
     else:
         f_growth = 0.
     print("D = ", D)
-    
+
     # field names and growths
     field_D = [1, D, D**2, D**2, D]
 
@@ -139,19 +139,19 @@ def main(path2config, want_rsd=False, alt_simname=None):
         grid_x = grid_x.flatten()
         grid_y = grid_y.flatten()
         grid_z = grid_z.flatten()
-        
+
         disp_pos[:, 0] += grid_x
         disp_pos[:, 1] += grid_y
         disp_pos[:, 2] += grid_z
         del grid_x, grid_y, grid_z; gc.collect()
-        
+
         disp_pos *= Lbox
         disp_pos %= Lbox
         print("box coordinates of the displacements", disp_pos.dtype)
-        
+
         # Initiate fields
         for i in range(len(keynames)):
-            
+
             print(keynames[i])
             if i == 0:
                 w = None
@@ -159,7 +159,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
                 f = asdf.open(fields_fn)
                 w = f['data'][keynames[i]][:, :, :].flatten()
                 f.close()
-            field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)) 
+            field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced))
             del w; gc.collect()
             table = {}
             table[f'{keynames[i]}_Re'] = np.array(field_fft.real, dtype=np.float32)
@@ -188,14 +188,14 @@ def main(path2config, want_rsd=False, alt_simname=None):
         pk_ij_dict = {}
         pk_ij_dict['k_binc'] = k_binc
         pk_ij_dict['mu_binc'] = mu_binc
-    
+
     # get the box k and mu modes
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
-    
+
     # initiate final arrays
     pk_auto = []
     pk_cross = []
-    for i in range(len(keynames)):        
+    for i in range(len(keynames)):
         for j in range(len(keynames)):
             if i < j: continue
             print("Computing cross-correlation of", keynames[i], keynames[j])

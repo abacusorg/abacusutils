@@ -21,13 +21,13 @@ DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/lc_hod.yaml'
 
 def main(path2config):
-    
+
     # load the yaml parameters
     config = yaml.load(open(path2config))
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
-    
+
     # additional parameter choices
     want_rsd = HOD_params['want_rsd']
     write_to_disk = HOD_params['write_to_disk']
@@ -35,7 +35,7 @@ def main(path2config):
     # run the HODs (note: the first time you call the function run_hod, the script takes a bit to compile)
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
     mock_dict = newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=write_to_disk, Nthread=16)
-        
+
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
 

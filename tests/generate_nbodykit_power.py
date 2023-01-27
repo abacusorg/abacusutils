@@ -102,14 +102,14 @@ def power_test_data():
                 )
 
 def generate_nbody(power_test_data, interlaced=False, compensated=False, paste='CIC'):
-    
+
     # load data
     power_test_data = power_test_data()
     Lbox = power_test_data['Lbox']
     x = power_test_data['x']
     y = power_test_data['y']
     z = power_test_data['z']
-    
+
     # specifications of the power spectrum computation
     nmesh = 72
     nbins_mu = 4
@@ -140,7 +140,7 @@ def generate_nbody(power_test_data, interlaced=False, compensated=False, paste='
             compensation = CompensateCICShotnoise
     if compensated:
         mesh = mesh.apply(compensation, kind='circular', mode='complex')
-        
+
     # compute the 2D power
     r = FFTPower(mesh, mode='2d', kmin=kmin, dk=dk, kmax=kmax, Nmu=nbins_mu, los=[0,0,1], poles=poles)
     p_ell = r.poles
@@ -154,7 +154,7 @@ def generate_nbody(power_test_data, interlaced=False, compensated=False, paste='
     #k = Pkmu['k']
     k = r.power.coords['k'] # bin centers (matches abacusutils preference)
     modes = Pkmu['modes']
-    Pkmu = Pkmu['power'] 
+    Pkmu = Pkmu['power']
 
     # save arrays
     np.savez(fn, k=k, power=Pkmu, modes=modes, power_ell=P_ell)

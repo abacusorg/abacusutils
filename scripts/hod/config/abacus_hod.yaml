@@ -4,14 +4,14 @@
 
 # Simulation parameters
 sim_params:
-    sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation 
+    sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation
     # sim_dir: '/mnt/gosling2/bigsims/'                                        # where is the simulation
     sim_dir: /mnt/alan1/sbose/scratch/data/cleaned_catalogues/
     output_dir: '/mnt/marvin1/syuan/scratch/data_mocks_summit_new'          # where to output galaxy mocks
     subsample_dir: '/mnt/marvin1/syuan/scratch/data_summit_cleaned/'                 # where to output subsample data
     z_mock: 0.5                                                              # which redshift slice
     cleaned_halos: True                                                     # load cleaned halos?
-    
+
 prepare_sim:
     Nparallel_load: 5                                                          # number of thread for organizing simulation outputs (prepare_sim)
 
@@ -22,10 +22,10 @@ HOD_params:
     # Ndim: 1024                     # size of grid for grid based local environment, we opted to use neighbor count based local environment instead
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
-        LRG: True 
+        LRG: True
         ELG: False
         QSO: False
-    want_rsd: True                 # want RSD? 
+    want_rsd: True                 # want RSD?
     write_to_disk: False
 
     # parameters for setting up the HOD of LRGs
@@ -103,20 +103,20 @@ clustering_params:
     pi_bin_size: 5
 
 # ===========================================================================================
-# The following dictionaries are for using the provided emcee/likelihood templates. They 
-# are not needed for using the AbacusHOD class and running HODs. 
+# The following dictionaries are for using the provided emcee/likelihood templates. They
+# are not needed for using the AbacusHOD class and running HODs.
 
-# parameters that indicate where the observed data that you would like to fit live. 
+# parameters that indicate where the observed data that you would like to fit live.
 data_params:
     tracer_density_mean:
         LRG: 3.0103e-4 # (mpc/h)^-3
     tracer_density_std:
         LRG: 4.0e-5 # (mpc/h)^-3
     tracer_combos:
-        LRG_LRG:    
+        LRG_LRG:
             path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
             path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
-#       LRG_ELG:    
+#       LRG_ELG:
 #            path2power: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_target_standard.npz'
 #            path2cov: '/mnt/marvin1/syuan/scratch/targets_xi/data_xi_cov_mock_div8.npz'
 #        ELG_ELG:

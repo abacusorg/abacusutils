@@ -26,13 +26,13 @@ TESTDIR = dirname(__file__)
 REFDIR = pjoin(dirname(__file__), 'ref_hod')
 EXAMPLE_SIM = pjoin(TESTDIR, 'AbacusSummit_base_c000_ph001-abridged')
 EXAMPLE_CONFIG = pjoin(TESTDIR, 'abacus_lc_hod.yaml')
-EXAMPLE_SUBSAMPLE_HALOS = pjoin(REFDIR, 
+EXAMPLE_SUBSAMPLE_HALOS = pjoin(REFDIR,
     'AbacusSummit_base_c000_ph001-abridged/z2.250/halos_xcom_0_seed600_abacushod_oldfenv_MT_new.h5')
-EXAMPLE_SUBSAMPLE_PARTS = pjoin(REFDIR, 
+EXAMPLE_SUBSAMPLE_PARTS = pjoin(REFDIR,
     'AbacusSummit_base_c000_ph001-abridged/z2.250/particles_xcom_0_seed600_abacushod_oldfenv_MT_new.h5')
-EXAMPLE_LRGS = pjoin(REFDIR, 
+EXAMPLE_LRGS = pjoin(REFDIR,
     'AbacusSummit_base_c000_ph001-abridged/z2.250/galaxies_rsd/LRGs.dat')
-EXAMPLE_ELGS = pjoin(REFDIR, 
+EXAMPLE_ELGS = pjoin(REFDIR,
     'AbacusSummit_base_c000_ph001-abridged/z2.250/galaxies_rsd/ELGs.dat')
 
 # @pytest.mark.xfail
@@ -45,7 +45,7 @@ def test_hod(tmp_path, reference_mode = False):
     config = yaml.safe_load(open(EXAMPLE_CONFIG))
     # inform abacus_hod where the simulation files are, relative to the cwd
     config['sim_params']['sim_dir'] = pjoin(TESTDIR, 'halo_light_cones')
-    
+
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
@@ -55,11 +55,11 @@ def test_hod(tmp_path, reference_mode = False):
         print("Generating new reference files...")
 
         prepare_sim.main(EXAMPLE_CONFIG)
-        
+
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
         bin_params = clustering_params['bin_params']
-        
+
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
@@ -96,10 +96,10 @@ def test_hod(tmp_path, reference_mode = False):
         rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
         pimax = clustering_params['pimax']
         pi_bin_size = clustering_params['pi_bin_size']
-        
+
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-        
+
         # throw away run for jit to compile, write to disk
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
         savedir_gal = config['sim_params']['output_dir']\

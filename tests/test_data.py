@@ -73,18 +73,18 @@ def test_subsamples_unclean(tmp_path):
     '''
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
-    
+
     cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=dict(A=True), fields='all', cleaned=False)
     lenA = len(cat.subsamples)
     assert lenA == 2975
     assert cat.subsamples.colnames == ['pos', 'vel']
-    
+
     cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=dict(B=True), fields='all', cleaned=False)
     lenB = len(cat.subsamples)
     assert lenB == 7082
 
     cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', subsamples=True, fields='all', cleaned=False)
-    
+
     assert len(cat.subsamples) == lenA + lenB
 
     # to regenerate reference
@@ -185,7 +185,7 @@ def test_unpack_bits():
 def test_filter_func():
     '''Test CHC filter_func
     '''
-    
+
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(EXAMPLE_SIM/'halos'/'z0.000', fields=['N','x_L2com'],
@@ -203,62 +203,62 @@ def test_pack9():
     fn = EXAMPLE_SIM/'slices'/'z0.000'/'L0_pack9'/'slab000.L0.pack9.asdf'
     p = read_asdf(fn, load=('pos','vel'),
                 dtype=np.float32)
-    
+
     #p.write(PACK9_OUTPUT, format='asdf', all_array_compression='blsc')
     ref = Table.read(PACK9_OUTPUT)
-    
+
     for k in ref.colnames:
         assert np.all(p[k] == ref[k])
     assert p.meta == ref.meta
-    
+
     p = read_asdf(fn, dtype=np.float32)
     assert sorted(p.colnames) == ['pos','vel']
 
     # pid checks
     pidfn = EXAMPLE_SIM/'slices'/'z0.000'/'L0_pack9_pid'/'slab000.L0.pack9.pid.asdf'
     p = read_asdf(pidfn, load=('aux','pid','lagr_pos','tagged','density','lagr_idx'))
-    
+
     #p.write(PACK9_PID_OUTPUT, format='asdf', all_array_compression='blsc')
     ref = Table.read(PACK9_PID_OUTPUT)
-    
+
     for k in ref.colnames:
         assert np.all(p[k] == ref[k])
     assert p.meta == ref.meta
-    
+
     p = read_asdf(pidfn, dtype=np.float32)
     assert p.colnames == ['pid']
 
-    
+
 def test_halo_lc():
     '''Test loading halo light cones
     '''
-    
+
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(curdir / 'halo_light_cones/AbacusSummit_base_c000_ph001-abridged/z2.250/',
                              fields='all',
                              subsamples=True)
     assert(cat.halo_lc == True)
-    
+
     HALO_LC_CAT = refdir / 'halo_lc_cat.asdf'
     HALO_LC_SUBSAMPLES = refdir / 'halo_lc_subsample.asdf'
-    
+
     # generate reference
     #ref = cat.halos
     #ref.write(HALO_LC_CAT, format='asdf', all_array_storage='internal', all_array_compression='blsc')
-    
+
     #ref = cat.subsamples
     #ref.write(HALO_LC_SUBSAMPLES, format='asdf', all_array_storage='internal', all_array_compression='blsc')
-    
+
     ref = Table.read(HALO_LC_CAT)
     halos = cat.halos
     for col in ref.colnames:
         assert check_close(ref[col], halos[col])
     assert halos.meta == ref.meta
-    
+
     ref = Table.read(HALO_LC_SUBSAMPLES)
     ss = cat.subsamples
     for col in ref.colnames:
         assert check_close(ref[col], ss[col])
-            
+
     assert ss.meta == ref.meta

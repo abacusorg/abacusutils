@@ -64,7 +64,7 @@ class DumPool(object):
 
     def close(self):
         pass
-    
+
 def time_lnprob(params, param_mapping, param_tracer, Data, Ball):
     print('   ==========================================')
     print("   | Calculating likelihood evaluation time |")
@@ -72,7 +72,7 @@ def time_lnprob(params, param_mapping, param_tracer, Data, Ball):
 
     # run once without timing since numba needs to compile
     lnprob(params[:, 0], params, param_mapping, param_tracer, Data, Ball)
-    
+
     timing = np.zeros(10)
     for i in range(10):
         print('Test ',i,' of 9')
@@ -83,7 +83,7 @@ def time_lnprob(params, param_mapping, param_tracer, Data, Ball):
             lnprob(params[:, 0]-(i-4)*0.1*params[:, 3], params, param_mapping, param_tracer, Data, Ball)
         finish = time.time()
         timing[i] = finish-start
-                
+
     mean = np.mean(timing)
     print('============================================================================')
     print('mean computation time: ', mean)
@@ -97,14 +97,14 @@ def inrange(p, params):
 
 def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
     if inrange(p, params):
-        # read the parameters 
+        # read the parameters
         for key in param_mapping.keys():
             mapping_idx = param_mapping[key]
             tracer_type = param_tracer[key]
             #tracer_type = param_tracer[params[mapping_idx, -1]]
             Ball.tracers[tracer_type][key] = p[mapping_idx]
             print(key, Ball.tracers[tracer_type][key])
-            
+
         # pass them to the mock dictionary
         mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread = 64)
         clustering = Ball.compute_xirppi(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size, Nthread = 16)
@@ -123,8 +123,8 @@ def main(path2config, time_likelihood):
     clustering_params = config['clustering_params']
     data_params = config['data_params']
     ch_config_params = config['ch_config_params']
-    fit_params = config['fit_params']    
-    
+    fit_params = config['fit_params']
+
     # create a new abacushod object and load the subsamples
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
@@ -142,7 +142,7 @@ def main(path2config, time_likelihood):
         param_mapping[key] = mapping_idx
         param_tracer[key] = tracer_type
         params[mapping_idx, :] = fit_params[key][1:-1]
-        
+
     # Make path to output
     if not os.path.isdir(os.path.expanduser(ch_config_params['path2output'])):
         try:
@@ -160,16 +160,16 @@ def main(path2config, time_likelihood):
         pool = DumPool()
         print("Not using MPI")
         pool_use = None
-        
+
     if not pool.is_master():
         pool.wait()
         sys.exit(0)
-    
+
     # just time the likelihood calculation
     if time_likelihood:
         time_lnprob(params, param_mapping, param_tracer, newData, newBall)
         return
-    
+
     # emcee parameters
     nwalkers = nparams * ch_config_params['walkersRatio']
     nsteps = ch_config_params['burninIterations'] + ch_config_params['sampleIterations']
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', dest='path2config', type=str, help='Path to config file.', default=DEFAULTS['path2config'])
     parser.add_argument('--time_likelihood', dest='time_likelihood',  help='Times the likelihood calculations', action='store_true')
-    
-    args = vars(parser.parse_args())    
+
+    args = vars(parser.parse_args())
     main(**args)
 

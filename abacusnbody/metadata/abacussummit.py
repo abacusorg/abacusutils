@@ -33,7 +33,7 @@ def get_meta(simname, redshift=None):
 
     if not simname.startswith('AbacusSummit_'):
         simname = 'AbacusSummit_' + simname
-    
+
     global metadata
     if metadata is None:
         with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
@@ -42,7 +42,7 @@ def get_meta(simname, redshift=None):
             for sim in metadata:
                 metadata[sim]['param'] = msgpack.loads(metadata[sim]['param'].data, strict_map_key=False)
                 metadata[sim]['state'] = msgpack.loads(metadata[sim]['state'].data, strict_map_key=False)
-    
+
     if simname not in metadata:
         raise ValueError(f'Simulation "{simname}" is not in metadata file "{metadata_fn}"')
 
@@ -58,5 +58,5 @@ def get_meta(simname, redshift=None):
         if redshift not in metadata[simname]['state']:
             raise ValueError(f'Redshift {redshift} metadata not present for "{simname}" in metadata file "{metadata_fn}')
         res.update(metadata[simname]['state'][redshift])
-    
+
     return res
