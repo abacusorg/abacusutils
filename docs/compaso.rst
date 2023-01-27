@@ -233,9 +233,9 @@ will be called for each superslab, and must return a mask representing the rows
 to keep.  For example, to drop all halos with less than 100 particles, use:
 
 .. code-block:: python
-    
+
     cat = CompaSOHaloCatalog(..., filter_func=lambda h: h['N'] >= 100)
-    
+
 Because this mask is applied on each superslab immediately after loading,
 the full, unfiltered table is never constructed, thus saving memory.
 

@@ -7,13 +7,11 @@ Usage
 $ python ./run_hod.py --help
 '''
 
-import os
-import glob
+import argparse
 import time
 
-import yaml
 import numpy as np
-import argparse
+import yaml
 
 from abacusnbody.hod.abacus_hod import AbacusHOD
 
@@ -27,7 +25,7 @@ def main(path2config):
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
-    
+
     # additional parameter choices
     want_rsd = HOD_params['want_rsd']
     write_to_disk = HOD_params['write_to_disk']
@@ -35,10 +33,10 @@ def main(path2config):
     rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
     pimax = clustering_params['pimax']
     pi_bin_size = clustering_params['pi_bin_size']
-    
+
     # create a new abacushod object
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-    
+
     # throw away run for jit to compile, write to disk
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 16)
     # mock_dict = newBall.gal_reader()

@@ -34,44 +34,44 @@ class AbacusHOD:
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
-        configurations. The ``clustering_params`` specifies the summary statistics 
+        configurations. The ``clustering_params`` specifies the summary statistics
         configurations. The ``HOD_params`` and ``clustering_params`` can be set to their
-        default values in the ``config/abacus_hod.yaml`` file and changed later. 
-        The ``sim_params`` cannot be changed once the ``AbacusHOD`` object is created. 
+        default values in the ``config/abacus_hod.yaml`` file and changed later.
+        The ``sim_params`` cannot be changed once the ``AbacusHOD`` object is created.
 
         Parameters
         ----------
         sim_params: dict
             Dictionary of simulation parameters. Load from ``config/abacus_hod.yaml``. The dictionary should contain the following keys:
-                * ``sim_name``: str, name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'. 
-                * ``sim_dir``: str, the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
-                * ``output_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
-                * ``subsample_dir``: str, where to save halo+particle subsample, e.g. '/my/output/subsamples/'. 
-                * ``z_mock``: float, which redshift slice, e.g. 0.5.    
+                * ``sim_name``: str, name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'.
+                * ``sim_dir``: str, the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.
+                * ``output_dir``: str, the diretory to save galaxy to, e.g. '/my/output/galalxies'.
+                * ``subsample_dir``: str, where to save halo+particle subsample, e.g. '/my/output/subsamples/'.
+                * ``z_mock``: float, which redshift slice, e.g. 0.5.
 
-        HOD_params: dict 
+        HOD_params: dict
             HOD parameters and tracer configurations. Load from ``config/abacus_hod.yaml``. It contains the following keys:
-                * ``tracer_flags``: dict, which tracers is enabled: 
-                    * ``LRG``: bool, default ``True``. 
-                    * ``ELG``: bool, default ``False``. 
-                    * ``QSO``: bool, default ``False``. 
-                * ``want_ranks``: bool, enable satellite profile flexibilities. If ``False``, satellite profile follows the DM, default ``True``. 
-                * ``want_rsd``: bool, enable RSD? default ``True``.                 # want RSD? 
+                * ``tracer_flags``: dict, which tracers is enabled:
+                    * ``LRG``: bool, default ``True``.
+                    * ``ELG``: bool, default ``False``.
+                    * ``QSO``: bool, default ``False``.
+                * ``want_ranks``: bool, enable satellite profile flexibilities. If ``False``, satellite profile follows the DM, default ``True``.
+                * ``want_rsd``: bool, enable RSD? default ``True``.                 # want RSD?
                 * ``Ndim``: int, grid density for computing local environment, default 1024.
                 * ``density_sigma``: float, scale radius in Mpc / h for local density definition, default 3.
-                * ``write_to_disk``: bool, output to disk? default ``False``. Setting to ``True`` decreases performance. 
-                * ``LRG_params``: dict, HOD parameter values for LRGs. Default values are given in config file. 
-                * ``ELG_params``: dict, HOD parameter values for ELGs. Default values are given in config file. 
-                * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file. 
+                * ``write_to_disk``: bool, output to disk? default ``False``. Setting to ``True`` decreases performance.
+                * ``LRG_params``: dict, HOD parameter values for LRGs. Default values are given in config file.
+                * ``ELG_params``: dict, HOD parameter values for ELGs. Default values are given in config file.
+                * ``QSO_params``: dict, HOD parameter values for QSOs. Default values are given in config file.
 
         clustering_params: dict, optional
             Summary statistics configuration parameters. Load from ``config/abacus_hod.yaml``. It contains the following keys:
                 * ``clustering_type``: str, which summary statistic to compute. Options: ``wp``, ``xirppi``, default: ``xirppi``.
-                * ``bin_params``: dict, transverse scale binning. 
+                * ``bin_params``: dict, transverse scale binning.
                     * ``logmin``: float, :math:`\\log_{10}r_{\\mathrm{min}}` in Mpc/h.
                     * ``logmax``: float, :math:`\\log_{10}r_{\\mathrm{max}}` in Mpc/h.
                     * ``nbins``: int, number of bins.
-                * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`. 
+                * ``pimax``: int, :math:`\\pi_{\\mathrm{max}}`.
                 * ``pi_bin_size``: int, size of bins along of the line of sight. Need to be divisor of ``pimax``.
         chunk: int, optional
             Index of current chunk. Must be between ``0`` and ``n_chunks-1``. Files associated with this chunk are written out as ``{tracer}s_{chunk}.dat``. Default is -1 (no chunking).
@@ -85,7 +85,7 @@ class AbacusHOD:
         self.z_mock = sim_params['z_mock']
         self.output_dir = sim_params.get('output_dir', './')
         self.halo_lc = sim_params.get('halo_lc', False)
-        
+
         # tracers
         tracer_flags = HOD_params['tracer_flags']
         tracers = {}
@@ -97,7 +97,7 @@ class AbacusHOD:
         # HOD parameter choices
         self.want_ranks = HOD_params.get('want_ranks', False)
         self.want_rsd = HOD_params['want_rsd']
-        
+
         if not clustering_params == None:
             # clusteringparameters
             self.pimax = clustering_params.get('pimax', None)
@@ -113,15 +113,15 @@ class AbacusHOD:
 
         # load the subsample particles
         self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
-        
-        
+
+
         # determine the halo mass function
         self.logMbins = np.linspace(
-            np.log10(np.min(self.halo_data['hmass'])), 
+            np.log10(np.min(self.halo_data['hmass'])),
             np.log10(np.max(self.halo_data['hmass'])), 101)
         self.deltacbins = np.linspace(-0.5, 0.5, 101)
         self.fenvbins = np.linspace(-0.5, 0.5, 101)
-        
+
         self.halo_mass_func, edges = np.histogramdd(
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins],
@@ -129,7 +129,7 @@ class AbacusHOD:
 
     def staging(self):
         """
-        Constructor call this function to load the halo+particle subsamples onto memory. 
+        Constructor call this function to load the halo+particle subsamples onto memory.
         """
         # all paths relevant for mock generation
         output_dir = Path(self.output_dir)
@@ -178,14 +178,14 @@ class AbacusHOD:
 
         # count ther number of halos and particles
         Nhalos = np.empty(params['numslabs'])
-        Nparts = np.empty(params['numslabs'])        
+        Nparts = np.empty(params['numslabs'])
         for eslab in range(start, end):
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -239,14 +239,14 @@ class AbacusHOD:
         halo_ticker = 0
         parts_ticker = 0
         for eslab in range(start, end):
-            
+
             print("Loading simulation by slab, ", eslab)
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
-                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)            
+                particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv_MT'%eslab)
 
             if self.want_ranks:
                 particlefilename = str(particlefilename) + '_withranks'
@@ -266,7 +266,7 @@ class AbacusHOD:
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
             halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
-            halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles 
+            halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles
             halo_multi = maskedhalos['multi_halos']
             halo_submask = maskedhalos['mask_subsample'].astype(bool)
             halo_randoms = maskedhalos['randoms']
@@ -282,7 +282,7 @@ class AbacusHOD:
             hdeltac[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_deltac
             hfenv[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_fenv
             halo_ticker += Nhalos[eslab-start]
-        
+
             # extract particle data that we need
             newpart = h5py.File(particlefilename, 'r')
             subsample = newpart['particles']
@@ -303,17 +303,17 @@ class AbacusHOD:
                 assert 'ranksv' in part_fields
                 part_ranks = subsample['ranks']
                 part_ranksv = subsample['ranksv']
-                
+
                 if 'ranksp' in part_fields:
                     part_ranksp = subsample['ranksp']
                 else:
                     part_ranksp = np.zeros(len(subsample))
-                    
+
                 if 'ranksr' in part_fields:
                     part_ranksr = subsample['ranksr']
                 else:
                     part_ranksr = np.zeros(len(subsample))
-                    
+
                 if 'ranksc' in part_fields:
                     part_ranksc = subsample['ranksc']
                 else:
@@ -324,7 +324,7 @@ class AbacusHOD:
                 p_ranksp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksp
                 p_ranksr[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksr
                 p_ranksc[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksc
-                
+
             # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
             # particle_data = vstack([particle_data, new_part_table])
             ppos[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_pos
@@ -338,7 +338,7 @@ class AbacusHOD:
             pdeltac[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_deltac
             pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
             parts_ticker += Nparts[eslab-start]
-            
+
         # sort halos by hid, important for conformity
         if not np.all(hid[:-1] <= hid[1:]):
             print("sorting halos for conformity calculation")
@@ -354,27 +354,27 @@ class AbacusHOD:
             hdeltac = hdeltac[sortind]
             hfenv = hfenv[sortind]
         assert np.all(hid[:-1] <= hid[1:])
-            
-        halo_data = {"hpos": hpos, 
-                     "hvel": hvel, 
-                     "hmass": hmass, 
-                     "hid": hid, 
-                     "hmultis": hmultis, 
-                     "hrandoms": hrandoms, 
-                     "hveldev": hveldev, 
-                     "hsigma3d": hsigma3d, 
-                     "hdeltac": hdeltac, 
+
+        halo_data = {"hpos": hpos,
+                     "hvel": hvel,
+                     "hmass": hmass,
+                     "hid": hid,
+                     "hmultis": hmultis,
+                     "hrandoms": hrandoms,
+                     "hveldev": hveldev,
+                     "hsigma3d": hsigma3d,
+                     "hdeltac": hdeltac,
                      "hfenv": hfenv}
         pweights = 1/pNp/psubsampling
         pinds = _searchsorted_parallel(hid, phid)
-        particle_data = {"ppos": ppos, 
-                         "pvel": pvel, 
-                         "phvel": phvel, 
-                         "phmass": phmass, 
-                         "phid": phid, 
-                         "pweights": pweights, 
-                         "prandoms": prandoms, 
-                         "pdeltac": pdeltac, 
+        particle_data = {"ppos": ppos,
+                         "pvel": pvel,
+                         "phvel": phvel,
+                         "phmass": phmass,
+                         "phid": phid,
+                         "pweights": pweights,
+                         "prandoms": prandoms,
+                         "pdeltac": pdeltac,
                          "pfenv": pfenv,
                          "pinds": pinds}
         if self.want_ranks:
@@ -389,10 +389,10 @@ class AbacusHOD:
             particle_data['pranksp'] =  np.ones(Nparts_tot)
             particle_data['pranksr'] =  np.ones(Nparts_tot)
             particle_data['pranksc'] =  np.ones(Nparts_tot)
-        
+
         return halo_data, particle_data, params, mock_dir
 
-    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False, 
+    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False,
         Nthread = 16, verbose = False, fn_ext = None):
         """
         Runs a custom HOD.
@@ -403,23 +403,23 @@ class AbacusHOD:
             dictionary of multi-tracer HOD. ``tracers['LRG']`` is the dictionary of LRG HOD parameters,
             overwrites the ``LRG_params`` argument in the constructor.
             Same for keys ``'ELG'`` and ``'QSO'``.
-        
-        ``want_rsd``: bool 
+
+        ``want_rsd``: bool
             enable RSD? default ``True``.
-            
+
         ``reseed``: int
             re-generate random numbers? supply random number seed. This overwrites the pre-generated random numbers, at a performance cost.
             Default ``None``.
 
-        ``write_to_disk``: bool 
-            output to disk? default ``False``. Setting to ``True`` decreases performance. 
+        ``write_to_disk``: bool
+            output to disk? default ``False``. Setting to ``True`` decreases performance.
 
         ``Nthread``: int
-            number of threads in the HOD run. Default 16. 
+            number of threads in the HOD run. Default 16.
 
-        ``verbose``: bool, 
+        ``verbose``: bool,
             detailed stdout? default ``False``.
-            
+
         ``fn_ext``: str
             filename extension for saved files. Only relevant when ``write_to_disk = True``.
 
@@ -427,13 +427,13 @@ class AbacusHOD:
         -------
         mock_dict: dict
             dictionary of galaxy outputs. Contains keys ``'LRG'``, ``'ELG'``, and ``'QSO'``. Each
-            tracer key corresponds to a sub-dictionary that contains the galaxy properties with keys 
+            tracer key corresponds to a sub-dictionary that contains the galaxy properties with keys
             ``'x'``, ``'y'``, ``'z'``, ``'vx'``, ``'vy'``, ``'vz'``, ``'mass'``, ``'id'``, ``Ncent'``.
             The coordinates are in Mpc/h, and the velocities are in km/s.
             The ``'mass'`` refers to host halo mass and is in units of Msun/h.
             The ``'id'`` refers to halo id, and the ``'Ncent'`` key refers to number of
-            central galaxies for that tracer. The first ``'Ncent'`` galaxies 
-            in the catalog are always centrals and the rest are satellites. 
+            central galaxies for that tracer. The first ``'Ncent'`` galaxies
+            in the catalog are always centrals and the rest are satellites.
 
         """
         if tracers == None:
@@ -448,14 +448,14 @@ class AbacusHOD:
             self.halo_data['hrandoms'] = r1
             self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
             self.particle_data['prandoms'] = r3
-            
+
             print("gen randoms took, ", time.time() - start)
-            
+
         start = time.time()
-        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread, 
-            enable_ranks = self.want_ranks, 
-            rsd = want_rsd, 
-            write_to_disk = write_to_disk, 
+        mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread,
+            enable_ranks = self.want_ranks,
+            rsd = want_rsd,
+            write_to_disk = write_to_disk,
             savedir = self.mock_dir,
             verbose = verbose,
             fn_ext = fn_ext)
@@ -475,12 +475,12 @@ class AbacusHOD:
             Same for keys ``'ELG'`` and ``'QSO'``.
 
         ``Nthread``: int
-            Number of threads in the HOD run. Default 16. 
+            Number of threads in the HOD run. Default 16.
 
         Returns
         -------
         ngal_dict: dict
-        dictionary of number of each tracer. 
+        dictionary of number of each tracer.
 
         fsat_dict: dict
         dictionary of satellite fraction of each tracer.
@@ -488,41 +488,41 @@ class AbacusHOD:
         """
         if tracers == None:
             tracers = self.tracers
-            
+
         ngal_dict = {}
         fsat_dict = {}
         for etracer in tracers.keys():
             tracer_hod = tracers[etracer]
-            
+
             # used in z-evolving HOD
             Delta_a = 1./(1+self.z_mock) - 1./(1+tracer_hod.get('z_pivot', self.z_mock))
             if etracer == 'LRG':
                 newngal = AbacusHOD._compute_ngal_lrg(
                     self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, tracer_hod['logM_cut'], tracer_hod['logM1'], tracer_hod['sigma'],
-                    tracer_hod['alpha'], tracer_hod['kappa'], tracer_hod.get('logM_cut_pr', 0), tracer_hod.get('logM1_pr', 0), tracer_hod.get('Acent', 0), 
+                    tracer_hod['alpha'], tracer_hod['kappa'], tracer_hod.get('logM_cut_pr', 0), tracer_hod.get('logM1_pr', 0), tracer_hod.get('Acent', 0),
                     tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Delta_a, Nthread)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'ELG':
                 newngal = AbacusHOD._compute_ngal_elg(
-                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
-                    tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'], 
-                    tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
+                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func,
+                    tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'],
+                    tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],
                     tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('logM_cut_pr', 0),
-                    tracer_hod.get('logM1_pr', 0), tracer_hod.get('A_s', 1), 
-                    tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0), 
-                    tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), 
-                    tracer_hod.get('delta_M1', 0), tracer_hod.get('delta_alpha', 0), 
-                    tracer_hod.get('alpha1', 0), tracer_hod.get('beta', 0),  
-                    tracer_hod.get('ic', 1), Delta_a, Nthread) 
+                    tracer_hod.get('logM1_pr', 0), tracer_hod.get('A_s', 1),
+                    tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0),
+                    tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0),
+                    tracer_hod.get('delta_M1', 0), tracer_hod.get('delta_alpha', 0),
+                    tracer_hod.get('alpha1', 0), tracer_hod.get('beta', 0),
+                    tracer_hod.get('ic', 1), Delta_a, Nthread)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
                 newngal = AbacusHOD._compute_ngal_qso(
-                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func, 
-                    tracer_hod['logM_cut'], tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],  
-                    tracer_hod['alpha'], tracer_hod.get('logM_cut_pr', 0), tracer_hod.get('logM1_pr', 0), tracer_hod.get('Acent', 0), 
-                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Delta_a, Nthread)         
+                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func,
+                    tracer_hod['logM_cut'], tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],
+                    tracer_hod['alpha'], tracer_hod.get('logM_cut_pr', 0), tracer_hod.get('logM1_pr', 0), tracer_hod.get('Acent', 0),
+                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Delta_a, Nthread)
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
         return ngal_dict, fsat_dict
@@ -551,7 +551,7 @@ class AbacusHOD:
                     logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
                     M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
                     ncent_temp = n_cen_LRG(Mh_temp, logM_cut_temp, sigma)
-                    nsat_temp = n_sat_LRG_modified(Mh_temp, logM_cut_temp, 
+                    nsat_temp = n_sat_LRG_modified(Mh_temp, logM_cut_temp,
                         10**logM_cut_temp, M1_temp, sigma, alpha, kappa)
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
                     ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
@@ -559,8 +559,8 @@ class AbacusHOD:
 
     @staticmethod
     @njit(fastmath = True, parallel = True)
-    def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q, 
-                          logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As, Acent, Asat, Bcent, Bsat, 
+    def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
+                          logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As, Acent, Asat, Bcent, Bsat,
                           delta_M1, delta_alpha, alpha1, beta, ic, Delta_a, Nthread):
         """
         internal helper to compute number of LRGs
@@ -587,14 +587,14 @@ class AbacusHOD:
                     M1_conf = M1_temp*10**delta_M1
                     alpha_conf = alpha + delta_alpha
                     nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_conf, As, alpha1, beta) * ic
-                    
-                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp 
+
+                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp
                     ngal_sat += halo_mass_func[i, j, k] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
         return ngal_cent, ngal_sat
 
     @staticmethod
     @njit(fastmath = True, parallel = True)
-    def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func, 
+    def _compute_ngal_qso(logMbins, deltacbins, fenvbins, halo_mass_func,
                           logM_cut, kappa, sigma, logM1, alpha, logM_cut_pr, logM1_pr, Acent, Asat, Bcent, Bsat, ic, Delta_a, Nthread):
         """
         internal helper to compute number of LRGs
@@ -628,26 +628,26 @@ class AbacusHOD:
         Parameters
         ----------
         ``mock_dict``: dict
-            dictionary of tracer positions. Output of ``run_hod``. 
+            dictionary of tracer positions. Output of ``run_hod``.
 
         ``Ntread``: int
-            number of threads in the HOD run. Default 16. 
+            number of threads in the HOD run. Default 16.
 
         ``rpbins``: np.array
             array of transverse bins in Mpc/h.
 
         ``pimax``: int
-            maximum bin edge along the line of sight direction, in Mpc/h. 
+            maximum bin edge along the line of sight direction, in Mpc/h.
 
         ``pi_bin_size``: int
-            size of bin along the line of sight. Currently, we only support linear binning along the line of sight. 
+            size of bin along the line of sight. Currently, we only support linear binning along the line of sight.
 
         Returns
         -------
         clustering: dict
             dictionary of summary statistics. Auto-correlations/spectra can be
-            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
-            accessed with keys such as ``'LRG_ELG'``. 
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be
+            accessed with keys such as ``'LRG_ELG'``.
         """
         if self.clustering_type == 'xirppi':
             clustering = self.compute_xirppi(mock_dict, *args, **kwargs)
@@ -655,10 +655,10 @@ class AbacusHOD:
             clustering = self.compute_wp(mock_dict, *args, **kwargs)
         elif self.clustering_type == 'multipole':
             clustering = self.compute_multipole(mock_dict, *args, **kwargs)
-        else: 
+        else:
             raise ValueError('clustering_type not implemented or not specified, use xirppi, wp, multipole')
         return clustering
-    
+
     def compute_xirppi(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`\\xi(r_p, \\pi)`.
@@ -666,26 +666,26 @@ class AbacusHOD:
         Parameters
         ----------
         ``mock_dict``: dict
-            dictionary of tracer positions. Output of ``run_hod``. 
+            dictionary of tracer positions. Output of ``run_hod``.
 
         ``Ntread``: int
-            number of threads in the HOD run. Default 16. 
+            number of threads in the HOD run. Default 16.
 
         ``rpbins``: np.array
             array of transverse bins in Mpc/h.
 
         ``pimax``: int
-            maximum bin edge along the line of sight direction, in Mpc/h. 
+            maximum bin edge along the line of sight direction, in Mpc/h.
 
         ``pi_bin_size``: int
-            size of bin along the line of sight. Currently, we only support linear binning along the line of sight. 
+            size of bin along the line of sight. Currently, we only support linear binning along the line of sight.
 
         Returns
         -------
         clustering: dict
             dictionary of summary statistics. Auto-correlations/spectra can be
-            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
-            accessed with keys such as ``'LRG_ELG'``. 
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be
+            accessed with keys such as ``'LRG_ELG'``.
         """
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
@@ -695,13 +695,13 @@ class AbacusHOD:
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2: continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
-                    clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
+                    clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size,
                         self.lbox, Nthread)
                 else:
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
-                    clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size, 
+                    clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size,
                         self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
@@ -725,7 +725,7 @@ class AbacusHOD:
                     z2 = mock_dict[tr2]['z']
                     new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
                         self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
-                    new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, 
+                    new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread,
                         x2 = x2, y2 = y2, z2 = z2)
                     clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
@@ -740,7 +740,7 @@ class AbacusHOD:
         Parameters
         ----------
         ``mock_dict``: dict
-            dictionary of tracer positions. Output of ``run_hod``. 
+            dictionary of tracer positions. Output of ``run_hod``.
 
         ``nbins_k``: int
             number of k bin centers (same convention as other correlation functions).
@@ -774,12 +774,12 @@ class AbacusHOD:
         -------
         clustering: dict
             dictionary of summary statistics. Auto-correlations/spectra can be
-            accessed with keys such as ``'LRG_LRG'`` and ``'LRG_LRG_ell'`` for the 
-            multipoles with number of modes per bin, ``'LRG_LRG[_ell]_modes'``. 
-            Cross-correlations/spectra can be accessed with keys such 
-            as ``'LRG_ELG'`` and ``'LRG_ELG_ell'`` for the multipoles 
-            with number of modes per bin, ``'LRG_LRG[_ell]_modes'``. Keys ``k_binc`` 
-            and ``mu_binc`` contain the bin centers of k and mu, respectively. 
+            accessed with keys such as ``'LRG_LRG'`` and ``'LRG_LRG_ell'`` for the
+            multipoles with number of modes per bin, ``'LRG_LRG[_ell]_modes'``.
+            Cross-correlations/spectra can be accessed with keys such
+            as ``'LRG_ELG'`` and ``'LRG_ELG_ell'`` for the multipoles
+            with number of modes per bin, ``'LRG_LRG[_ell]_modes'``. Keys ``k_binc``
+            and ``mu_binc`` contain the bin centers of k and mu, respectively.
             The power spectrum P(k, mu) has a shape (nbins_k, nbins_mu), whereas
             the multipole power spectrum has shape (len(poles), nbins_k). Cubic box only.
         """
@@ -827,7 +827,7 @@ class AbacusHOD:
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv
         from .zcv.tracer_power import get_tracer_power
-        
+
         # compute real space and redshift space
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
@@ -837,7 +837,7 @@ class AbacusHOD:
         save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
         save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
         rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
-        
+
         if load_presaved:
             pk_rsd_tr_dict = asdf.open(save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
             pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
@@ -846,7 +846,7 @@ class AbacusHOD:
                 pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
             else:
                 pk_tr_dict, pk_ij_dict = None, None
-                        
+
         else:
             # run version with rsd or without rsd
             for tr in mock_dict.keys():
@@ -860,7 +860,7 @@ class AbacusHOD:
 
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
-                mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False, 
+                mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False,
                                          Nthread=16, verbose=False, fn_ext=None)
                 for tr in mock_dict.keys():
                     # obtain the positions
@@ -869,14 +869,14 @@ class AbacusHOD:
 
                     # get power spectra for this tracer
                     pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
-                    pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']         
+                    pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
             else:
                 pk_tr_dict, pk_ij_dict = None, None
-                
+
         # run the final part and save
         zcv_dict = run_zcv(pk_rsd_tr_dict, pk_rsd_ij_dict, pk_tr_dict, pk_ij_dict, config)
         return zcv_dict
-    
+
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`w_p`.
@@ -884,26 +884,26 @@ class AbacusHOD:
         Parameters
         ----------
         ``mock_dict``: dict
-            dictionary of tracer positions. Output of ``run_hod``. 
+            dictionary of tracer positions. Output of ``run_hod``.
 
         ``Ntread``: int
-            number of threads in the HOD run. Default 16. 
+            number of threads in the HOD run. Default 16.
 
         ``rpbins``: np.array
             array of transverse bins in Mpc/h.
 
         ``pimax``: int
-            maximum bin edge along the line of sight direction, in Mpc/h. 
+            maximum bin edge along the line of sight direction, in Mpc/h.
 
         ``pi_bin_size``: int
-            size of bin along the line of sight. Currently, we only support linear binning along the line of sight. 
+            size of bin along the line of sight. Currently, we only support linear binning along the line of sight.
 
         Returns
         -------
         clustering: dict
             dictionary of summary statistics. Auto-correlations/spectra can be
-            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be 
-            accessed with keys such as ``'LRG_ELG'``. 
+            accessed with keys such as ``'LRG_LRG'``. Cross-correlations/spectra can be
+            accessed with keys such as ``'LRG_ELG'``.
         """
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
@@ -920,30 +920,30 @@ class AbacusHOD:
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
-                    clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread, 
+                    clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread,
                         x2 = x2, y2 = y2, z2 = z2)
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    
-    def gal_reader(self, output_dir = None, simname = None, 
+
+    def gal_reader(self, output_dir = None, simname = None,
         sim_dir = None, z_mock = None, want_rsd = None, tracers = None):
         """
-        Loads galaxy data given directory and return a ``mock_dict`` dictionary.  
+        Loads galaxy data given directory and return a ``mock_dict`` dictionary.
 
         Parameters
         ----------
         ``sim_name``: str
-            name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'. 
+            name of the simulation volume, e.g. 'AbacusSummit_base_c000_ph006'.
 
         ``sim_dir``: str
-            the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.                                 
+            the directory that the simulation lives in, e.g. '/path/to/AbacusSummit/'.
 
         ``output_dir``: str
-            the diretory to save galaxy to, e.g. '/my/output/galalxies'. 
+            the diretory to save galaxy to, e.g. '/my/output/galalxies'.
 
         ``z_mock``: floa
-             which redshift slice, e.g. 0.5.    
+             which redshift slice, e.g. 0.5.
 
         ``want_rsd``: bool
             RSD?
@@ -954,7 +954,7 @@ class AbacusHOD:
         Returns
         -------
         ``mock_dict``: dict
-            dictionary of tracer positions. Output of ``run_hod``. 
+            dictionary of tracer positions. Output of ``run_hod``.
 
         """
 
@@ -990,4 +990,3 @@ def _searchsorted_parallel(a, b):
     for i in numba.prange(len(b)):
         res[i] = np.searchsorted(a, b[i])
     return res
-

@@ -65,7 +65,7 @@ New Features
 - Add pack9 reader [#25]
 - Add light cone catalog reading to ``CompaSOHaloCatalog`` [#11]
 
-Enhancements 
+Enhancements
 ~~~~~~~~~~~~
 - Sped up RNG for reseeding [#24]
 
@@ -112,8 +112,8 @@ Changes
 
 Fixes
 ~~~~~
-- Fixed issue where satellite galaxy halo ID was incorrect. 
-  
+- Fixed issue where satellite galaxy halo ID was incorrect.
+
 New Features
 ~~~~~~~~~~~~
 - ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned=True`` (the default) [#6]
@@ -135,7 +135,7 @@ Deprecations
 ~~~~~~~~~~~~
 - Passing a string to the ``load_subsamples`` argument of ``CompaSOHaloCatalog`` is deprecated;
   use a dict instead, like: ``load_subsamples=dict(A=True, rv=True)``. [#6]
-  
+
 - ``cleaned_halos`` renamed to ``cleaned``
 
 0.4.0 (2021-02-03)
@@ -162,7 +162,7 @@ Fixes
 ~~~~~
 - Specify minimum Astropy version to avoid
   ``AttributeError: 'numpy.ndarray' object has no attribute 'info'``
-  
+
 0.2.0 (2020-07-08)
 ------------------
 

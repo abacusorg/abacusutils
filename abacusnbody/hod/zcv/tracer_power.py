@@ -5,15 +5,18 @@ CHECK: Syntax for load pk_ij
 Might not be necessary to save
 """
 import gc
-import os
 from pathlib import Path
 
 import asdf
 import numpy as np
 
-from abacusnbody.hod.power_spectrum import (calc_pk3d, get_field_fft,
-                                            get_k_mu_box_edges, get_k_mu_edges,
-                                            get_W_compensated)
+from abacusnbody.hod.power_spectrum import (
+    calc_pk3d,
+    get_field_fft,
+    get_k_mu_box_edges,
+    get_k_mu_edges,
+    get_W_compensated,
+)
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
@@ -55,7 +58,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
     # k_Ny = np.pi*nmesh/Lbox
-    
+
     # define k, mu bins
     n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
@@ -66,7 +69,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     pk_tr_dict = {}
     pk_tr_dict['k_binc'] = k_binc
     pk_tr_dict['mu_binc'] = mu_binc
-    
+
     # create save directory
     save_dir = Path(tracer_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
@@ -80,7 +83,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         W = get_W_compensated(Lbox, nmesh, paste, interlaced)
     else:
         W = None
-    
+
     # set up cosmology
     boltz = Class()
     cosmo = {}
@@ -94,7 +97,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         cosmo[k] = meta[k]
     boltz.set(cosmo)
     boltz.compute()
-    
+
     # file to save to
     # ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
     # fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
@@ -113,7 +116,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     # else:
     #     f_growth = 0.
     print("D = ", D)
-    
+
     # field names and growths
     field_D = [1, D, D**2, D**2, D]
 
@@ -151,10 +154,10 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
 
     # TESTING
     #tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
-    
+
     # get the box k and mu modes
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
-    
+
     # compute the galaxy auto rsd poles
     print("Computing auto-correlation of tracer")
     pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
@@ -163,7 +166,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     pk_tr_dict['P_ell_tr_tr'] = binned_poles
     pk_tr_dict['N_ell_tr_tr'] = Npoles
     #np.savez("/global/homes/b/boryanah/zcv/power_tr.npz", pk3d=pk3d, N3d=N3d, binned_poles=binned_poles, Npoles=Npoles)
-    
+
     # initiate final arrays
     # pk_auto = []
     pk_cross = []
@@ -173,7 +176,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
 
         # load field
         field_fft_i = asdf.open(fields_fft_fn[i])['data']
-        
+
         # compute power spectrum
         pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
         pk3d *= field_D[i]
@@ -184,7 +187,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
         pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
         del field_fft_i; gc.collect()
-                        
+
     header = {}
     header['sim_name'] = sim_name
     header['Lbox'] = Lbox

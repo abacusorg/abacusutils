@@ -19,7 +19,7 @@ def get_k_mu_box(L_hMpc, n_xy, n_z):
     # cell width in z direction (Mpc/h)
     d_z = L_hMpc / n_z
     k_z = (fftfreq(n_z, d=d_z) * 2. * np.pi).astype(np.float32)
-    
+
     # h/Mpc
     x = k_xy[:, np.newaxis, np.newaxis]
     y = k_xy[np.newaxis, :, np.newaxis]
@@ -262,7 +262,7 @@ def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
 
             density[ixp1, iyp1, izm1] += wxp1*wyp1*wzm1*W
             density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
-            
+
 
 @njit(nogil=True, parallel=False)
 def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
@@ -290,7 +290,7 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
         if 0. <= i < bins[0] and 0. <= j < bins[1]:
             N[int(i), int(j)] += 1.
             H[int(i), int(j)] += weights[t]
-            
+
     for i in range(bins[0]):
         for j in range(bins[1]):
             if N[i, j] > 0.:
@@ -309,25 +309,25 @@ def get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk):
         #k_bin_edges = np.linspace(k_hMpc_min, k_hMpc_max, n_k_bins+1)
         k_bin_edges = np.linspace(0., k_hMpc_max, n_k_bins+1)
         #k_bin_edges = np.arange(0., n_k_bins+1) * dk
-    
+
     # define mu-binning
     mu_bin_edges = np.linspace(0., 1., n_mu_bins + 1)
     # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
-    mu_bin_edges[-1] += 1.e-6 
+    mu_bin_edges[-1] += 1.e-6
     #k_bin_edges[1:] += 1.e-6 # includes the 2pi/L modes in the first bin, though I think they shouldn't be there...
-    
+
     return k_bin_edges, mu_bin_edges
 
 def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk):
     """
     Compute the size of the k vector and mu for each mode and also bin edges for both. Assumes z direction is along LOS
     """
-    
+
     # this stores *all* Fourier wavenumbers in the box (no binning)
     k_box, mu_box = get_k_mu_box(L_hMpc, n_xy, n_z)
     k_box = k_box.flatten()
     mu_box = mu_box.flatten()
-    
+
     # define k and mu-binning
     k_bin_edges, mu_bin_edges = get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     return k_box, mu_box, k_bin_edges, mu_bin_edges
@@ -336,23 +336,23 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
     """
     Calculate the P3D for a given field (in h/Mpc units). Answer returned in (Mpc/h)^3 units
     """
-    
+
     # get raw power
     if field2_fft is not None:
         raw_p3d = (np.conj(field_fft)*field2_fft).real.flatten()
     else:
         raw_p3d = (np.abs(field_fft)**2).flatten()
     del field_fft; gc.collect()
-    
+
     # for the histograming
-    ranges = ((k_bin_edges[0], k_bin_edges[-1]),(mu_bin_edges[0], mu_bin_edges[-1])) 
+    ranges = ((k_bin_edges[0], k_bin_edges[-1]),(mu_bin_edges[0], mu_bin_edges[-1]))
     nbins2d = (len(k_bin_edges)-1, len(mu_bin_edges)-1)
     nbins2d = np.asarray(nbins2d).astype(np.int64)
     ranges = np.asarray(ranges).astype(np.float64)
 
     # power spectrum
     binned_p3d, N3d = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d)
-    
+
     # if poles is not empty, then compute P_ell for mu_box
     binned_poles = []
     Npoles = []
@@ -369,7 +369,7 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
         Npoles.append(Npole)
         Npoles = np.array(Npoles)
         binned_poles = np.array(binned_poles)
-            
+
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     p3d_hMpc = binned_p3d * L_hMpc**3
     return p3d_hMpc, N3d, binned_poles, Npoles
@@ -423,12 +423,12 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
                                             k[np.newaxis, np.newaxis, :]) *d)
     field_fft *= 0.5 / field.size
     print("field fft", field_fft.dtype)
-    
+
     # inverse fourier transform
     #field_fft *= field.size
     #field = ifftn(field_fft) # we work in fourier
     return field_fft
-    
+
 def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
 
     # get field in real space
@@ -448,12 +448,12 @@ def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
         assert W is not None
         field_fft /= (W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :])
     return field_fft
-    
+
 def get_W_compensated(lbox, num_cells, paste, interlaced):
-    """ 
+    """
     Compute the TSC/CIC kernel convolution for a given set of wavenumbers.
     """
-    
+
     # cell width
     d = lbox / num_cells
 
@@ -462,7 +462,7 @@ def get_W_compensated(lbox, num_cells, paste, interlaced):
 
     # natural wavemodes
     k = (fftfreq(num_cells, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
-    
+
     # apply deconvolution
     if interlaced:
         if paste == 'TSC':
@@ -475,7 +475,7 @@ def get_W_compensated(lbox, num_cells, paste, interlaced):
         if paste == 'TSC':
             W = (1 - s + 2./15 * s**2) ** 0.5
         elif paste == 'CIC':
-            W = (1 - 2./3 * s) ** 0.5 
+            W = (1 - 2./3 * s) ** 0.5
         del s
     print(W.astype)
     return W
@@ -513,7 +513,7 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num
         del pos2; gc.collect()
     else:
         field2_fft = None
-        
+
     # calculate power spectrum
     n_perp = n_los = num_cells # cubic box
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(lbox, n_perp, n_los, nbins_k, nbins_mu, k_hMpc_max, logk)

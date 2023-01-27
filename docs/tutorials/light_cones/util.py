@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 
+
 @jit(nopython = True)
 def histogram_hp(rho,heal):
     """ Faster histograming """

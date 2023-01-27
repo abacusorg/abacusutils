@@ -1,6 +1,6 @@
-import os
 
 import numpy as np
+
 
 class PowerData(object):
     """
