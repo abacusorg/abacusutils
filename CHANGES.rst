@@ -6,6 +6,10 @@ Changelog
 ----------------
 - HOD now supports a new ELG conformity model
 
+New Features
+~~~~~~~~~~~~
+- Add a power spectrum module, and a zeldovich control variates (ZCV) module that uses it [#68]
+
 Fixes
 ~~~~~
 - Bump Numba requirement to fixed version and enable parallelism in env calc [#60]
@@ -13,6 +17,7 @@ Fixes
 Enhancements
 ~~~~~~~~~~~~
 - Add power spectrum to `metadata` module [#69]
+- Upgrade docs and CI [#71]
 
 1.3.0 (2022-06-08)
 ------------------
@@ -23,7 +28,7 @@ Breaking Changes
 - Python 3.6 (EOL) support has been dropped [#56]
 
 New Features
-~~~~~~~~~~~
+~~~~~~~~~~~~
 - ``abacusnbody.metadata`` added. Supports querying simulation parameters without downloading simulation data. [#56]
 
 Fixes
@@ -60,7 +65,7 @@ New Features
 - Add pack9 reader [#25]
 - Add light cone catalog reading to ``CompaSOHaloCatalog`` [#11]
 
-Enhancements 
+Enhancements
 ~~~~~~~~~~~~
 - Sped up RNG for reseeding [#24]
 
@@ -107,8 +112,8 @@ Changes
 
 Fixes
 ~~~~~
-- Fixed issue where satellite galaxy halo ID was incorrect. 
-  
+- Fixed issue where satellite galaxy halo ID was incorrect.
+
 New Features
 ~~~~~~~~~~~~
 - ``CompaSOHaloCatalog`` can read "cleaned" halo catalogs with ``cleaned=True`` (the default) [#6]
@@ -130,7 +135,7 @@ Deprecations
 ~~~~~~~~~~~~
 - Passing a string to the ``load_subsamples`` argument of ``CompaSOHaloCatalog`` is deprecated;
   use a dict instead, like: ``load_subsamples=dict(A=True, rv=True)``. [#6]
-  
+
 - ``cleaned_halos`` renamed to ``cleaned``
 
 0.4.0 (2021-02-03)
@@ -157,7 +162,7 @@ Fixes
 ~~~~~
 - Specify minimum Astropy version to avoid
   ``AttributeError: 'numpy.ndarray' object has no attribute 'info'``
-  
+
 0.2.0 (2020-07-08)
 ------------------
 

@@ -17,10 +17,8 @@
 
 # -- Project information -----------------------------------------------------
 
-# TODO: author ordering? LHG adopted the ordering from the ALCC proposal
 project = 'abacusutils'
-copyright = '2021, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
-author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
+copyright = '2023, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
 
 
 # -- General configuration ---------------------------------------------------
@@ -28,7 +26,12 @@ author = 'Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sown
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['readthedocs_ext.readthedocs', 'recommonmark', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.intersphinx', 'sphinx.ext.autosectionlabel']
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.napoleon',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.autosectionlabel',
+              'myst_nb',
+            ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -36,7 +39,13 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build']
+
+root_doc = "index"
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.ipynb': 'myst-nb',
+}
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -46,17 +55,33 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #
 #html_theme = 'alabaster'
 #html_theme = 'default'
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = ['custom.css']
 
+html_title = "abacusutils"
+html_logo = "images/icon_red.svg"
 html_favicon = 'images/icon_red.png'
 
-def setup(app):
-    app.add_css_file('custom.css')
+html_show_sourcelink = False
+html_theme_options = {
+    "repository_url": "https://github.com/abacusorg/abacusutils",
+    "repository_branch": "master",
+    # "launch_buttons": {
+    #     "binderhub_url": "https://mybinder.org",
+    #     "notebook_interface": "jupyterlab",
+    #     "colab_url": "https://colab.research.google.com/",
+    # },
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "use_download_button": True,
+    "use_fullscreen_button": False,
+}
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -68,3 +93,6 @@ autosectionlabel_prefix_document = True
 
 autodoc_member_order = 'bysource'
 autodoc_mock_imports = ['Corrfunc',]
+autodoc_warningiserror = True
+
+nb_execution_mode = 'off'

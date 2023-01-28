@@ -1,289 +1,42 @@
 """
-The ``compaso_halo_catalog`` module loads halo catalogs from CompaSO, Abacus's
-on-the-fly halo finder.  The module defines one class, ``CompaSOHaloCatalog``,
-whose constructor takes the path to a halo catalog as an argument.
-Users should use this class as the primary interface to load
-and manipulate halo catalogs.
-
-The halo catalogs and particle subsamples are stored on disk in
-ASDF files and are loaded into memory as Astropy tables.  Each
-column of an Astropy table is essentially a Numpy array and can
-be accessed with familiar Numpy-like syntax.  More on Astropy
-tables here: http://docs.astropy.org/en/stable/table/
-
-Beyond just loading the halo catalog files into memory, this
-module performs a few other manipulations.  Many of the halo
-catalog columns are stored in bit-packed formats (e.g.
-floats are scaled to a ratio from 0 to 1 then packed in 16-bit
-ints), so these columns are unpacked as they are loaded.
-
-Furthermore, the halo catalogs for big simulations are divided
-across a few dozen files.  These files are transparently loaded
-into one monolithic Astropy table if one passes a directory
-to ``CompaSOHaloCatalog``; to save memory by loading only one file,
-pass just that file as the argument to ``CompaSOHaloCatalog``.
-
-Importantly, because ASDF and Astropy tables are both column-
-oriented, it can be much faster to load only the subset of
-halo catalog columns that one needs, rather than all 60-odd
-columns.  Use the ``fields`` argument to the ``CompaSOHaloCatalog``
-constructor to specify a subset of fields to load.  Similarly, the
-particles can be quite large, and one can use the ``subsamples``
-argument to restrict the particles to the subset one needs.
-
-Some brief examples and technical details about the halo catalog
-layout are presented below, followed by the full module API.
-Examples of using this module to work with AbacusSummit data can
-be found on the AbacusSummit website here:
-https://abacussummit.readthedocs.io
-
-
-Short Example
-=============
->>> from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
->>> # Load the RVs and PIDs for particle subsample A
->>> cat = CompaSOHaloCatalog('/storage/AbacusSummit/AbacusSummit_base_c000_ph000/halos/z0.100', subsamples=dict(A=True,pos=True))
->>> print(cat.halos[:5])  # cat.halos is an Astropy Table, print the first 5 rows
-   id    npstartA npstartB ... sigmavrad_L2com sigmavtan_L2com rvcirc_max_L2com
--------- -------- -------- ... --------------- --------------- ----------------
-25000000        0        2 ...       0.9473971      0.96568024      0.042019103
-25000001       11       12 ...      0.86480814       0.8435805      0.046611086
-48000000       18       15 ...      0.66734606      0.68342227      0.033434115
-58000000       31       18 ...      0.52170926       0.5387341      0.042292822
-58001000       38       23 ...       0.4689916      0.40759262      0.034498636
->>> print(cat.halos['N','x_com'][:5])  # print the position and mass of the first 5 halos
-  N         x_com [3]
---- ------------------------
-278 -998.88525 .. -972.95404
- 45  -998.9751 .. -972.88416
-101   -999.7485 .. -947.8377
- 82    -998.904 .. -937.6313
- 43   -999.3252 .. -937.5813
->>> # Examine the particle subsamples associated with the 5th halo
->>> h5 = cat.halos[4]
->>> print(cat.subsamples['pos'][h5['npstartA']:h5['npstartA'] + h5['npoutA']])
-        pos [3]
-------------------------
-  -999.3019 .. -937.5229
- -999.33435 .. -937.5515
--999.38965 .. -937.58777
->>> # At a glance, the pos fields match that of the 5th halo above, so it appears we have indexed correctly!
-
-
-Catalog Structure
-=================
-The catalogs are stored in a directory structure that looks like:
-
-.. code-block:: none
-
-    - SimulationName/
-        - halos/
-            - z0.100/
-                - halo_info/
-                    halo_info_000.asdf
-                    halo_info_001.asdf
-                    ...
-                - halo_rv_A/
-                    halo_rv_A_000.asdf
-                    halo_rv_A_001.asdf
-                    ...
-                - <field & halo, rv & PID, subsample A & B directories>
-            - <other redshift directories, some with particle subsamples, others without>
-
-The file numbering roughly corresponds to a planar chunk of the simulation
-(all y and z for some range of x).  The matching of the halo_info file numbering
-to the particle file numbering is important; halo_info files index into the
-corresponding particle files.
-
-The halo catalogs are stored on disk in ASDF files (https://asdf.readthedocs.io/).
-The ASDF files start with a human-readable header that describes
-the data present in the file and metadata about the simulation
-from which it came (redshift, cosmology, etc).  The rest of
-the file is binary blobs, each representing a column (i.e.
-a halo property).
-
-Internally, the ASDF binary portions are usually compressed.  This should
-be transparent to users, although you may be prompted to install the
-blosc package if it is not present.  Decompression should be fast,
-at least 500 MB/s per core.
-
-
-Particle Subsamples
-===================
-We define two disjoint sets of "subsample" particles, called "subsample A" and
-"subsample B".  Subsample A is a few percent of all particles, with subsample B
-a few times larger than that.  Particles membership in each group is a function
-of PID and is thus consistent across redshift.
-
-At most redshifts, we only output halo catalogs and halo subsample particle PIDs.
-This aids with construction of merger trees.  At a few redshifts, we provide
-subsample particle positions as well as PIDs, for both halo particles and
-non-halo particles, called "field" particles.  Only halo particles (specifically,
-:doc:`L1 particles<summit:compaso>`) may be loaded through this module; field
-particles and L0 halo particles can be loaded by reading the particle files
-directly with :ref:`abacusnbody.data:read_abacus module`.
-
-Use the ``subsamples`` argument to the constructor to specify loading
-subsample A and/or B, and which fields---pos, vel, pid---to load.  Note that
-if only one of pos & vel is specified, the IO amount is the same, because
-the pos & vel are packed together in :ref:`RVint format<compaso:Bit-packed Formats>`.
-But the memory usage and time to unpack will be lower.
-
-
-Halo File Types
-===============
-Each file type (for halos, particles, etc) is grouped into a subdirectory.
-These subdirectories are:
-
-- ``halo_info/``
-  The primary halo catalog files.  Contains stats like
-  CoM positions and velocities and moments of the particles.
-  Also indicates the index and count of subsampled particles in the
-  ``halo_pid_A/B`` and ``halo_rv_A/B`` files.
-
-- ``halo_pid_A/`` and ``halo_pid_B/``
-  The 64-bit particle IDs of particle subsamples A and B.  The PIDs
-  contain information about the Lagrangian position of the particles,
-  whether they are tagged, and their local density.
-
-The following subdirectories are only present for the redshifts for which
-we output particle subsamples and not just halo catalogs:
-
-- ``halo_rv_A/`` and ``halo_rv_B/``
-  The positions and velocities of the halo subsample particles, in "RVint"
-  format. The halo associations are recoverable with the indices in the
-  ``halo_info`` files.
-
-- ``field_rv_A/`` and ``field_rv_B/``
-  Same as ``halo_rv_<A|B>/``, but only for the field (non-halo) particles.
-
-- ``field_pid_A/`` and ``field_pid_B/``
-  Same as ``halo_pid_<A|B>/``, but only for the field (non-halo) particles.
-
-
-Bit-packed Formats
-==================
-The "RVint" format packs six fields (x,y,z, and vx,vy,vz) into three ints (12 bytes).
-Positions are stored to 20 bits (global), and velocities 12 bits (max 6000 km/s).
-
-The PIDs are 8 bytes and encode a local density estimate, tag bits for merger trees,
-and a unique particle id, the last of which encodes the Lagrangian particle coordinate.
-
-These are described in more detail on the :doc:`AbacusSummit Data Model page <summit:data-products>`.
-
-Use the ``unpack_bits`` argument of the ``CompaSOHaloCatalog`` constructor to specify
-which PID bit fields you want unpacked.  Be aware that some of them might use a lot of
-memory; e.g. the Lagrangian positions are three 4-byte floats per subsample particle.
-Also be aware that some of the returned arrays use narrow int dtypes to save memory,
-such as the ``lagr_idx`` field using ``int16``.  It is easy to silently overflow such
-narrow int types; make sure your operations stay within the type width and cast
-if necessary.
-
-
-Field Subset Loading
-====================
-Because the ASDF files are column-oriented, it is possible to load just one or a few
-columns (halo catalog fields) rather than the whole file.  This can save huge amounts
-of IO, memory, and CPU time (the latter due to the decompression).  Use the ``fields`` argument
-to the ``CompaSOHaloCatalog`` constructor to specify the list of columns you want.
-
-In detail, some columns are stored as ratios to other columns.  For example, ``r90``
-is stored as a ratio relative to ``r100``.  So to properly unpack
-``r90``, the ``r100`` column must also be read.  ``CompaSOHaloCatalog`` knows about
-these dependencies and will load the minimum set necessary to return the requested
-columns to the user.  However, this may result in more IO than expected.  The ``verbose``
-constructor flag or the ``dependency_info`` field of the ``CompaSOHaloCatalog``
-object may be useful for diagnosing exactly what data is being loaded.
-
-Despite the potential extra IO and CPU time, the extra memory usage is granular
-at the level of individual files.  In other words, when loading multiple files,
-the concatenated array will never be constructed for columns that only exist for
-dependency purposes.
-
-
-Superslab (Chunk) Processing
-============================
-The halo catalogs are divided across multiple files, called "superslabs", which are
-typically planar chunks of the simulation volume (all y,z for some range of x, with
-a bit of overlap at the boundaries).  Applications that can process the volume
-superslab-by-superslab can save a substantial amount of memory compared to loading
-the full volume.  To load a single superslab, pass the corresponding ``halo_info_XXX.asdf``
-file as the ``path`` argument:
-
-.. code-block:: python
-
-    cat = CompaSOHaloCatalog('AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf')
-
-If your application needs one slab of padding, you can pass a list of files and proceed in a
-rolling fashion:
-
-.. code-block:: python
-
-    cat = CompaSOHaloCatalog(['AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_033.asdf',
-                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_000.asdf',
-                              'AbacusSummit_base_c000_ph000/halos/z0.100/halo_info/halo_info_001.asdf'])
-
-
-Superslab Filtering
-===================
-Another way to save memory is to use the ``filter_func`` argument.  This function
-will be called for each superslab, and must return a mask representing the rows
-to keep.  For example, to drop all halos with less than 100 particles, use:
-
-.. code-block:: python
-    
-    cat = CompaSOHaloCatalog(..., filter_func=lambda h: h['N'] >= 100)
-    
-Because this mask is applied on each superslab immediately after loading,
-the full, unfiltered table is never constructed, thus saving memory.
-
-The filtering adds some CPU time, but in many cases loading catalogs is
-IO limited, so this won't add much overhead.
-
-
-Multi-threaded Decompression
-============================
-The Blosc compression we use inside the ASDF files supports multi-threaded
-decompression.  We have packed AbacusSummit files with 4 Blosc blocks (each ~few MB)
-per ASDF block, so 4 Blosc threads is probably the optimal value.  This is the
-default value, unless fewer cores are available (as determined by the process
-affinity mask).
-
-.. note::
-
-    Loading a CompaSOHaloCatalog will use 4 decompression threads by default.
-
-You can control the number of decompression threads with:
-
-.. code-block:: python
-
-    import abacusnbody.data.asdf
-    abacusnbody.data.asdf.set_nthreads(N)
 """
 
-from glob import glob
+"""
+The compaso_halo_catalog module loads halo catalogs from CompaSO, Abacus's
+on-the-fly halo finder. The module defines one class, CompaSOHaloCatalog,
+whose constructor takes the path to a halo catalog as an argument.
+Users should use this class as the primary interface to load and manipulate
+halo catalogs.
+
+A high-level overview of this module is given at
+https://abacusutils.readthedocs.io/en/latest/compaso.html
+or docs/compaso.rst.
+"""
+
+import gc
 import os
 import os.path
-from pathlib import PurePath
-from os.path import join as pjoin, dirname, basename, isdir, isfile, normpath, abspath, samefile
 import re
-import gc
 import warnings
-from time import perf_counter as timer
-
 from collections import defaultdict
+from glob import glob
+from os.path import abspath, basename, dirname, isdir, isfile
+from os.path import join as pjoin
+from os.path import normpath, samefile
+from pathlib import PurePath
 
 # Stop astropy from trying to download time data; nodes on some clusters are not allowed to access the internet directly
 from astropy.utils import iers
+
 iers.conf.auto_download = False
 
-import numpy as np
-import numba as nb
-import astropy.table
-from astropy.table import Table
 import asdf
-
 import asdf.compression
+import astropy.table
+import numba as nb
+import numpy as np
+from astropy.table import Table
+
 try:
     asdf.compression.validate('blsc')
 except Exception as e:
@@ -295,6 +48,7 @@ from . import bitpacked
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
 from . import asdf as _asdf
+
 _asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
 class CompaSOHaloCatalog:
@@ -328,9 +82,9 @@ class CompaSOHaloCatalog:
             Or a single halo info file, or a list of halo info files.
             Will accept ``halo_info`` dirs or "redshift" dirs
             (e.g. ``z1.000/halo_info/`` or ``z1.000/``).
-	    
+
 	    .. note::
-	    
+
                 To load cleaned catalogs, you do *not* need to pass a different
 		argument to the ``path`` directory.  Use ``cleaned=True`` instead
 		and the path to the cleaning info will be detected automatically
@@ -381,26 +135,26 @@ class CompaSOHaloCatalog:
 
         verbose: bool, optional
             Print informational messages. Default: False
-            
+
         cleandir: str, optional
             Where the halo catalog cleaning files are located (usually called ``cleaning/``).
             Default of None will try to detect it automatically.  Only has any effect if
             using ``cleaned=True``.
-            
+
         filter_func: function, optional
             A mask function to be applied to each superslab as it is loaded.  The function
             must take one argument (a halo table) and return a boolean array or similar
             mask on the rows. Simple lambda expressions are particularly useful here;
             for example, to load all halos with 100 particles or more, use:
-            
+
             .. code-block:: python
-            
+
                 filter_func=lambda h: h['N'] >= 100
-                
+
         halo_lc: bool or None, optional
             Whether the catalog is a halo light cone catalog, i.e. an output of the CompaSO
             halo light cone pipeline. Default of None means to detect based on the catalog path.
-            
+
         """
         # Internally, we will use `load_subsamples` as the name of the `subsamples` arg to distinguish it from the `self.subsamples` table
         load_subsamples = subsamples
@@ -411,15 +165,15 @@ class CompaSOHaloCatalog:
         if 'cleaned_halos' in kwargs:
             cleaned = kwargs.pop('cleaned_halos')
             warnings.warn('`cleaned_halos` argument is deprecated; use `cleaned`', FutureWarning)
-            
+
         # `cleaned` and `self.cleaned` mean slightly different things.
         # `cleaned` (local var) means to load the cleaning info files,
         # `self.cleaned` means the catalog incorporates cleaning info, either because the user
         # said `cleaned=True` or because this is a halo light cone catalog, which is already cleaned
         self.cleaned = cleaned
-        
+
         if halo_lc == None:
-            halo_lc = self.is_path_halo_lc(path)
+            halo_lc = self._is_path_halo_lc(path)
             if verbose and halo_lc:
                 print('Detected halo light cone catalog.')
         self.halo_lc = halo_lc
@@ -431,7 +185,7 @@ class CompaSOHaloCatalog:
             cleaned = False
             unpack_bits = False
             self.cleaned = True
-            
+
         # Check no unknown args!
         if kwargs:
             raise ValueError(f'Unknown arguments to CompaSOHaloCatalog constructor: {list(kwargs)}')
@@ -453,7 +207,7 @@ class CompaSOHaloCatalog:
         if halo_lc:
             if self.unpack_subsamples:
                 self.load_AB = ['A']
-        
+
         # Parse `fields` and `cleaned_fields` to determine halo catalog fields to read
         (self.fields,
          self.cleaned_fields) = self._setup_fields(fields, cleaned=cleaned, load_AB=self.load_AB, halo_lc=halo_lc)
@@ -531,7 +285,7 @@ class CompaSOHaloCatalog:
 
         if verbose:
             print('\n'+str(self))
-            
+
         gc.collect()
 
 
@@ -586,7 +340,7 @@ class CompaSOHaloCatalog:
             if len(halo_fns) == 0:
                 raise FileNotFoundError(f'No halo_info files found! Search pattern was: "{globpat}"')
 
-        
+
         if halo_lc:  # halo light cones files aggregate all superslabs into a single file
             superslab_inds = np.array([0])
         else:
@@ -604,15 +358,15 @@ class CompaSOHaloCatalog:
                     if not isdir(cleandir_small):
                         raise FileNotFoundError(f'Could not find cleaning info dir. Tried:\n"{cleandir}"\n"{cleandir_small}"\nTo load the uncleaned catalog, use `cleaned=False`.')
                     cleandir = cleandir_small
-            
+
             cleandir = pjoin(cleandir, *pathsplit[s:])  # TODO ugly
-            
+
             cleaned_halo_fns = [pjoin(cleandir, 'cleaned_halo_info', 'cleaned_halo_info_%03d.asdf'%(ext)) for ext in superslab_inds]
-            
+
             for fn in cleaned_halo_fns:
                 if not isfile(fn):
                     raise FileNotFoundError(f'Cleaning info not found. File path was: "{fn}". To load the uncleaned catalog, use `cleaned=False`.')
-            
+
         else:
             cleandir = None
             cleaned_halo_fns = []
@@ -757,7 +511,7 @@ class CompaSOHaloCatalog:
                 # TODO: this will silently drop misspellings
                 if 'L2' not in item and item not in halo_lc_dt.names:
                     fields.remove(item)
-        
+
         if cleaned:
             # If the user has not asked to load npstart{AB}_merge columns, we need to do so ourselves for indexing
             for AB in load_AB:
@@ -780,7 +534,7 @@ class CompaSOHaloCatalog:
             cleaned_fns = []
         else:
             assert len(cleaned_fns) == len(halo_fns)
-            
+
         # Open all the files, validate them, and count the halos
         # Lazy load, but don't use mmap
         afs = [asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in halo_fns]
@@ -794,7 +548,7 @@ class CompaSOHaloCatalog:
 
         # Make an empty table for the concatenated, unpacked values
         # Note that np.empty is being smart here and creating 2D arrays when the dtype is a vector
-        
+
         cols = {}
         for col in fields:
             if col in halo_lc_dt.names:
@@ -804,7 +558,7 @@ class CompaSOHaloCatalog:
         for col in cleaned_fields:
             cols[col] = np.empty(N_halos, dtype=clean_dt_progen[col])
         all_fields = fields + cleaned_fields
-        
+
         # Figure out what raw columns we need to read based on the fields the user requested
         # TODO: provide option to drop un-requested columns
         raw_dependencies, fields_with_deps, extra_fields = self._get_halo_fields_dependencies(all_fields)
@@ -843,7 +597,7 @@ class CompaSOHaloCatalog:
         N_written = 0
         for i,af in enumerate(afs):
             caf = cleaned_afs[i] if cleaned_afs else None
-            
+
             # This is where the IO on the raw columns happens
             # There are some fields that we'd prefer to directly read into the concatenated table,
             # but ASDF doesn't presently support that, so this is the best we can do
@@ -870,11 +624,11 @@ class CompaSOHaloCatalog:
                 if field in loaded_fields:
                     continue
                 loaded_fields += self._load_halo_field(halos, rawhalos, field)
-            
+
             if self.filter_func:
                 # N_total from the cleaning replaces N. For filtering purposes, allow the user to use 'N'
                 halos.rename_column('N_total', 'N')
-                
+
                 mask = self.filter_func(halos)
                 nmask = mask.sum()
                 halos[:nmask] = halos[mask]
@@ -891,7 +645,7 @@ class CompaSOHaloCatalog:
             if cleaned_afs:
                 cleaned_afs[i] = None
             gc.collect()
-            
+
         # Now the filtered length
         self.halos = self.halos[:N_written]
         if N_written < N_halos:
@@ -979,7 +733,7 @@ class CompaSOHaloCatalog:
         pat = re.compile(r'origin')
         self.halo_field_loaders[pat] = lambda m,raw,halos: raw[m[0]]%3
 
-        # loader for halo light cone catalog fields: interpolated position and velocity        
+        # loader for halo light cone catalog fields: interpolated position and velocity
         pat = re.compile(r'(?P<pv>pos|vel)_interp')
         def lc_interp_loader(m, raw, halos):
             columns = {}
@@ -991,11 +745,11 @@ class CompaSOHaloCatalog:
                 columns['vel_interp'] = np.where(avg_avail[:, None], raw['vel_avg'], raw['vel_interp'])
             return columns
         self.halo_field_loaders[pat] = lc_interp_loader
-        
+
         # eigvecs loader
         pat = re.compile(r'(?P<rnv>sigma(?:r|n|v)_eigenvecs)(?P<which>Min|Mid|Maj)(?P<com>_(?:L2)?com)')
         def eigvecs_loader(m,raw,halos):
-            minor,middle,major = unpack_euler16(raw[m['rnv']+m['com']+'_u16'])
+            minor,middle,major = _unpack_euler16(raw[m['rnv']+m['com']+'_u16'])
             columns = {}
 
             minor_field = m['rnv'] + 'Min' + m['com']
@@ -1197,7 +951,7 @@ class CompaSOHaloCatalog:
         # Even if unpack_bits is False, return the PID-masked value, not the raw value.
 
         particle_dict = self._reindex_subsamples('pid', N_halo_per_file, cleaned=cleaned, halo_lc=halo_lc)
-        
+
         pid_AB_afs = particle_dict['particle_AB_afs']
         np_per_file = particle_dict['np_per_file']
         pid_AB_merge_afs = particle_dict['particle_AB_merge_afs']
@@ -1208,7 +962,7 @@ class CompaSOHaloCatalog:
         if halo_lc:
             self.subsamples.add_column(pid_AB_afs[0][self.data_key]['pid'], name='pid', copy=False)
             return
-        
+
         start = 0
         np_total = np.sum(np_per_file)
         pids_AB = np.empty(np_total, dtype=np.uint64)
@@ -1254,7 +1008,7 @@ class CompaSOHaloCatalog:
                 start_indices_merge = self.halos[f'npstart{AB}_merge']
                 nump_indices = self.halos[f'npout{AB}']
                 nump_indices_merge = self.halos[f'npout{AB}_merge']
-                pids_AB_total, npstart_updated, offset = join_arrays(offset, pids_AB, pids_AB_merge, pids_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
+                pids_AB_total, npstart_updated, offset = _join_arrays(offset, pids_AB, pids_AB_merge, pids_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
 
                 if not self.subsamples_to_load and not self._updated_indices[AB]:
                     self.halos[f'npstart{AB}'] = npstart_updated
@@ -1304,7 +1058,7 @@ class CompaSOHaloCatalog:
             self.subsamples.add_column(particle_AB_afs[0][self.data_key]['pos'], name='pos', copy=False)
             self.subsamples.add_column(particle_AB_afs[0][self.data_key]['vel'], name='vel', copy=False)
             return
-        
+
         start = 0
         np_total = np.sum(np_per_file)
         particles_AB = np.empty((np_total,3),dtype=np.int32)
@@ -1338,7 +1092,7 @@ class CompaSOHaloCatalog:
                 start_indices_merge = self.halos[f'npstart{AB}_merge']
                 nump_indices = self.halos[f'npout{AB}']
                 nump_indices_merge = self.halos[f'npout{AB}_merge']
-                particles_AB_total, npstart_updated, offset = join_arrays(offset, particles_AB, particles_AB_merge, particles_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
+                particles_AB_total, npstart_updated, offset = _join_arrays(offset, particles_AB, particles_AB_merge, particles_AB_total, start_indices, nump_indices, start_indices_merge, nump_indices_merge, self.halos['N_total'])
 
                 if not self.subsamples_to_load and not self._updated_indices[AB] :
                     self.halos[f'npstart{AB}'] = npstart_updated
@@ -1381,12 +1135,12 @@ class CompaSOHaloCatalog:
             for col in cat.columns:
                 nbytes += cat[col].nbytes
         return nbytes
-    
+
     @staticmethod
-    def is_path_halo_lc(path):
+    def _is_path_halo_lc(path):
         path = str(path)
         return 'halo_light_cones' in path or bool(glob(pjoin(path, 'lc_*.asdf')))
-        
+
 
     def __repr__(self):
         # TODO: there's probably some more helpful info we could put in here
@@ -1434,7 +1188,7 @@ INT16SCALE = 32000.
 
 # function to combine halo subsample and merged particle subsample arrays
 @nb.njit
-def join_arrays(offset, array_original, array_merge, array_joined, npstart_original, npout_original, npstart_merge, npout_merge, np_total):
+def _join_arrays(offset, array_original, array_merge, array_joined, npstart_original, npout_original, npstart_merge, npout_merge, np_total):
 
     N = len(np_total)
     npstart_updated = np.empty(N, dtype=np.int64)
@@ -1459,7 +1213,7 @@ def join_arrays(offset, array_original, array_merge, array_joined, npstart_origi
     return array_joined, npstart_updated, offset
 
 # unpack the eigenvectors
-def unpack_euler16(bin_this):
+def _unpack_euler16(bin_this):
     N = bin_this.shape[0]
     minor = np.zeros((N,3))
     middle = np.zeros((N,3))
@@ -1741,4 +1495,3 @@ user_dt = np.dtype([('id', np.uint64),
                     ('sigmavtan_L2com', np.float32),
                     ('rvcirc_max_L2com', np.float32),
 ], align=True)
- 

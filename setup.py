@@ -27,10 +27,14 @@ extras_require = dict(extra=['emcee',
                       zcv=['ZeNBu @ git+https://github.com/sfschen/ZeNBu.git',
                            'classy',
                            ],
+                      docs=['sphinx >= 4.2',
+                            'sphinx-book-theme >= 0.3',
+                            'myst_nb >= 0.17.1',
+                            ],
                     )
 extras_require['test'] = extras_require['zcv'] + ['pytest']
 
-# If we're on ReadTheDocs, can't install packages with C dependencies, like Corrfunc
+# If we're on ReadTheDocs, don't try to install packages with C dependencies, like Corrfunc
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     # This list must be kept synchronized with `autodoc_mock_imports` in docs/conf.py
@@ -43,7 +47,7 @@ setup(
     name="abacusutils",
     author="Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan",
     author_email="lgarrison@flatironinstitute.org",
-    description="Python and C/C++ code to read halo catalogs and other Abacus N-body data products",
+    description="Python code to read halo catalogs and other Abacus N-body data products",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/abacusorg/abacusutils",

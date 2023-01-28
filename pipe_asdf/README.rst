@@ -21,7 +21,7 @@ data (in this case, just prints some values).
 One can build this program with:
 
 .. code-block:: console
-    
+
     $ make
 
 and run it with:

@@ -42,12 +42,12 @@ def main(path2config, alt_simname=None):
     n_mu_bins = config['power_params']['nbins_mu']
     rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if rsd else ""
-        
+
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
     os.makedirs(save_z_dir, exist_ok=True)
-    
+
     # read meta data
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
@@ -77,7 +77,7 @@ def main(path2config, alt_simname=None):
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
-    
+
     # name of file to save to
     
     if not logk:
@@ -91,7 +91,7 @@ def main(path2config, alt_simname=None):
         zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}_dk{dk:.3f}.npz"
         window_fn = save_dir / f"window_nmesh{nmesh:d}_dk{dk:.3f}.npz"
     pk_lin_fn = save_dir / "abacus_pk_lin_ic.dat"
-    
+
     # load the power spectrum at z = 1
     if os.path.exists(pk_lin_fn):
         # load linear power spectrum
@@ -102,16 +102,16 @@ def main(path2config, alt_simname=None):
         kth = meta['CLASS_power_spectrum']['k (h/Mpc)']
         pk_z1 = meta['CLASS_power_spectrum']['P (Mpc/h)^3']
         p_m_lin = D_ratio**2*pk_z1
-        
+
         # to match the lowest k-modes in zenbu (make pretty)
         choice = kth > 1.e-05
         kth = kth[choice]
         p_m_lin = p_m_lin[choice]
         np.savetxt(pk_lin_fn, np.vstack((kth, p_m_lin)).T)
-        
+
     # create a dict with everything you would ever need
     cfg = {'lbox': Lbox, 'nmesh_in': nmesh, 'p_lin_ic_file': pk_lin_fn, 'Cosmology': cosmo, 'surrogate_gaussian_cutoff': kcut, 'z_ic': z_ic}
-                
+
     # presave the zenbu power spectra
     print("Generating ZeNBu output")
     if os.path.exists(zenbu_fn):
@@ -137,7 +137,7 @@ def main(path2config, alt_simname=None):
         np.savez(window_fn, window=window, keff=keff)
         print("Saved window for this choice of box and nmesh")
 
-        
+
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
 

@@ -16,13 +16,13 @@ file names, Astropy tables, etc.
 # TODO: generator to iterate over files
 # TODO: load multiple files into concatenated table
 
-from os.path import basename
 import warnings
+from os.path import basename
 
 import numpy as np
 from astropy.table import Table
 
-from .bitpacked import unpack_rvint, unpack_pids
+from .bitpacked import unpack_pids, unpack_rvint
 from .pack9 import unpack_pack9
 
 __all__ = ['read_asdf']
@@ -38,23 +38,23 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     ----------
     fn: str
         The filename of the ASDF file to load
-        
+
     load: list of str or None, optional
         A list of columns to load. The default (``None``) is to load columns based on
         what's in the file. If the file contains positions and velocities, those will
         be loaded; if it contains PIDs, those will be loaded.
-        
+
         The list of fields that can be specified is: \
         ``'pos', 'vel', 'pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'aux'``
-            
+
         All except ``pos`` & ``vel`` are PID-derived fields (see
         :func:`abacusnbody.data.bitpacked.unpack_pids`)
-        
+
     colname: str or None, optional
         The internal column name in the ASDF file to load.  Probably one of ``'rvint'``,
         ``'packedpid'``, ``'pid'``, or ``'pack9'``.  In most cases, the name can be
         automatically detected, which is the default behavior (``None``).
-    
+
     dtype: np.dtype, optional
         The precision in which to unpack any floating
         point arrays.  Default: np.float32
@@ -92,7 +92,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
                     colname = cn
             if colname is None:
                 raise ValueError(f"Could not find any of {_colnames} in asdf file {fn}. Need to specify colname!")
-        
+
         # determine what fields to unpack
         load = _resolve_columns(colname, load, kwargs)
 
@@ -109,7 +109,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
                 header['SubsampleFraction'] = SubsampleFraction
                 if verbose:
                     print(f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction*100):d}% total)')
-        
+
         table = Table(meta=header)
         if 'pos' in load:
             table.add_column(np.empty((Nmax,3), dtype=dtype), copy=False, name='pos')
@@ -119,7 +119,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
             table.add_column(data, copy=False, name='aux')  # 'aux' is the raw aux field
         # For the PID columns, we'll let `unpack_pids` build those for us
         # Eventually, we'll need to be able to pass output arrays
-        
+
         if colname == 'rvint':
             _posout = table['pos'] if 'pos' in load else False
             _velout = table['vel'] if 'vel' in load else False
@@ -137,17 +137,17 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
             for n,col in cols.items():
                 table.add_column(col, name=n, copy=False)
             nread = len(data)
-            
+
     table = table[:nread]  # truncate to amount actually read
     # TODO: could drop some memory here
-    
+
     return table
 
 
 def _resolve_columns(colname, load, kwargs):
     '''Figure out what columns to read. `colname` is the data column in the file,
     `load` is the tuple of strings, `kwargs` might have deprecated load_pos/vel'''
-    
+
     load_pos = kwargs.pop('load_pos', None)
     load_vel = kwargs.pop('load_vel', None)
     if load_pos is not None or load_vel is not None:
@@ -162,7 +162,7 @@ def _resolve_columns(colname, load, kwargs):
         else:
             warnings.warn('`load` and deprecated `load_pos` or `load_vel` specified. '
                           'Ignoring deprecated parameters.')
-            
+
     if load is None:
         load = []
         if colname in ('pack9','rvint'):

@@ -11,4 +11,3 @@ The `generate_cfs/` directory contains a script called `generate_cf.py` to evalu
 catalog.  The `launch_cori_slurm.sh` script then broadcasts that Python script over multiple sims/redshifts in the suite,
 using [disBatch](https://github.com/flatironinstitute/disBatch/) to do the dynamic dispatch.  This script is particular
 to NERSC's Cori platform, but the general pattern should be widely applicable.
-
