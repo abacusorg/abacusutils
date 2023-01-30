@@ -4,12 +4,12 @@
 <img src="docs/images/icon_red.png" width="175px" alt="Abacus Logo">
 </p>
 
-[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Tests](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml/badge.svg)](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml)
+[![Documentation Status](https://readthedocs.org/projects/abacusutils/badge/?version=latest)](https://abacusutils.readthedocs.io/en/latest/?badge=latest) [![PyPI](https://img.shields.io/pypi/v/abacusutils)](https://pypi.org/project/abacusutils/) [![Tests](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml/badge.svg)](https://github.com/abacusorg/abacusutils/actions/workflows/tests.yml) [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/abacusorg/abacusutils/master.svg)](https://results.pre-commit.ci/latest/github/abacusorg/abacusutils/master)
 
 abacusutils is a package for reading and manipulating data products from the Abacus *N*-body project.
 In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io>)
 suite of simulations.  The package focuses on the Python 3 API, but there is also a language-agnostic Unix pipe
-interface to some of the functionality.
+interface to some of the functionality. 
 
 These interfaces are documented here: <https://abacusutils.readthedocs.io>
 
