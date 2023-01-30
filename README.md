@@ -9,7 +9,7 @@
 abacusutils is a package for reading and manipulating data products from the Abacus *N*-body project.
 In particular, these utilities are intended for use with the [AbacusSummit](https://abacussummit.readthedocs.io>)
 suite of simulations.  The package focuses on the Python 3 API, but there is also a language-agnostic Unix pipe
-interface to some of the functionality. 
+interface to some of the functionality.
 
 These interfaces are documented here: <https://abacusutils.readthedocs.io>
 
