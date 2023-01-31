@@ -1,17 +1,12 @@
-"""
-"""
+# The compaso_halo_catalog module loads halo catalogs from CompaSO, Abacus's
+# on-the-fly halo finder. The module defines one class, CompaSOHaloCatalog,
+# whose constructor takes the path to a halo catalog as an argument.
+# Users should use this class as the primary interface to load and manipulate
+# halo catalogs.
 
-"""
-The compaso_halo_catalog module loads halo catalogs from CompaSO, Abacus's
-on-the-fly halo finder. The module defines one class, CompaSOHaloCatalog,
-whose constructor takes the path to a halo catalog as an argument.
-Users should use this class as the primary interface to load and manipulate
-halo catalogs.
-
-A high-level overview of this module is given at
-https://abacusutils.readthedocs.io/en/latest/compaso.html
-or docs/compaso.rst.
-"""
+# A high-level overview of this module is given at
+# https://abacusutils.readthedocs.io/en/latest/compaso.html
+# or docs/compaso.rst.
 
 import gc
 import os
