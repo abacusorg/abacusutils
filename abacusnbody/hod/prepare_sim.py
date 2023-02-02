@@ -725,7 +725,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
         MT = True
     want_ranks = config['HOD_params'].get('want_ranks', False)
     want_AB = config['HOD_params'].get('want_AB', False)
-    want_shear = config['HOD_params'].get('want_AB', False)
+    want_shear = config['HOD_params'].get('want_shear', False)
     # if want shear, calculate shear field first
     if want_shear:
         Ndim = config['HOD_params'].get('shear_N', 1000)
