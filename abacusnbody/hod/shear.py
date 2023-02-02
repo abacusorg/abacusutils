@@ -1,13 +1,15 @@
-import numpy as np
-import numba
 import time
+
+import numba
+import numpy as np
+import numpy.linalg as la
 from numba import njit, prange, set_num_threads
+from scipy.interpolate import interpn
+from scipy.ndimage import gaussian_filter
+
 # from nbodykit.lab import ArrayCatalog, FieldMesh
 # from nbodykit.base.mesh import MeshFilter
 
-from scipy.ndimage import gaussian_filter
-from scipy.interpolate import interpn
-import numpy.linalg as la
 
 @numba.vectorize
 def rightwrap(x, L):
@@ -21,7 +23,7 @@ def dist(pos1, pos2, L=None):
     Calculate L2 norm distance between a set of points
     and either a reference point or another set of points.
     Optionally includes periodicity.
-    
+
     Parameters
     ----------
     pos1: ndarray of shape (N,m)
@@ -30,23 +32,23 @@ def dist(pos1, pos2, L=None):
         A single point or set of points
     L: float, optional
         The box size. Will do a periodic wrap if given.
-    
+
     Returns
     -------
     dist: ndarray of shape (N,)
         The distances between pos1 and pos2
     '''
-    
+
     # read dimension of data
     N, nd = pos1.shape
-    
+
     # allow pos2 to be a single point
     pos2 = np.atleast_2d(pos2)
     assert pos2.shape[-1] == nd
     broadcast = len(pos2) == 1
-    
+
     dist = np.empty(N, dtype=pos1.dtype)
-    
+
     i2 = 0
     for i in range(N):
         delta = 0.
@@ -77,25 +79,25 @@ def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
             W = weights[0]
         elif Nw > 1:
             W = weights[n]
-        
+
         # convert to a position in the grid
         px = (positions[n,0]/boxsize)*gx # used to say boxsize+0.5
         py = (positions[n,1]/boxsize)*gy # used to say boxsize+0.5
         if threeD:
             pz = (positions[n,2]/boxsize)*gz # used to say boxsize+0.5
-        
+
         # round to nearest cell center
         ix = np.int32(round(px))
         iy = np.int32(round(py))
         if threeD:
             iz = np.int32(round(pz))
-        
+
         # calculate distance to cell center
         dx = ix - px
         dy = iy - py
         if threeD:
             dz = iz - pz
-        
+
         # find the tsc weights for each dimension
         wx = .75 - dx**2
         wxm1 = .5*(.5 + dx)**2
@@ -109,7 +111,7 @@ def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
             wzp1 = .5*(.5 - dz)**2
         else:
             wz = 1.
-        
+
         # find the wrapped x,y,z grid locations of the points we need to change
         # negative indices will be automatically wrapped
         ixm1 = (ix - 1)
@@ -124,7 +126,7 @@ def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
             izp1 = rightwrap(iz + 1, gz)
         else:
             izw = np.uint32(0)
-        
+
         # change the 9 or 27 cells that the cloud touches
         density[ixm1, iym1, izw ] += wxm1*wym1*wz  *W
         density[ixm1, iyw , izw ] += wxm1*wy  *wz  *W
@@ -135,7 +137,7 @@ def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
         density[ixp1, iym1, izw ] += wxp1*wym1*wz  *W
         density[ixp1, iyw , izw ] += wxp1*wy  *wz  *W
         density[ixp1, iyp1, izw ] += wxp1*wyp1*wz  *W
-        
+
         if threeD:
             density[ixm1, iym1, izm1] += wxm1*wym1*wzm1*W
             density[ixm1, iym1, izp1] += wxm1*wym1*wzp1*W
@@ -163,7 +165,7 @@ def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
 
             density[ixp1, iyp1, izm1] += wxp1*wyp1*wzm1*W
             density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
-            
+
 def smooth_density(D, R, N_dim, Lbox):
     # cell size
     cell = Lbox/N_dim
@@ -183,20 +185,20 @@ def Wth(ksq, r):
 @njit(nopython=True)
 def Wg(k, r):
     return np.exp(-k*r*r/2.)
-            
+
 
 @njit(nopython=True)
 def get_tidal(dfour, karr, N_dim, R):
-    
+
     # initiate array
     tfour = np.zeros(shape=(N_dim, N_dim, N_dim, 3, 3),dtype=np.complex128)#complex)
-    
+
     # computing tidal tensor
     for a in range(N_dim):
         for b in range(N_dim):
             for c in range(N_dim):
                 if (a, b, c) == (0, 0, 0): continue
-                
+
                 ksq = karr[a]**2 + karr[b]**2 + karr[c]**2
                 # smoothed density Gauss fourier
                 #dksmo[a, b, c] = Wg(ksq)*dfour[a, b, c]
@@ -236,13 +238,13 @@ def get_shear_nb(tidr, N_dim):
     return shear
 
 def get_shear(dsmo, N_dim, Lbox, R=None):
-    
+
     # fourier transform the density field
     dfour = np.fft.fftn(dsmo)
-        
+
     # k values
     karr = np.fft.fftfreq(N_dim, d=Lbox/(2*np.pi*N_dim))
-    
+
     # creating empty arrays for future use
     start = time.time()
     tfour = get_tidal(dfour, karr, N_dim, R)

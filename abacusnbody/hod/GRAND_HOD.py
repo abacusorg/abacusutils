@@ -96,7 +96,7 @@ def Phi_fun(logM_h, logM_cut, sigma, gamma):
     x = gamma*(logM_h-logM_cut)/sigma
     Phi = 0.5*(1 + math.erf(x/np.sqrt(2)))
     return Phi
-    
+
 # @njit(fastmath=True)
 # def A_fun(p_max, Q, phi, Phi):
 #     """
@@ -104,7 +104,7 @@ def Phi_fun(logM_h, logM_cut, sigma, gamma):
 #     """
 #     A = (p_max-1./Q)
 #     return A
-    
+
 
 @njit(fastmath=True)
 def Gaussian_fun(x, mean, sigma):
@@ -420,12 +420,12 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 elif keep_cent[i] == 2:
                     M1_E_temp =  10**(logM1_EE + As_E * hdeltac[i] + Bs_E * hfenv[i]) # M1_E_temp*10**delta_M1
                     base_p_E = N_sat_elg(
-                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E   
+                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E
 
                     # if base_p_E > 1:
                     #     print("ExE new p", base_p_E, np.log10(hmass[i]), N_sat_elg(
                     #     hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_E_temp, A_E, alpha1, beta), weights[i], ic_E)
-                    
+
                 # rank mods
                 if enable_ranks:
                     decorator_E = 1 + s_E * ranks[i] + s_v_E * ranksv[i] + s_p_E * ranksp[i] + s_r_E * ranksr[i]
