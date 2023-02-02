@@ -411,7 +411,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 elif keep_cent[i] == 2:
                     M1_E_temp =  10**(logM1_EE + As_E * hdeltac[i] + Bs_E * hfenv[i]) # M1_E_temp*10**delta_M1
                     base_p_E = N_sat_elg(
-                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E   
+                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E
 
                     # if base_p_E > 1:
                     #     print("ExE new p", base_p_E, np.log10(hmass[i]), N_sat_elg(
