@@ -23,7 +23,6 @@ def dist(pos1, pos2, L=None):
     Calculate L2 norm distance between a set of points
     and either a reference point or another set of points.
     Optionally includes periodicity.
-
     Parameters
     ----------
     pos1: ndarray of shape (N,m)
@@ -32,7 +31,6 @@ def dist(pos1, pos2, L=None):
         A single point or set of points
     L: float, optional
         The box size. Will do a periodic wrap if given.
-
     Returns
     -------
     dist: ndarray of shape (N,)
