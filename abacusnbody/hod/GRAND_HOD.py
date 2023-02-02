@@ -97,15 +97,6 @@ def Phi_fun(logM_h, logM_cut, sigma, gamma):
     Phi = 0.5*(1 + math.erf(x/np.sqrt(2)))
     return Phi
 
-# @njit(fastmath=True)
-# def A_fun(p_max, Q, phi, Phi):
-#     """
-#     Aiding function for N_cen_ELG_v1().
-#     """
-#     A = (p_max-1./Q)
-#     return A
-
-
 @njit(fastmath=True)
 def Gaussian_fun(x, mean, sigma):
     """
@@ -420,7 +411,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv,
                 elif keep_cent[i] == 2:
                     M1_E_temp =  10**(logM1_EE + As_E * hdeltac[i] + Bs_E * hfenv[i]) # M1_E_temp*10**delta_M1
                     base_p_E = N_sat_elg(
-                        hmass[i], 10**logM_cut_E_temp, kappa_E, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E
+                        hmass[i], 10**logM_cut_E_temp, kappa_EE, M1_E_temp, alpha_EE, A_E) * weights[i] * ic_E   
 
                     # if base_p_E > 1:
                     #     print("ExE new p", base_p_E, np.log10(hmass[i]), N_sat_elg(
@@ -756,9 +747,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         # conformity params
         logM1_EE = ELG_HOD.get('logM1_EE', logM1_E)
         alpha_EE = ELG_HOD.get('alpha_EE', alpha_E)
+
         logM1_EL = ELG_HOD.get('logM1_EL', logM1_E)
         alpha_EL = ELG_HOD.get('alpha_EL', alpha_E)
-
+        
         ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E,
                             Ac_E, As_E, Bc_E, Bs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL])
     else:
