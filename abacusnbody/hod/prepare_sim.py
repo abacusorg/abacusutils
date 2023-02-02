@@ -18,6 +18,7 @@ import itertools
 from itertools import repeat
 import argparse
 import gc
+import glob
 
 import numpy as np
 from astropy.table import Table
@@ -28,7 +29,14 @@ from numba import njit, types, jit
 import numba
 from scipy.spatial import cKDTree
 
+from scipy.ndimage import gaussian_filter
+from scipy.interpolate import interpn
+import numpy.linalg as la
+
+from .shear import *
+
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+from abacusnbody.data.read_abacus import *
 
 
 DEFAULTS = {}
@@ -281,7 +289,7 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
     return Menv
 
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, cleaning, newseed, 
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, want_shear, shearmark, cleaning, newseed, 
                  halo_lc=False, nthread = 1, overwrite = 1, mcut = 1e11, rad_outer = 5.):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
@@ -427,24 +435,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                                     halo_lc=halo_lc, Lbox=Lbox, nthread=nthread, mcut = mcut)
         gc.collect()
         
-        # Menv = np.array([np.sum(allmasses[allinds_outer[ind]]) - np.sum(allmasses[allinds_inner[ind]]) \
-        #     for ind in np.arange(len(halos))])
-        # Menv = calc_Menv(allmasses, allinds_outer, allinds_inner)
-
         if halo_lc and len(index_bounds) > 0:
             Menv[index_bounds] *= rand_norm
         
-        # fenv_rank = np.zeros(len(Menv))
-        # for ibin in range(nbins):
-        #     mmask = (halos['N']*Mpart > mbins[ibin]) \
-        #     & (halos['N']*Mpart < mbins[ibin + 1])
-        #     if np.sum(mmask) > 0:
-        #         if np.sum(mmask) == 1:
-        #             fenv_rank[mmask] = 0
-        #         else:
-        #             new_fenv_rank = Menv[mmask].argsort().argsort()
-        #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-
         halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, allmasses)
 
         # compute delta concentration
@@ -461,11 +454,32 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     new_deltac_rank = new_deltac.argsort().argsort()
                     deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
         halos['deltac_rank'] = deltac_rank
-
+        
     else:
         halos['fenv_rank'] = np.zeros(len(halos))
         halos['deltac_rank'] = np.zeros(len(halos))
 
+    if want_shear:
+        assert len(np.unique(shearmark.shape)) == 1
+        N_dim = len(shearmark)
+        cell = Lbox/N_dim
+        
+        shear_rank = np.zeros(len(halos))
+        for ibin in range(nbins):
+            mmask = (allmasses > mbins[ibin]) & (allmasses < mbins[ibin + 1])
+            if np.sum(mmask) > 0:
+                if np.sum(mmask) == 1:
+                    deltac_rank[mmask] = 0
+                else:
+                    GroupPos = (halos[mmask]['x_L2com']/cell).astype(int)%N_dim
+                    halo_shears = interpn((np.arange(N_dim), np.arange(N_dim), np.arange(N_dim)), shearmark, GroupPos)
+                    new_shear_rank = halo_shears.argsort().argsort()
+                    shear_rank[mmask] = new_shear_rank / np.max(new_shear_rank) - 0.5
+        halos['shear_rank'] = shear_rank
+        print("finished shear compute")
+    else:
+        halos['shear_rank'] = np.zeros(len(halos))
+        
     # the new particle start, len, and multiplier
     halos_pstart = halos['npstartA']
     halos_pnum = halos['npoutA']
@@ -647,6 +661,44 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
+def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
+    
+    start = time.time()
+    fns = glob.glob(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/field_rv_A/*asdf')
+    partpos = []
+    for efn in fns:
+        ecat = read_asdf(efn, load = ['pos'])
+        partpos += [ecat['pos'][np.random.choice(len(ecat['pos']), size = int(len(ecat['pos'])/partdown), replace = False)]]
+
+
+    fns = glob.glob(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/halo_rv_A/*asdf')
+    for efn in fns:
+        ecat = read_asdf(efn, load = ['pos'])
+        partpos += [ecat['pos'][np.random.choice(len(ecat['pos']), size = int(len(ecat['pos'])/partdown), replace = False)]]
+
+    pos_parts = np.concatenate(partpos)
+    print("compiled all particles", len(pos_parts), "took time", time.time() - start)
+    
+    start = time.time()
+    cat = CompaSOHaloCatalog(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0'), fields = ['N'], cleaned = True)
+    header = cat.header
+    Lbox = header['BoxSizeHMpc']
+    cell = Lbox/N_dim
+    print("compiled all halos", "took time", time.time() - start)
+
+    start = time.time()
+    dens = np.zeros((N_dim, N_dim, N_dim))
+    numba_tsc_3D(pos_parts, dens, Lbox)
+    print("finished TSC, took time", time.time() - start)
+    start = time.time()
+    dens_smooth = smooth_density(dens, R, N_dim, Lbox)
+    print("finished smoothing, took time", time.time() - start)
+    start = time.time()
+    shearmark = get_shear(dens_smooth, N_dim, Lbox)
+    print("finished shear mark, took time", time.time() - start)
+    
+    return shearmark
+
 def main(path2config, params = None, alt_simname = None, alt_z = None, newseed = 600, halo_lc = False, overwrite = 1):
     print("compiling compaso halo catalogs into subsampled catalogs")
 
@@ -680,8 +732,19 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     MT = False
     if tracer_flags['ELG'] or tracer_flags['QSO']:
         MT = True
-    want_ranks = config['HOD_params']['want_ranks']
-    want_AB = config['HOD_params']['want_AB']
+    want_ranks = config['HOD_params'].get('want_ranks', False)
+    want_AB = config['HOD_params'].get('want_AB', False)
+    want_shear = config['HOD_params'].get('want_AB', False)
+    # if want shear, calculate shear field first
+    if want_shear:
+        Ndim = config['HOD_params'].get('shear_N', 1000)
+        Rsm = config['HOD_params'].get('shear_R', 2)
+        partdown = config['HOD_params'].get('partdown', 100)
+        print("computing shear field")
+        shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, partdown)
+    else:
+        shearmark = None
+        
     # N_dim = config['HOD_params']['Ndim']
     nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load']))
 
@@ -691,7 +754,8 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
                                 repeat(simdir), repeat(simname), repeat(z_mock), 
                                 repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-                                repeat(want_AB), repeat(cleaning), repeat(newseed), repeat(halo_lc), 
+                                repeat(want_AB), repeat(want_shear), repeat(shearmark), 
+                                repeat(cleaning), repeat(newseed), repeat(halo_lc), 
                                 repeat(nthread), repeat(overwrite)))
     p.close()
     p.join()
