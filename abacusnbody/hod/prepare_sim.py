@@ -9,7 +9,6 @@ $ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.
 import argparse
 import gc
 import glob
-
 import itertools
 import multiprocessing
 import os
@@ -27,14 +26,10 @@ from scipy.interpolate import NearestNDInterpolator, interpn
 from scipy.ndimage import gaussian_filter
 from scipy.spatial import cKDTree
 
-from scipy.ndimage import gaussian_filter
-from scipy.interpolate import interpn
-import numpy.linalg as la
-
-from .shear import *
-
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import *
+
+from .shear import *
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -287,7 +282,7 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
 
 
 
-def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, want_shear, shearmark, cleaning, newseed, 
+def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, want_shear, shearmark, cleaning, newseed,
                  halo_lc=False, nthread = 1, overwrite = 1, mcut = 1e11, rad_outer = 5.):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
@@ -432,7 +427,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         Menv = do_Menv_from_tree(allpos, allmasses, r_inner=halos['r98_L2com'], r_outer=rad_outer,
                                     halo_lc=halo_lc, Lbox=Lbox, nthread=nthread, mcut = mcut)
         gc.collect()
-        
+
         if halo_lc and len(index_bounds) > 0:
             Menv[index_bounds] *= rand_norm
 
@@ -452,7 +447,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     new_deltac_rank = new_deltac.argsort().argsort()
                     deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
         halos['deltac_rank'] = deltac_rank
-        
+
     else:
         halos['fenv_rank'] = np.zeros(len(halos))
         halos['deltac_rank'] = np.zeros(len(halos))
@@ -746,11 +741,11 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     os.makedirs(savedir, exist_ok = True)
 
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
-    p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
-                                repeat(simdir), repeat(simname), repeat(z_mock), 
-                                repeat(tracer_flags), repeat(MT), repeat(want_ranks), 
-                                repeat(want_AB), repeat(want_shear), repeat(shearmark), 
-                                repeat(cleaning), repeat(newseed), repeat(halo_lc), 
+    p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir),
+                                repeat(simdir), repeat(simname), repeat(z_mock),
+                                repeat(tracer_flags), repeat(MT), repeat(want_ranks),
+                                repeat(want_AB), repeat(want_shear), repeat(shearmark),
+                                repeat(cleaning), repeat(newseed), repeat(halo_lc),
                                 repeat(nthread), repeat(overwrite)))
     p.close()
     p.join()

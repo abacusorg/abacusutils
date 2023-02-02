@@ -591,8 +591,8 @@ class AbacusHOD:
                     M1_conf =  10**(logM1_EE + Asat * deltacs[j] + Bsat * fenvs[k])
                     nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_EE, As) * ic
                     # we cannot calculate the number of EL conformal satellites with this approach, so we ignore it for now.
-                    
-                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp 
+
+                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp
                     ngal_sat += halo_mass_func[i, j, k] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
                     # print(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As)
         return ngal_cent, ngal_sat
