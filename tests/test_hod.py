@@ -10,32 +10,32 @@ To generate new reference, run:
     $ python test_hod.py
 """
 
-from os.path import dirname, join as pjoin
 import tempfile
+from os.path import dirname
+from os.path import join as pjoin
 
-import yaml
-import pytest
 import h5py
+import numba
 import numpy as np
+import pytest
+import yaml
 from astropy.io import ascii
-
 from common import check_close
 
 # required for pytest to work (see GH #60)
-import numba
 numba.config.THREADING_LAYER='forksafe'
 
 TESTDIR = dirname(__file__)
 REFDIR = pjoin(dirname(__file__), 'ref_hod')
 EXAMPLE_SIM = pjoin(TESTDIR, 'Mini_N64_L32')
 EXAMPLE_CONFIG = pjoin(TESTDIR, 'abacus_hod.yaml')
-EXAMPLE_SUBSAMPLE_HALOS = pjoin(REFDIR, 
+EXAMPLE_SUBSAMPLE_HALOS = pjoin(REFDIR,
     'Mini_N64_L32/z0.000/halos_xcom_2_seed600_abacushod_oldfenv_MT_new.h5')
-EXAMPLE_SUBSAMPLE_PARTS = pjoin(REFDIR, 
+EXAMPLE_SUBSAMPLE_PARTS = pjoin(REFDIR,
     'Mini_N64_L32/z0.000/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5')
-EXAMPLE_LRGS = pjoin(REFDIR, 
+EXAMPLE_LRGS = pjoin(REFDIR,
     'Mini_N64_L32/z0.000/galaxies_rsd/LRGs.dat')
-EXAMPLE_ELGS = pjoin(REFDIR, 
+EXAMPLE_ELGS = pjoin(REFDIR,
     'Mini_N64_L32/z0.000/galaxies_rsd/ELGs.dat')
 
 
@@ -49,20 +49,21 @@ def test_hod(tmp_path, reference_mode = False):
     config = yaml.safe_load(open(EXAMPLE_CONFIG))
     # inform abacus_hod where the simulation files are, relative to the cwd
     config['sim_params']['sim_dir'] = TESTDIR
-    
+
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
+
 
     # reference mode
     if reference_mode:
         print("Generating new reference files...")
         prepare_sim.main(EXAMPLE_CONFIG, params=config)
-        
+
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
         bin_params = clustering_params['bin_params']
-        
+
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
@@ -98,10 +99,10 @@ def test_hod(tmp_path, reference_mode = False):
         rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
         pimax = clustering_params['pimax']
         pi_bin_size = clustering_params['pi_bin_size']
-        
+
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-        
+
         # throw away run for jit to compile, write to disk
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
         savedir_gal = config['sim_params']['output_dir']\
@@ -118,6 +119,15 @@ def test_hod(tmp_path, reference_mode = False):
         for ekey in data.keys():
             assert check_close(data[ekey], data1[ekey])
 
+        # smoke test for zcv
+        config['sim_params']['sim_name'] = 'AbacusSummit_base_c000_ph006' # so that meta can find it
+        config['sim_params']['z_mock'] = 0.8 # so that meta can find it
+        config['HOD_params']['want_rsd'] = False # so that it doesn't run twice
+        config['zcv_params']['zcv_dir'] = pjoin(TESTDIR, 'data_zcv')
+        config['zcv_params']['tracer_dir'] = pjoin(tmp_path, 'zcv_tracer_data')
+        mock_dict = newBall.run_hod(newBall.tracers, want_rsd = config['HOD_params']['want_rsd'], write_to_disk = False, Nthread = 2)
+        del mock_dict['ELG']  # drop ELG since zcv works with a single tracer currently
+        zcv_dict = newBall.apply_zcv(mock_dict, config)
 
 if __name__ == '__main__':
     with tempfile.TemporaryDirectory() as tmpdir:

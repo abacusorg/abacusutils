@@ -1,12 +1,17 @@
 # allsims testhod rsd
-import numpy as np
-import os, sys, time
+import gc
+import time
+
 import Corrfunc
+import numba
+import numpy as np
 # from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
 # from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
-# from Corrfunc.theory.DDrppi import 
-from Corrfunc.theory import wp, xi, DDsmu, DDrppi
+# from Corrfunc.theory.DDrppi import
+from Corrfunc.theory import DDrppi, DDsmu, wp, xi
+from numba import njit
 from scipy.special import legendre
+
 
 def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
     r"""
@@ -68,8 +73,8 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
 
     return result
 
-def calc_xirppi_fast(x1, y1, z1, rpbins, pimax, 
-    pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
+def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
+    pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.
     start = time.time()
     if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
@@ -85,9 +90,9 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     else:
         autocorr = 1
         ND2 = ND1
-    
+
     # single precision mode
-    # to do: make this native 
+    # to do: make this native
     cf_start = time.time()
     rpbins = rpbins.astype(np.float32)
     pimax = np.float32(pimax)
@@ -96,7 +101,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     z1 = z1.astype(np.float32)
     lbox = np.float32(lbox)
 
-    if autocorr == 1:    
+    if autocorr == 1:
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
@@ -104,7 +109,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
@@ -129,9 +134,9 @@ def calc_multipole_fast(x1, y1, z1, sbins,
     else:
         autocorr = 1
         ND2 = ND1
-    
+
     # single precision mode
-    # to do: make this native 
+    # to do: make this native
     cf_start = time.time()
     sbins = sbins.astype(np.float32)
     x1 = x1.astype(np.float32)
@@ -166,8 +171,8 @@ def calc_multipole_fast(x1, y1, z1, sbins,
     return xi_array
 
 
-def calc_wp_fast(x1, y1, z1, rpbins, pimax, 
-    lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units. 
+def calc_wp_fast(x1, y1, z1, rpbins, pimax,
+    lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.
     if not isinstance(pimax, int):
         raise ValueError("pimax needs to be an integer")
 
@@ -180,7 +185,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         ND2 = ND1
 
     # single precision mode
-    # to do: make this native 
+    # to do: make this native
     cf_start = time.time()
     rpbins = rpbins.astype(np.float32)
     pimax = np.float32(pimax)
@@ -189,7 +194,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     z1 = z1.astype(np.float32)
     lbox = np.float32(lbox)
 
-    if autocorr == 1:    
+    if autocorr == 1:
         print("sample size", len(x1))
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
@@ -199,7 +204,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2, 
+        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
@@ -211,5 +216,3 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     xirppi = DD_counts / RR_counts[:, None] - 1
 
     return 2*np.sum(xirppi, axis = 1)
-
-

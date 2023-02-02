@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 '''
 This is a script for loading simulation data and generating subsamples.
 
@@ -7,26 +6,18 @@ Usage
 $ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.yaml
 '''
 
-import os
-from pathlib import Path
-import yaml
-import multiprocessing
-from multiprocessing import Pool
-import random
-import time
-import itertools
-from itertools import repeat
 import argparse
 import gc
 import glob
 
-import numpy as np
-from astropy.table import Table
 import h5py
-from scipy.ndimage import gaussian_filter
-from scipy.interpolate import NearestNDInterpolator
-from numba import njit, types, jit
 import numba
+import numpy as np
+import yaml
+from astropy.table import Table
+from numba import jit, njit, types
+from scipy.interpolate import NearestNDInterpolator
+from scipy.ndimage import gaussian_filter
 from scipy.spatial import cKDTree
 
 from scipy.ndimage import gaussian_filter
@@ -38,12 +29,11 @@ from .shear import *
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import *
 
-
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 
-# https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD 
+# https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD
 # standard power law satellites
 def subsample_halos(m, MT):
     x = np.log10(m)
@@ -79,11 +69,11 @@ def subsample_halos(m, MT):
 #         downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
 #         downfactors[x > 13.0] = 1
 #         return downfactors
-    
-# # standard satellites 
+
+# # standard satellites
 # def submask_particles(m_in, n_in, MT):
 #     x = np.log10(m_in)
-    
+
 #     if MT:
 #         if m_in < 1e11:
 #             return np.zeros(n_in)
@@ -105,7 +95,7 @@ def subsample_halos(m, MT):
 # conformity fix
 def submask_particles(m_in, n_in, MT):
     x = np.log10(m_in)
-    
+
     if MT:
         if m_in < 1e11:
             return np.zeros(n_in)
@@ -125,7 +115,7 @@ def submask_particles(m_in, n_in, MT):
             submask = np.zeros(n_in).astype(int)
             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
             return submask
-        
+
 def get_vertices_cube(units=0.5,N=3):
     vertices = 2*((np.arange(2**N)[:,None] & (1 << np.arange(N))) > 0) - 1
     return vertices*units
@@ -149,7 +139,7 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     # location of observer
     origin = origins[0]
 
-    # generate randoms on the unit sphere 
+    # generate randoms on the unit sphere
     costheta = np.random.rand(N_rands)*2.-1.
     phi = np.random.rand(N_rands)*2.*np.pi
     theta = np.arccos(costheta)
@@ -187,7 +177,7 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
         vert[y_vert > 0, 1] -= offset
         vert[z_vert > 0, 2] -= offset
 
-    
+
     # vertices for all three boxes
     vert0 = box0+vert
     if origins.shape[0] > 1 and chi_max >= (Lbox-offset): # not true of only the huge boxes and at low zs for base
@@ -261,10 +251,10 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
         # note that periodicity exists only in y and z directions
         querypos = (allpos+Lbox/2.) % Lbox  # needs to be within 0 and Lbox for periodicity
         treebox = Lbox
-    
+
     mmask = allmasses > mcut
     pos_cut = querypos[mmask]
-    
+
     print("Building and querying trees for mass env calculation")
     querypos_tree = cKDTree(querypos, boxsize=treebox)
     if isinstance(r_inner, (list, tuple, np.ndarray)):
@@ -272,24 +262,25 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
     allinds_inner = querypos_tree.query_ball_point(pos_cut, r = r_inner, workers = nthread)
     inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
     del allinds_inner; gc.collect()
-    
+
     if isinstance(r_outer, (list, tuple, np.ndarray)):
         r_outer = np.array(r_outer)[mmask]
     allinds_outer = querypos_tree.query_ball_point(pos_cut, r = r_outer, workers = nthread)
     del querypos, querypos_tree; gc.collect()
-    
+
     outer_arr, outer_starts = concat_to_arr(allinds_outer)
     del allinds_outer; gc.collect()
-    
+
     print("starting Menv")
     numba.set_num_threads(nthread)
-    
+
     Menv = np.zeros(len(allmasses))
     Menv[mmask] = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
     return Menv
 
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, want_shear, shearmark, cleaning, newseed, 
+
                  halo_lc=False, nthread = 1, overwrite = 1, mcut = 1e11, rad_outer = 5.):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
@@ -326,11 +317,11 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         vel_key = 'v_L2com'
         N_key = 'N'
 
-    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = [N_key, 
-        pos_key, vel_key, 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'], 
+    cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = [N_key,
+        pos_key, vel_key, 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'],
         cleaned = cleaning)
     assert halo_lc == cat.halo_lc
-    
+
     halos = cat.halos
     if halo_lc:
         halos['id'] = halos[id_key]
@@ -339,15 +330,15 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         halos['N'] = halos[N_key]
     if cleaning:
         halos = halos[halos['N'] > 0]
-        
+
     parts = cat.subsamples
     header = cat.header
     Lbox = cat.header['BoxSizeHMpc']
-    Mpart = header['ParticleMassHMsun'] # msun / h 
+    Mpart = header['ParticleMassHMsun'] # msun / h
     H0 = header['H0']
     h = H0/100.0
 
-    # # form a halo table of the columns i care about 
+    # # form a halo table of the columns i care about
     # creating a mask of which halos to keep, which halos to drop
     p_halos = subsample_halos(halos['N']*Mpart, MT)
     mask_halos = np.random.random(len(halos)) < p_halos
@@ -374,8 +365,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
         #         else:
         #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
         #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-        # halos['fenv_rank'] = fenv_rank            
-        
+        # halos['fenv_rank'] = fenv_rank
+
         allpos = halos['x_L2com']
         allmasses = halos['N']*Mpart
 
@@ -408,7 +399,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 # factor of rands to generate
                 rand = 10
                 rand_N = allpos.shape[0]*rand
-                
+
                 # generate randoms in L shape
                 randpos, randdist = gen_rand(allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins)
                 rand_n = rand_N/(4./3.*np.pi*(r_max**3-r_min**3))
@@ -417,7 +408,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 randbounds_edge = ((x_min_edge <= randpos[:, 0]) & (x_max_edge >= randpos[:, 0]) & (y_min_edge <= randpos[:, 1]) & (y_max_edge >= randpos[:, 1]) & (z_min_edge <= randpos[:, 2]) & (z_max_edge >= randpos[:, 2]) & (r_min_edge <= randdist) & (r_max_edge >= randdist))
                 randpos = randpos[~randbounds_edge]
                 del randbounds_edge, randdist
-                
+
                 if randpos.shape[0] > 0:
                     # random points on the edges
                     rand_N = randpos.shape[0]
@@ -486,7 +477,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     halos_pstart_new = np.zeros(len(halos))
     halos_pnum_new = np.zeros(len(halos))
 
-    # particle arrays for ranks and mask 
+    # particle arrays for ranks and mask
     mask_parts = np.zeros(len(parts))
     len_old = len(parts)
     ranks_parts = np.full(len_old, -1.0)
@@ -544,7 +535,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     ranksr_parts[indices_parts] = 0
                     ranksc_parts[indices_parts] = 0
                     continue
-                
+
                 # make the rankings
                 theseparts = parts[
                     halos_pstart[j]: halos_pstart[j] + halos_pnum[j]][submask.astype(bool)]
@@ -552,35 +543,35 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 theseparts_vel = theseparts['vel']
                 theseparts_halo_pos = halos['x_L2com'][j]
                 theseparts_halo_vel = halos['v_L2com'][j]
-                
+
                 # construct particle tree to find nearest neighbors
                 parts_tree = cKDTree(parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]]['pos'])
                 dist2_neighbors = parts_tree.query(theseparts_pos, k = 2)[0][:, 1]
-                newranksc = dist2_neighbors.argsort().argsort() 
+                newranksc = dist2_neighbors.argsort().argsort()
                 ranksc_parts[indices_parts] = (newranksc - np.mean(newranksc)) / np.mean(newranksc)
 
                 dist2_rel = np.sum((theseparts_pos - theseparts_halo_pos)**2, axis = 1)
-                newranks = dist2_rel.argsort().argsort() 
+                newranks = dist2_rel.argsort().argsort()
                 ranks_parts[indices_parts] = (newranks - np.mean(newranks)) / np.mean(newranks)
 
                 v2_rel = np.sum((theseparts_vel - theseparts_halo_vel)**2, axis = 1)
-                newranksv = v2_rel.argsort().argsort() 
+                newranksv = v2_rel.argsort().argsort()
                 ranksv_parts[indices_parts] = (newranksv - np.mean(newranksv)) / np.mean(newranksv)
 
                 # get rps
                 # calc relative positions
-                r_rel = theseparts_pos - theseparts_halo_pos 
+                r_rel = theseparts_pos - theseparts_halo_pos
                 r0 = np.sqrt(np.sum(r_rel**2, axis = 1))
                 r_rel_norm = r_rel/r0[:, None]
 
                 # list of peculiar velocities of the particles
                 vels_rel = theseparts_vel - theseparts_halo_vel # velocity km/s
                 # relative speed to halo center squared
-                v_rel2 = np.sum(vels_rel**2, axis = 1) 
+                v_rel2 = np.sum(vels_rel**2, axis = 1)
 
                 # calculate radial and tangential peculiar velocity
                 vel_rad = np.sum(vels_rel*r_rel_norm, axis = 1)
-                newranksr = vel_rad.argsort().argsort() 
+                newranksr = vel_rad.argsort().argsort()
                 ranksr_parts[indices_parts] = (newranksr - np.mean(newranksr)) / np.mean(newranksr)
 
                 # radial component
@@ -605,9 +596,9 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                     oldx = np.sqrt(x2)
                     x2 = v_tan2/(factorA + alpha*(np.log(1+oldx*r0_kpc/rs)/oldx - factorB))
                 x2[np.isnan(x2)] = 1
-                # final perihelion distance 
+                # final perihelion distance
                 rp2 = r0_kpc**2*x2
-                newranksp = rp2.argsort().argsort() 
+                newranksp = rp2.argsort().argsort()
                 ranksp_parts[indices_parts] = (newranksp - np.mean(newranksp)) / np.mean(newranksp)
 
         else:
@@ -617,10 +608,10 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     halos['npstartA'] = halos_pstart_new
     halos['npoutA'] = halos_pnum_new
     halos['randoms'] = np.random.random(len(halos)) # attaching random numbers
-    halos['randoms_gaus_vrms'] = np.random.normal(loc = 0, 
+    halos['randoms_gaus_vrms'] = np.random.normal(loc = 0,
         scale = halos["sigmav3d_L2com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
 
-    # output halo file 
+    # output halo file
     print("outputting new halo file ")
     # output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
     if os.path.exists(outfilename_halos):
@@ -649,7 +640,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     parts['halo_deltac'] = deltach_parts[mask_parts]
     parts['halo_fenv'] = fenvh_parts[mask_parts]
 
-    print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0), 
+    print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0),
         np.sum(parts['halo_mass'] < 0))
     print("outputting new particle file ")
     # output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
@@ -706,15 +697,15 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     # update params if needed
     if params:
         config.update(params)
-    if alt_simname: 
+    if alt_simname:
         config['sim_params']['sim_name'] = alt_simname
-    if alt_z: 
+    if alt_z:
         config['sim_params']['z_mock'] = alt_z
-    
+
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
-    z_mock = config['sim_params']['z_mock']
-    savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0') 
+    z_mock = float(config['sim_params']['z_mock'])
+    savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0')
     cleaning = config['sim_params']['cleaned_halos']
     if 'halo_lc' in config['sim_params'].keys():
         halo_lc = config['sim_params']['halo_lc']
@@ -749,7 +740,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load']))
 
     os.makedirs(savedir, exist_ok = True)
-    
+
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir), 
                                 repeat(simdir), repeat(simname), repeat(z_mock), 
@@ -774,21 +765,20 @@ if __name__ == "__main__":
                         help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
                        )
     parser.add_argument('--alt_z',
-                        help='alternative z to process, like "0.8"',
+                        help='alternative z to process, like "0.8"', type=float,
                        )
     parser.add_argument('--newseed',
-                        help='alternative random number seed, positive integer', default = 600
+                        help='alternative random number seed, positive integer', default = 600, type=int
                        )
     parser.add_argument('--overwrite',
-                        help='overwrite existing subsamples', default = 1
+                        help='overwrite existing subsamples', default = 1, type=int
                        )
     args = vars(parser.parse_args())
-
     main(**args)
 
     print("done")
 
-    # for i in [3,4]: # [20, 21, 22, 23, 24, 0, 1, 2]: 
+    # for i in [3,4]: # [20, 21, 22, 23, 24, 0, 1, 2]:
     #     simname = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
     #     for z in [0.575]:
     #         main(args['path2config'], alt_simname = simname, alt_z = z)

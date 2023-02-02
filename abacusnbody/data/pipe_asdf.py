@@ -70,7 +70,7 @@ The ``abacusnbody/pipe_asdf`` directory also contains a symlink to this
 file, so from this directory one can also run
 
 .. code-block:: bash
-    
+
     $ ./pipe_asdf.py
 
 To-do
@@ -79,18 +79,17 @@ To-do
 - Add CompaSOHaloCatalog hooks to pipe the unpacked data (?)
 '''
 
-import sys
 import argparse
-from os.path import isfile, join as pjoin
-import warnings
 import gc
-import time
+import sys
+from os.path import isfile
+from os.path import join as pjoin
 from timeit import default_timer as timer
 
 import asdf
+import asdf.compression
 import numpy as np
 
-import asdf.compression
 try:
     asdf.compression.validate('blsc')
 except Exception as e:

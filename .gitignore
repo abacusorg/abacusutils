@@ -12,3 +12,4 @@ venv/
 *.code-workspace
 /env*
 abacusnbody/metadata/abacussummit_headers.asdf
+*-jvsc-*.ipynb

@@ -14,10 +14,10 @@ Example C Client Code
 An example C program called ``client.c`` that receives data over a pipe
 is given in the `abacusutils/pipe_asdf directory <https://github.com/abacusorg/abacusutils/tree/master/pipe_asdf>`_.
 
-From this directory, one can build the ``client`` program by running 
+From this directory, one can build the ``client`` program by running
 
 .. code-block:: bash
-    
+
     $ make
 
 and run it with:
