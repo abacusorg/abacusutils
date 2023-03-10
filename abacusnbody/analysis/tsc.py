@@ -134,7 +134,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         _check_dtype(weights, 'weights')
 
     if verbose:
-        print(f'{npartition=}')
+        print(f'npartition={npartition}')
 
     wraptime = -timeit.default_timer()
     if wrap:
