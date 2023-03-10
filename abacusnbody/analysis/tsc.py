@@ -25,8 +25,8 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     CPU.  Sometimes using, e.g., half of all CPUs will be faster than using all
     of them.
 
-    `npartition` is a tuning parameter.  Generally it should be at least
-    `2*nthread`, so that all threads have work to do in both passes.  Sometimes
+    ``npartition`` is a tuning parameter.  Generally it should be at least
+    ``2*nthread``, so that all threads have work to do in both passes.  Sometimes
     an even finer partitioning can produce a favorable ordering in memory of
     particles for TSC.  Sorting the particles within each stripe produces an
     even more favorable ordering, but the current implementation of sorting is
@@ -52,7 +52,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     nthread : int, optional
         Number of threads, for both the parallel partition and the TSC.
-        Values < 0 use `numba.config.NUMBA_NUM_THREADS`, which is usually all
+        Values < 0 use ``numba.config.NUMBA_NUM_THREADS``, which is usually all
         CPUs.
         Default: -1
 
@@ -69,13 +69,13 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         Default: None
 
     sort : bool, optional
-        Sort the particles along the `coord` coordinate within each partition
+        Sort the particles along the ``coord`` coordinate within each partition
         stripe. This can affect performance.
         Default: False
 
     coord : int, optional
-        The coordinate on which to partition. `coord = 0` means `x`,
-        `coord = 1` means `y`, etc.
+        The coordinate on which to partition. ``coord = 0`` means ``x``,
+        ``coord = 1`` means ``y``, etc.
         Default: 0
 
     verbose : bool, optional
@@ -86,7 +86,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     -------
     dens : ndarray
         The density grid, which may be newly allocated, or the same as the
-        input `densgrid` argument if that argument was an ndarray.
+        input ``densgrid`` argument if that argument was an ndarray.
     '''
 
     if nthread < 0:
@@ -220,9 +220,9 @@ def partition_parallel(pos, npartition, boxsize, weights=None, coord=0,
     nthread=-1, sort=False,
 ):
     '''
-    A parallel partition.  Partitions a set of positions into `npartition`
-    pieces, using the `coord` coordinate (`coord=0` partitions on `x`, `coord=1`
-    partitions on `y`, etc.).
+    A parallel partition.  Partitions a set of positions into ``npartition``
+    pieces, using the ``coord`` coordinate (``coord=0`` partitions on ``x``, ``coord=1``
+    partitions on ``y``, etc.).
 
     The particle copy stage is coded as a scatter rather than a gather.
 
@@ -250,25 +250,25 @@ def partition_parallel(pos, npartition, boxsize, weights=None, coord=0,
 
     nthread : int, optional
         Number of threads to parallelize over (using Numba threading).
-        Values < 0 use `numba.config.NUMBA_NUM_THREADS`, which is usually all
+        Values < 0 use ``numba.config.NUMBA_NUM_THREADS``, which is usually all
         CPUs.
         Default: -1
 
     sort : bool, optional
-        Sort the particles on the `coord` coordinate within each partition.
+        Sort the particles on the ``coord`` coordinate within each partition.
         Can speed up subsequent TSC, but generally slow and not worth it.
         Default: False
 
     Returns
     -------
-    partitioned : ndarray like `pos`
+    partitioned : ndarray like ``pos``
         The particles, in partitioned order
 
     part_starts : ndarray, shape (npartition + 1,), dtype int64
-        The index in `partitioned` where each partition starts
+        The index in ``partitioned`` where each partition starts
 
     wpart : ndarray or None
-        The weights, in partitioned order; or None if `weights` not given.
+        The weights, in partitioned order; or None if ``weights`` not given.
     '''
 
     if nthread < 0:
