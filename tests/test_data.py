@@ -237,7 +237,7 @@ def test_halo_lc():
     cat = CompaSOHaloCatalog(curdir / 'halo_light_cones/AbacusSummit_base_c000_ph001-abridged/z2.250/',
                              fields='all',
                              subsamples=True)
-    assert(cat.halo_lc == True)
+    assert(cat.halo_lc is True)
 
     HALO_LC_CAT = refdir / 'halo_lc_cat.asdf'
     HALO_LC_SUBSAMPLES = refdir / 'halo_lc_subsample.asdf'

@@ -41,7 +41,7 @@ def main(path2config):
     mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = False, Nthread = 16)
     # mock_dict = newBall.gal_reader()
     start = time.time()
-    xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 32)
+    newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 32)
     print("Done xi, total time ", time.time() - start)
     # print(xirppi)
     # wp = newBall.compute_wp(mock_dict, rpbins, pimax, pi_bin_size)
@@ -61,7 +61,7 @@ def main(path2config):
         start = time.time()
         # ngal_dict = newBall.compute_ngal()
         # print("Done ngal, took time ", time.time() - start, ngal_dict)
-        xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 32)
+        newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size, Nthread = 32)
         deltat = time.time() - start
         print("Done xi, total time ", deltat)
         meantime += deltat

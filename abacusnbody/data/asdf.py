@@ -65,7 +65,7 @@ class BloscCompressor(Compressor):
             shuffle = blosc.SHUFFLE
         elif shuffle == 'bitshuffle':
             shuffle = blosc.BITSHUFFLE
-        elif shuffle == None:
+        elif shuffle is None:
             shuffle = blosc.NOSHUFFLE
         else:
             raise ValueError(shuffle)

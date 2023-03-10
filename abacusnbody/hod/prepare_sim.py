@@ -18,10 +18,7 @@ import h5py
 import numba
 import numpy as np
 import yaml
-from astropy.table import Table
-from numba import jit, njit, types
-from scipy.interpolate import NearestNDInterpolator
-from scipy.ndimage import gaussian_filter
+from numba import njit
 from scipy.spatial import cKDTree
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -202,7 +199,7 @@ def concat_to_arr(lists, dtype=np.int64):
     '''
     starts = np.empty(len(lists) + 1, dtype=np.int64)
     starts[0] = 0
-    starts[1:] = np.cumsum(np.fromiter((len(l) for l in lists), count=len(lists), dtype=np.int64))
+    starts[1:] = np.cumsum(np.fromiter((len(ell) for ell in lists), count=len(lists), dtype=np.int64))
     N = starts[-1]
     res = np.fromiter(itertools.chain.from_iterable(lists), count=N, dtype=dtype)
     return res, starts
@@ -257,15 +254,18 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
         r_inner = np.array(r_inner)[mmask]
     allinds_inner = querypos_tree.query_ball_point(pos_cut, r = r_inner, workers = nthread)
     inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
-    del allinds_inner; gc.collect()
+    del allinds_inner
+    gc.collect()
 
     if isinstance(r_outer, (list, tuple, np.ndarray)):
         r_outer = np.array(r_outer)[mmask]
     allinds_outer = querypos_tree.query_ball_point(pos_cut, r = r_outer, workers = nthread)
-    del querypos, querypos_tree; gc.collect()
+    del querypos, querypos_tree
+    gc.collect()
 
     outer_arr, outer_starts = concat_to_arr(allinds_outer)
-    del allinds_outer; gc.collect()
+    del allinds_outer
+    gc.collect()
 
     print("starting Menv")
     numba.set_num_threads(nthread)
@@ -474,8 +474,8 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     ranksr_parts = np.full(len_old, -1.0)
     ranksp_parts = np.full(len_old, -1.0)
     ranksc_parts = np.full(len_old, -1.0)
-    pos_parts = np.full((len_old, 3), -1.0)
-    vel_parts = np.full((len_old, 3), -1.0)
+    # pos_parts = np.full((len_old, 3), -1.0)
+    # vel_parts = np.full((len_old, 3), -1.0)
     hvel_parts = np.full((len_old, 3), -1.0)
     Mh_parts = np.full(len_old, -1.0)
     Np_parts = np.full(len_old, -1.0)
@@ -606,7 +606,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     if os.path.exists(outfilename_halos):
         os.remove(outfilename_halos)
     newfile = h5py.File(outfilename_halos, 'w')
-    dataset = newfile.create_dataset('halos', data = halos[mask_halos])
+    newfile.create_dataset('halos', data = halos[mask_halos])
     newfile.close()
 
     # output the new particle file
@@ -636,7 +636,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     if os.path.exists(outfilename_particles):
         os.remove(outfilename_particles)
     newfile = h5py.File(outfilename_particles, 'w')
-    dataset = newfile.create_dataset('particles', data = parts)
+    newfile.create_dataset('particles', data = parts)
     newfile.close()
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))

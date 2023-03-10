@@ -15,7 +15,7 @@ COSM_KEYS = ('A_s', 'alpha_s')
 def get_state(fn):
     with open(fn) as fp:
         headerlines = fp.readlines()
-    i = next(i for i,l in enumerate(headerlines) if l.startswith('#created'))
+    i = next(i for i,ell in enumerate(headerlines) if ell.startswith('#created'))
     statestr = ''.join(headerlines[i+1:])
 
     return dict(InputFile(str_source=statestr))
@@ -51,7 +51,7 @@ def main(small=False):
                 # maybe a header?
                 try:
                     zheader = dict(InputFile(zdir / 'header'))
-                except:
+                except Exception:
                     continue  # nothing!
 
             state[zdir.name] = {k:v for k,v in zheader.items() if k not in param}

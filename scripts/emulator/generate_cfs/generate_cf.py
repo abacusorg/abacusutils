@@ -24,7 +24,8 @@ DEFAULT_NDENS = 1e-4
 DEFAULT_NTHREAD = len(os.sched_getaffinity(0))  # guess based on affinity mask
 DEFAULT_OUTDIR = '.'
 
-log = lambda *args,**kwargs: print(*args,**kwargs,flush=True)
+def log(*args, **kwargs):
+    return print(*args, **kwargs, flush=True)
 
 def prepare_cat(halo_cat_path, ndens):
     '''Load and downsample the cat
