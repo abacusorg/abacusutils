@@ -11,14 +11,14 @@ from scipy.interpolate import interp1d, splev, splrep
 from scipy.optimize import minimize
 from scipy.signal import savgol_filter
 
-from abacusnbody.hod.power_spectrum import get_k_mu_edges
+from abacusnbody.analysis.power_spectrum import get_k_mu_edges
 from abacusnbody.metadata import get_meta
 
 try:
     from classy import Class
     from ZeNBu.zenbu import Zenbu
     from ZeNBu.zenbu_rsd import Zenbu_RSD
-except ImportError as e:
+except ImportError:
     raise ImportError('Missing imports for zcv. Install abacusutils with '
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
@@ -27,7 +27,8 @@ def get_spectra_from_fields(fields1, fields2, neutrinos=True):
     spectra = []
     for i, fi in enumerate(fields1):
         for j, fj in enumerate(fields2):
-            if (i<j) | (neutrinos & (i==1) & (j==0)): continue
+            if (i<j) | (neutrinos & (i==1) & (j==0)):
+                continue
             spectra.append((fi, fj))
 
     return spectra
@@ -73,11 +74,11 @@ def combine_rsd_spectra(k, spectra_poles, bias_params, ngauss=3):
     bias_monomials = np.array([1, 2*b1, b1**2, b2, b1*b2, 0.25*b2**2, 2*bs, 2*b1*bs, b2*bs, bs**2, alpha0, alpha2, alpha4,alpha6,sn,sn2,sn4])
 
     nus, ws = np.polynomial.legendre.leggauss(2*ngauss)
-    nus_calc = nus[0:ngauss]
+    # nus_calc = nus[0:ngauss]
     nus = nus[0:ngauss]
     ws = ws[:ngauss]
     n_nu = ngauss
-    leggauss = True
+    # leggauss = True
 
     L0 = np.polynomial.legendre.Legendre((1))(nus)
     L2 = np.polynomial.legendre.Legendre((0,0,1))(nus)
@@ -148,7 +149,7 @@ def meshgrid(x, y, z):
 
 def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nmax=6, ngauss=6):
 
-    if pkclass==None:
+    if pkclass is None:
         pkclass = Class()
         pkclass.set(cfg["Cosmology"])
         pkclass.compute()
@@ -284,7 +285,7 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
 
         if kout is None:
             dk = 2 * np.pi / lbox
-            kmax = np.pi*cfg['nmesh_in']/lbox + dk/2
+            # kmax = np.pi*cfg['nmesh_in']/lbox + dk/2
             kout = np.arange(dk, np.pi*cfg['nmesh_in']/lbox + dk/2, dk)
             assert(len(k) == (len(kout)-1))
 
@@ -297,7 +298,7 @@ def reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, cfg, z, bias_vec, kth, p_m_
             pell_conv_list.append(pell_conv_i.reshape(3,-1))
 
         pk_ij_zenbu_conv = np.stack(pell_conv_list)
-        temp = np.zeros_like(pk_ij_zenbu)
+        # temp = np.zeros_like(pk_ij_zenbu)
         pk_ij_zenbu[:,:,:pk_ij_zenbu_conv.shape[-1]] = pk_ij_zenbu_conv # if win fac is > 1 get rid of nans
         pk_ij_zenbu[:,:,pk_ij_zenbu_conv.shape[-1]:] = 0
 
@@ -309,13 +310,13 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
                                         s_ell=[0.1, 10, 100], sg_window=21, rsd=False,
                                         k0=0.618, dk=0.167, beta1_k=0.05, poles=[0, 2, 4]):
 
-    fields_z = ['1', 'd', 'd2', 's', 'n2']
-    fields_zenbu = ['1', 'd', 'd2', 's']
+    # fields_z = ['1', 'd', 'd2', 's', 'n2']
+    # fields_zenbu = ['1', 'd', 'd2', 's']
 
     # parsing
-    component_spectra_zz = get_spectra_from_fields(fields_z, fields_z, neutrinos=False)
-    pk_ij_zz_dict = dict(zip(component_spectra_zz, pk_ij_zz))
-    nspec = len(bias_vec)
+    # component_spectra_zz = get_spectra_from_fields(fields_z, fields_z, neutrinos=False)
+    # pk_ij_zz_dict = dict(zip(component_spectra_zz, pk_ij_zz))
+    # nspec = len(bias_vec)
 
     if rsd:
         if len(bias_vec)<11:
@@ -345,12 +346,13 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
         var_zz = 2 * pk_zz ** 2
         var_nn = 2 * pk_nn ** 2
 
-    beta = cov_zn / var_zz
-    beta_damp = 1/2 * (1 - np.tanh((k - k0)/dk)) * beta
+    with np.errstate(invalid='ignore'):
+        beta = cov_zn / var_zz
+        r_zt = cov_zn / np.sqrt(var_zz * var_nn)
 
-    r_zt = cov_zn / np.sqrt(var_zz * var_nn)
+    beta_damp = 1/2 * (1 - np.tanh((k - k0)/dk)) * beta
     beta_damp = np.atleast_2d(beta_damp)
-    beta_damp[beta_damp != beta_damp] = 0
+    beta_damp[~np.isfinite(beta_damp)] = 0
     beta_damp[:,:k.searchsorted(beta1_k)] = 1
 
     r_zt = np.atleast_2d(r_zt)
@@ -363,12 +365,12 @@ def compute_beta_and_reduce_variance_tt(k, pk_nn, pk_ij_zn, pk_ij_zz, pk_ij_zb,
         # TESTING kinda ugly
         try:
             beta_smooth[i,:] = savgol_filter(beta_damp.T[:,i], sg_window, 3) #splev(k, betaspl)
-        except: # only when testing
+        except Exception: # only when testing
             beta_smooth[i,:] = savgol_filter(beta_damp.T[:,i], 3, 2)
         if i!=2:
             try:
                 beta_smooth_nohex[i,:] = savgol_filter(beta_damp.T[:,i], sg_window, 3)#splev(k, betaspl)
-            except:
+            except Exception:
                 beta_smooth_nohex[i,:] = savgol_filter(beta_damp.T[:,i], 3, 2)
         else:
             beta_smooth_nohex[i,:] = 1
@@ -535,7 +537,7 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
         dk[-1] = dk[-2]
 
     nkout = len(kout) - 1
-    dkin = (kin[1:] - kin[:-1])[0]
+    # dkin = (kin[1:] - kin[:-1])[0]
 
     idx_o = np.digitize(knorm, kout) - 1
     nmodes_out = np.zeros(nkout * 3)
@@ -613,7 +615,8 @@ def measure_2pt_bias_rsd(k, pk_ij_heft, pk_tt, kmax, ellmax=2, nbias=3, kmin=0.0
     #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
     Nk = 1
 
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(10-len(bvec))]), rsd=True)[:ellmax,:])**2/(2 * pk_tt_kcut**2 / Nk))
+    def loss(bvec):
+        return np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec, np.zeros(10 - len(bvec))]), rsd=True)[:ellmax, :]) ** 2 / (2 * pk_tt_kcut ** 2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
 
     out = minimize(loss, bvec0)
@@ -632,9 +635,10 @@ def measure_2pt_bias(k, pk_ij_heft, pk_tt, kmax, nbias=3, kmin=0.0):
     # adding more realistic noise: error on P(k) is sqrt(2/Nk) P(k)
     #dk = kcut[1]-kcut[0]
     #Nk = kcut**2*dk # propto missing division by (2.pi/L^3)
-    Nk = 1
+    # Nk = 1
 
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec,np.zeros(5-len(bvec))])))**2)#/(2 * pk_tt_kcut**2 / Nk))
+    def loss(bvec):
+        return np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_heft_kcut, np.hstack([bvec, np.zeros(5 - len(bvec))]))) ** 2)#/(2 * pk_tt_kcut**2 / Nk))
     #b1,b2,bs,alpha0,alpha2,alpha4,alpha6,sn,sn2,sn4
 
     out = minimize(loss, bvec0)
@@ -665,7 +669,8 @@ def read_power(power_fn, keynames):
         else:
             pk_ij_zt[i, :, :] = f['data'][f'P_kmu_{keynames[i]}_tr'].reshape(len(k), 1)
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             if "rsd" in str(power_fn):
                 pk_ij_zz[count, :, :] = f['data'][f'P_ell_{keynames[i]}_{keynames[j]}'].reshape(3, len(k))
             else:
@@ -699,7 +704,8 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
         else:
             pk_ij_zt[i, :, :] = power_tr_dict[f'P_kmu_{keynames[i]}_tr'].reshape(len(k), 1)
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             if want_rsd:
                 pk_ij_zz[count, :, :] = power_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'].reshape(len(poles), len(k))
             else:
@@ -714,7 +720,7 @@ def get_cfg(sim_name, z_this, nmesh):
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
-    k_Ny = np.pi*nmesh/Lbox
+    # k_Ny = np.pi*nmesh/Lbox
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
@@ -845,9 +851,6 @@ if __name__ == "__main__":
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from classy import Class
-
-    from abacusnbody.metadata import get_meta
 
     # get a few parameters for the simulation
     sim_name = "AbacusSummit_high_c000_ph100"

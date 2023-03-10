@@ -9,6 +9,7 @@ Changelog
 New Features
 ~~~~~~~~~~~~
 - Add a power spectrum module, and a zeldovich control variates (ZCV) module that uses it [#68]
+- New parallel TSC module [#79]
 
 Fixes
 ~~~~~

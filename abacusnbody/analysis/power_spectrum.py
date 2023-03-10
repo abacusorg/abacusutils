@@ -7,6 +7,8 @@ from numba import njit
 from scipy.fft import fftfreq, fftn
 from scipy.special import legendre
 
+from .tsc import tsc_parallel
+
 
 def get_k_mu_box(L_hMpc, n_xy, n_z):
     """
@@ -44,7 +46,7 @@ def rightwrap(x, L):
 
 
 @njit(nogil=True)
-def numba_cic_3D(positions, density, boxsize, weights=np.empty(0)):
+def numba_cic_3D(positions, density, boxsize, weights=None):
     """
     Compute density using the cloud-in-cell algorithm. Assumes cubic box
     """
@@ -53,12 +55,10 @@ def numba_cic_3D(positions, density, boxsize, weights=np.empty(0)):
     gz = np.uint32(density.shape[2])
     threeD = gz != 1
     W = 1.
-    Nw = len(weights)
+    have_W = weights is not None
+
     for n in range(len(positions)):
-        # broadcast scalar weights
-        if Nw == 1:
-            W = weights[0]
-        elif Nw > 1:
+        if have_W:
             W = weights[n]
 
         # convert to a position in the grid
@@ -159,110 +159,6 @@ def numba_cic_3D(positions, density, boxsize, weights=np.empty(0)):
             density[ixp1, iyp1, izm1] += wxp1*wyp1*wzm1*W
             density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
 
-@njit(nogil=True)
-def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
-    """
-    Compute density using the triangle-shape-cloud algorithm. Assumes cubic box
-    """
-    gx = np.uint32(density.shape[0])
-    gy = np.uint32(density.shape[1])
-    gz = np.uint32(density.shape[2])
-    threeD = gz != 1
-    W = 1.
-    Nw = len(weights)
-    for n in range(len(positions)):
-        # broadcast scalar weights
-        if Nw == 1:
-            W = weights[0]
-        elif Nw > 1:
-            W = weights[n]
-
-        # convert to a position in the grid
-        px = (positions[n,0]/boxsize)*gx # used to say boxsize+0.5
-        py = (positions[n,1]/boxsize)*gy # used to say boxsize+0.5
-        if threeD:
-            pz = (positions[n,2]/boxsize)*gz # used to say boxsize+0.5
-
-        # round to nearest cell center
-        ix = np.int32(round(px))
-        iy = np.int32(round(py))
-        if threeD:
-            iz = np.int32(round(pz))
-
-        # calculate distance to cell center
-        dx = ix - px
-        dy = iy - py
-        if threeD:
-            dz = iz - pz
-
-        # find the tsc weights for each dimension
-        wx = .75 - dx**2
-        wxm1 = .5*(.5 + dx)**2 # og not 1.5 cause wrt to adjacent cell
-        wxp1 = .5*(.5 - dx)**2
-        wy = .75 - dy**2
-        wym1 = .5*(.5 + dy)**2
-        wyp1 = .5*(.5 - dy)**2
-        if threeD:
-            wz = .75 - dz**2
-            wzm1 = .5*(.5 + dz)**2
-            wzp1 = .5*(.5 - dz)**2
-        else:
-            wz = 1.
-
-        # find the wrapped x,y,z grid locations of the points we need to change
-        # negative indices will be automatically wrapped
-        ixm1 = rightwrap(ix - 1, gx)
-        ixw  = rightwrap(ix    , gx)
-        ixp1 = rightwrap(ix + 1, gx)
-        iym1 = rightwrap(iy - 1, gy)
-        iyw  = rightwrap(iy    , gy)
-        iyp1 = rightwrap(iy + 1, gy)
-        if threeD:
-            izm1 = rightwrap(iz - 1, gz)
-            izw  = rightwrap(iz    , gz)
-            izp1 = rightwrap(iz + 1, gz)
-        else:
-            izw = np.uint32(0)
-
-        # change the 9 or 27 cells that the cloud touches
-        density[ixm1, iym1, izw ] += wxm1*wym1*wz  *W
-        density[ixm1, iyw , izw ] += wxm1*wy  *wz  *W
-        density[ixm1, iyp1, izw ] += wxm1*wyp1*wz  *W
-        density[ixw , iym1, izw ] += wx  *wym1*wz  *W
-        density[ixw , iyw , izw ] += wx  *wy  *wz  *W
-        density[ixw , iyp1, izw ] += wx  *wyp1*wz  *W
-        density[ixp1, iym1, izw ] += wxp1*wym1*wz  *W
-        density[ixp1, iyw , izw ] += wxp1*wy  *wz  *W
-        density[ixp1, iyp1, izw ] += wxp1*wyp1*wz  *W
-
-        if threeD:
-            density[ixm1, iym1, izm1] += wxm1*wym1*wzm1*W
-            density[ixm1, iym1, izp1] += wxm1*wym1*wzp1*W
-
-            density[ixm1, iyw , izm1] += wxm1*wy  *wzm1*W
-            density[ixm1, iyw , izp1] += wxm1*wy  *wzp1*W
-
-            density[ixm1, iyp1, izm1] += wxm1*wyp1*wzm1*W
-            density[ixm1, iyp1, izp1] += wxm1*wyp1*wzp1*W
-
-            density[ixw , iym1, izm1] += wx  *wym1*wzm1*W
-            density[ixw , iym1, izp1] += wx  *wym1*wzp1*W
-
-            density[ixw , iyw , izm1] += wx  *wy  *wzm1*W
-            density[ixw , iyw , izp1] += wx  *wy  *wzp1*W
-
-            density[ixw , iyp1, izm1] += wx  *wyp1*wzm1*W
-            density[ixw , iyp1, izp1] += wx  *wyp1*wzp1*W
-
-            density[ixp1, iym1, izm1] += wxp1*wym1*wzm1*W
-            density[ixp1, iym1, izp1] += wxp1*wym1*wzp1*W
-
-            density[ixp1, iyw , izm1] += wxp1*wy  *wzm1*W
-            density[ixp1, iyw , izp1] += wxp1*wy  *wzp1*W
-
-            density[ixp1, iyp1, izm1] += wxp1*wyp1*wzm1*W
-            density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
-
 
 @njit(nogil=True, parallel=False)
 def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
@@ -279,7 +175,7 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
     else:
         delta0 = 1./((ranges[0, 1] - ranges[0, 0]) / bins[0])
     delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
-    Nw = len(weights)
+    # Nw = len(weights)
     for t in range(tracks.shape[1]):
         if logk:
             i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
@@ -342,7 +238,8 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
         raw_p3d = (np.conj(field_fft)*field2_fft).real.flatten()
     else:
         raw_p3d = (np.abs(field_fft)**2).flatten()
-    del field_fft; gc.collect()
+    del field_fft
+    gc.collect()
 
     # for the histograming
     ranges = ((k_bin_edges[0], k_bin_edges[-1]),(mu_bin_edges[0], mu_bin_edges[-1]))
@@ -374,25 +271,25 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
     p3d_hMpc = binned_p3d * L_hMpc**3
     return p3d_hMpc, N3d, binned_poles, Npoles
 
+# @profile
 def get_field(pos, lbox, num_cells, paste, w=None, d=0.):
     # check if weights are requested
-    if w is None:
-        w = np.empty(0)
-    else:
+    if w is not None:
         assert pos.shape[0] == len(w)
     pos = pos.astype(np.float32)
     field = np.zeros((num_cells, num_cells, num_cells), dtype=np.float32)
     if paste == 'TSC':
         if d != 0.:
-            numba_tsc_3D(pos + np.float32(d), field, lbox, weights=w)
+            # TODO: could add an offset parameter to tsc_parallel
+            tsc_parallel(pos + np.float32(d), field, lbox, weights=w)
         else:
-            numba_tsc_3D(pos, field, lbox, weights=w)
+            tsc_parallel(pos, field, lbox, weights=w)
     elif paste == 'CIC':
         if d != 0.:
             numba_cic_3D(pos + np.float32(d), field, lbox, weights=w)
         else:
             numba_cic_3D(pos, field, lbox, weights=w)
-    if len(w) == 0: # in the zcv code the weights are already normalized, so don't normalize here
+    if w is None: # in the zcv code the weights are already normalized, so don't normalize here
         field /= (pos.shape[0]/num_cells**3.) # same as passing "Value" to nbodykit (1+delta)(x) V(x)
         field -= 1. # leads to -1 in the complex field
     return field
@@ -403,7 +300,7 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
     d = lbox / num_cells
 
     # nyquist frequency
-    kN = np.pi / d
+    # kN = np.pi / d
 
     # natural wavemodes
     k = (fftfreq(num_cells, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
@@ -411,7 +308,8 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
     # offset by half a cell
     field_shift = get_field(pos, lbox, num_cells, paste, w, d=0.5*d)
     print("shift", field_shift.dtype, pos.dtype)
-    del pos, w; gc.collect()
+    del pos, w
+    gc.collect()
 
     # fourier transform shifted field and sum them up
     #field_fft = fftn(field) / field.size
@@ -429,6 +327,7 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
     #field = ifftn(field_fft) # we work in fourier
     return field_fft
 
+# @profile
 def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
 
     # get field in real space
@@ -441,7 +340,8 @@ def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
         # get Fourier modes from skewers grid
         field_fft = fftn(field) / field.size
     # get rid of pos, field
-    del pos, w, field; gc.collect()
+    del pos, w, field
+    gc.collect()
 
     # apply compensation filter
     if compensated:
@@ -477,9 +377,9 @@ def get_W_compensated(lbox, num_cells, paste, interlaced):
         elif paste == 'CIC':
             W = (1 - 2./3 * s) ** 0.5
         del s
-    print(W.astype)
     return W
 
+# @profile
 def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num_cells, compensated, interlaced, w = None, x2 = None, y2 = None, z2 = None, w2 = None, poles=[]):
     """
     Compute the 3D power spectrum given particle positions by first painting them on a cubic mesh and then applying the fourier transforms and mode counting.
@@ -493,24 +393,32 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num
 
     # express more conveniently
     pos = np.zeros((len(x1), 3), dtype=np.float32)
-    pos[:, 0] = x1; pos[:, 1] = y1; pos[:, 2] = z1
-    del x1, y1, z1; gc.collect()
+    pos[:, 0] = x1
+    pos[:, 1] = y1
+    pos[:, 2] = z1
+    del x1, y1, z1
+    gc.collect()
 
     # convert to fourier space
     field_fft = get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced)
-    del pos; gc.collect()
+    del pos
+    gc.collect()
 
     # if second field provided
     if x2 is not None:
         assert (y2 is not None) and (z2 is not None)
         # assemble the positions and compute density field
         pos2 = np.zeros((len(x2), 3), dtype=np.float32)
-        pos2[:, 0] = x2; pos2[:, 1] = y2; pos2[:, 2] = z2
-        del x2, y2, z2; gc.collect()
+        pos2[:, 0] = x2
+        pos2[:, 1] = y2
+        pos2[:, 2] = z2
+        del x2, y2, z2
+        gc.collect()
 
         # convert to fourier space
         field2_fft = get_field_fft(pos2, lbox, num_cells, paste, w2, W, compensated, interlaced)
-        del pos2; gc.collect()
+        del pos2
+        gc.collect()
     else:
         field2_fft = None
 

@@ -1,12 +1,12 @@
 '''
 '''
 
-'''
-The AbacusHOD module generates HOD tracers from Abacus simulations.
-A high-level overview of this module can be found in
-https://abacusutils.readthedocs.io/en/latest/hod.html
-or docs/hod.rst.
-'''
+
+# The AbacusHOD module generates HOD tracers from Abacus simulations.
+# A high-level overview of this module can be found in
+# https://abacusutils.readthedocs.io/en/latest/hod.html
+# or docs/hod.rst.
+
 
 import gc
 import time
@@ -20,9 +20,21 @@ from astropy.io import ascii
 from numba import njit
 from parallel_numpy_rng import MTGenerator
 
-from .GRAND_HOD import *
-from .power_spectrum import calc_power
-from .tpcf_corrfunc import calc_multipole_fast, calc_wp_fast, calc_xirppi_fast
+from ..analysis.power_spectrum import calc_power
+from ..analysis.tpcf_corrfunc import (
+    calc_multipole_fast,
+    calc_wp_fast,
+    calc_xirppi_fast,
+)
+from .GRAND_HOD import (
+    gen_gal_cat,
+    n_cen_LRG,
+    n_sat_LRG_modified,
+    N_cen_ELG_v1,
+    N_sat_elg,
+    N_cen_QSO,
+    N_sat_generic,
+)
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -98,7 +110,7 @@ class AbacusHOD:
         self.want_ranks = HOD_params.get('want_ranks', False)
         self.want_rsd = HOD_params['want_rsd']
 
-        if not clustering_params == None:
+        if clustering_params is not None:
             # clusteringparameters
             self.pimax = clustering_params.get('pimax', None)
             self.pi_bin_size = clustering_params.get('pi_bin_size', None)
@@ -172,7 +184,8 @@ class AbacusHOD:
         n_jump = int(np.ceil(len(halo_info_fns)/n_chunks))
         start = ((chunk)*n_jump)
         end = ((chunk+1)*n_jump)
-        if end > len(halo_info_fns): end = len(halo_info_fns)
+        if end > len(halo_info_fns):
+            end = len(halo_info_fns)
         params['numslabs'] = end-start
         self.lbox = header['BoxSize']
 
@@ -265,10 +278,10 @@ class AbacusHOD:
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
-            halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
-            halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles
+            # halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
+            # halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles
             halo_multi = maskedhalos['multi_halos']
-            halo_submask = maskedhalos['mask_subsample'].astype(bool)
+            # halo_submask = maskedhalos['mask_subsample'].astype(bool)
             halo_randoms = maskedhalos['randoms']
 
             hpos[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_pos
@@ -436,7 +449,7 @@ class AbacusHOD:
             in the catalog are always centrals and the rest are satellites.
 
         """
-        if tracers == None:
+        if tracers is None:
             tracers = self.tracers
         if reseed:
             start = time.time()
@@ -486,7 +499,7 @@ class AbacusHOD:
         dictionary of satellite fraction of each tracer.
 
         """
-        if tracers == None:
+        if tracers is None:
             tracers = self.tracers
 
         ngal_dict = {}
@@ -693,7 +706,8 @@ class AbacusHOD:
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
                     clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size,
                         self.lbox, Nthread)
@@ -713,7 +727,8 @@ class AbacusHOD:
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
                     new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
                         self.lbox, Nthread)
@@ -791,7 +806,8 @@ class AbacusHOD:
             z1 = mock_dict[tr1]['z']
             w1 = mock_dict[tr1].get('w', None)
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
                     k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
@@ -852,7 +868,8 @@ class AbacusHOD:
             for tr in mock_dict.keys():
                 # obtain the positions
                 tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
-                del mock_dict; gc.collect()
+                del mock_dict
+                gc.collect()
 
                 # get power spectra for this tracer
                 pk_rsd_tr_dict = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config)
@@ -865,7 +882,8 @@ class AbacusHOD:
                 for tr in mock_dict.keys():
                     # obtain the positions
                     tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
-                    del mock_dict; gc.collect()
+                    del mock_dict
+                    gc.collect()
 
                     # get power spectra for this tracer
                     pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
@@ -911,7 +929,8 @@ class AbacusHOD:
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
                     clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
@@ -958,19 +977,19 @@ class AbacusHOD:
 
         """
 
-        if output_dir == None:
+        if output_dir is None:
             output_dir = Path(self.output_dir)
-        if simname == None:
+        if simname is None:
             simname = Path(self.sim_name)
-        if sim_dir == None:
+        if sim_dir is None:
             sim_dir = Path(self.sim_dir)
-        if z_mock == None:
+        if z_mock is None:
             z_mock = self.z_mock
-        if want_rsd == None:
+        if want_rsd is None:
             want_rsd = self.want_rsd
-        if tracers == None:
+        if tracers is None:
             tracers = self.tracers.keys()
-        mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
+        # mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
 
         if want_rsd:
             rsd_string = "_rsd"
