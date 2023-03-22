@@ -91,6 +91,8 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     if nthread < 0:
         nthread = numba.config.NUMBA_NUM_THREADS
+    if verbose:
+            print(f'nthread={nthread}')
 
     numba.set_num_threads(nthread)
     if type(densgrid) is int:
@@ -101,7 +103,10 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     if not npartition:
         if nthread > 1:
-            npartition = min(n1d//3, 2*nthread)
+            if 2*nthread >= n1d//2:
+                npartition = n1d//2
+            else:
+                npartition = min(n1d//3, 2*nthread)
             npartition = 2 * (npartition // 2)  # must be even
         else:
             npartition = 1
