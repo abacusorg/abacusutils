@@ -30,9 +30,11 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'sphinx.ext.intersphinx',
               'sphinx.ext.autosectionlabel',
-              'sphinx.ext.mathjax',
+              'sphinx.ext.linkcode',
               'myst_nb',
             ]
+
+myst_enable_extensions = ["dollarmath"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -97,3 +99,12 @@ autodoc_mock_imports = ['Corrfunc',]
 autodoc_warningiserror = True
 
 nb_execution_mode = 'off'
+
+def linkcode_resolve(domain, info):
+    # TODO: how to link to current branch instead of master?
+    if domain != 'py':
+        return None
+    if not info['module']:
+        return None
+    filename = info['module'].replace('.', '/')
+    return f"https://github.com/abacusorg/abacusutils/blob/master/{filename}.py"
