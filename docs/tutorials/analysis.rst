@@ -1,5 +1,5 @@
-CompaSO
--------
+Analysis
+--------
 
 .. toctree::
    :maxdepth: 1
