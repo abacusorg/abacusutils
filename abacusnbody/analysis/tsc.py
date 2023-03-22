@@ -103,8 +103,13 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     if not npartition:
         if nthread > 1:
+            # Can be equal to n1d//2, or less than or equal to n1d//3.
+            # Must be even, and need not exceed 2*nthread.
             if 2*nthread >= n1d//2:
                 npartition = n1d//2
+                npartition = 2 * (npartition // 2)
+                if npartition < n1d//2:
+                    npartition = n1d//3
             else:
                 npartition = min(n1d//3, 2*nthread)
             npartition = 2 * (npartition // 2)  # must be even
