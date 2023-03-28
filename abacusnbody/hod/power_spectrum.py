@@ -332,6 +332,24 @@ def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk)
     k_bin_edges, mu_bin_edges = get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     return k_box, mu_box, k_bin_edges, mu_bin_edges
 
+def project_3d_to_poles(k_bin_edges, k_box, mu_box, logk, raw_p3d, L_hMpc, poles):
+    binned_poles = []
+    Npoles = []
+
+    # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
+    ranges = ((k_bin_edges[0], k_bin_edges[-1]), (0., 1.+1.e-6)) # not doing this misses the +/- 1 mu modes in the first few bins
+    nbins2d = (len(k_bin_edges)-1, 1)
+    nbins2d = np.asarray(nbins2d).astype(np.int64)
+    ranges = np.asarray(ranges).astype(np.float64)
+    for i in range(len(poles)):
+        Ln = legendre(poles[i])
+        binned_pole, Npole = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d*Ln(mu_box)*(2.*poles[i]+1.)) # ask Lehman (I think the equation is (2 ell + 1)/2 but for some reason I don't need the division by 2)
+        binned_poles.append(binned_pole * L_hMpc**3)
+        Npoles.append(Npole)
+    Npoles = np.array(Npoles)
+    binned_poles = np.array(binned_poles)
+    return binned_poles, Npoles
+
 def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=[]):
     """
     Calculate the P3D for a given field (in h/Mpc units). Answer returned in (Mpc/h)^3 units
@@ -354,22 +372,12 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
     binned_p3d, N3d = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d)
 
     # if poles is not empty, then compute P_ell for mu_box
-    binned_poles = []
-    Npoles = []
     if len(poles) > 0:
-        # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
-        ranges = ((k_bin_edges[0], k_bin_edges[-1]), (0., 1.+1.e-6)) # not doing this misses the +/- 1 mu modes in the first few bins
-        nbins2d = (len(k_bin_edges)-1, 1)
-        nbins2d = np.asarray(nbins2d).astype(np.int64)
-        ranges = np.asarray(ranges).astype(np.float64)
-        for i in range(len(poles)):
-            Ln = legendre(poles[i])
-            binned_pole, Npole = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d*Ln(mu_box)*(2.*poles[i]+1.)) # ask Lehman (I think the equation is (2 ell + 1)/2 but for some reason I don't need the division by 2)
-            binned_poles.append(binned_pole * L_hMpc**3)
-        Npoles.append(Npole)
-        Npoles = np.array(Npoles)
-        binned_poles = np.array(binned_poles)
-
+        binned_poles, Npoles = project_3d_to_poles(k_bin_edges, k_box, mu_box, logk, raw_p3d, L_hMpc, poles)
+    else:
+        binned_poles = []
+        Npoles = []
+        
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     p3d_hMpc = binned_p3d * L_hMpc**3
     return p3d_hMpc, N3d, binned_poles, Npoles

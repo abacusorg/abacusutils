@@ -4,7 +4,7 @@ Just run twice for rsd and no rsd
 CHECK: Syntax for load pk_ij
 Might not be necessary to save
 """
-import gc
+import os, gc
 from pathlib import Path
 
 import asdf
@@ -29,11 +29,11 @@ except ImportError as e:
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
 
-def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
-
+def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power=False):
+    
     # read zcv parameters
     advected_dir = config['zcv_params']['zcv_dir']  # input of advected fields
-    tracer_dir = config['zcv_params']['tracer_dir']  # output of tracers
+    tracer_dir = config['zcv_params']['zcv_dir']  # output of tracers
     # ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
@@ -172,39 +172,79 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     # TESTING
     #tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
 
-    # get the box k and mu modes
-    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
-
-    # compute the galaxy auto rsd poles
     print("Computing auto-correlation of tracer")
-    pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
-    pk_tr_dict['P_kmu_tr_tr'] = pk3d
-    pk_tr_dict['N_kmu_tr_tr'] = N3d
-    pk_tr_dict['P_ell_tr_tr'] = binned_poles
-    pk_tr_dict['N_ell_tr_tr'] = Npoles
-    #np.savez("/global/homes/b/boryanah/zcv/power_tr.npz", pk3d=pk3d, N3d=N3d, binned_poles=binned_poles, Npoles=Npoles)
+    if save_3D_power:
+        power_tr_fns = []
+        
+        # compute
+        pk3d = np.array((tr_field_fft*np.conj(tr_field_fft)).real, dtype=np.float32)
+        #pk3d *= Lbox**3
+                
+        # record
+        pk_tr_dict = {}
+        pk_tr_dict[f'P_k3D_tr_tr'] = pk3d
+        header = {}
+        header['sim_name'] = sim_name
+        header['Lbox'] = Lbox
+        header['nmesh'] = nmesh
+        header['kcut'] = kcut
+        power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_tr_nmesh{nmesh:d}.asdf"
+        power_tr_fns.append(power_tr_fn)
+        compress_asdf(str(power_tr_fn), pk_tr_dict, header)
+    else:
+        # get the box k and mu modes
+        k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
 
-    # initiate final arrays
-    # pk_auto = []
-    pk_cross = []
-    # pkcounter = 0
+        # compute the galaxy auto rsd poles
+        pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
+        pk_tr_dict['P_kmu_tr_tr'] = pk3d
+        pk_tr_dict['N_kmu_tr_tr'] = N3d
+        pk_tr_dict['P_ell_tr_tr'] = binned_poles
+        pk_tr_dict['N_ell_tr_tr'] = Npoles
+
+    # loop over fields
     for i in range(len(keynames)):
         print("Computing cross-correlation of tracer and ", keynames[i])
 
         # load field
         field_fft_i = asdf.open(fields_fft_fn[i])['data']
+        
+        if save_3D_power:
 
-        # compute power spectrum
-        pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
-        pk3d *= field_D[i]
-        binned_poles *= field_D[i]
-        pk_cross.append(pk3d)
-        pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
-        pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
-        pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
-        pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
-        del field_fft_i; gc.collect()
+            # compute
+            field_fft_i = field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im']
+            pk3d = np.array((field_fft_i*np.conj(tr_field_fft)).real, dtype=np.float32)
+            pk3d *= field_D[i]
+            #pk3d *= Lbox**3
+            
+            # record
+            pk_tr_dict = {}
+            pk_tr_dict[f'P_k3D_{keynames[i]}_tr'] = pk3d
+            header = {}
+            header['sim_name'] = sim_name
+            header['Lbox'] = Lbox
+            header['nmesh'] = nmesh
+            header['kcut'] = kcut
+            power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_tr_nmesh{nmesh:d}.asdf"
+            power_tr_fns.append(power_tr_fn)
+            compress_asdf(str(power_tr_fn), pk_tr_dict, header)
+            del field_fft_i; gc.collect()
 
+        else:
+
+            # compute power spectrum
+            pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
+            pk3d *= field_D[i]
+            binned_poles *= field_D[i]
+            pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
+            pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
+            pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
+            pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
+            del field_fft_i; gc.collect()
+
+    if save_3D_power:
+        return power_tr_fns
+    
     header = {}
     header['sim_name'] = sim_name
     header['Lbox'] = Lbox
@@ -214,7 +254,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         compress_asdf(str(power_tr_fn), pk_tr_dict, header)
     return pk_tr_dict
 
-def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True):
+def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, save_3D_power=False, want_load_tr_fft=False):
     # field names
     keynames = ['delta', 'deltamu2']
 
@@ -280,33 +320,36 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True):
         power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_{rec_algo}_lin_nmesh{nmesh:d}_dk{dk:.3f}.asdf"
 
     # create fft field for the tracer
-    w = None
-    print("min/max tracer pos", tracer_pos.min(), tracer_pos.max(), tracer_pos.shape)
-    tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
-    if random_pos is not None:
-        rn_field_fft = get_field_fft(random_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
-        tr_field_fft -= rn_field_fft
-        del random_pos, rn_field_fft; gc.collect()
-    del tracer_pos; gc.collect()
+    if want_load_tr_fft:
+        tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
+    else:
+        w = None
+        print("min/max tracer pos", tracer_pos.min(), tracer_pos.max(), tracer_pos.shape)
+        tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
+        if random_pos is not None:
+            rn_field_fft = get_field_fft(random_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
+            tr_field_fft -= rn_field_fft
+            del random_pos, rn_field_fft; gc.collect()
+        del tracer_pos; gc.collect()
 
-    if want_save:
-        # save the tracer field
-        header = {}
-        header['sim_name'] = sim_name
-        header['Lbox'] = Lbox
-        header['nmesh'] = nmesh
-        header['compensated'] = compensated
-        header['interlaced'] = interlaced
-        header['paste'] = paste
-        table = {}
-        table['tr_field_fft_Re'] = np.array(tr_field_fft.real, dtype=np.float32)
-        table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
-        compress_asdf(tr_field_fft_fn, table, header)
-        del table; gc.collect()
+        if want_save:
+            # save the tracer field
+            header = {}
+            header['sim_name'] = sim_name
+            header['Lbox'] = Lbox
+            header['nmesh'] = nmesh
+            header['compensated'] = compensated
+            header['interlaced'] = interlaced
+            header['paste'] = paste
+            table = {}
+            table['tr_field_fft_Re'] = np.array(tr_field_fft.real, dtype=np.float32)
+            table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
+            compress_asdf(tr_field_fft_fn, table, header)
+            del table; gc.collect()
 
-    # TESTING
-    #tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
-
+    # TESTING because we are doing this cause it's huge, just cancel here!!!!!!!!!!!!
+    if want_load_tr_fft is 0: return
+            
     # load density field
     f = asdf.open(ic_fn)
     delta = f['data']['dens'][:, :, :]
@@ -324,23 +367,62 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True):
     
     # compute the galaxy auto rsd poles
     print("Computing auto-correlation of tracer")
-    pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
-    pk_tr_dict['P_kmu_tr_tr'] = pk3d
-    pk_tr_dict['N_kmu_tr_tr'] = N3d
-    pk_tr_dict['P_ell_tr_tr'] = binned_poles
-    pk_tr_dict['N_ell_tr_tr'] = Npoles
+    if save_3D_power:
+        del k_box, mu_box; gc.collect()
+        
+        power_tr_fns = []
+        
+        # compute
+        pk3d = np.array((tr_field_fft*np.conj(tr_field_fft)).real, dtype=np.float32)
+        #pk3d *= Lbox**3
+                
+        # record
+        pk_tr_dict = {}
+        pk_tr_dict[f'P_k3D_tr_tr'] = pk3d
+        header = {}
+        header['sim_name'] = sim_name
+        header['Lbox'] = Lbox
+        header['nmesh'] = nmesh
+        header['kcut'] = kcut
+        power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_tr_tr_{rec_algo}_lin_nmesh{nmesh:d}.asdf"
+        power_tr_fns.append(power_tr_fn)
+        compress_asdf(str(power_tr_fn), pk_tr_dict, header)
+    else:
+        pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
+        pk_tr_dict['P_kmu_tr_tr'] = pk3d
+        pk_tr_dict['N_kmu_tr_tr'] = N3d
+        pk_tr_dict['P_ell_tr_tr'] = binned_poles
+        pk_tr_dict['N_ell_tr_tr'] = Npoles
     
     # initiate final arrays
     for i in range(len(keynames)):
         print("Computing cross-correlation of tracer and ", keynames[i])
-        
-        # compute power spectrum
-        pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields[keynames[i]], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
-        pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
-        pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
-        pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
-        pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
-                        
+
+        if save_3D_power:
+            # compute
+            pk3d = np.array((fields[keynames[i]]*np.conj(tr_field_fft)).real, dtype=np.float32)
+            
+            # record
+            pk_tr_dict = {}
+            pk_tr_dict[f'P_k3D_{keynames[i]}_tr'] = pk3d
+            header = {}
+            header['sim_name'] = sim_name
+            header['Lbox'] = Lbox
+            header['nmesh'] = nmesh
+            header['kcut'] = kcut
+            power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_tr_{rec_algo}_lin_nmesh{nmesh:d}.asdf"
+            power_tr_fns.append(power_tr_fn)
+            compress_asdf(str(power_tr_fn), pk_tr_dict, header)
+        else:
+            # compute power spectrum
+            pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields[keynames[i]], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
+            pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
+            pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
+            pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
+            pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
+
+    if save_3D_power:
+        return power_tr_fns
     header = {}
     header['sim_name'] = sim_name
     header['Lbox'] = Lbox

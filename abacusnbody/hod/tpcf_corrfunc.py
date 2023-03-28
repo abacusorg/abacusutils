@@ -179,6 +179,51 @@ def calc_multipole_fast(x1, y1, z1, rpbins,
 
     return xi_array
 
+def calc_multipole_fast_shift(x1, y1, z1, x2, y2, z2, rpbins,
+    lbox, Nthread, num_cells = 20, orders = [0, 2]):  # all r assumed to be in h-1 mpc units.
+
+    ND1 = float(len(x1))
+    ND2 = len(x2)
+
+    # single precision mode
+    # to do: make this native
+    cf_start = time.time()
+    rpbins = rpbins.astype(np.float32)
+    x1 = x1.astype(np.float32)
+    y1 = y1.astype(np.float32)
+    z1 = z1.astype(np.float32)
+    x2 = x2.astype(np.float32)
+    y2 = y2.astype(np.float32)
+    z2 = z2.astype(np.float32)
+    pos1 = np.array([x1, y1, z1]).T % lbox
+    lbox = np.float32(lbox)
+    nbins_mu = 40
+    mu_bins = np.linspace(0, 1, nbins_mu+1)
+
+
+    # compute DD
+    DD_counts = DDsmu(1, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)['npairs'].astype(float).reshape((len(rpbins) - 1, nbins_mu))
+    DD_counts /= ND1*ND1
+    print("DD")
+    DS_counts = DDsmu(0, Nthread, rpbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
+                      periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)['npairs'].astype(float).reshape((len(rpbins) - 1, nbins_mu))
+    DS_counts /= ND1*ND2 
+    print("DS")
+    SS_counts = DDsmu(1, Nthread, rpbins, 1, nbins_mu, x2, y2, z2, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)['npairs'].astype(float).reshape((len(rpbins) - 1, nbins_mu))
+    SS_counts /= ND2*ND2 
+    print("SS")
+    RR_counts = 2*np.pi/3*(rpbins[1:, None]**3 - rpbins[:-1, None]**3)*(mu_bins[None, 1:] - mu_bins[None, :-1]) / lbox**3 * ND1 * ND1 * 2
+    RR_counts /= ND1*ND1
+    xi_s_mu = (DD_counts - 2*DS_counts + SS_counts) / RR_counts
+
+    xi_array = []
+    for neworder in orders:
+        # print(neworder, rpbins, tpcf_multipole(xi_s_mu, mu_bins, order = neworder))
+        xi_array += [tpcf_multipole(xi_s_mu, mu_bins, order=neworder)]
+    xi_array = np.concatenate(xi_array)
+
+    return xi_array
+
 
 def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.

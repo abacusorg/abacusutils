@@ -32,7 +32,7 @@ except ImportError as e:
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
-def main(path2config, want_rsd=False, alt_simname=None):
+def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
 
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
@@ -202,7 +202,7 @@ def main(path2config, want_rsd=False, alt_simname=None):
     del W; gc.collect()
 
     # check if pk_ij exists
-    if os.path.exists(power_ij_fn):
+    if os.path.exists(power_ij_fn) and not save_3D_power:
         pk_ij_dict = asdf.open(power_ij_fn)['data']
         return pk_ij_dict
     else:
@@ -220,29 +220,52 @@ def main(path2config, want_rsd=False, alt_simname=None):
         for j in range(len(keynames)):
             if i < j: continue
             print("Computing cross-correlation of", keynames[i], keynames[j])
-
+                  
             # load field
             field_fft_i = asdf.open(fields_fft_fn[i])['data']
             field_fft_j = asdf.open(fields_fft_fn[j])['data']
 
-            # compute power spectrum
-            pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
-            pk3d *= field_D[i]*field_D[j]
-            binned_poles *= field_D[i]*field_D[j]
-            pk_auto.append(pk3d)
-            pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
-            pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
-            pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
-            pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
-            del field_fft_i, field_fft_j; gc.collect()
+            if save_3D_power:
+                # construct
+                field_fft_i = field_fft_i[f'{keynames[i]}_Re'] + 1j*field_fft_i[f'{keynames[i]}_Im']
+                field_fft_j = field_fft_j[f'{keynames[j]}_Re'] + 1j*field_fft_j[f'{keynames[j]}_Im']
 
-    # record power spectra
-    header = {}
-    header['sim_name'] = sim_name
-    header['Lbox'] = Lbox
-    header['nmesh'] = nmesh
-    header['kcut'] = kcut
-    compress_asdf(str(power_ij_fn), pk_ij_dict, header)
+                # compute
+                pk3d = np.array((field_fft_i*np.conj(field_fft_j)).real, dtype=np.float32)
+                pk3d *= field_D[i]*field_D[j]
+                #pk3d *= Lbox**3 # seems unnecessary
+                
+                # record
+                pk_ij_dict = {}
+                pk_ij_dict[f'P_k3D_{keynames[i]}_{keynames[j]}'] = pk3d
+                header = {}
+                header['sim_name'] = sim_name
+                header['Lbox'] = Lbox
+                header['nmesh'] = nmesh
+                header['kcut'] = kcut
+                power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{nmesh:d}.asdf"
+                compress_asdf(str(power_ij_fn), pk_ij_dict, header)
+                del field_fft_i, field_fft_j; gc.collect()
+            else:
+                # compute power spectrum
+                pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
+                pk3d *= field_D[i]*field_D[j]
+                binned_poles *= field_D[i]*field_D[j]
+                pk_auto.append(pk3d)
+                pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
+                pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
+                pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
+                pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
+                del field_fft_i, field_fft_j; gc.collect()
+
+    if not save_3D_power:
+        # record power spectra
+        header = {}
+        header['sim_name'] = sim_name
+        header['Lbox'] = Lbox
+        header['nmesh'] = nmesh
+        header['kcut'] = kcut
+        compress_asdf(str(power_ij_fn), pk_ij_dict, header)
     return pk_ij_dict
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
@@ -255,5 +278,6 @@ if __name__ == "__main__":
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     parser.add_argument('--want_rsd', help='Include RSD effects?', action='store_true')
     parser.add_argument('--alt_simname', help='Alternative simulation name')
+    parser.add_argument('--save_3D_power', help='Record full 3D power spectrum', action='store_true')
     args = vars(parser.parse_args())
     main(**args)
