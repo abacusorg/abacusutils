@@ -1107,12 +1107,11 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
 
     # reduce variance of measurement
     bias_vec = np.array(bvec_opt_rs['x']) # b1, b2, bs, bn, shot (not used)
-    bias_vec[1:] = 0. # set to 0 all but b1
+    #bias_vec[1:] = 0. # set to 0 all but b1
     #bias_vec[2:] = 0. # set to 0 all but b1 and b2
     #bias_vec[3:] = 0. # set to 0 all but b1, b2, bs
     bias_vec = np.hstack(([1.], bias_vec))
     #bias_vec = [1, *bvec_opt_rs['x']]
-    #bias_vec[1] = 1.05 # TESTING
     
     # decide what to input depending on whether rsd requested or not
     if want_rsd:
