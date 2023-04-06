@@ -13,7 +13,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     '''
     A parallel implementation of TSC mass assignment using numba. The algorithm
     partitions the particles into stripes of sufficient width that their TSC
-    clouds don't overlap, and then do all the even-numbered stripes in
+    clouds don't overlap, and then does all the even-numbered stripes in
     parallel, followed by the odd-numbered ones.
 
     This method parallelizes well and can exceed, e.g., 500 million particles
@@ -35,7 +35,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     Parameters
     ----------
     pos : ndarray of shape (n,3)
-        The particles, in domain [0,boxsize)
+        The particles, in domain [0,box)
 
     densgrid : ndarray, tuple, or int
         Either an ndarray in which to write the density, or a tuple/int
@@ -44,10 +44,11 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         (nx != ny != nz).
 
     box : float
-        The domain size. Positions are expected in domain [0,boxsize).
+        The domain size. Positions are expected in domain [0,box) (but may be
+        wrapped; see ``wrap``).
 
     weights : ndarray of shape (n,), optional
-        Particle weights.
+        Particle weights/masses.
         Default: None
 
     nthread : int, optional
@@ -58,7 +59,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     wrap : bool, optional
         Apply an in-place periodic wrap to any out-of-bounds particle positions,
-        bringing them back to domain [0,boxsize).  This is on by default
+        bringing them back to domain [0,box).  This is on by default
         because it's generally fast compared to TSC.
         Default: True
 
