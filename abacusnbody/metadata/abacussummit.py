@@ -50,7 +50,7 @@ def get_meta(simname, redshift=None):
     if 'CLASS_power_spectrum' in metadata[simname]:
         res['CLASS_power_spectrum'] = metadata[simname]['CLASS_power_spectrum']
 
-    if redshift != None:
+    if redshift is not None:
         if type(redshift) != str:
             redshift = f'z{redshift:.3f}'
         if not redshift.startswith('z'):

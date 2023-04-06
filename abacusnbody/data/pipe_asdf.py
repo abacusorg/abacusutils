@@ -83,7 +83,6 @@ import argparse
 import gc
 import sys
 from os.path import isfile
-from os.path import join as pjoin
 from timeit import default_timer as timer
 
 import asdf
@@ -133,7 +132,8 @@ def unpack_to_pipe(asdf_fns, fields, data_key=DEFAULT_DATA_KEY, header_key=DEFAU
             arr = af[data_key][field][:]  # read + decompression happens here
             read_time += timer() - read_start_time
             pipe.write(arr)
-            del arr; gc.collect()
+            del arr
+            gc.collect()
         nbytes_tot += N*field_width
     pipe.close()  # signal EOF
     tot_time = timer() - start_time

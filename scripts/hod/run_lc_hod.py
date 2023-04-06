@@ -13,7 +13,6 @@ $ python ./run_hod.py --help
 import argparse
 import time
 
-import numpy as np
 import yaml
 
 from abacusnbody.hod.abacus_hod import AbacusHOD
@@ -32,14 +31,14 @@ def main(path2config):
     # additional parameter choices
     want_rsd = HOD_params['want_rsd']
     write_to_disk = HOD_params['write_to_disk']
-    bin_params = clustering_params['bin_params']
-    rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
-    pimax = clustering_params['pimax']
-    pi_bin_size = clustering_params['pi_bin_size']
+    # bin_params = clustering_params['bin_params']
+    # rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'] + 1)
+    # pimax = clustering_params['pimax']
+    # pi_bin_size = clustering_params['pi_bin_size']
 
     # run the HODs
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-    mock_dict = newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=write_to_disk, Nthread=16)
+    newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=write_to_disk, Nthread=16)
 
     # can change some parameter and run again to time
     zs = [0.1]
@@ -48,7 +47,7 @@ def main(path2config):
         sim_params['z_mock'] = zs[i]
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
         start = time.time()
-        mock_dict = newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=False, Nthread=16)
+        newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=False, Nthread=16)
         print("Done hod, took time ", time.time() - start)
 
 

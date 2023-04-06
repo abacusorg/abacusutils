@@ -46,7 +46,7 @@ class SampleFileUtil(object):
 
         probFile.write("\n".join([str(p) for p in prob]))
         probFile.write("\n")
-        probFile.flush();
+        probFile.flush()
 
     def close(self):
         self.samplesFile.close()
@@ -147,7 +147,7 @@ def main(path2config, time_likelihood):
     if not os.path.isdir(os.path.expanduser(ch_config_params['path2output'])):
         try:
             os.makedirs(os.path.expanduser(ch_config_params['path2output']))
-        except:
+        except KeyError:
             pass
 
     # MPI option

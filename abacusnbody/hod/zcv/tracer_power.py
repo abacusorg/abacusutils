@@ -10,7 +10,7 @@ from pathlib import Path
 import asdf
 import numpy as np
 
-from abacusnbody.hod.power_spectrum import (
+from abacusnbody.analysis.power_spectrum import (
     calc_pk3d,
     get_field_fft,
     get_k_mu_box_edges,
@@ -23,7 +23,7 @@ from .ic_fields import compress_asdf
 
 try:
     from classy import Class
-except ImportError as e:
+except ImportError:
     raise ImportError('Could not import classy. Install abacusutils with '
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
@@ -135,7 +135,8 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
     """
     print("min/max tracer pos", tracer_pos.min(), tracer_pos.max(), tracer_pos.shape)
     tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
-    del tracer_pos; gc.collect()
+    del tracer_pos
+    gc.collect()
 
     if want_save:
         # save the tracer field
@@ -150,7 +151,8 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         table['tr_field_fft_Re'] = np.array(tr_field_fft.real, dtype=np.float32)
         table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
         compress_asdf(tr_field_fft_fn, table, header)
-        del table; gc.collect()
+        del table
+        gc.collect()
 
     # TESTING
     #tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
@@ -186,7 +188,8 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True):
         pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
         pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
         pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
-        del field_fft_i; gc.collect()
+        del field_fft_i
+        gc.collect()
 
     header = {}
     header['sim_name'] = sim_name

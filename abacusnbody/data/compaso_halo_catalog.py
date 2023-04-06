@@ -15,15 +15,9 @@ import re
 import warnings
 from collections import defaultdict
 from glob import glob
-from os.path import abspath, basename, dirname, isdir, isfile
+from os.path import abspath, basename, dirname, isdir, isfile, samefile
 from os.path import join as pjoin
-from os.path import normpath, samefile
 from pathlib import PurePath
-
-# Stop astropy from trying to download time data; nodes on some clusters are not allowed to access the internet directly
-from astropy.utils import iers
-
-iers.conf.auto_download = False
 
 import asdf
 import asdf.compression
@@ -32,17 +26,18 @@ import numba as nb
 import numpy as np
 from astropy.table import Table
 
+from . import asdf as _asdf
+from . import bitpacked
+
 try:
     asdf.compression.validate('blsc')
 except Exception as e:
     raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
-from . import bitpacked
 
 # Default to 4 decompression threads, or fewer if fewer cores are available
 DEFAULT_BLOSC_THREADS = 4
 DEFAULT_BLOSC_THREADS = max(1, min(len(os.sched_getaffinity(0)), DEFAULT_BLOSC_THREADS))
-from . import asdf as _asdf
 
 _asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
@@ -78,12 +73,12 @@ class CompaSOHaloCatalog:
             Will accept ``halo_info`` dirs or "redshift" dirs
             (e.g. ``z1.000/halo_info/`` or ``z1.000/``).
 
-	    .. note::
+            .. note::
 
                 To load cleaned catalogs, you do *not* need to pass a different
-		argument to the ``path`` directory.  Use ``cleaned=True`` instead
-		and the path to the cleaning info will be detected automatically
-		(or see ``cleandir``).
+                argument to the ``path`` directory.  Use ``cleaned=True`` instead
+                and the path to the cleaning info will be detected automatically
+                (or see ``cleandir``).
 
         cleaned: bool, optional
             Loads the "cleaned" version of the halo catalogues. Always recommended.
@@ -167,7 +162,7 @@ class CompaSOHaloCatalog:
         # said `cleaned=True` or because this is a halo light cone catalog, which is already cleaned
         self.cleaned = cleaned
 
-        if halo_lc == None:
+        if halo_lc is None:
             halo_lc = self._is_path_halo_lc(path)
             if verbose and halo_lc:
                 print('Detected halo light cone catalog.')
@@ -377,7 +372,7 @@ class CompaSOHaloCatalog:
             try:
                 for _f in unpack_bits:
                     assert _f in bitpacked.PID_FIELDS
-            except:
+            except Exception:
                 raise ValueError(f'`unpack_bits` must be True, False, or one of: "{bitpacked.PID_FIELDS}"')
         return unpack_bits
 
@@ -388,14 +383,14 @@ class CompaSOHaloCatalog:
         Will be returned as lists of strings in `load_AB` and `load_pidrv`.
         `unpack_subsamples` is for pipelining, to keep things in rvint.
         '''
-        if load_subsamples == False:
+        if load_subsamples is False:
             # stub
             load_AB = []
             load_pidrv = []
             unpack_subsamples = True
         else:
             # If user has not specified which subsamples, then assume user wants to load everything
-            if load_subsamples == True:
+            if load_subsamples is True:
                 load_subsamples = dict(A=True, B=True, rv=True, pid=True)
 
             if type(load_subsamples) == dict:
@@ -934,7 +929,7 @@ class CompaSOHaloCatalog:
         np_per_file = np.array(np_per_file)
 
         particle_dict = {'particle_AB_afs': particle_AB_afs,
-	                 'np_per_file': np_per_file,
+                         'np_per_file': np_per_file,
                          'particle_AB_merge_afs': particle_AB_merge_afs,
                          'np_per_file_merge': np_per_file_merge,
                          'key_to_read': key_to_read}
@@ -1221,7 +1216,7 @@ def _unpack_euler16(bin_this):
     bin_this = bin_this - cap*(EULER_TBIN*EULER_TBIN)
 
     it = (np.floor(np.sqrt(bin_this))).astype(int)
-    its = np.sum(np.isnan(it))
+    # its = np.sum(np.isnan(it))
 
 
     ir = bin_this - it*it
@@ -1238,23 +1233,48 @@ def _unpack_euler16(bin_this):
     # and zz=1
     norm = 1.0/np.sqrt(1.0+xx*xx+yy*yy)
     zz = norm
-    yy *= norm; xx *= norm;  # These are now a unit vector
+    yy *= norm
+    xx *= norm  # These are now a unit vector
 
     # TODO: legacy code, rewrite
-    major[cap==0,0] = zz[cap==0]; major[cap==0,1] = yy[cap==0]; major[cap==0,2] = xx[cap==0];
-    major[cap==1,0] = zz[cap==1]; major[cap==1,1] =-yy[cap==1]; major[cap==1,2] = xx[cap==1];
-    major[cap==2,0] = zz[cap==2]; major[cap==2,1] = xx[cap==2]; major[cap==2,2] = yy[cap==2];
-    major[cap==3,0] = zz[cap==3]; major[cap==3,1] = xx[cap==3]; major[cap==3,2] =-yy[cap==3];
+    major[cap==0,0] = zz[cap==0]
+    major[cap==0,1] = yy[cap==0]
+    major[cap==0,2] = xx[cap==0]
+    major[cap==1,0] = zz[cap==1]
+    major[cap==1,1] =-yy[cap==1]
+    major[cap==1,2] = xx[cap==1]
+    major[cap==2,0] = zz[cap==2]
+    major[cap==2,1] = xx[cap==2]
+    major[cap==2,2] = yy[cap==2]
+    major[cap==3,0] = zz[cap==3]
+    major[cap==3,1] = xx[cap==3]
+    major[cap==3,2] =-yy[cap==3]
 
-    major[cap==4,1] = zz[cap==4]; major[cap==4,2] = yy[cap==4]; major[cap==4,0] = xx[cap==4];
-    major[cap==5,1] = zz[cap==5]; major[cap==5,2] =-yy[cap==5]; major[cap==5,0] = xx[cap==5];
-    major[cap==6,1] = zz[cap==6]; major[cap==6,2] = xx[cap==6]; major[cap==6,0] = yy[cap==6];
-    major[cap==7,1] = zz[cap==7]; major[cap==7,2] = xx[cap==7]; major[cap==7,0] =-yy[cap==7];
+    major[cap==4,1] = zz[cap==4]
+    major[cap==4,2] = yy[cap==4]
+    major[cap==4,0] = xx[cap==4]
+    major[cap==5,1] = zz[cap==5]
+    major[cap==5,2] =-yy[cap==5]
+    major[cap==5,0] = xx[cap==5]
+    major[cap==6,1] = zz[cap==6]
+    major[cap==6,2] = xx[cap==6]
+    major[cap==6,0] = yy[cap==6]
+    major[cap==7,1] = zz[cap==7]
+    major[cap==7,2] = xx[cap==7]
+    major[cap==7,0] =-yy[cap==7]
 
-    major[cap==8,2] = zz[cap==8]; major[cap==8,0] = yy[cap==8]; major[cap==8,1] = xx[cap==8];
-    major[cap==9,2] = zz[cap==9]; major[cap==9,0] =-yy[cap==9]; major[cap==9,1] = xx[cap==9];
-    major[cap==10,2] = zz[cap==10]; major[cap==10,0] = xx[cap==10]; major[cap==10,1] = yy[cap==10];
-    major[cap==11,2] = zz[cap==11]; major[cap==11,0] = xx[cap==11]; major[cap==11,1] =-yy[cap==11];
+    major[cap==8,2] = zz[cap==8]
+    major[cap==8,0] = yy[cap==8]
+    major[cap==8,1] = xx[cap==8]
+    major[cap==9,2] = zz[cap==9]
+    major[cap==9,0] =-yy[cap==9]
+    major[cap==9,1] = xx[cap==9]
+    major[cap==10,2] = zz[cap==10]
+    major[cap==10,0] = xx[cap==10]
+    major[cap==10,1] = yy[cap==10]
+    major[cap==11,2] = zz[cap==11]
+    major[cap==11,0] = xx[cap==11]
+    major[cap==11,1] =-yy[cap==11]
 
     # Next, we can get the minor axis
     az = (iaz+0.5)*(1.0/EULER_ABIN)*np.pi
@@ -1265,13 +1285,16 @@ def _unpack_euler16(bin_this):
     # are perpendicular.
 
     eq2 = (cap//4) == 2
-    minor[eq2,0] = xx[eq2]; minor[eq2,1] = yy[eq2];
+    minor[eq2,0] = xx[eq2]
+    minor[eq2,1] = yy[eq2]
     minor[eq2,2] = (minor[eq2,0]*major[eq2,0]+minor[eq2,1]*major[eq2,1])/(-major[eq2,2])
     eq4 = (cap//4) == 0
-    minor[eq4,1] = xx[eq4]; minor[eq4,2] = yy[eq4];
+    minor[eq4,1] = xx[eq4]
+    minor[eq4,2] = yy[eq4]
     minor[eq4,0] = (minor[eq4,1]*major[eq4,1]+minor[eq4,2]*major[eq4,2])/(-major[eq4,0])
     eq1 = (cap//4) == 1
-    minor[eq1,2] = xx[eq1]; minor[eq1,0] = yy[eq1];
+    minor[eq1,2] = xx[eq1]
+    minor[eq1,0] = yy[eq1]
     minor[eq1,1] = (minor[eq1,2]*major[eq1,2]+minor[eq1,0]*major[eq1,0])/(-major[eq1,1])
     minor *= (1./np.linalg.norm(minor,axis=1).reshape(N,1))
 
