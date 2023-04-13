@@ -827,6 +827,7 @@ class AbacusHOD:
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv
         from .zcv.tracer_power import get_tracer_power
+        from .power_spectrum import get_k_mu_edges
 
         # compute real space and redshift space
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
@@ -838,12 +839,32 @@ class AbacusHOD:
         save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
         rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
 
+        # define bins
+        Lbox = self.lbox
+        k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, config['power_params']['k_hMpc_max'], config['power_params']['nbins_k'], config['power_params']['nbins_mu'], config['power_params']['logk'])
+
+        # get file names
+        if not config['power_params']['logk']:
+            dk = k_bin_edges[1]-k_bin_edges[0]
+        else:
+            dk = np.log(k_bin_edges[1]/k_bin_edges[0])
+        if config['power_params']['nbins_k'] == config['zcv_params']['nmesh']//2:
+            power_rsd_tr_fn = save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf"
+            power_rsd_ij_fn = save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf"
+            power_tr_fn = save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}.asdf"
+            power_ij_fn = save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf"
+        else:
+            power_rsd_tr_fn = save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+            power_rsd_ij_fn = save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+            power_tr_fn = save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+            power_ij_fn = save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+        
         if load_presaved:
-            pk_rsd_tr_dict = asdf.open(save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
-            pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+            pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
+            pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
             if config['HOD_params']['want_rsd']:
-                pk_tr_dict = asdf.open(save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
-                pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+                pk_tr_dict = asdf.open(power_tr_fn)['data']
+                pk_ij_dict = asdf.open(power_ij_fn)['data']
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
@@ -856,7 +877,7 @@ class AbacusHOD:
 
                 # get power spectra for this tracer
                 pk_rsd_tr_dict = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config)
-                pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+                pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
 
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
@@ -869,7 +890,7 @@ class AbacusHOD:
 
                     # get power spectra for this tracer
                     pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
-                    pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+                    pk_ij_dict = asdf.open(power_ij_fn)['data']
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
