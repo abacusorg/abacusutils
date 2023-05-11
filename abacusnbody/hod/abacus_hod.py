@@ -830,7 +830,6 @@ class AbacusHOD:
 
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv
-        from .zcv.tools_jdr_new import run_zcv # TESTING!
         from .zcv.tracer_power import get_tracer_power
         from .power_spectrum import get_k_mu_edges
 
@@ -910,9 +909,9 @@ class AbacusHOD:
 
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv_field
-        from .zcv.tools_jdr_new import run_zcv_field # TESTING!
         from .zcv.tracer_power import get_tracer_power
         from .power_spectrum import get_k_mu_edges
+        from .zcv.get_xi_from_pk import pk_to_xi
 
         # compute real space and redshift space
         assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
@@ -954,7 +953,7 @@ class AbacusHOD:
                 tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
                 del mock_dict; gc.collect()
 
-                pk_rsd_tr_fns = get_tracer_power(tracer_pos, want_rsd, config, save_3D_power=save_3D_power)
+                pk_rsd_tr_fns = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config, save_3D_power=True)
                 del tracer_pos; gc.collect()
 
             # run version without rsd if rsd was requested
@@ -966,7 +965,7 @@ class AbacusHOD:
                     tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
                     del mock_dict; gc.collect()
 
-                    pk_tr_fns = get_tracer_power(tracer_pos, False, config, save_3D_power=save_3D_power)
+                    pk_tr_fns = get_tracer_power(tracer_pos, False, config, save_3D_power=True)
                     del tracer_pos; gc.collect()
             else:
                 pk_tr_fns, pk_ij_fns = None, None # TODO: unsure
@@ -976,12 +975,12 @@ class AbacusHOD:
 
         # convert 3d power spectrum to correlation function multipoles
         r_bins = np.linspace(0., 200., 201)
-        pk_rsd_tr_fns = [save_z_dir / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"] # TODO: same as other 
-        power_cv_tr_fn = save_z_dir / f"power{rsd_str}_ZCV_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf" # TODO: should be an output
+        pk_rsd_tr_fns = [save_z_dir / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"] # TODO: same as other (could check that we have this if presaved)
+        power_cv_tr_fn = save_z_dir / f"power{rsd_str}_ZCV_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf" # TODO: should be an output (could check that we have this if presaved; run_zcv too)
         xi_cv_dict = pk_to_xi(power_cv_tr_fn, r_bins, poles=config['power_params']['poles'], key='P_k3D_tr_tr_zcv')
         xi_raw_dict = pk_to_xi(pk_rsd_tr_fns[0], r_bins, poles=config['power_params']['poles'], key='P_k3D_tr_tr')
-        zcv_dict['Xi_tr_tr_ell_zcv'] = xi_cv_dict['binned_poles']
-        zcv_dict['Xi_tr_tr_ell'] = xi_raw_dict['binned_poles']
+        zcv_dict['Xi_tr_tr_ell_zcv'] = xi_cv_dict['binned_poles']*config['power_params']['nmesh']**3
+        zcv_dict['Xi_tr_tr_ell'] = xi_raw_dict['binned_poles']*config['power_params']['nmesh']**3
         zcv_dict['Np_tr_tr_ell'] = xi_raw_dict['Npoles']
         zcv_dict['r_binc'] = xi_cv_dict['r_binc']
 
