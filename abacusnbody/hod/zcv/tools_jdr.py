@@ -84,10 +84,8 @@ def combine_spectra(k, spectra, bias_params, rsd=False, numerical_nabla=False):
             pkvec[10:, ...] = -k[np.newaxis, :]**2 * pkvec[nabla_idx, ...]
 
         # read out bias terms
-        # TESTING?
         bias_params = np.hstack([bias_params, np.zeros(5-len(bias_params))])
-        #b1, b2, bs, bk2, sn = bias_params # og
-        b1, sn, b2, bs, bk2 = bias_params # TESTING!!!!!!!!!!!!!!!!!!
+        b1, b2, bs, bk2, sn = bias_params
         bias_monomials = np.array([1,
                                    2*b1, b1**2,
                                    b2, b2*b1, 0.25*b2**2,
@@ -246,7 +244,7 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     bvec0 = np.zeros(len(keynames)) # b1, b2, bs, bn, sn
     
     # minimize loss function
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_kcut, np.hstack([bvec, np.zeros(5-len(bvec))]), rsd=rsd))**2/(2 * pk_tt_kcut**2))# tuksi TESTING
+    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_kcut, np.hstack([bvec[:-1], np.zeros(5-len(bvec)), bvec[-1]]), rsd=rsd))**2/(2 * pk_tt_kcut**2))# tuksi TESTING
     out = minimize(loss, bvec0)
     return out
 
