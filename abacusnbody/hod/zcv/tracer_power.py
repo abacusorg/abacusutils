@@ -1,9 +1,3 @@
-"""
-TODO: Fix cosmology here too
-Just run twice for rsd and no rsd
-CHECK: Syntax for load pk_ij
-Might not be necessary to save
-"""
 import os, gc
 from pathlib import Path
 
@@ -89,22 +83,13 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    # TESTING!!!!!!!!!!!!!!!
     phase = int(sim_name.split('ph')[-1])
-    if phase <= 6 and z_this == 0.8: # case old convention:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', #'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
-    else:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', 'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+    ):
+        cosmo[k] = meta[k]
     boltz.set(cosmo)
     boltz.compute()
 
@@ -141,15 +126,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     w = None
     tracer_pos += Lbox/2. # I think necessary for cross correlations
     tracer_pos %= Lbox
-    """
-    # TESTING
-    import h5py
-    tracer_fn = "/global/cscratch1/sd/boryanah/zcv/test_base.h5" #test_base_z3.000.h5" ##test_base.h5" # test.h5
-    if want_rsd:
-        tracer_pos = h5py.File(tracer_fn)["pos_zspace"][:, :]
-    else:
-        tracer_pos = h5py.File(tracer_fn)["pos_rspace"][:, :]
-    """
     print("min/max tracer pos", tracer_pos.min(), tracer_pos.max(), tracer_pos.shape)
     tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
     del tracer_pos; gc.collect()
@@ -168,9 +144,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
         compress_asdf(tr_field_fft_fn, table, header)
         del table; gc.collect()
-
-    # TESTING
-    #tr_field_fft = asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Re'] + 1j * asdf.open(tr_field_fft_fn)['data']['tr_field_fft_Im']
 
     print("Computing auto-correlation of tracer")
     if save_3D_power:
@@ -347,7 +320,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
             compress_asdf(tr_field_fft_fn, table, header)
             del table; gc.collect()
 
-    # TESTING because we are doing this cause it's huge, just cancel here!!!!!!!!!!!!
+    # You need to call this function twice because large files -- once to compute the tr_field_fft and save it and once to just load it and compute stuff
     if want_load_tr_fft is 0: return
             
     # load density field

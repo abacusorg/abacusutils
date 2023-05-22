@@ -1,6 +1,3 @@
-# Bug:
-# ZCV field delta2 combine_spectra
-
 # Martin:
 # kmax_fit in the yaml file (maybe also sg params)
 # bias is reported
@@ -8,18 +5,17 @@
 # Joe:
 # combine spectra rsd uses alpha and not nabla?
 # sg_window depends on the k spacing; needs to perhaps depend on k-range
-# window function setting to zero
+# window function setting to zero past nyquist
 # how to do bias fitting best
 # zenbu convention is same as nbody
 # leggauss stuff in combine spectra with the alphas
 # nabla is never used in combine_spectra rsd
 
 # TODO:
-# divisions by zero
+# divisions by zero (isclose)
 # savgol weirdness
 # bias fitting nicer (and also more flexible for the user to decide what they are fitting)
-# clean up run_lcv
-# could maybe pass bias_fit from yaml file (b1 being default? should we assume b1b2bsbn)
+# r_zt_proj = cov_zn / np.sqrt(var_zz * var_nn) # need to figure out why infinity is first value
 
 """
 Tools for applying variance reduction (ZCV and LCV) (base of script by Joe DeRose).
@@ -234,8 +230,6 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     # apply cuts to power spectra
     kidx_max = k.searchsorted(kmax)
     kidx_min = k.searchsorted(kmin)
-    # TESTING
-    kidx_min = 1
     kcut = k[kidx_min:kidx_max]
     pk_tt_kcut = pk_tt[kidx_min:kidx_max]
     pk_ij_kcut = pk_ij[:, kidx_min:kidx_max]
@@ -244,7 +238,7 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     bvec0 = np.zeros(len(keynames)) # b1, b2, bs, bn, sn
     
     # minimize loss function
-    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_kcut, np.hstack([bvec[:-1], np.zeros(5-len(bvec)), bvec[-1]]), rsd=rsd))**2/(2 * pk_tt_kcut**2))# tuksi TESTING
+    loss = lambda bvec : np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_kcut, np.hstack([bvec[:-1], np.zeros(5-len(bvec)), bvec[-1]]), rsd=rsd))**2/(2 * pk_tt_kcut**2))
     out = minimize(loss, bvec0)
     return out
 
@@ -324,7 +318,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
         power_lin_dict[key] = power_lin_dict[key][:, kidx_min:kidx_max]
 
     # define loss function as the fractional difference squared
-    loss = lambda bias: np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0])**2/(2 * pk_tt_kcut**2)) # tuksi
+    loss = lambda bias: np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0])**2/(2 * pk_tt_kcut**2))
 
     # fit for the bias
     out = minimize(loss, 1.)
@@ -380,22 +374,13 @@ def get_cfg(sim_name, z_this, nmesh):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    # TESTING!!!!!!!!!!!!!!! I think we need to get rid of this stuff soon tuks
     phase = int(sim_name.split('ph')[-1])
-    if phase <= 6 and z_this == 0.8: # case old convention:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', #'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
-    else:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', 'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+    ):
+        cosmo[k] = meta[k]
 
     # create a dict with everything you would ever need
     cfg = {}
@@ -591,7 +576,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dict['Nk_tr_tr_ell'] = nmodes
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
-    zcv_dict['bias'] = bias_vec
+    zcv_dict['bias'] = bias_vec[1:]
     return zcv_dict
 
 def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns, config):
@@ -711,7 +696,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     # cross-correlation coefficient
     #print("var_zz, var_nn", var_zz, var_nn)
     with np.errstate(divide='ignore'):
-        r_zt_proj = cov_zn / np.sqrt(var_zz * var_nn) # need to figure out why infinity is first value tuksi
+        r_zt_proj = cov_zn / np.sqrt(var_zz * var_nn)
         #r_zt_proj[np.isclose(var_zz * var_nn, 0.)] = 0.
         r_zt_proj = np.atleast_2d(r_zt_proj)
         
@@ -727,7 +712,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     beta_smooth = np.zeros_like(beta_damp)
     for i in range(beta_smooth.shape[0]):
         beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
-    beta_smooth = expand_poles_to_3d(k_binc, beta_smooth, k_box, mu_box, only_ell0=True).reshape(pk_nn.shape) # tuks
+    beta_smooth = expand_poles_to_3d(k_binc, beta_smooth, k_box, mu_box, only_ell0=True).reshape(pk_nn.shape)
     
     # get reduced fields
     pk_nn -= beta_smooth * pk_zz
@@ -768,7 +753,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     zcv_dict['Nk_tr_tr_ell'] = nmodes
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
-    zcv_dict['bias'] = bias_vec
+    zcv_dict['bias'] = bias_vec[1:]
     return zcv_dict
 
 def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
@@ -1117,7 +1102,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # cross-correlation coefficient
     with np.errstate(divide='ignore'):
-        r_lt_proj = cov_lt / np.sqrt(var_ll * var_tt) # need to figure out why infinity is first value tuksi
+        r_lt_proj = cov_lt / np.sqrt(var_ll * var_tt)
         #r_lt_proj[np.isclose(var_ll * var_tt, 0.)] = 0.
         r_lt_proj = np.atleast_2d(r_lt_proj)
     

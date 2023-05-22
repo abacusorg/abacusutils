@@ -87,22 +87,13 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    # TESTING!!!!!!!!!!!!!!!
     phase = int(sim_name.split('ph')[-1])
-    if phase <= 6 and z_this == 0.8: # case old convention:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', #'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
-    else:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', 'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+    ):
+        cosmo[k] = meta[k]
     boltz.set(cosmo)
     boltz.compute()
 

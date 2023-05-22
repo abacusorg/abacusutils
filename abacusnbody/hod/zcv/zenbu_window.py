@@ -73,7 +73,7 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
 
     nkin = len(kin)
 
-    if k2weight: # tuks this is sketch
+    if k2weight:
         dk = np.zeros_like(kin)
         dk[:-1] = kin[1:] - kin[:-1]
         dk[-1] = dk[-2]
@@ -291,22 +291,13 @@ def main(path2config, alt_simname=None):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    # TESTING!!!!!!!!!!!!!!!
     phase = int(sim_name.split('ph')[-1])
-    if phase <= 6 and z_this == 0.8: # case old convention:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', #'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
-    else:
-        for k in ('H0', 'omega_b', 'omega_cdm',
-                  'omega_ncdm', 'N_ncdm', 'N_ur',
-                  'n_s', 'A_s', 'alpha_s',
-                  #'wa', 'w0',
-        ):
-            cosmo[k] = meta[k]
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+    ):
+        cosmo[k] = meta[k]
 
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
