@@ -130,7 +130,6 @@ def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R
         < D ((b+f mu^2)(1-S) + bS) delta, tr > = D * (b < delta, tr > + f (1-S) < delta, mu^2 >)
     """    
     if rec_algo == "recsym":
-
         if rsd:
             pk = D * (bias * spectra_dict['P_ell_delta_tr'] +
                       f_growth * spectra_dict['P_ell_deltamu2_tr'])
@@ -224,6 +223,7 @@ def multipole_cov(pell, ell):
 
     return cov
 
+
 def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     """
     ZCV: Infer the bias based on the template power spectrum and tracer measurements
@@ -247,7 +247,6 @@ def combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr
     """
     LCV: Given bias parameters, compute the model-model auto and cross correlation for the 3D k-vector
     """
-
     if rec_algo == "reciso":
         S = get_smoothing(k_box, R)
         f_eff = f_growth*(1.-S)
@@ -320,7 +319,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
 
     # define loss function as the fractional difference squared
     loss = lambda bias: np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0])**2/(2 * pk_tt_kcut**2))
-
+    
     # fit for the bias
     out = minimize(loss, 1.)
     return out    
