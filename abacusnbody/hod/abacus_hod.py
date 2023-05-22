@@ -847,7 +847,7 @@ class AbacusHOD:
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv
         from .zcv.tracer_power import get_tracer_power
-        from .power_spectrum import get_k_mu_edges
+        from ..analysis.power_spectrum import get_k_mu_edges
 
         # compute real space and redshift space
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
@@ -928,7 +928,7 @@ class AbacusHOD:
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv_field
         from .zcv.tracer_power import get_tracer_power
-        from .power_spectrum import get_k_mu_edges
+        from ..analysis.power_spectrum import get_k_mu_edges
         from .zcv.get_xi_from_pk import pk_to_xi
 
         # compute real space and redshift space

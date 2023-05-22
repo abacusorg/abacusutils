@@ -12,8 +12,8 @@ import numpy as np
 import yaml
 from scipy.fft import fftn
 
-from abacusnbody.hod.power_spectrum import (calc_pk3d, get_k_mu_box_edges, get_k_mu_edges,
-                                            get_W_compensated)
+from abacusnbody.analysis.power_spectrum import (calc_pk3d, get_k_mu_box_edges, get_k_mu_edges,
+                                                 get_W_compensated)
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
