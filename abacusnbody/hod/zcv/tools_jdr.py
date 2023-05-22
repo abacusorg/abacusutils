@@ -30,7 +30,7 @@ from scipy.optimize import minimize
 from scipy.signal import savgol_filter
 from scipy.special import legendre
 
-from abacusnbody.hod.power_spectrum import get_k_mu_edges, get_k_mu_box_edges, project_3d_to_poles
+from abacusnbody.analysis.power_spectrum import get_k_mu_edges, get_k_mu_box_edges, project_3d_to_poles
 from abacusnbody.metadata import get_meta
 from .ic_fields import compress_asdf
 
