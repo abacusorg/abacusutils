@@ -87,7 +87,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    phase = int(sim_name.split('ph')[-1])
+    int(sim_name.split('ph')[-1])
     for k in ('H0', 'omega_b', 'omega_cdm',
               'omega_ncdm', 'N_ncdm', 'N_ur',
               'n_s', 'A_s', 'alpha_s',
@@ -112,7 +112,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     else:
         power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_ij_nmesh{nmesh:d}_dk{dk:.3f}.asdf"
         print("power file", str(power_ij_fn))
-        
+
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)
     D /= boltz.scale_independent_growth_factor(z_ic)
@@ -219,7 +219,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
             if i < j:
                 continue
             print("Computing cross-correlation of", keynames[i], keynames[j])
-                  
+
             # load field
             field_fft_i = asdf.open(fields_fft_fn[i])['data']
             field_fft_j = asdf.open(fields_fft_fn[j])['data']
@@ -233,7 +233,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
                 pk3d = np.array((field_fft_i*np.conj(field_fft_j)).real, dtype=np.float32)
                 pk3d *= field_D[i]*field_D[j]
                 #pk3d *= Lbox**3 # seems unnecessary
-                
+
                 # record
                 pk_ij_dict = {}
                 pk_ij_dict[f'P_k3D_{keynames[i]}_{keynames[j]}'] = pk3d

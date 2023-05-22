@@ -23,7 +23,7 @@ try:
     from classy import Class
     from ZeNBu.zenbu import Zenbu
     from ZeNBu.zenbu_rsd import Zenbu_RSD
-except ImportError as e:
+except ImportError:
     raise ImportError('Missing imports for zcv. Install abacusutils with '
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
@@ -79,7 +79,7 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
         dk[-1] = dk[-2]
 
     nkout = len(kout) - 1
-    dkin = (kin[1:] - kin[:-1])[0]
+    (kin[1:] - kin[:-1])[0]
 
     idx_o = np.digitize(knorm, kout) - 1
     nmodes_out = np.zeros(nkout * 3)
@@ -146,7 +146,7 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
 
 def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nmax=6, ngauss=6):
 
-    if pkclass==None:
+    if pkclass is None:
         pkclass = Class()
         pkclass.set(cfg["Cosmology"])
         pkclass.compute()
@@ -291,7 +291,7 @@ def main(path2config, alt_simname=None):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    phase = int(sim_name.split('ph')[-1])
+    int(sim_name.split('ph')[-1])
     for k in ('H0', 'omega_b', 'omega_cdm',
               'omega_ncdm', 'N_ncdm', 'N_ur',
               'n_s', 'A_s', 'alpha_s',
@@ -304,7 +304,7 @@ def main(path2config, alt_simname=None):
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
 
     # name of file to save to
-    
+
     if not logk:
         dk = k_bins[1]-k_bins[0]
     else:

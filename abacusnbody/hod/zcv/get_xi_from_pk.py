@@ -3,7 +3,7 @@ import gc
 import asdf
 import numpy as np
 
-from scipy.fft import ifftn, fftfreq
+from scipy.fft import ifftn
 from scipy.special import legendre
 from ..power_spectrum import mean2d_numba_seq
 
@@ -15,12 +15,12 @@ def get_r_mu_box(L_hMpc, n_xy, n_z):
     d_xy = L_hMpc / n_xy
     #k_xy = (fftfreq(n_xy, d=d_xy) * 2. * np.pi).astype(np.float32)
     r_xy = (np.arange(n_xy) * d_xy).astype(np.float32)
-    
+
     # cell width in z direction (Mpc/h)
     d_z = L_hMpc / n_z
     #r_z = (fftfreq(n_z, d=d_z) * 2. * np.pi).astype(np.float32)
     r_z = (np.arange(n_z) * d_z).astype(np.float32)
-    
+
     # h/Mpc
     x = r_xy[:, np.newaxis, np.newaxis]
     y = r_xy[np.newaxis, :, np.newaxis]
@@ -34,17 +34,17 @@ def get_r_mu_box(L_hMpc, n_xy, n_z):
     mu_box = z/np.ones_like(r_box)
     mu_box[r_box > 0.] /= r_box[r_box > 0.]
     mu_box[r_box == 0.] = 0.
-    
+
     # I believe the definition is that and it allows you to count all modes (agrees with nbodykit)
     mu_box = np.abs(mu_box)
     print("r box, mu box", r_box.dtype, mu_box.dtype)
 
     r_box = r_box.flatten()
-    mu_box = mu_box.flatten()    
+    mu_box = mu_box.flatten()
     return r_box, mu_box
 
 def pk_to_xi(power_tr_fn, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
-    
+
     # apply fourier transform to get 3D correlation
     f = asdf.open(power_tr_fn)
     Lbox = f['header']['Lbox']
@@ -61,7 +61,7 @@ def pk_to_xi(power_tr_fn, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
     r_box, mu_box = get_r_mu_box(Lbox, n_perp, n_los)
     r_box = r_box.astype(np.float32)
     mu_box = mu_box.astype(np.float32)
-    
+
     # bin into xi_ell(r)
     binned_poles = []
     Npoles = []

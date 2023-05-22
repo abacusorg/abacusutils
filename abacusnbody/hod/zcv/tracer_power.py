@@ -24,7 +24,7 @@ except ImportError:
 
 
 def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power=False):
-    
+
     # read zcv parameters
     advected_dir = config['zcv_params']['zcv_dir']  # input of advected fields
     tracer_dir = config['zcv_params']['zcv_dir']  # output of tracers
@@ -83,7 +83,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    phase = int(sim_name.split('ph')[-1])
+    int(sim_name.split('ph')[-1])
     for k in ('H0', 'omega_b', 'omega_cdm',
               'omega_ncdm', 'N_ncdm', 'N_ur',
               'n_s', 'A_s', 'alpha_s',
@@ -150,14 +150,14 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     print("Computing auto-correlation of tracer")
     if save_3D_power:
         power_tr_fns = []
-        
+
         # compute
         pk3d = np.array((tr_field_fft*np.conj(tr_field_fft)).real, dtype=np.float32)
         #pk3d *= Lbox**3
-                
+
         # record
         pk_tr_dict = {}
-        pk_tr_dict[f'P_k3D_tr_tr'] = pk3d
+        pk_tr_dict['P_k3D_tr_tr'] = pk3d
         header = {}
         header['sim_name'] = sim_name
         header['Lbox'] = Lbox
@@ -183,14 +183,14 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
 
         # load field
         field_fft_i = asdf.open(fields_fft_fn[i])['data']
-        
+
         if save_3D_power:
             # compute
             field_fft_i = field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im']
             pk3d = np.array((field_fft_i*np.conj(tr_field_fft)).real, dtype=np.float32)
             pk3d *= field_D[i]
             #pk3d *= Lbox**3
-            
+
             # record
             pk_tr_dict = {}
             pk_tr_dict[f'P_k3D_{keynames[i]}_tr'] = pk3d
@@ -218,7 +218,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
 
     if save_3D_power:
         return power_tr_fns
-    
+
     header = {}
     header['sim_name'] = sim_name
     header['Lbox'] = Lbox
@@ -234,7 +234,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
 
     # read lcv parameters
     lcv_dir = config['lcv_params']['lcv_dir']
-    ic_dir = config['lcv_params']['ic_dir']
+    config['lcv_params']['ic_dir']
     nmesh = config['lcv_params']['nmesh']
     kcut = config['lcv_params']['kcut']
     rec_algo = config['HOD_params']['rec_algo']
@@ -256,9 +256,9 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     # get a few parameters for the simulation
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
-    z_ic = meta['InitialRedshift']
-    k_Ny = np.pi*nmesh/Lbox
-    
+    meta['InitialRedshift']
+    np.pi*nmesh/Lbox
+
     # define k, mu bins
     n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
@@ -269,7 +269,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     pk_tr_dict = {}
     pk_tr_dict['k_binc'] = k_binc
     pk_tr_dict['mu_binc'] = mu_binc
-    
+
     # create save directory
     save_dir = Path(lcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
@@ -280,7 +280,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
         W = get_W_compensated(Lbox, nmesh, paste, interlaced)
     else:
         W = None
-        
+
     # file to save to
     ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
     tr_field_fft_fn = Path(save_z_dir) / f"tr_field{rsd_str}_fft_nmesh{nmesh:d}.asdf" # overwrites
@@ -322,8 +322,8 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
             del table; gc.collect()
 
     # You need to call this function twice because large files -- once to compute the tr_field_fft and save it and once to just load it and compute stuff
-    if want_load_tr_fft is 0: return
-            
+    if want_load_tr_fft == 0: return
+
     # load density field
     f = asdf.open(ic_fn)
     delta = f['data']['dens'][:, :, :]
@@ -332,27 +332,27 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     # do fourier transform
     delta_fft = fftn(delta)/nmesh**3
     del delta; gc.collect()
-    
+
     # get the box k and mu modes
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
 
     # do mu_box**2 delta and get the three power spectra from this
     fields = {'delta': delta_fft, 'deltamu2': delta_fft*mu_box.reshape(delta_fft.shape)**2}
-    
+
     # compute the galaxy auto rsd poles
     print("Computing auto-correlation of tracer")
     if save_3D_power:
         del k_box, mu_box; gc.collect()
-        
+
         power_tr_fns = []
-        
+
         # compute
         pk3d = np.array((tr_field_fft*np.conj(tr_field_fft)).real, dtype=np.float32)
         #pk3d *= Lbox**3
-                
+
         # record
         pk_tr_dict = {}
-        pk_tr_dict[f'P_k3D_tr_tr'] = pk3d
+        pk_tr_dict['P_k3D_tr_tr'] = pk3d
         header = {}
         header['sim_name'] = sim_name
         header['Lbox'] = Lbox
@@ -367,7 +367,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
         pk_tr_dict['N_kmu_tr_tr'] = N3d
         pk_tr_dict['P_ell_tr_tr'] = binned_poles
         pk_tr_dict['N_ell_tr_tr'] = Npoles
-    
+
     # initiate final arrays
     for i in range(len(keynames)):
         print("Computing cross-correlation of tracer and ", keynames[i])
@@ -375,7 +375,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
         if save_3D_power:
             # compute
             pk3d = np.array((fields[keynames[i]]*np.conj(tr_field_fft)).real, dtype=np.float32)
-            
+
             # record
             pk_tr_dict = {}
             pk_tr_dict[f'P_k3D_{keynames[i]}_tr'] = pk3d

@@ -878,7 +878,7 @@ class AbacusHOD:
             power_rsd_ij_fn = save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
             power_tr_fn = save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
             power_ij_fn = save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
-        
+
         if load_presaved:
             pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
             pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
@@ -935,7 +935,7 @@ class AbacusHOD:
         assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
-        
+
         # create save directory
         save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
         save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
@@ -962,11 +962,11 @@ class AbacusHOD:
                 if i < j: continue
                 pk_rsd_ij_fns.append(save_z_dir / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf")
                 pk_ij_fns.append(save_z_dir / f"power_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf")
-        
+
         if not load_presaved:
             # run version with rsd or without rsd
             for tr in mock_dict.keys():
-                
+
                 # obtain the positions
                 tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
                 del mock_dict; gc.collect()
@@ -977,7 +977,7 @@ class AbacusHOD:
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
                 mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False,
-                                         Nthread=16, verbose=False, fn_ext=None) # TODO: reseed 
+                                         Nthread=16, verbose=False, fn_ext=None) # TODO: reseed
                 for tr in mock_dict.keys():
                     # obtain the positions
                     tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
@@ -1003,7 +1003,7 @@ class AbacusHOD:
         zcv_dict['r_binc'] = xi_cv_dict['r_binc']
 
         return zcv_dict
-    
+
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
         """
         Computes :math:`w_p`.
