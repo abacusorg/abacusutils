@@ -115,7 +115,6 @@ def combine_cross_spectra(k, spectra, bias_params, rsd=False):
         b1, b2, bs, bk, sn = bias_params
         bias_monomials = np.array([1, b1, 0.5 * b2, bs, bk])
         pk = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,:], axis=0) #+ sn
-        pk = combine_real_space_cross_spectra(k, spectra, bias_params)
     return pk
 
 def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=False):
