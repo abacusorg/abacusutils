@@ -38,6 +38,8 @@ and new features!
    :maxdepth: 2
    :caption: Tutorials
 
+   tutorials/analysis
+   tutorials/compaso
    tutorials/light_cones
 
 .. toctree::

@@ -1,5 +1,5 @@
-compaso_halo_catalog
-====================
+CompaSO Halo Catalogs
+=====================
 
 The ``compaso_halo_catalog`` module loads halo catalogs from CompaSO, Abacus's
 on-the-fly halo finder.  The module defines one class, ``CompaSOHaloCatalog``,

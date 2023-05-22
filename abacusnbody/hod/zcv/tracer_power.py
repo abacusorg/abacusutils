@@ -5,7 +5,7 @@ import asdf
 import numpy as np
 from scipy.fft import fftn
 
-from abacusnbody.hod.power_spectrum import (
+from abacusnbody.analysis.power_spectrum import (
     calc_pk3d,
     get_field_fft,
     get_k_mu_box_edges,
@@ -18,7 +18,7 @@ from .ic_fields import compress_asdf
 
 try:
     from classy import Class
-except ImportError as e:
+except ImportError:
     raise ImportError('Could not import classy. Install abacusutils with '
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
@@ -128,7 +128,8 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     tracer_pos %= Lbox
     print("min/max tracer pos", tracer_pos.min(), tracer_pos.max(), tracer_pos.shape)
     tr_field_fft = get_field_fft(tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
-    del tracer_pos; gc.collect()
+    del tracer_pos
+    gc.collect()
 
     if want_save:
         # save the tracer field
@@ -143,7 +144,8 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         table['tr_field_fft_Re'] = np.array(tr_field_fft.real, dtype=np.float32)
         table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
         compress_asdf(tr_field_fft_fn, table, header)
-        del table; gc.collect()
+        del table
+        gc.collect()
 
     print("Computing auto-correlation of tracer")
     if save_3D_power:
@@ -183,7 +185,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         field_fft_i = asdf.open(fields_fft_fn[i])['data']
         
         if save_3D_power:
-
             # compute
             field_fft_i = field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im']
             pk3d = np.array((field_fft_i*np.conj(tr_field_fft)).real, dtype=np.float32)

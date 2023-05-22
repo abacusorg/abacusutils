@@ -8,7 +8,8 @@ slurm-*.out
 abacusnbody/version.py
 .vscode/
 issues/
-venv/
+*venv*/
 *.code-workspace
-/env*
+/*env*.sh
 abacusnbody/metadata/abacussummit_headers.asdf
+*-jvsc-*.ipynb

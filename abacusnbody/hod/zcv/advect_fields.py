@@ -13,7 +13,7 @@ import asdf
 import numpy as np
 import yaml
 
-from abacusnbody.hod.power_spectrum import (
+from abacusnbody.analysis.power_spectrum import (
     calc_pk3d,
     get_field_fft,
     get_k_mu_box_edges,
@@ -26,7 +26,7 @@ from .ic_fields import compress_asdf
 
 try:
     from classy import Class
-except ImportError as e:
+except ImportError:
     raise ImportError('Could not import classy. Install abacusutils with '
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
 
@@ -37,7 +37,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
-    ic_dir = config['zcv_params']['ic_dir']
+    # ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
     keynames = config['zcv_params']['fields']
@@ -63,7 +63,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
-    k_Ny = np.pi*nmesh/Lbox
+    # k_Ny = np.pi*nmesh/Lbox
 
     # define k, mu bins
     n_perp = n_los = nmesh
@@ -116,7 +116,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)
     D /= boltz.scale_independent_growth_factor(z_ic)
-    Ha = boltz.Hubble(z_this) * 299792.458
+    # Ha = boltz.Hubble(z_this) * 299792.458
     if want_rsd:
         f_growth = boltz.scale_independent_growth_factor_f(z_this)
     else:
@@ -139,7 +139,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
         disp_pos[:, 1] = f['data']['disp_y'][:, :, :].flatten() * D
         disp_pos[:, 2] = f['data']['disp_z'][:, :, :].flatten() * D * (1 + f_growth)
         print("loaded displacements", disp_pos.dtype)
-        f.close(); gc.collect()
+        f.close()
+        gc.collect()
 
         # read in displacements, rescale by D=D(z_this)/D(z_ini)
         grid_x, grid_y, grid_z = np.meshgrid(
@@ -155,7 +156,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
         disp_pos[:, 0] += grid_x
         disp_pos[:, 1] += grid_y
         disp_pos[:, 2] += grid_z
-        del grid_x, grid_y, grid_z; gc.collect()
+        del grid_x, grid_y, grid_z
+        gc.collect()
 
         disp_pos *= Lbox
         disp_pos %= Lbox
@@ -172,11 +174,13 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
                 w = f['data'][keynames[i]][:, :, :].flatten()
                 f.close()
             field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced))
-            del w; gc.collect()
+            del w
+            gc.collect()
             table = {}
             table[f'{keynames[i]}_Re'] = np.array(field_fft.real, dtype=np.float32)
             table[f'{keynames[i]}_Im'] = np.array(field_fft.imag, dtype=np.float32)
-            del field_fft; gc.collect()
+            del field_fft
+            gc.collect()
 
             # write out the advected fields
             header = {}
@@ -188,9 +192,12 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
             header['interlaced'] = interlaced
             header['paste'] = paste
             compress_asdf(fields_fft_fn[i], table, header)
-            del table; gc.collect()
-        del disp_pos; gc.collect()
-    del W; gc.collect()
+            del table
+            gc.collect()
+        del disp_pos
+        gc.collect()
+    del W
+    gc.collect()
 
     # check if pk_ij exists
     if os.path.exists(power_ij_fn) and not save_3D_power:
@@ -206,10 +213,11 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
 
     # initiate final arrays
     pk_auto = []
-    pk_cross = []
+    # pk_cross = []
     for i in range(len(keynames)):
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             print("Computing cross-correlation of", keynames[i], keynames[j])
                   
             # load field

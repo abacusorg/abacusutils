@@ -16,7 +16,7 @@ import yaml
 from numba import jit
 from scipy.interpolate import interp1d
 
-from abacusnbody.hod.power_spectrum import get_k_mu_edges
+from abacusnbody.analysis.power_spectrum import get_k_mu_edges
 from abacusnbody.metadata import get_meta
 
 try:
@@ -260,7 +260,7 @@ def main(path2config, alt_simname=None):
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
-    ic_dir = config['zcv_params']['ic_dir']
+    # ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
 
@@ -287,7 +287,7 @@ def main(path2config, alt_simname=None):
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
     D_ratio = meta['GrowthTable'][z_ic]/meta['GrowthTable'][1.0]
-    k_Ny = np.pi*nmesh/Lbox
+    # k_Ny = np.pi*nmesh/Lbox
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.

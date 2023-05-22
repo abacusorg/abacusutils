@@ -13,8 +13,6 @@ from os.path import join as pjoin
 
 import h5py
 import numba
-import numpy as np
-import pytest
 import yaml
 from astropy.io import ascii
 from common import check_close
@@ -58,16 +56,16 @@ def test_hod(tmp_path, reference_mode = False):
 
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
-        bin_params = clustering_params['bin_params']
+        # bin_params = clustering_params['bin_params']
 
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
+        newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
 
     # test mode
     else:
         simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
-        simdir = config['sim_params']['sim_dir']
+        # simdir = config['sim_params']['sim_dir']
         z_mock = config['sim_params']['z_mock']
         # all output dirs should be under tmp_path
         config['sim_params']['output_dir'] = pjoin(tmp_path, 'data_mocks_summit_new') + '/'
@@ -91,17 +89,17 @@ def test_hod(tmp_path, reference_mode = False):
 
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
-        write_to_disk = HOD_params['write_to_disk']
-        bin_params = clustering_params['bin_params']
-        rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
-        pimax = clustering_params['pimax']
-        pi_bin_size = clustering_params['pi_bin_size']
+        # bin_params = clustering_params['bin_params']
+        # rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
+        # pimax = clustering_params['pimax']
+        # pi_bin_size = clustering_params['pi_bin_size']
 
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
         # throw away run for jit to compile, write to disk
-        mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
+        # mock_dict =
+        newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = True, Nthread = 2)
         savedir_gal = config['sim_params']['output_dir']\
             +"/"+simname+"/z"+str(z_mock).ljust(5, '0') +"/galaxies_rsd/LRGs.dat"
         data = ascii.read(EXAMPLE_LRGS)

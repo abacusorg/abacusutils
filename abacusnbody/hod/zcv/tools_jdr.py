@@ -130,6 +130,7 @@ def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R
         < D ((b+f mu^2)(1-S) + bS) delta, tr > = D * (b < delta, tr > + f (1-S) < delta, mu^2 >)
     """    
     if rec_algo == "recsym":
+
         if rsd:
             pk = D * (bias * spectra_dict['P_ell_delta_tr'] +
                       f_growth * spectra_dict['P_ell_deltamu2_tr'])
@@ -353,7 +354,8 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
         else:
             pk_ij_zt[i, :, :] = power_tr_dict[f'P_kmu_{keynames[i]}_tr'].reshape(len(k), 1)
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             if want_rsd:
                 pk_ij_zz[count, :, :] = power_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'].reshape(len(poles), len(k))
             else:
@@ -370,7 +372,7 @@ def get_cfg(sim_name, z_this, nmesh):
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
     z_ic = meta['InitialRedshift']
-    k_Ny = np.pi*nmesh/Lbox
+    # k_Ny = np.pi*nmesh/Lbox
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.

@@ -81,11 +81,14 @@ def gaussian_filter(field, nmesh, lbox, kcut):
     # multiply by filter in fourier space
     kx, ky, kz = np.meshgrid(kvals, kvals, kvalsr)
     knorm = kx**2 + ky**2 + kz**2
-    del kx, ky, kz; gc.collect()
+    del kx, ky, kz
+    gc.collect()
     filt = np.exp(-knorm / (2 * kcut**2))
-    del knorm; gc.collect()
+    del knorm
+    gc.collect()
     fhat = filt * fhat
-    del filt; gc.collect()
+    del filt
+    gc.collect()
 
     # inverse fourier transform
     f_filt = np.fft.irfftn(fhat).astype(np.float32)
@@ -138,7 +141,8 @@ def get_dk_to_s2(delta_k, nmesh, lbox):
             tidesq += 2.0 * np.fft.irfftn(karray * delta_k)**2.
         else:
             tidesq += 1.0 * np.fft.irfftn(karray * delta_k)**2.
-        del karray; gc.collect()
+        del karray
+        gc.collect()
     return tidesq
 
 
@@ -183,7 +187,8 @@ def get_fields(delta_lin, Lbox, nmesh):
     d2 = delta_lin * delta_lin
     fmean = np.mean(d2)
     d2 -= fmean
-    del delta_lin; gc.collect()
+    del delta_lin
+    gc.collect()
     print("generated delta^2")
 
     # get s^2
@@ -266,7 +271,8 @@ def main(path2config, cv_type, alt_simname=None):
         compress_asdf(str(ic_fn), table, header)
 
     # not sure what the displacements are used for (maybe later?)
-    del disp_x, disp_y, disp_z; gc.collect()
+    del disp_x, disp_y, disp_z
+    gc.collect()
 
     if os.path.exists(fields_fn):
         print("Already saved fields for this simulation")

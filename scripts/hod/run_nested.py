@@ -7,7 +7,6 @@ import dill
 import numpy as np
 import yaml
 from dynesty import NestedSampler
-from likelihood import PowerData
 from scipy import stats
 
 from abacusnbody.hod.abacus_hod import AbacusHOD
@@ -27,9 +26,9 @@ def lnprob(p, param_mapping, param_tracer, Data, Ball):
     # pass them to the mock dictionary
     mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread = 64)
 
-    clustering = Ball.compute_wp(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size, Nthread = 16)
+    clustering = Ball.compute_wp(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size, Nthread = 16)  # noqa  # TODO clustering unused
 
-    lnP = Data.compute_likelihood(theory_density)
+    lnP = Data.compute_likelihood(theory_density)  # noqa  # TODO theory_density undefined
 
     return lnP
 
@@ -52,7 +51,7 @@ def main(path2config):
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
     # read data parameters
-    newData = wp_Data(data_params, HOD_params)
+    newData = wp_Data(data_params, HOD_params)  # noqa  # TODO wp_Data undefined
 
     # parameters to fit
     nparams = len(fit_params.keys())
@@ -70,14 +69,14 @@ def main(path2config):
     if not os.path.isdir(os.path.expanduser(dynesty_config_params['path2output'])):
         try:
             os.makedirs(os.path.expanduser(dynesty_config_params['path2output']))
-        except:
+        except KeyError:
             pass
 
     # dynesty parameters
     nlive = dynesty_config_params['nlive']
     maxcall = dynesty_config_params['maxcall']
     method = dynesty_config_params['method']
-    bound = dynesty_config_params['bound']
+    # bound = dynesty_config_params['bound']
 
     # where to record
     prefix_chain = os.path.join(os.path.expanduser(dynesty_config_params['path2output']),
