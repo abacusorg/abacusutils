@@ -230,6 +230,7 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     # apply cuts to power spectra
     kidx_max = k.searchsorted(kmax)
     kidx_min = k.searchsorted(kmin)
+    kidx_min = np.max([kidx_min, 1]) # matters!
     kcut = k[kidx_min:kidx_max]
     pk_tt_kcut = pk_tt[kidx_min:kidx_max]
     pk_ij_kcut = pk_ij[:, kidx_min:kidx_max]
@@ -659,12 +660,10 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
 
     # load the presaved window function
     data = np.load(window_fn)
-    data['window']
 
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
-    data['lptobj']
 
     # combine zenbu multipoles
     pk_zenbu = combine_spectra(k_binc, pk_ij_zenbu, bias_vec[1:], rsd=want_rsd)
