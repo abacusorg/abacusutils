@@ -86,7 +86,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     print("mean delta", np.mean(delta))
 
     # do fourier transform
-    delta_fft = fftn(delta)/nmesh**3
+    delta_fft = fftn(delta, workers=-1)/nmesh**3
     del delta; gc.collect()
 
     # get the box k and mu modes

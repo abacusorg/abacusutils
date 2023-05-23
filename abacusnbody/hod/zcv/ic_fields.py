@@ -12,6 +12,9 @@ from pathlib import Path
 import asdf
 import numpy as np
 import yaml
+#from np.fft import fftfreq, fftn, ifftn
+from scipy.fft import fftfreq, rfftfreq, rfftn, irfftn
+
 
 from abacusnbody.metadata import get_meta
 
@@ -72,9 +75,9 @@ def gaussian_filter(field, nmesh, lbox, kcut):
     """
 
     # fourier transform field
-    fhat = np.fft.rfftn(field).astype(np.complex64)
-    kvals = np.fft.fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
-    kvalsr = np.fft.rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
+    fhat = rfftn(field, workers=-1).astype(np.complex64)
+    kvals = fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
+    kvalsr = rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
     kvals = kvals.astype(np.float32)
     kvalsr = kvalsr.astype(np.float32)
 
@@ -91,7 +94,7 @@ def gaussian_filter(field, nmesh, lbox, kcut):
     gc.collect()
 
     # inverse fourier transform
-    f_filt = np.fft.irfftn(fhat).astype(np.float32)
+    f_filt = irfftn(fhat, workers=-1).astype(np.float32)
     return f_filt
 
 def delta_ij(i, j):
@@ -117,8 +120,8 @@ def get_dk_to_s2(delta_k, nmesh, lbox):
     tidesq: the s^2 field
     """
     # get wavenumber grids # TODO could carry this around instead of regenerating every time
-    kvals = np.fft.fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
-    kvalsr = np.fft.rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
+    kvals = fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
+    kvalsr = rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
     kvals = kvals.astype(np.float32)
     kvalsr = kvalsr.astype(np.float32)
     kx, ky, kz = np.meshgrid(kvals, kvals, kvalsr)
@@ -138,9 +141,9 @@ def get_dk_to_s2(delta_k, nmesh, lbox):
     for i in range(len(jvec)):
         karray = ks[jvec[i][0]]*ks[jvec[i][1]]/knorm - delta_ij(jvec[i][0], jvec[i][1]) / 3.0
         if jvec[i][0] != jvec[i][1]:
-            tidesq += 2.0 * np.fft.irfftn(karray * delta_k)**2.
+            tidesq += 2.0 * irfftn(karray * delta_k, workers=-1)**2.
         else:
-            tidesq += 1.0 * np.fft.irfftn(karray * delta_k)**2.
+            tidesq += 1.0 * irfftn(karray * delta_k, workers=-1)**2.
         del karray
         gc.collect()
     return tidesq
@@ -158,8 +161,8 @@ def get_dk_to_n2(delta_k, nmesh, lbox):
     real_gradsqdelta: the nabla^2 delta field
     """
     # get wavenumber grids
-    kvals = np.fft.fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
-    kvalsr = np.fft.rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
+    kvals = fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
+    kvalsr = rfftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
     kvals = kvals.astype(np.float32)
     kvalsr = kvalsr.astype(np.float32)
     kx, ky, kz = np.meshgrid(kvals, kvals, kvalsr)
@@ -169,7 +172,7 @@ def get_dk_to_n2(delta_k, nmesh, lbox):
     gc.collect()
 
     # Compute -k^2 delta which is the gradient
-    nabla2delta = np.fft.irfftn(-knorm * delta_k).astype(np.float32)
+    nabla2delta = irfftn(-knorm * delta_k, workers=-1).astype(np.float32)
     return nabla2delta
 
 def get_fields(delta_lin, Lbox, nmesh):
@@ -178,7 +181,7 @@ def get_fields(delta_lin, Lbox, nmesh):
     Note that you can save the fields separately if they are using too much memory
     """
     # get delta
-    delta_fft = np.fft.rfftn(delta_lin).astype(np.complex64)
+    delta_fft = rfftn(delta_lin, workers=-1).astype(np.complex64)
     fmean = np.mean(delta_lin)
     d = delta_lin-fmean
     print("generated delta")

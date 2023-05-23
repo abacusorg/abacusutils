@@ -51,7 +51,7 @@ def pk_to_xi(power_tr_fn, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
     nmesh = f['header']['nmesh']
     n_perp = n_los = nmesh
     Pk = f['data'][key]
-    Xi = ifftn(Pk).real.flatten()
+    Xi = ifftn(Pk, workers=-1).real.flatten()
     del Pk; gc.collect()
 
     # define r bins

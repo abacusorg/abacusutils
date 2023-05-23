@@ -333,7 +333,7 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
     #field_fft = fftn(field) / field.size
     #field_shift_fft = fftn(field_shift) / field.size
     field_fft = np.zeros((len(k), len(k), len(k)), dtype=np.complex64)
-    field_fft[:, :, :] = fftn(field) + fftn(field_shift) * \
+    field_fft[:, :, :] = fftn(field, workers=-1) + fftn(field_shift, workers=-1) * \
                          np.exp(0.5 * 1j * (k[:, np.newaxis, np.newaxis] + \
                                             k[np.newaxis, :, np.newaxis] + \
                                             k[np.newaxis, np.newaxis, :]) *d)
@@ -356,7 +356,7 @@ def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
         field_fft = get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w)
     else:
         # get Fourier modes from skewers grid
-        field_fft = fftn(field) / field.size
+        field_fft = fftn(field, workers=-1) / field.size
     # get rid of pos, field
     del pos, w, field
     gc.collect()
