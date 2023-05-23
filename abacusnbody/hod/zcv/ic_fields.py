@@ -233,7 +233,7 @@ def main(path2config, cv_type, alt_simname=None):
     # get a few parameters for the simulation
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
-    k_Ny = np.pi*nmesh/Lbox
+    np.pi*nmesh/Lbox
 
     # file to save the filtered ic
     ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
