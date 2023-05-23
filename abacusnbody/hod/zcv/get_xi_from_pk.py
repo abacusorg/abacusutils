@@ -5,7 +5,7 @@ import numpy as np
 
 from scipy.fft import ifftn
 from scipy.special import legendre
-from ..power_spectrum import mean2d_numba_seq
+from abacusnbody.analysis.power_spectrum import mean2d_numba_seq
 
 def get_r_mu_box(L_hMpc, n_xy, n_z):
     """

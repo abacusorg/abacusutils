@@ -5,7 +5,7 @@ arrays smaller and presave them
 
 """
 import argparse
-import gc
+import gc, warnings
 import os
 from pathlib import Path
 
@@ -15,8 +15,10 @@ import yaml
 #from np.fft import fftfreq, fftn, ifftn
 from scipy.fft import fftfreq, rfftfreq, rfftn, irfftn
 
-
 from abacusnbody.metadata import get_meta
+
+from asdf.exceptions import AsdfWarning
+warnings.filterwarnings('ignore', category=AsdfWarning)
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml', 'cv_type': 'zcv'}
 
@@ -232,7 +234,6 @@ def main(path2config, cv_type, alt_simname=None):
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
     k_Ny = np.pi*nmesh/Lbox
-    print("k_Ny", k_Ny)
 
     # file to save the filtered ic
     ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"

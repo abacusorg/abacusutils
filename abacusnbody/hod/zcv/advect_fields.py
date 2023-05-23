@@ -1,11 +1,5 @@
-"""
-TODO: Fix cosmology here too
-Just run twice for rsd and no rsd
-CHECK: Syntax for load pk_ij
-Might not be necessary to save
-"""
 import argparse
-import gc
+import gc, warnings
 import os
 from pathlib import Path
 
@@ -29,6 +23,9 @@ try:
 except ImportError:
     raise ImportError('Could not import classy. Install abacusutils with '
         '"pip install abacusutils[zcv]" to install zcv dependencies.')
+
+from asdf.exceptions import AsdfWarning
+warnings.filterwarnings('ignore', category=AsdfWarning)
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
