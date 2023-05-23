@@ -959,7 +959,8 @@ class AbacusHOD:
             pk_rsd_tr_fns.append(save_z_dir / f"power{rsd_str}_{keynames[i]}_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf")
             pk_tr_fns.append(save_z_dir / f"power_{keynames[i]}_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf")
             for j in range(len(keynames)):
-                if i < j: continue
+                if i < j:
+                    continue
                 pk_rsd_ij_fns.append(save_z_dir / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf")
                 pk_ij_fns.append(save_z_dir / f"power_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf")
 
@@ -969,10 +970,10 @@ class AbacusHOD:
 
                 # obtain the positions
                 tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
-                del mock_dict; gc.collect()
+                del mock_dict; gc.collect() # noqa: E702
 
                 pk_rsd_tr_fns = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config, save_3D_power=True)
-                del tracer_pos; gc.collect()
+                del tracer_pos; gc.collect() # noqa: E702
 
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
@@ -981,10 +982,10 @@ class AbacusHOD:
                 for tr in mock_dict.keys():
                     # obtain the positions
                     tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
-                    del mock_dict; gc.collect()
+                    del mock_dict; gc.collect() # noqa: E702
 
                     pk_tr_fns = get_tracer_power(tracer_pos, False, config, save_3D_power=True)
-                    del tracer_pos; gc.collect()
+                    del tracer_pos; gc.collect() # noqa: E702
             else:
                 pk_tr_fns, pk_ij_fns = None, None # TODO: unsure
 

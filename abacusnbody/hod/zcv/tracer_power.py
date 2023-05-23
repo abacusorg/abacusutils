@@ -1,4 +1,5 @@
-import os, gc
+import os
+import gc
 from pathlib import Path
 
 import asdf
@@ -202,7 +203,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
             power_tr_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_tr_nmesh{nmesh:d}.asdf"
             power_tr_fns.append(power_tr_fn)
             compress_asdf(str(power_tr_fn), pk_tr_dict, header)
-            del field_fft_i; gc.collect()
+            del field_fft_i; gc.collect() # noqa: E702
 
         else:
 
@@ -214,7 +215,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
             pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
             pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
             pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
-            del field_fft_i; gc.collect()
+            del field_fft_i; gc.collect() # noqa: E702
 
     if save_3D_power:
         return power_tr_fns
@@ -303,8 +304,8 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
         if random_pos is not None:
             rn_field_fft = get_field_fft(random_pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
             tr_field_fft -= rn_field_fft
-            del random_pos, rn_field_fft; gc.collect()
-        del tracer_pos; gc.collect()
+            del random_pos, rn_field_fft; gc.collect() # noqa: E702
+        del tracer_pos; gc.collect() # noqa: E702
 
         if want_save:
             # save the tracer field
@@ -319,10 +320,11 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
             table['tr_field_fft_Re'] = np.array(tr_field_fft.real, dtype=np.float32)
             table['tr_field_fft_Im'] = np.array(tr_field_fft.imag, dtype=np.float32)
             compress_asdf(tr_field_fft_fn, table, header)
-            del table; gc.collect()
+            del table; gc.collect() # noqa: E702
 
     # You need to call this function twice because large files -- once to compute the tr_field_fft and save it and once to just load it and compute stuff
-    if want_load_tr_fft == 0: return
+    if want_load_tr_fft == 0:
+        return
 
     # load density field
     f = asdf.open(ic_fn)
@@ -331,7 +333,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
 
     # do fourier transform
     delta_fft = fftn(delta, workers=-1)/nmesh**3
-    del delta; gc.collect()
+    del delta; gc.collect() # noqa: E702
 
     # get the box k and mu modes
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
@@ -342,7 +344,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     # compute the galaxy auto rsd poles
     print("Computing auto-correlation of tracer")
     if save_3D_power:
-        del k_box, mu_box; gc.collect()
+        del k_box, mu_box; gc.collect() # noqa: E702
 
         power_tr_fns = []
 

@@ -87,7 +87,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
 
     # do fourier transform
     delta_fft = fftn(delta, workers=-1)/nmesh**3
-    del delta; gc.collect()
+    del delta; gc.collect() # noqa: E702
 
     # get the box k and mu modes
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
@@ -101,7 +101,8 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     pk_lin_dict['mu_binc'] = mu_binc
     for i in range(len(keynames)):
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             print("Computing cross-correlation of", keynames[i], keynames[j])
 
             if save_3D_power:

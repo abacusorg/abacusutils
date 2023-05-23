@@ -1,7 +1,8 @@
 import argparse
-import gc, warnings
+import gc
 import os
 from pathlib import Path
+import warnings
 
 import asdf
 import numpy as np
@@ -241,7 +242,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
                 header['kcut'] = kcut
                 power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{nmesh:d}.asdf"
                 compress_asdf(str(power_ij_fn), pk_ij_dict, header)
-                del field_fft_i, field_fft_j; gc.collect()
+                del field_fft_i, field_fft_j; gc.collect() # noqa: E702
             else:
                 # compute power spectrum
                 pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
@@ -252,7 +253,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
                 pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
                 pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
                 pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
-                del field_fft_i, field_fft_j; gc.collect()
+                del field_fft_i, field_fft_j; gc.collect() # noqa: E702
 
     if not save_3D_power:
         # record power spectra

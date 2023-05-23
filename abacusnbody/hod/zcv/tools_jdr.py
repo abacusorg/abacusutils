@@ -20,8 +20,9 @@
 """
 Tools for applying variance reduction (ZCV and LCV) (base of script by Joe DeRose).
 """
-import gc, warnings
+import gc
 from pathlib import Path
+import warnings
 
 import asdf
 import numpy as np
@@ -270,7 +271,8 @@ def combine_field_spectra_k3D(bias, power_ij_fns, keynames):
     counter = 0
     for i in range(len(keynames)):
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             if i == 0 and j == 0:
                 power = np.zeros_like(asdf.open(power_ij_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}'])
             if (i == j):
@@ -315,7 +317,8 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
     # cut the template power spectra for the same k range
     power_lin_dict = power_dict.copy()
     for key in power_lin_dict.keys():
-        if "P_ell" not in key: continue
+        if "P_ell" not in key:
+            continue
         power_lin_dict[key] = power_lin_dict[key][:, kidx_min:kidx_max]
 
     # define loss function as the fractional difference squared
@@ -431,7 +434,10 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     assert (fields[:len(keynames)] == keynames).all(), "Requested keynames should follow the standard order"
 
     # smoothing parameters
-    sg_window = 21; k0 = 0.618; dk_cv = 0.167; beta1_k = 0.05
+    sg_window = config['zcv_params'].get('sg_window', 21)
+    k0 = config['zcv_params'].get('k0_window', 0.618)
+    dk_cv = config['zcv_params'].get('dk_window', 0.167)
+    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
 
     # power params
     k_hMpc_max = config['power_params']['k_hMpc_max']
@@ -470,10 +476,6 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     else:
         zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}_dk{dk:.3f}.npz"
         window_fn = save_dir / f"window_nmesh{nmesh:d}_dk{dk:.3f}.npz"
-
-    # load the linear power spectrum
-    p_in = np.genfromtxt(cfg['p_lin_ic_file'])
-    kth, p_m_lin = p_in[:, 0], p_in[:, 1]
 
     # change names
     if not want_rsd:
@@ -548,9 +550,9 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     beta_smooth = np.zeros_like(beta_damp)
     for i in range(beta_smooth.shape[0]):
         try:
-            beta_smooth[i, :] = savgol_filter(beta_damp.T[:,i], sg_window, 3)
-        except:
-            pass # smoke test
+            beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
+        except ValueError:
+            warnings.warn('This message should only appear when doing a smoke test.')
 
     # cross-correlation coefficient
     with np.errstate(divide='ignore'):
@@ -600,7 +602,10 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     assert (fields[:len(keynames)] == keynames).all(), "Requested keynames should follow the standard order"
 
     # smoothing parameters
-    sg_window = 21; k0 = 0.618; dk_cv = 0.167; beta1_k = 0.05
+    sg_window = config['zcv_params'].get('sg_window', 21)
+    k0 = config['zcv_params'].get('k0_window', 0.618)
+    dk_cv = config['zcv_params'].get('dk_window', 0.167)
+    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
 
     # power params
     k_hMpc_max = config['power_params']['k_hMpc_max']
@@ -644,7 +649,8 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     counter = 0
     for i in range(len(keynames)):
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             print("projecting", keynames[i], keynames[j])
             pk = asdf.open(power_ij_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}']
             pk = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk.flatten(), Lbox, poles=[0])
@@ -677,7 +683,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     # project 3D power spectra into multipoles
     pk_nn_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_nn.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
     pk_zn_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_zn.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
-    del pk_zn; gc.collect()
+    del pk_zn; gc.collect() # noqa: E702
     pk_zz_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_zz.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
 
     # expand zenbu to 3D power spectrum
@@ -716,8 +722,8 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
 
     # get reduced fields
     pk_nn -= beta_smooth * pk_zz
-    del beta_smooth; gc.collect()
-    del pk_zz; gc.collect()
+    del beta_smooth; gc.collect() # noqa: E702
+    del pk_zz; gc.collect() # noqa: E702
 
     # save CV-reduced 3D power spectrum
     pk_tr_dict = {}
@@ -770,7 +776,10 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     want_rsd = config['HOD_params']['want_rsd']
 
     # smoothing parameters
-    sg_window = 21; k0 = 0.618; dk_cv = 0.167; beta1_k=0.05
+    sg_window = config['zcv_params'].get('sg_window', 21)
+    k0 = config['zcv_params'].get('k0_window', 0.618)
+    dk_cv = config['zcv_params'].get('dk_window', 0.167)
+    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
 
     # power params
     k_hMpc_max = config['power_params']['k_hMpc_max']
@@ -916,8 +925,8 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     for i in range(beta_smooth.shape[0]):
         try:
             beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
-        except:
-            pass # smoke test
+        except ValueError:
+            warnings.warn('This message should only appear when doing a smoke test.')
 
     # apply window function
     if want_rsd:
@@ -958,7 +967,10 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     keynames = ['delta', 'deltamu2']
 
     # smoothing parameters
-    sg_window = 21; k0 = 0.618; dk_cv = 0.167; beta1_k=0.05
+    sg_window = config['zcv_params'].get('sg_window', 21)
+    k0 = config['zcv_params'].get('k0_window', 0.618)
+    dk_cv = config['zcv_params'].get('dk_window', 0.167)
+    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
 
     # power params
     k_hMpc_max = config['power_params']['k_hMpc_max']
@@ -1042,7 +1054,8 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     counter = 0
     for i in range(len(keynames)):
         for j in range(len(keynames)):
-            if i < j: continue
+            if i < j:
+                continue
             print("projecting", i, j)
             pk = asdf.open(power_lin_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}']
             pk = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk.flatten(), Lbox, poles=[0])
@@ -1069,7 +1082,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # project 3D power spectra to multipoles
     pk_lt_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_lt.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
-    del pk_lt; gc.collect()
+    del pk_lt; gc.collect() # noqa: E702
     pk_tt_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_tt.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
     pk_ll_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_ll.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
 
@@ -1107,8 +1120,8 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # get reduced fields
     pk_tt -= beta_smooth * pk_ll
-    del beta_smooth; gc.collect()
-    del pk_ll; gc.collect()
+    del beta_smooth; gc.collect() # noqa: E702
+    del pk_ll; gc.collect() # noqa: E702
 
     # save 3d
     pk_tr_dict = {}

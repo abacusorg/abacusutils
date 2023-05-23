@@ -5,9 +5,10 @@ arrays smaller and presave them
 
 """
 import argparse
-import gc, warnings
+import gc
 import os
 from pathlib import Path
+import warnings
 
 import asdf
 import numpy as np
