@@ -208,7 +208,7 @@ def mean2d_numba_seq2(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.
     bins_dt = bins.astype(dtype)
     zero = dtype(0.)
     one = dtype(1.)
-    
+
     H = np.zeros((bins[0], bins[1]), dtype=dtype)
     N = np.zeros((bins[0], bins[1]), dtype=dtype)
     if logk:
@@ -218,9 +218,9 @@ def mean2d_numba_seq2(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.
     delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
     delta0 = dtype(delta0)
     delta1 = dtype(delta1)
-    
+
     for t in range(tracks.shape[1]):
-        
+
         if logk:
             i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
         else:
@@ -231,7 +231,7 @@ def mean2d_numba_seq2(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.
             i, j = int(i), int(j)
             N[i, j] += one
             H[i, j] += weights[t]
-    
+
     for i in range(bins[0]):
         for j in range(bins[1]):
             if N[i, j] > zero:
@@ -264,10 +264,10 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
     delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
     delta0 = dtype(delta0)
     delta1 = dtype(delta1)
-    
+
     for t in nb.prange(tracks.shape[1]):
         thread = nb.np.ufunc.parallel._get_thread_id()
-        
+
         if logk:
             i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
         else:
@@ -281,7 +281,7 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
 
     # do the summation
     N = thread_N.sum(axis=0)
-    H = thread_H.sum(axis=0)    
+    H = thread_H.sum(axis=0)
     for i in range(bins[0]):
         for j in range(bins[1]):
             if N[i, j] > zero:
