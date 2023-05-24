@@ -2,6 +2,7 @@ import gc
 
 import numba
 import numpy as np
+import numba as nb
 from numba import njit
 #from np.fft import fftfreq, fftn, ifftn
 from scipy.fft import fftfreq, fftn
@@ -161,13 +162,14 @@ def numba_cic_3D(positions, density, boxsize, weights=None):
 
 
 @njit(nogil=True, parallel=False)
-def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
+def mean2d_numba_seq1(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
     """
     Compute the mean number of modes per 2D bin.
     This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
     """
     tracks = tracks.astype(dtype)
     ranges = ranges.astype(dtype)
+    weights = weights.astype(dtype)
     H = np.zeros((bins[0], bins[1]), dtype=dtype)
     N = np.zeros((bins[0], bins[1]), dtype=dtype)
     if logk:
@@ -190,6 +192,99 @@ def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.f
     for i in range(bins[0]):
         for j in range(bins[1]):
             if N[i, j] > 0.:
+                H[i, j] /= N[i, j]
+    return H, N
+
+@njit(parallel=False, fastmath=True, nogil=True)
+def mean2d_numba_seq2(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
+    """
+    weights? nogil? fastmath?
+    Compute the mean number of modes per 2D bin.
+    This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
+    """
+    tracks = tracks.astype(dtype)
+    ranges = ranges.astype(dtype)
+    weights = weights.astype(dtype)
+    bins_dt = bins.astype(dtype)
+    zero = dtype(0.)
+    one = dtype(1.)
+    
+    H = np.zeros((bins[0], bins[1]), dtype=dtype)
+    N = np.zeros((bins[0], bins[1]), dtype=dtype)
+    if logk:
+        delta0 = 1./(np.log(ranges[0, 1]/ranges[0, 0]) / bins[0])
+    else:
+        delta0 = 1./((ranges[0, 1] - ranges[0, 0]) / bins[0])
+    delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
+    delta0 = dtype(delta0)
+    delta1 = dtype(delta1)
+    
+    for t in range(tracks.shape[1]):
+        
+        if logk:
+            i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
+        else:
+            i = (tracks[0, t] - ranges[0, 0]) * delta0
+        j = (tracks[1, t] - ranges[1, 0]) * delta1
+
+        if zero <= i < bins_dt[0] and zero <= j < bins_dt[1]:
+            i, j = int(i), int(j)
+            N[i, j] += one
+            H[i, j] += weights[t]
+    
+    for i in range(bins[0]):
+        for j in range(bins[1]):
+            if N[i, j] > zero:
+                H[i, j] /= N[i, j]
+    return H, N
+
+
+@njit(parallel=True, fastmath=True)
+#def mean2d_numba_parallel(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32): # tuks
+def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
+    """
+    Compute the mean number of modes per 2D bin.
+    This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
+    """
+    tracks = tracks.astype(dtype)
+    ranges = ranges.astype(dtype)
+    weights = weights.astype(dtype)
+    bins_dt = bins.astype(dtype)
+    zero = dtype(0.)
+    one = dtype(1.)
+
+    #nb.set_num_threads(16)
+    nthread = nb.get_num_threads()
+    thread_H = np.zeros((nthread, bins[0], bins[1]), dtype=dtype)
+    thread_N = np.zeros((nthread, bins[0], bins[1]), dtype=dtype)
+    if logk:
+        delta0 = 1./(np.log(ranges[0, 1]/ranges[0, 0]) / bins[0])
+    else:
+        delta0 = 1./((ranges[0, 1] - ranges[0, 0]) / bins[0])
+    delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
+    delta0 = dtype(delta0)
+    delta1 = dtype(delta1)
+    
+    for t in nb.prange(tracks.shape[1]):
+        thread = nb.np.ufunc.parallel._get_thread_id()
+        
+        if logk:
+            i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
+        else:
+            i = (tracks[0, t] - ranges[0, 0]) * delta0
+        j = (tracks[1, t] - ranges[1, 0]) * delta1
+
+        if zero <= i < bins_dt[0] and zero <= j < bins_dt[1]:
+            i, j = int(i), int(j)
+            thread_N[thread, i, j] += one
+            thread_H[thread, i, j] += weights[t]
+
+    # do the summation
+    N = thread_N.sum(axis=0)
+    H = thread_H.sum(axis=0)    
+    for i in range(bins[0]):
+        for j in range(bins[1]):
+            if N[i, j] > zero:
                 H[i, j] /= N[i, j]
     return H, N
 
