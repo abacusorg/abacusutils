@@ -862,6 +862,8 @@ class AbacusHOD:
         # define bins
         Lbox = self.lbox
         k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, config['power_params']['k_hMpc_max'], config['power_params']['nbins_k'], config['power_params']['nbins_mu'], config['power_params']['logk'])
+        k_binc = 0.5*(k_bin_edges[1:]+k_bin_edges[:-1])
+        mu_binc = 0.5*(mu_bin_edges[1:]+mu_bin_edges[:-1])
 
         # get file names
         if not config['power_params']['logk']:
@@ -878,13 +880,27 @@ class AbacusHOD:
             power_rsd_ij_fn = save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
             power_tr_fn = save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
             power_ij_fn = save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+        pk_fns = [power_rsd_tr_fn, power_rsd_ij_fn, power_tr_fn, power_ij_fn]
+        for fn in pk_fns:
+            try:
+                assert np.isclose(asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']), f"Mismatching file: {str(fn)}"
+            except FileNotFoundError:
+                pass
 
         if load_presaved:
             pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
             pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
+            assert np.allclose(k_binc, pk_rsd_tr_dict['k_binc']), f"Mismatching file: {str(power_rsd_tr_fn)}"
+            assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
+            assert np.allclose(mu_binc, pk_rsd_tr_dict['mu_binc']), f"Mismatching file: {str(power_rsd_tr_fn)}"
+            assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
             if config['HOD_params']['want_rsd']:
                 pk_tr_dict = asdf.open(power_tr_fn)['data']
                 pk_ij_dict = asdf.open(power_ij_fn)['data']
+                assert np.allclose(k_binc, pk_tr_dict['k_binc']), f"Mismatching file: {str(power_tr_fn)}"
+                assert np.allclose(k_binc, pk_ij_dict['k_binc']), f"Mismatching file: {str(power_ij_fn)}"
+                assert np.allclose(mu_binc, pk_tr_dict['mu_binc']), f"Mismatching file: {str(power_tr_fn)}"
+                assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), f"Mismatching file: {str(power_ij_fn)}"
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
@@ -899,7 +915,8 @@ class AbacusHOD:
                 # get power spectra for this tracer
                 pk_rsd_tr_dict = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config)
                 pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
-
+                assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
+                assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
                 mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False,
@@ -913,6 +930,8 @@ class AbacusHOD:
                     # get power spectra for this tracer
                     pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
                     pk_ij_dict = asdf.open(power_ij_fn)['data']
+                    assert np.allclose(k_binc, pk_ij_dict['k_binc']), f"Mismatching file: {str(power_ij_fn)}"
+                    assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), f"Mismatching file: {str(power_ij_fn)}"
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
@@ -928,7 +947,6 @@ class AbacusHOD:
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv_field
         from .zcv.tracer_power import get_tracer_power
-        from ..analysis.power_spectrum import get_k_mu_edges
         from .zcv.get_xi_from_pk import pk_to_xi
 
         # compute real space and redshift space
@@ -942,8 +960,6 @@ class AbacusHOD:
         rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
 
         # define bins
-        Lbox = self.lbox
-        k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, config['power_params']['k_hMpc_max'], config['power_params']['nbins_k'], config['power_params']['nbins_mu'], config['power_params']['logk'])
 
         # construct names of files based on fields
         keynames = config['zcv_params']['fields']
@@ -990,6 +1006,11 @@ class AbacusHOD:
                 pk_tr_fns, pk_ij_fns = None, None # TODO: unsure
 
         # pass field names as a list to run_zcv
+        pks = [pk_rsd_tr_fns, pk_rsd_ij_fns, pk_tr_fns, pk_ij_fns]
+        for pk_fns in pks:
+            if pk_fns is not None:
+                for fn in pk_fns:
+                    assert np.isclose(asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']), f"Mismatching file: {str(fn)}"
         zcv_dict = run_zcv_field(pk_rsd_tr_fns, pk_rsd_ij_fns, pk_tr_fns, pk_ij_fns, config)
 
         # convert 3d power spectrum to correlation function multipoles

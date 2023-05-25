@@ -432,6 +432,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     rsd_str = "_rsd" if want_rsd else ""
     fields = np.array(["1cb", "delta", "delta2", "tidal2", "nabla2"])
     assert (fields[:len(keynames)] == keynames).all(), "Requested keynames should follow the standard order"
+    assert nmesh == config['power_params']['nmesh'], "nmesh from power_params need to match nmesh from zcv_params"
 
     # smoothing parameters
     sg_window = config['zcv_params'].get('sg_window', 21)
@@ -506,11 +507,15 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     # load the presaved window function
     data = np.load(window_fn)
     window = data['window']
+    keff = data['keff']
+    assert len(keff) == len(k_binc), f"Mismatching file: {str(window_fn)}"
+    assert np.abs(keff[-1]-k_binc[-1])/k_binc[-1] < 0.1, f"Mismatching file: {str(window_fn)}"
 
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
-    data['lptobj']
+    assert np.allclose(data['k_binc'], k_binc), f"Mismatching file: {str(zenbu_fn)}"
+    assert np.isclose(data['kcut'], kcut), f"Mismatching file: {str(zenbu_fn)}"
 
     # combine spectra drops the bias = 1 element
     pk_zz = combine_spectra(k_binc, pk_ij_zz_input, bias_vec[1:], rsd=want_rsd)
@@ -600,19 +605,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     rsd_str = "_rsd" if want_rsd else ""
     fields = np.array(["1cb", "delta", "delta2", "tidal2", "nabla2"])
     assert (fields[:len(keynames)] == keynames).all(), "Requested keynames should follow the standard order"
-
-    # smoothing parameters
-    sg_window = config['zcv_params'].get('sg_window', 21)
-    k0 = config['zcv_params'].get('k0_window', 0.618)
-    dk_cv = config['zcv_params'].get('dk_window', 0.167)
-    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
-
-    # power params
-    k_hMpc_max = config['power_params']['k_hMpc_max']
-    logk = config['power_params']['logk']
-    n_k_bins = config['power_params']['nbins_k']
-    n_mu_bins = config['power_params']['nbins_mu']
-    poles = config['power_params']['poles']
+    assert nmesh == config['power_params']['nmesh'], "nmesh from power_params need to match nmesh from zcv_params"
 
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
@@ -625,9 +618,30 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     cfg = get_cfg(sim_name, z_this, nmesh)
     cfg['p_lin_ic_file'] = str(pk_lin_fn)
     cfg['nmesh_in'] = nmesh
-    cfg['poles'] = poles
+    cfg['poles'] = config['power_params']['poles']
     cfg['surrogate_gaussian_cutoff'] = kcut
     Lbox = cfg['lbox']
+
+    # smoothing parameters
+    sg_window = config['zcv_params'].get('sg_window', 21)
+    k0 = config['zcv_params'].get('k0_window', 0.618)
+    dk_cv = config['zcv_params'].get('dk_window', 0.167)
+    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
+
+    # power params
+    k_hMpc_max = config['power_params'].get('k_hMpc_max', np.pi*nmesh/Lbox)
+    logk = config['power_params'].get('logk', False)
+    n_k_bins = config['power_params'].get('nbins_k', nmesh//2)
+    n_mu_bins = config['power_params'].get('nbins_mu', 1)
+    poles = config['power_params']['poles']
+
+    # make sure that the parameters are set correctly
+    if not (np.isclose(k_hMpc_max, np.pi*nmesh/Lbox) & logk == False & n_k_bins == nmesh//2 & n_mu_bins == 1):
+        warnings.warn("Setting the parameters correctly for Xi computation")
+        k_hMpc_max = np.pi*nmesh/Lbox
+        logk = False
+        n_k_bins = nmesh//2
+        n_mu_bins = 1
 
     # name of files to read from could add the _dk version
     zenbu_fn = save_z_dir / f"zenbu_pk{rsd_str}_ij_lpt_nmesh{nmesh:d}.npz"
@@ -670,6 +684,8 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
+    assert np.allclose(data['k_binc'], k_binc), f"Mismatching file: {str(zenbu_fn)}"
+    assert np.isclose(data['kcut'], kcut), f"Mismatching file: {str(zenbu_fn)}"
 
     # combine zenbu multipoles
     pk_zenbu = combine_spectra(k_binc, pk_ij_zenbu, bias_vec[1:], rsd=want_rsd)
@@ -774,12 +790,13 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     kcut = config['lcv_params']['kcut']
     kmax = config['lcv_params'].get('kmax_fit', 0.08)
     want_rsd = config['HOD_params']['want_rsd']
+    assert nmesh == config['power_params']['nmesh'], "nmesh from power_params need to match nmesh from lcv_params"
 
     # smoothing parameters
-    sg_window = config['zcv_params'].get('sg_window', 21)
-    k0 = config['zcv_params'].get('k0_window', 0.618)
-    dk_cv = config['zcv_params'].get('dk_window', 0.167)
-    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
+    sg_window = config['lcv_params'].get('sg_window', 21)
+    k0 = config['lcv_params'].get('k0_window', 0.618)
+    dk_cv = config['lcv_params'].get('dk_window', 0.167)
+    beta1_k = config['lcv_params'].get('beta1_k', 0.05)
 
     # power params
     k_hMpc_max = config['power_params']['k_hMpc_max']
@@ -883,6 +900,9 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     # load the presaved window function
     data = np.load(window_fn)
     window = data['window']
+    keff = data['keff']
+    assert len(keff) == len(k_binc), f"Mismatching file: {str(window_fn)}"
+    assert np.abs(keff[-1]-k_binc[-1])/k_binc[-1] < 0.1, f"Mismatching file: {str(window_fn)}"
 
     # stochasticity and model error
     shotnoise = (pk_tt_input - 2. * pk_tl_input + pk_ll_input)[0]
@@ -965,19 +985,48 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = "_rsd" if want_rsd else ""
     keynames = ['delta', 'deltamu2']
+    assert nmesh == config['power_params']['nmesh'], "nmesh from power_params need to match nmesh from lcv_params"
 
     # smoothing parameters
-    sg_window = config['zcv_params'].get('sg_window', 21)
-    k0 = config['zcv_params'].get('k0_window', 0.618)
-    dk_cv = config['zcv_params'].get('dk_window', 0.167)
-    beta1_k = config['zcv_params'].get('beta1_k', 0.05)
+    sg_window = config['lcv_params'].get('sg_window', 21)
+    k0 = config['lcv_params'].get('k0_window', 0.618)
+    dk_cv = config['lcv_params'].get('dk_window', 0.167)
+    beta1_k = config['lcv_params'].get('beta1_k', 0.05)
+
+    # read meta data
+    meta = get_meta(sim_name, redshift=z_this)
+    Lbox = meta['BoxSize']
+    z_ic = meta['InitialRedshift']
+    D_ratio = meta['GrowthTable'][z_ic]/meta['GrowthTable'][1.0]
+    cosmo = {}
+    cosmo['output'] = 'mPk mTk'
+    cosmo['P_k_max_h/Mpc'] = 20.
+    int(sim_name.split('ph')[-1])
+    for k in ('H0', 'omega_b', 'omega_cdm',
+              'omega_ncdm', 'N_ncdm', 'N_ur',
+              'n_s', 'A_s', 'alpha_s',
+              #'wa', 'w0',
+    ):
+        cosmo[k] = meta[k]
 
     # power params
-    k_hMpc_max = config['power_params']['k_hMpc_max']
-    logk = config['power_params']['logk']
-    n_k_bins = config['power_params']['nbins_k']
-    n_mu_bins = config['power_params']['nbins_mu']
+    k_hMpc_max = config['power_params'].get('k_hMpc_max', np.pi*nmesh/Lbox)
+    logk = config['power_params'].get('logk', False)
+    n_k_bins = config['power_params'].get('nbins_k', nmesh//2)
+    n_mu_bins = config['power_params'].get('nbins_mu', 1)
     poles = config['power_params']['poles']
+
+    # create save directory
+    save_dir = Path(lcv_dir) / sim_name
+    save_z_dir = save_dir / f"z{z_this:.3f}"
+
+    # make sure that the parameters are set correctly
+    if not (np.isclose(k_hMpc_max, np.pi*nmesh/Lbox) & logk == False & n_k_bins == nmesh//2 & n_mu_bins == 1):
+        warnings.warn("Setting the parameters correctly for Xi computation")
+        k_hMpc_max = np.pi*nmesh/Lbox
+        logk = False
+        n_k_bins = nmesh//2
+        n_mu_bins = 1
 
     # reconstruction algorithm
     rec_algo = config['HOD_params']['rec_algo']
@@ -989,23 +1038,6 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     # create save directory
     save_dir = Path(lcv_dir) / sim_name
     save_z_dir = save_dir / f"z{z_this:.3f}"
-
-    # read meta data
-    meta = get_meta(sim_name, redshift=z_this)
-    Lbox = meta['BoxSize']
-    z_ic = meta['InitialRedshift']
-    D_ratio = meta['GrowthTable'][z_ic]/meta['GrowthTable'][1.0]
-    np.pi*nmesh/Lbox
-    cosmo = {}
-    cosmo['output'] = 'mPk mTk'
-    cosmo['P_k_max_h/Mpc'] = 20.
-    int(sim_name.split('ph')[-1])
-    for k in ('H0', 'omega_b', 'omega_cdm',
-              'omega_ncdm', 'N_ncdm', 'N_ur',
-              'n_s', 'A_s', 'alpha_s',
-              #'wa', 'w0',
-    ):
-        cosmo[k] = meta[k]
 
     # load input linear power
     kth = meta['CLASS_power_spectrum']['k (h/Mpc)']

@@ -350,7 +350,7 @@ def main(path2config, alt_simname=None):
             lptobj = np.array([p0table, p2table, p4table])
         else:
             lptobj = lptobj.pktable
-        np.savez(zenbu_fn, pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj)
+        np.savez(zenbu_fn, pk_ij_zenbu=pk_ij_zenbu, lptobj=lptobj, k_binc=k_binc, kcut=kcut)
         print("Saved zenbu for this simulation, redshift and RSD choice.")
 
     # presave the window function

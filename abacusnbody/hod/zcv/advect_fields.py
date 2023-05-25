@@ -30,15 +30,18 @@ warnings.filterwarnings('ignore', category=AsdfWarning)
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
-def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
+def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, only_requested_fields=False):
 
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']
-    # ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
-    keynames = config['zcv_params']['fields']
+    if only_requested_fields:
+        keynames = config['zcv_params']['fields']
+        warnings.warn("Saving only requested fields. Delete pre-saved files and run again if changing `fields`.")
+    else:
+        keynames = ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
     # power params
     if alt_simname is not None:
@@ -128,10 +131,22 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
     if all(os.path.exists(fn) for fn in fields_fft_fn):
         fields_fft = []
         for i in range(len(keynames)):
-            fields_fft.append(asdf.open(fields_fft_fn[i])['data'])
+            f = asdf.open(fields_fft_fn[i])
+            fields_fft.append(f['data'])
+            header = f['header']
+            assert header['sim_name'] == sim_name, f"Mismatch in the files: {str(fields_fft_fn[i])}"
+            assert np.isclose(header['Lbox'], Lbox), f"Mismatch in the file: {str(fields_fft_fn[i])}"
+            assert header['nmesh'] == nmesh, f"Mismatch in the file: {str(fields_fft_fn[i])}"
+            assert np.isclose(header['kcut'], kcut), f"Mismatch in the file: {str(fields_fft_fn[i])}"
+            assert header['compensated'] == compensated, f"Mismatch in the file: {str(fields_fft_fn[i])}"
+            assert header['interlaced'] == interlaced, f"Mismatch in the file: {str(fields_fft_fn[i])}"
+            assert header['paste'] == paste, f"Mismatch in the file: {str(fields_fft_fn[i])}"
     else:
         # load density field and displacements
         f = asdf.open(ic_fn)
+        header = f['header']
+        assert header['nmesh'] == nmesh, "Mismatch in the file: {str(ic_fn)}"
+        assert np.isclose(header['kcut'], kcut), "Mismatch in the file: {str(ic_fn)}"
         disp_pos = np.zeros((nmesh**3, 3), np.float32)
         disp_pos[:, 0] = f['data']['disp_x'][:, :, :].flatten() * D
         disp_pos[:, 1] = f['data']['disp_y'][:, :, :].flatten() * D
@@ -169,6 +184,9 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False):
                 w = None
             else:
                 f = asdf.open(fields_fn)
+                header = f['header']
+                assert header['nmesh'] == nmesh, "Mismatch in the file: {str(fields_fn)}"
+                assert np.isclose(header['kcut'], kcut), "Mismatch in the file: {str(fields_fn)}"
                 w = f['data'][keynames[i]][:, :, :].flatten()
                 f.close()
             field_fft = (get_field_fft(disp_pos, Lbox, nmesh, paste, w, W, compensated, interlaced))
@@ -276,5 +294,6 @@ if __name__ == "__main__":
     parser.add_argument('--want_rsd', help='Include RSD effects?', action='store_true')
     parser.add_argument('--alt_simname', help='Alternative simulation name')
     parser.add_argument('--save_3D_power', help='Record full 3D power spectrum', action='store_true')
+    parser.add_argument('--only_requested_fields', help='Save only the requested fields in the yaml file (not recommended)', action='store_true')
     args = vars(parser.parse_args())
     main(**args)
