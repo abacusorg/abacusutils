@@ -1,3 +1,7 @@
+"""
+tuks poles and rfft and in the other functions too and get rid of k_box and mu box for most -- only exception is expand poles
+and also make the prepare steps easier (and for zenbu Xi too)
+"""
 import gc
 
 import numba
@@ -5,7 +9,7 @@ import numpy as np
 import numba as nb
 from numba import njit
 #from np.fft import fftfreq, fftn, ifftn
-from scipy.fft import fftfreq, fftn
+from scipy.fft import fftfreq, fftn, rfftfreq, rfftn
 from scipy.special import legendre
 
 from .tsc import tsc_parallel
@@ -161,151 +165,158 @@ def numba_cic_3D(positions, density, boxsize, weights=None):
             density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
 
 
-@njit(nogil=True, parallel=False)
-def mean2d_numba_seq1(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
+@njit
+def factorial_slow(x):
+    """ 
+    Computes factorial assuming x integer
     """
-    Compute the mean number of modes per 2D bin.
-    This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
+    n = 1
+    for i in range(2, x+1):
+        n *= i
+    return n
+
+LOOKUP_TABLE = np.array([
+    1, 1, 2, 6, 24, 120, 720, 5040, 40320,
+    362880, 3628800, 39916800, 479001600,
+    6227020800, 87178291200, 1307674368000,
+    20922789888000, 355687428096000, 6402373705728000,
+    121645100408832000, 2432902008176640000], dtype='int64')
+
+@nb.jit
+def factorial(n):
+    """ 
+    Computes factorial assuming n integer
     """
-    tracks = tracks.astype(dtype)
-    ranges = ranges.astype(dtype)
-    weights = weights.astype(dtype)
-    H = np.zeros((bins[0], bins[1]), dtype=dtype)
-    N = np.zeros((bins[0], bins[1]), dtype=dtype)
-    if logk:
-        delta0 = 1./(np.log(ranges[0, 1]/ranges[0, 0]) / bins[0])
-    else:
-        delta0 = 1./((ranges[0, 1] - ranges[0, 0]) / bins[0])
-    delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
-    # Nw = len(weights)
-    for t in range(tracks.shape[1]):
-        if logk:
-            i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
+    if n > 20:
+        raise ValueError
+    return LOOKUP_TABLE[n]
+
+@njit
+def n_choose_k(n, k):
+    """ 
+    Computes binomial coefficient assuming n, k integers
+    """
+    return factorial(n)//(factorial(k)*factorial(n-k))
+
+@njit
+def P_n(x, n, dtype=np.float32):
+    """ 
+    Computes Legendre polynomial for some squared x quantity (maximum tested n is 10)
+    """
+    sum = dtype(0.)
+    for k in range(n//2+1):
+        factor = dtype(n_choose_k(n, k) * n_choose_k(2*n - 2*k, n))
+        if k % 2 == 0:
+            sum += factor*x**(dtype(0.5*(n-2*k)))
         else:
-            i = (tracks[0, t] - ranges[0, 0]) * delta0
-        j = (tracks[1, t] - ranges[1, 0]) * delta1
+            sum -= factor*x**(dtype(0.5*(n-2*k)))
+    return dtype(0.5**n)*sum
 
-        if 0. <= i < bins[0] and 0. <= j < bins[1]:
-            N[int(i), int(j)] += 1.
-            H[int(i), int(j)] += weights[t]
+            
+@numba.njit(parallel=True, fastmath=True)
+def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32):
+    '''
+    Count modes in (k,mu) bins for a 3D rfft mesh of shape (n1d, n1d, n1d//2+1).
 
-    for i in range(bins[0]):
-        for j in range(bins[1]):
-            if N[i, j] > 0.:
-                H[i, j] /= N[i, j]
-    return H, N
+    The k and mu values are constructed on the fly.  We use the monotonicity of
+    k and mu with respect to kz to accelerate the bin search.
 
-@njit(parallel=False, fastmath=True, nogil=True)
-def mean2d_numba_seq2(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
-    """
-    weights? nogil? fastmath?
-    Compute the mean number of modes per 2D bin.
-    This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
-    """
-    tracks = tracks.astype(dtype)
-    ranges = ranges.astype(dtype)
-    weights = weights.astype(dtype)
-    bins_dt = bins.astype(dtype)
-    zero = dtype(0.)
-    one = dtype(1.)
+    The main opportunity we're not taking advantage of here is an eightfold
+    symmetry in k-space. One just has to take care to single count the boundary
+    modes and double count the others, as one does with the rfft symmetry.
+    '''
 
-    H = np.zeros((bins[0], bins[1]), dtype=dtype)
-    N = np.zeros((bins[0], bins[1]), dtype=dtype)
-    if logk:
-        delta0 = 1./(np.log(ranges[0, 1]/ranges[0, 0]) / bins[0])
+    kzlen = n1d//2 + 1
+    Nk = len(kedges) - 1
+
+    kedges2 = ((kedges/(2*np.pi/L))**2).astype(dtype)
+    muedges2 = (np.linspace(0., 1., Nmu+1)**2).astype(dtype)
+
+    nthread = numba.get_num_threads()
+    counts = np.zeros((nthread, Nk, Nmu), dtype=np.int64)
+    weighted_counts = np.zeros((nthread, Nk, Nmu), dtype=dtype)
+    poles = np.array(poles)
+    
+    if len(poles) > 0:
+        Np = len(poles)
+        counts_poles = np.zeros((nthread, Nk), dtype=np.int64)
+        weighted_counts_poles = np.zeros((nthread, Np, Nk), dtype=dtype)
     else:
-        delta0 = 1./((ranges[0, 1] - ranges[0, 0]) / bins[0])
-    delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
-    delta0 = dtype(delta0)
-    delta1 = dtype(delta1)
+        Np = 1 # t
+        counts_poles = np.zeros((nthread, Nk), dtype=np.int64) # t
+        weighted_counts_poles = np.zeros((nthread, Np, Nk), dtype=dtype) # t
+        #counts_poles = np.array([[]])
+        #weighted_counts_poles = np.array([])
+        
+    # Loop over all k vectors
+    for i in numba.prange(n1d):
+        tid = numba.get_thread_id()
+        i2 = i**2 if i <= n1d//2 else (n1d - i)**2
+        for j in range(n1d):
+            bk,bmu = 0,0
+            j2 = j**2 if j <= n1d//2 else (n1d - j)**2
+            for k in range(kzlen):
+                kmag2 = dtype(i2 + j2 + k**2)
+                if kmag2 > 0:
+                    invkmag2 = kmag2**-1
+                    mu2 = dtype(k**2) * invkmag2
+                else:
+                    mu2 = dtype(0.) # matches nbodykit
 
-    for t in range(tracks.shape[1]):
+                if kmag2 < kedges2[0]:
+                    continue
 
-        if logk:
-            i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
-        else:
-            i = (tracks[0, t] - ranges[0, 0]) * delta0
-        j = (tracks[1, t] - ranges[1, 0]) * delta1
+                if kmag2 >= kedges2[-1]:
+                    break
 
-        if zero <= i < bins_dt[0] and zero <= j < bins_dt[1]:
-            i, j = int(i), int(j)
-            N[i, j] += one
-            H[i, j] += weights[t]
+                while kmag2 > kedges2[bk+1]:
+                    bk += 1
 
-    for i in range(bins[0]):
-        for j in range(bins[1]):
-            if N[i, j] > zero:
-                H[i, j] /= N[i, j]
-    return H, N
+                while mu2 > muedges2[bmu+1]:
+                    bmu += 1
 
-
-@njit(parallel=True, fastmath=True)
-#def mean2d_numba_parallel(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32): # tuks
-def mean2d_numba_seq(tracks, bins, ranges, logk, weights=np.empty(0), dtype=np.float32):
-    """
-    Compute the mean number of modes per 2D bin.
-    This implementation is 8-9 times faster than np.histogramdd and can be threaded (nogil!)
-    """
-    tracks = tracks.astype(dtype)
-    ranges = ranges.astype(dtype)
-    weights = weights.astype(dtype)
-    bins_dt = bins.astype(dtype)
-    zero = dtype(0.)
-    one = dtype(1.)
-
-    #nb.set_num_threads(16)
-    nthread = nb.get_num_threads()
-    thread_H = np.zeros((nthread, bins[0], bins[1]), dtype=dtype)
-    thread_N = np.zeros((nthread, bins[0], bins[1]), dtype=dtype)
-    if logk:
-        delta0 = 1./(np.log(ranges[0, 1]/ranges[0, 0]) / bins[0])
-    else:
-        delta0 = 1./((ranges[0, 1] - ranges[0, 0]) / bins[0])
-    delta1 = 1./((ranges[1, 1] - ranges[1, 0]) / bins[1])
-    delta0 = dtype(delta0)
-    delta1 = dtype(delta1)
-
-    for t in nb.prange(tracks.shape[1]):
-        thread = nb.np.ufunc.parallel._get_thread_id()
-
-        if logk:
-            i = np.log(tracks[0, t]/ranges[0, 0]) * delta0
-        else:
-            i = (tracks[0, t] - ranges[0, 0]) * delta0
-        j = (tracks[1, t] - ranges[1, 0]) * delta1
-
-        if zero <= i < bins_dt[0] and zero <= j < bins_dt[1]:
-            i, j = int(i), int(j)
-            thread_N[thread, i, j] += one
-            thread_H[thread, i, j] += weights[t]
-
-    # do the summation
-    N = thread_N.sum(axis=0)
-    H = thread_H.sum(axis=0)
-    for i in range(bins[0]):
-        for j in range(bins[1]):
-            if N[i, j] > zero:
-                H[i, j] /= N[i, j]
-    return H, N
+                counts[tid, bk, bmu] += 1 if k == 0 else 2
+                weighted_counts[tid, bk, bmu] += weights[i, j, k] if k == 0 else dtype(2.)*weights[i, j, k]
+                if Np > 0:
+                    counts_poles[tid, bk] += 1 if k == 0 else 2
+                    for ip in range(Np):
+                        pole = poles[ip]
+                        if pole == 0:
+                            weighted_counts_poles[tid, ip, bk] += weights[i, j, k] if k == 0 else dtype(2.)*weights[i, j, k]
+                        else:
+                            pw = dtype(2*pole + 1)*P_n(mu2, pole)
+                            weighted_counts_poles[tid, ip, bk] += weights[i, j, k]*pw if k == 0 else dtype(2.)*weights[i, j, k]*pw
+    
+    counts = counts.sum(axis=0)
+    weighted_counts = weighted_counts.sum(axis=0)
+    #if Np > 0: # tuks
+    counts_poles = counts_poles.sum(axis=0)
+    weighted_counts_poles = weighted_counts_poles.sum(axis=0)
+        
+    for i in range(Nk):
+        if Np > 0:
+            if counts_poles[i] != 0:
+                for ip in range(Np):
+                    weighted_counts_poles[ip, i] /= dtype(counts_poles[i])
+        for j in range(Nmu):
+            if counts[i, j] != 0:
+                weighted_counts[i, j] /= dtype(counts[i, j])
+    return weighted_counts, counts, weighted_counts_poles, counts_poles
 
 def get_k_mu_edges(L_hMpc, k_hMpc_max, n_k_bins, n_mu_bins, logk):
 
-    # define k-binning (in 1/Mpc)
+    # define k-binning
     if logk:
         # set minimum k to make sure we cover fundamental mode
         k_hMpc_min = (1.-1.e-4)*2.*np.pi/L_hMpc
         k_bin_edges = np.geomspace(k_hMpc_min, k_hMpc_max, n_k_bins+1)
     else:
-        #dk = 2.*np.pi/L_hMpc
-        #k_bin_edges = np.linspace(k_hMpc_min, k_hMpc_max, n_k_bins+1)
         k_bin_edges = np.linspace(0., k_hMpc_max, n_k_bins+1)
-        #k_bin_edges = np.arange(0., n_k_bins+1) * dk
 
     # define mu-binning
     mu_bin_edges = np.linspace(0., 1., n_mu_bins + 1)
     # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
-    mu_bin_edges[-1] += 1.e-6
-    #k_bin_edges[1:] += 1.e-6 # includes the 2pi/L modes in the first bin, though I think they shouldn't be there...
+    mu_bin_edges[-1] += 1.e-6 # tuks maybe not necessary?
 
     return k_bin_edges, mu_bin_edges
 
@@ -324,6 +335,8 @@ def get_k_mu_box_edges(L_hMpc, n_xy, n_z, n_k_bins, n_mu_bins, k_hMpc_max, logk)
     return k_box, mu_box, k_bin_edges, mu_bin_edges
 
 def project_3d_to_poles(k_bin_edges, k_box, mu_box, logk, raw_p3d, L_hMpc, poles):
+    assert np.max(poles) <= 10, "numba implementation works up to ell = 10"
+    
     binned_poles = []
     Npoles = []
 
@@ -345,43 +358,24 @@ def calc_pk3d(field_fft, L_hMpc, k_box, mu_box, k_bin_edges, mu_bin_edges, logk,
     """
     Calculate the P3D for a given field (in h/Mpc units). Answer returned in (Mpc/h)^3 units
     """
-
+    
     # get raw power
     if field2_fft is not None:
-        raw_p3d = (np.conj(field_fft)*field2_fft).real.flatten()
+        raw_p3d = (np.conj(field_fft)*field2_fft).real
     else:
-        raw_p3d = (np.abs(field_fft)**2).flatten()
+        raw_p3d = (np.abs(field_fft)**2)
     del field_fft
     gc.collect()
 
-    # for the histograming
-    ranges = ((k_bin_edges[0], k_bin_edges[-1]),(mu_bin_edges[0], mu_bin_edges[-1]))
-    nbins2d = (len(k_bin_edges)-1, len(mu_bin_edges)-1)
-    nbins2d = np.asarray(nbins2d).astype(np.int64)
-    ranges = np.asarray(ranges).astype(np.float64)
-
     # power spectrum
-    binned_p3d, N3d = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d)
-
-    # if poles is not empty, then compute P_ell for mu_box
-    binned_poles = []
-    Npoles = []
-    if len(poles) > 0:
-        # ask Lehman; not doing this misses the +/- 1 mu modes (i.e. I want the rightmost edge of the mu bins to be inclusive)
-        ranges = ((k_bin_edges[0], k_bin_edges[-1]), (0., 1.+1.e-6)) # not doing this misses the +/- 1 mu modes in the first few bins
-        nbins2d = (len(k_bin_edges)-1, 1)
-        nbins2d = np.asarray(nbins2d).astype(np.int64)
-        ranges = np.asarray(ranges).astype(np.float64)
-        for i in range(len(poles)):
-            Ln = legendre(poles[i])
-            binned_pole, Npole = mean2d_numba_seq(np.array([k_box, mu_box]), bins=nbins2d, ranges=ranges, logk=logk, weights=raw_p3d*Ln(mu_box)*(2.*poles[i]+1.)) # ask Lehman (I think the equation is (2 ell + 1)/2 but for some reason I don't need the division by 2)
-            binned_poles.append(binned_pole * L_hMpc**3)
-        Npoles.append(Npole)
-        Npoles = np.array(Npoles)
-        binned_poles = np.array(binned_poles)
+    nmesh = raw_p3d.shape[0] # tuks rfft
+    Nmu = len(mu_bin_edges) - 1 # tuks, get rid of function args: logk, k_box, mu_box
+    binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, L_hMpc, k_bin_edges, Nmu, raw_p3d, poles)
 
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     p3d_hMpc = binned_p3d * L_hMpc**3
+    if len(poles) > 0:
+        binned_poles *= L_hMpc**3
     return p3d_hMpc, N3d, binned_poles, Npoles
 
 # @profile
@@ -440,6 +434,41 @@ def get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w):
     #field = ifftn(field_fft) # we work in fourier
     return field_fft
 
+
+def get_interlaced_field_rfft(pos, field, lbox, num_cells, paste, w):
+
+    # cell width
+    d = lbox / num_cells
+
+    # nyquist frequency
+    # kN = np.pi / d
+
+    # natural wavemodes
+    k = (fftfreq(num_cells, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
+    kz = (rfftfreq(num_cells, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
+
+    # offset by half a cell
+    field_shift = get_field(pos, lbox, num_cells, paste, w, d=0.5*d)
+    print("shift", field_shift.dtype, pos.dtype)
+    del pos, w
+    gc.collect()
+
+    # fourier transform shifted field and sum them up
+    #field_fft = fftn(field) / field.size
+    #field_shift_fft = fftn(field_shift) / field.size
+    field_fft = np.zeros((len(k), len(k), len(kz)), dtype=np.complex64)
+    field_fft[:, :, :] = rfftn(field, workers=-1) + rfftn(field_shift, workers=-1) * \
+                         np.exp(0.5 * 1j * (k[:, np.newaxis, np.newaxis] + \
+                                            k[np.newaxis, :, np.newaxis] + \
+                                            kz[np.newaxis, np.newaxis, :]) *d)
+    field_fft *= 0.5 / field.size
+    print("field fft", field_fft.dtype)
+
+    # inverse fourier transform
+    #field_fft *= field.size
+    #field = ifftn(field_fft) # we work in fourier
+    return field_fft
+
 # @profile
 def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
 
@@ -448,10 +477,12 @@ def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
     print("field, pos", field.dtype, pos.dtype)
     if interlaced:
         # get interlaced field
-        field_fft = get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w)
+        #field_fft = get_interlaced_field_fft(pos, field, lbox, num_cells, paste, w)
+        field_fft = get_interlaced_field_rfft(pos, field, lbox, num_cells, paste, w)
     else:
         # get Fourier modes from skewers grid
-        field_fft = fftn(field, workers=-1) / field.size
+        #field_fft = fftn(field, workers=-1) / field.size
+        field_fft = rfftn(field, workers=-1) / field.size
     # get rid of pos, field
     del pos, w, field
     gc.collect()
@@ -459,7 +490,8 @@ def get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced):
     # apply compensation filter
     if compensated:
         assert W is not None
-        field_fft /= (W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :])
+        #field_fft /= (W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :])
+        field_fft /= (W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :(num_cells//2+1)]) # tuks
     return field_fft
 
 def get_W_compensated(lbox, num_cells, paste, interlaced):
@@ -513,7 +545,8 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num
     gc.collect()
 
     # convert to fourier space
-    field_fft = get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced)
+    #field_fft = get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced)
+    field_rfft = get_field_fft(pos, lbox, num_cells, paste, w, W, compensated, interlaced)
     del pos
     gc.collect()
 
@@ -529,16 +562,19 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, lbox, paste, num
         gc.collect()
 
         # convert to fourier space
-        field2_fft = get_field_fft(pos2, lbox, num_cells, paste, w2, W, compensated, interlaced)
+        #field2_fft = get_field_fft(pos2, lbox, num_cells, paste, w2, W, compensated, interlaced)
+        field2_rfft = get_field_fft(pos2, lbox, num_cells, paste, w2, W, compensated, interlaced)
         del pos2
         gc.collect()
     else:
-        field2_fft = None
+        #field2_fft = None
+        field2_rfft = None
 
     # calculate power spectrum
     n_perp = n_los = num_cells # cubic box
     k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(lbox, n_perp, n_los, nbins_k, nbins_mu, k_hMpc_max, logk)
-    pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field2_fft, poles=poles)
+    #pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field2_fft, poles=poles)
+    pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_rfft, lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field2_rfft, poles=poles)
 
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
