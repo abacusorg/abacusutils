@@ -11,7 +11,6 @@ import yaml
 from abacusnbody.analysis.power_spectrum import (
     calc_pk3d,
     get_field_fft,
-    get_k_mu_box_edges,
     get_k_mu_edges,
     get_W_compensated,
 )
@@ -225,8 +224,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
         pk_ij_dict['mu_binc'] = mu_binc
 
     # get the box k and mu modes
-    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
-
+    k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    
     # initiate final arrays
     pk_auto = []
     # pk_cross = []
@@ -263,7 +262,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
                 del field_fft_i, field_fft_j; gc.collect() # noqa: E702
             else:
                 # compute power spectrum
-                pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
+                pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
                 pk3d *= field_D[i]*field_D[j]
                 binned_poles *= field_D[i]*field_D[j]
                 pk_auto.append(pk3d)

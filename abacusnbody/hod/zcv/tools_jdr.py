@@ -31,7 +31,7 @@ from scipy.optimize import minimize
 from scipy.signal import savgol_filter
 from scipy.special import legendre
 
-from abacusnbody.analysis.power_spectrum import get_k_mu_edges, get_k_mu_box_edges, project_3d_to_poles
+from abacusnbody.analysis.power_spectrum import get_k_mu_edges, project_3d_to_poles, expand_poles_to_3d, get_smoothing
 from abacusnbody.metadata import get_meta
 from .ic_fields import compress_asdf
 
@@ -138,7 +138,7 @@ def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R
                       f_growth * spectra_dict['P_kmu_deltamu2_tr'])
     elif rec_algo == "reciso":
         assert R is not None
-        S = get_smoothing(k, R)
+        S = np.exp(-k**2*R**2/2.)
         f_eff = f_growth * (1.-S)
         if rsd:
             f_eff = f_eff.reshape(1, len(k), 1)
@@ -175,7 +175,7 @@ def combine_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=
                          bias**2 * spectra_dict['P_kmu_delta_delta'])
     elif rec_algo == "reciso":
         assert R is not None
-        S = get_smoothing(k, R)
+        S = np.exp(-k**2*R**2/2.)
         f_eff = f_growth * (1.-S)
         if rsd:
             f_eff = f_eff.reshape(1, len(k), 1)
@@ -245,14 +245,13 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     out = minimize(loss, bvec0)
     return out
 
-def combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr_fns, k_box, R, rec_algo):
+def combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr_fns, nmesh, Lbox, R, rec_algo):
     """
     LCV: Given bias parameters, compute the model-model auto and cross correlation for the 3D k-vector
     """
     if rec_algo == "reciso":
-        S = get_smoothing(k_box, R)
+        S = get_smoothing(nmesh, Lbox, R)
         f_eff = f_growth*(1.-S)
-        nmesh = int(k_box.size**(1./3))
         f_eff = f_eff.reshape(nmesh, nmesh, nmesh)
     elif rec_algo == "recsym":
         f_eff = f_growth
@@ -296,12 +295,6 @@ def combine_field_cross_spectra_k3D(bias, power_tr_fns, keynames):
         power += bias[i]*asdf.open(power_tr_fns[counter])['data'][f'P_k3D_{keynames[i]}_tr']
         counter += 1
     return power
-
-def get_smoothing(k, R):
-    """
-    LCV: Smoothing scale applied in reconstruction
-    """
-    return np.exp(-k**2*R**2/2.)
 
 def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rsd, rec_algo, R, ellmax=2, kmin=0.0):
     """
@@ -394,27 +387,6 @@ def get_cfg(sim_name, z_this, nmesh):
     cfg['Cosmology'] = cosmo
     cfg['z_ic'] = z_ic
     return cfg
-
-def expand_poles_to_3d(k_binc, pk_zenbu, k_box, mu_box, only_ell0=False):
-    """
-    Expand measurements of the multipoles into a 3d array of k-vectors
-    """
-    # interpolate multipoles
-    p0spline = interp1d(k_binc.astype(np.float32), pk_zenbu[0].astype(np.float32), fill_value='extrapolate')
-    if not only_ell0:
-        p2spline = interp1d(k_binc.astype(np.float32), pk_zenbu[1].astype(np.float32), fill_value='extrapolate')
-        p4spline = interp1d(k_binc.astype(np.float32), pk_zenbu[2].astype(np.float32), fill_value='extrapolate')
-
-    # interpolate zenbu on the box
-    pk_zb = np.zeros(k_box.shape, dtype=np.float32)
-    pk_zb[:] += p0spline(k_box)
-    gc.collect()
-    if not only_ell0:
-        pk_zb[:] += p2spline(k_box)*legendre(2)(mu_box)
-        gc.collect()
-        pk_zb[:] += p4spline(k_box)*legendre(4)(mu_box)
-        gc.collect()
-    return pk_zb
 
 def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, config):
     """
@@ -650,14 +622,13 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     # file to save to
     power_cv_tr_fn = Path(save_z_dir) / f"power{rsd_str}_ZCV_tr_nmesh{nmesh:d}.asdf"
 
-    # get the box k and mu modes
-    n_perp = n_los = nmesh
-    k_box, mu_box, k_bins, mu_bins = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
+    # define k bins
+    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = 0.5*(k_bins[1:]+k_bins[:-1])
 
     # project 3d measurements in real space to monopole
     pk_nn = asdf.open(power_tr_fns[0])['data']['P_k3D_tr_tr']
-    pk_nn = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_nn.flatten(), Lbox, poles=[0])[0].flatten()/Lbox**3
+    pk_nn = project_3d_to_poles(k_bins, pk_nn, Lbox, poles=[0])[0].flatten()/Lbox**3
     print("pk_nn", pk_nn[:10])
     pk_ij = np.zeros((15, len(pk_nn)))
     counter = 0
@@ -667,7 +638,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
                 continue
             print("projecting", keynames[i], keynames[j])
             pk = asdf.open(power_ij_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}']
-            pk = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk.flatten(), Lbox, poles=[0])
+            pk = project_3d_to_poles(k_bins, pk, Lbox, poles=[0])
             pk_ij[counter] = pk[0].flatten()/Lbox**3
             print("pk_ij", pk_ij[counter, :10])
             nmodes = pk[1].flatten()
@@ -697,13 +668,14 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     pk_zn = combine_field_cross_spectra_k3D(bias_vec, power_rsd_tr_fns, keynames)
 
     # project 3D power spectra into multipoles
-    pk_nn_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_nn.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
-    pk_zn_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_zn.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
+    pk_nn_proj = project_3d_to_poles(k_bins, pk_nn, Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
+    pk_zn_proj = project_3d_to_poles(k_bins, pk_zn, Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
     del pk_zn; gc.collect() # noqa: E702
-    pk_zz_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_zz.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
+    pk_zz_proj = project_3d_to_poles(k_bins, pk_zz, Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
 
     # expand zenbu to 3D power spectrum
-    pk_zz[:, :, :] -= (expand_poles_to_3d(k_binc, pk_zenbu, k_box, mu_box)/Lbox**3).reshape(nmesh, nmesh, nmesh)
+    assert np.min(np.diff(k_binc)) == np.max(np.diff(k_binc)), "For custom interpolation, need equidistant k-values"
+    pk_zz[:, :, :] -= expand_poles_to_3d(k_binc, pk_zenbu, nmesh, Lbox, np.array(poles))/np.float32(Lbox**3)
 
     # disconnected covariance
     if want_rsd:
@@ -734,7 +706,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     beta_smooth = np.zeros_like(beta_damp)
     for i in range(beta_smooth.shape[0]):
         beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
-    beta_smooth = expand_poles_to_3d(k_binc, beta_smooth, k_box, mu_box, only_ell0=True).reshape(pk_nn.shape)
+    beta_smooth = expand_poles_to_3d(k_binc, beta_smooth, nmesh, Lbox, np.array([0]))
 
     # get reduced fields
     pk_nn -= beta_smooth * pk_zz
@@ -753,7 +725,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     print("compressed")
 
     # project to multipoles
-    pk_nn_betasmooth, nmodes = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_nn.flatten(), Lbox, poles)
+    pk_nn_betasmooth, nmodes = project_3d_to_poles(k_bins, pk_nn, Lbox, poles)
     pk_nn = pk_nn_proj.reshape(1, len(poles), len(k_binc))
     pk_zz = pk_zz_proj
     pk_zn = pk_zn_proj
@@ -878,7 +850,7 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
 
     # get linear prediction for the multipoles
     if rec_algo == "reciso":
-        S = get_smoothing(kth, R)
+        S = np.exp(-kth**2*R**2/2.)
         f_eff = f_growth*(1.-S)
     elif rec_algo == "recsym":
         f_eff = f_growth
@@ -1043,6 +1015,15 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     kth = meta['CLASS_power_spectrum']['k (h/Mpc)']
     pk_z1 = meta['CLASS_power_spectrum']['P (Mpc/h)^3']
     print("how many ks are saved", len(kth))
+
+    # make the k-values equidistant
+    choice = kth < np.sqrt(3.)*1.2*np.pi*nmesh/Lbox # sqrt(3)*1.2*Nyquist
+    kth, pk_z1 = kth[choice], pk_z1[choice]
+    kth_new = np.arange(kth.min(), kth.max(), np.min(np.diff(kth)))
+    pk_z1_new = np.interp(kth_new, kth, pk_z1)
+    kth, pk_z1_new = kth_new, pk_z1_new
+    
+    # rewind back to initial redshift of the simulation
     p_m_lin = D_ratio**2*pk_z1
 
     # apply gaussian cutoff to linear power
@@ -1069,19 +1050,12 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     else:
         np.log(k_bins[1]/k_bins[0])
 
-    # name of files to read from
-    save_dir / f"window_nmesh{nmesh:d}.npz"
-
     # file to save to
     power_cv_tr_fn = Path(save_z_dir) / f"power{rsd_str}_LCV_tr_{rec_algo}_nmesh{nmesh:d}.asdf"
 
-    # get the box k and mu modes
-    n_perp = n_los = nmesh
-    k_box, mu_box, _, _ = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk) # could get rid of kbins
-
     # compute bias from the monopole
     pk_tt = asdf.open(power_rsd_tr_fns[0])['data']['P_k3D_tr_tr']
-    pk_tt = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_tt.flatten(), Lbox, poles=[0])[0].flatten()/Lbox**3
+    pk_tt = project_3d_to_poles(k_bins, pk_tt, Lbox, poles=[0])[0].flatten()/Lbox**3
     pk_ij = {}
     counter = 0
     for i in range(len(keynames)):
@@ -1090,7 +1064,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
                 continue
             print("projecting", i, j)
             pk = asdf.open(power_lin_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}']
-            pk = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk.flatten(), Lbox, poles=[0])
+            pk = project_3d_to_poles(k_bins, pk, Lbox, poles=[0])
             pk_ij[f"P_ell_{keynames[i]}_{keynames[j]}"] = (pk[0].flatten()/Lbox**3).reshape(1, len(pk_tt), 1)
             nmodes = pk[1].flatten()
             counter += 1
@@ -1102,7 +1076,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # get linear prediction
     if rec_algo == "reciso":
-        S = get_smoothing(kth, R)
+        S = np.exp(-kth**2*R**2/2.)
         f_eff = f_growth*(1.-S)
     elif rec_algo == "recsym":
         f_eff = f_growth
@@ -1110,16 +1084,17 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     assert want_rsd, "Real space not implemented"
 
     # calculate the 3d power spectra
-    pk_tt, pk_ll, pk_lt = combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr_fns, k_box, R, rec_algo)
+    pk_tt, pk_ll, pk_lt = combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr_fns, nmesh, Lbox, R, rec_algo)
 
     # project 3D power spectra to multipoles
-    pk_lt_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_lt.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
+    pk_lt_proj = project_3d_to_poles(k_bins, pk_lt, Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
     del pk_lt; gc.collect() # noqa: E702
-    pk_tt_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_tt.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
-    pk_ll_proj = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_ll.flatten(), Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
+    pk_tt_proj = project_3d_to_poles(k_bins, pk_tt, Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
+    pk_ll_proj = project_3d_to_poles(k_bins, pk_ll, Lbox, poles)[0].reshape(len(poles), len(k_binc))/Lbox**3
 
     # expand multipole to 3D power spectra (this is the C-mu_C part)
-    pk_ll[:, :, :] -= (expand_poles_to_3d(kth, p_m_lin_poles, k_box, mu_box)/Lbox**3).reshape(nmesh, nmesh, nmesh)
+    assert np.min(np.diff(kth)) == np.max(np.diff(kth)), "For custom interpolation, need equidistant k-values"
+    pk_ll[:, :, :] -= expand_poles_to_3d(kth, p_m_lin_poles, nmesh, Lbox, np.array(poles))/np.float32(Lbox**3)
     gc.collect()
 
     # disconnected covariance
@@ -1142,7 +1117,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     beta_smooth = np.zeros_like(beta_damp)
     for i in range(beta_smooth.shape[0]):
         beta_smooth[i, :] = savgol_filter(beta_damp.T[:, i], sg_window, 3)
-    beta_smooth = expand_poles_to_3d(k_binc, beta_smooth, k_box, mu_box, only_ell0=True).reshape(pk_tt.shape)
+    beta_smooth = expand_poles_to_3d(k_binc, beta_smooth, nmesh, Lbox, np.array([0]))
 
     # cross-correlation coefficient
     with np.errstate(divide='ignore'):
@@ -1167,7 +1142,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     print("compressed")
 
     # project to multipoles
-    pk_tt_betasmooth, nmodes = project_3d_to_poles(k_bins, k_box, mu_box, logk, pk_tt.flatten(), Lbox, poles)
+    pk_tt_betasmooth, nmodes = project_3d_to_poles(k_bins, pk_tt, Lbox, poles)
     pk_tt = pk_tt_proj.reshape(1, len(poles), len(k_binc))
 
     # changing format (note that projection multiplies by L^3, so we get rid of that)

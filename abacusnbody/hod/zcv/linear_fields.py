@@ -10,10 +10,10 @@ from pathlib import Path
 import asdf
 import numpy as np
 import yaml
-from scipy.fft import fftn
+from scipy.fft import rfftn
+import numba as nb
 
-from abacusnbody.analysis.power_spectrum import (calc_pk3d, get_k_mu_box_edges, get_k_mu_edges,
-                                                 get_W_compensated)
+from abacusnbody.analysis.power_spectrum import (calc_pk3d, get_k_mu_edges, get_delta_mu2, get_W_compensated)
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
@@ -49,9 +49,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     # get a few parameters for the simulation
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
-    meta['InitialRedshift']
-    np.pi*nmesh/Lbox
-
+    
     # define k, mu bins
     n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
@@ -84,17 +82,17 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     f = asdf.open(ic_fn)
     delta = f['data']['dens'][:, :, :]
     print("mean delta", np.mean(delta))
-
+    
     # do fourier transform
-    delta_fft = fftn(delta, workers=-1)/nmesh**3
+    delta_fft = rfftn(delta, workers=-1)/np.float32(nmesh**3)
     del delta; gc.collect() # noqa: E702
 
     # get the box k and mu modes
-    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
+    k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
 
-    # do mu_box**2 delta and get the three power spectra from this
-    fields = {'delta': delta_fft, 'deltamu2': delta_fft*mu_box.reshape(delta_fft.shape)**2}
-
+    # do mu**2 delta and get the three power spectra from this
+    fields_fft = {'delta': delta_fft, 'deltamu2': get_delta_mu2(delta_fft, nmesh)}
+    
     # save the power spectra
     pk_lin_dict = {}
     pk_lin_dict['k_binc'] = k_binc
@@ -107,7 +105,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
 
             if save_3D_power:
                 # compute
-                pk3d = np.array((fields[keynames[i]]*np.conj(fields[keynames[j]])).real, dtype=np.float32)
+                pk3d = np.array((fields_fft[keynames[i]]*np.conj(fields_fft[keynames[j]])).real, dtype=np.float32)
 
                 # record
                 pk_ij_dict = {}
@@ -122,7 +120,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
 
             else:
                 # compute power spectrum
-                pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields[keynames[i]], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=fields[keynames[j]], poles=poles)
+                pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields_fft[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=fields_fft[keynames[j]], poles=poles)
                 pk_lin_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
                 pk_lin_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
                 pk_lin_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles

@@ -4,13 +4,13 @@ from pathlib import Path
 
 import asdf
 import numpy as np
-from scipy.fft import fftn
+from scipy.fft import rfftn
 
 from abacusnbody.analysis.power_spectrum import (
     calc_pk3d,
     get_field_fft,
-    get_k_mu_box_edges,
     get_k_mu_edges,
+    get_delta_mu2,
     get_W_compensated,
 )
 from abacusnbody.metadata import get_meta
@@ -169,10 +169,10 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         compress_asdf(str(power_tr_fn), pk_tr_dict, header)
     else:
         # get the box k and mu modes
-        k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
+        k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
 
         # compute the galaxy auto rsd poles
-        pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
+        pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=poles)
         pk_tr_dict['P_kmu_tr_tr'] = pk3d
         pk_tr_dict['N_kmu_tr_tr'] = N3d
         pk_tr_dict['P_ell_tr_tr'] = binned_poles
@@ -208,7 +208,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         else:
 
             # compute power spectrum
-            pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
+            pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=tr_field_fft, poles=poles)
             pk3d *= field_D[i]
             binned_poles *= field_D[i]
             pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
@@ -332,20 +332,18 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     print("mean delta", np.mean(delta))
 
     # do fourier transform
-    delta_fft = fftn(delta, workers=-1)/nmesh**3
+    delta_fft = rfftn(delta, workers=-1)/nmesh**3
     del delta; gc.collect() # noqa: E702
 
     # get the box k and mu modes
-    k_box, mu_box, k_bin_edges, mu_bin_edges = get_k_mu_box_edges(Lbox, n_perp, n_los, n_k_bins, n_mu_bins, k_hMpc_max, logk)
+    k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
 
-    # do mu_box**2 delta and get the three power spectra from this
-    fields = {'delta': delta_fft, 'deltamu2': delta_fft*mu_box.reshape(delta_fft.shape)**2}
+    # do mu**2 delta and get the three power spectra from this
+    fields = {'delta': delta_fft, 'deltamu2': get_delta_mu2(delta_fft, nmesh)}
 
     # compute the galaxy auto rsd poles
     print("Computing auto-correlation of tracer")
     if save_3D_power:
-        del k_box, mu_box; gc.collect() # noqa: E702
-
         power_tr_fns = []
 
         # compute
@@ -364,7 +362,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
         power_tr_fns.append(power_tr_fn)
         compress_asdf(str(power_tr_fn), pk_tr_dict, header)
     else:
-        pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=None, poles=poles)
+        pk3d, N3d, binned_poles, Npoles = calc_pk3d(tr_field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=poles)
         pk_tr_dict['P_kmu_tr_tr'] = pk3d
         pk_tr_dict['N_kmu_tr_tr'] = N3d
         pk_tr_dict['P_ell_tr_tr'] = binned_poles
@@ -391,7 +389,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
             compress_asdf(str(power_tr_fn), pk_tr_dict, header)
         else:
             # compute power spectrum
-            pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields[keynames[i]], Lbox, k_box, mu_box, k_bin_edges, mu_bin_edges, logk, field2_fft=tr_field_fft, poles=poles)
+            pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=tr_field_fft, poles=poles)
             pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
             pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
             pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
