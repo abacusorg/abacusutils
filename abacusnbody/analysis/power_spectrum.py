@@ -170,6 +170,7 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, L_hMpc, poles):
     assert np.max(poles) <= 10, "numba implementation works up to ell = 10"
     nmesh = raw_p3d.shape[0]
     poles = np.array(poles)
+    raw_p3d = np.asarray(raw_p3d)
     binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, L_hMpc, k_bin_edges, Nmu=1, weights=raw_p3d, poles=poles)
     binned_poles *= L_hMpc**3
     return binned_poles, Npoles
@@ -183,7 +184,6 @@ def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
     assert np.abs((k_ell[1]-k_ell[0]) - (k_ell[-1]-k_ell[-2])) < 1.e-6
     kzlen = n1d//2 + 1
     numba.get_num_threads()
-    len(poles)
     Pk = np.zeros((n1d, n1d, kzlen), dtype=dtype)
     dk = dtype(2. * np.pi / L)
     k_ell = k_ell.astype(dtype)
