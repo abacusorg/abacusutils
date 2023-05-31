@@ -41,13 +41,18 @@ def subsample_halos(m, MT):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
     if MT:
-        mask1 = x < 11.4
-        mask2 = x < 11.6
-        downfactors[mask1] = 0.2/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
-        downfactors[mask2&(~mask1)] = 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.3)*25))
-        downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.7)*10))
-        # save all halos that could host a satellite
-        # downfactors[x>11.2] = 1
+        # # for elgs
+        # mask1 = x < 11.4
+        # mask2 = x < 11.6
+        # downfactors[mask1] = 0.2/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
+        # downfactors[mask2&(~mask1)] = 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.3)*25))
+        # downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.7)*10))
+        
+        # for bgs
+        mask1 = x < 11.0
+        mask2 = x < 11.2
+        downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
+        downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
         return downfactors
     else:
         downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 11.8)*10)) # LRG only, default 12.3, set to 12.0 for z = 1.1
@@ -283,7 +288,7 @@ def do_Menv_from_tree(allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthrea
 
 
 def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ranks, want_AB, want_shear, shearmark, cleaning, newseed,
-                 halo_lc=False, nthread = 1, overwrite = 1, mcut = 1e11, rad_outer = 5.):
+                 halo_lc=False, nthread = 1, overwrite = 1, mcut = 1e11, rad_outer = 10):
     outfilename_halos = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     outfilename_particles = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushod_oldfenv'
     print("processing slab ", i)
@@ -495,6 +500,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     idh_parts = np.full(len_old, -1)
     deltach_parts = np.full(len_old, -1.0)
     fenvh_parts = np.full(len_old, -1.0)
+    shearh_parts = np.full(len_old, -1.0)
 
     print("compiling particle subsamples")
     start_tracker = 0
@@ -516,6 +522,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
             idh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['id'][j]
             deltach_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['deltac_rank'][j]
             fenvh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['fenv_rank'][j]
+            shearh_parts[halos_pstart[j]: halos_pstart[j] + halos_pnum[j]] = halos['shear_rank'][j]
 
             # updating the pstart, pnum, for the halos
             halos_pstart_new[j] = start_tracker
@@ -640,6 +647,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
     parts['randoms'] = np.random.random(len(parts))
     parts['halo_deltac'] = deltach_parts[mask_parts]
     parts['halo_fenv'] = fenvh_parts[mask_parts]
+    parts['halo_shear'] = shearh_parts[mask_parts]
 
     print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0),
         np.sum(parts['halo_mass'] < 0))

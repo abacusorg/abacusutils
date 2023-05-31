@@ -3,7 +3,7 @@ import time
 import numba
 import numpy as np
 import numpy.linalg as la
-from numba import njit, prange, set_num_threads
+from numba import njit
 from scipy.interpolate import interpn
 from scipy.ndimage import gaussian_filter
 
@@ -218,7 +218,6 @@ def get_tidal(dfour, karr, N_dim, R):
 
 @njit(nopython=True)
 def get_shear_nb(tidr, N_dim):
-    set_num_threads(32)
     shear = np.zeros(shape=(N_dim, N_dim, N_dim), dtype=np.float64)
     for a in range(N_dim):
         for b in range(N_dim):
