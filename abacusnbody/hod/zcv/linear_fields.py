@@ -11,7 +11,6 @@ import asdf
 import numpy as np
 import yaml
 from scipy.fft import rfftn
-import numba as nb
 
 from abacusnbody.analysis.power_spectrum import (calc_pk3d, get_k_mu_edges, get_delta_mu2, get_W_compensated)
 from abacusnbody.metadata import get_meta
@@ -49,9 +48,8 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     # get a few parameters for the simulation
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
-    
+
     # define k, mu bins
-    n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5
@@ -82,7 +80,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     f = asdf.open(ic_fn)
     delta = f['data']['dens'][:, :, :]
     print("mean delta", np.mean(delta))
-    
+
     # do fourier transform
     delta_fft = rfftn(delta, workers=-1)/np.float32(nmesh**3)
     del delta; gc.collect() # noqa: E702
@@ -92,7 +90,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
 
     # do mu**2 delta and get the three power spectra from this
     fields_fft = {'delta': delta_fft, 'deltamu2': get_delta_mu2(delta_fft, nmesh)}
-    
+
     # save the power spectra
     pk_lin_dict = {}
     pk_lin_dict['k_binc'] = k_binc

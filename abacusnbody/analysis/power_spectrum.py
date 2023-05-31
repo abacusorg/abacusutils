@@ -1,18 +1,21 @@
 """
 # immediate important:
-make the prepare steps easier (and for zenbu Xi too) 
+make the prepare steps easier (and for zenbu Xi too)
 need to fix the array size in zcv (because now we return different stuff)
-(ask L) do documentation (maybe start with docstrings)
+(ask Lehman) do documentation (maybe start with docstrings)
+
+you might be able to speed up ic_fields
+maybe make the power nmesh not a required argument (with get) and then provide bear minimum files
 
 # immediate cosmetic:
 you could fix jdr's bias thing to be yours which would help if a user wants custom 1 delta delta2 etc.
 
-# longer-term cosmetic:
-maybe can select k_hMpc_min? 
-(maybe not) compute_power and calc_power give it directly bin_edges 
-
 # longer-term important:
 add cic parallel (should be easy) _tsc_parallel (maybe ask Lehman about this)
+
+# longer-term cosmetic:
+maybe can select k_hMpc_min?
+(maybe not) compute_power and calc_power give it directly bin_edges
 """
 
 import gc
@@ -34,7 +37,7 @@ FACTORIAL_LOOKUP_TABLE = np.array([
 
 @numba.njit
 def factorial(n):
-    """ 
+    """
     Computes factorial assuming n integer
     """
     if n > 20:
@@ -43,7 +46,7 @@ def factorial(n):
 
 @numba.njit
 def factorial_slow(x):
-    """ 
+    """
     Computes factorial assuming x integer
     """
     n = 1
@@ -53,14 +56,14 @@ def factorial_slow(x):
 
 @numba.njit
 def n_choose_k(n, k):
-    """ 
+    """
     Computes binomial coefficient assuming n, k integers
     """
     return factorial(n)//(factorial(k)*factorial(n-k))
 
 @numba.njit
 def P_n(x, n, dtype=np.float32):
-    """ 
+    """
     Computes Legendre polynomial for some squared x quantity (maximum tested n is 10)
     """
     sum = dtype(0.)
@@ -105,7 +108,7 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32, 
         poles = poles.astype(np.int64)
     counts_poles = np.zeros((nthread, Nk), dtype=np.int64)
     weighted_counts_poles = np.zeros((nthread, len(poles), Nk), dtype=dtype)
-        
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
         tid = numba.get_thread_id()
@@ -144,12 +147,12 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32, 
                         else:
                             pw = dtype(2*pole + 1)*P_n(mu2, pole)
                             weighted_counts_poles[tid, ip, bk] += weights[i, j, k]*pw if k == 0 else dtype(2.)*weights[i, j, k]*pw
-    
+
     counts = counts.sum(axis=0)
     weighted_counts = weighted_counts.sum(axis=0)
     counts_poles = counts_poles.sum(axis=0)
     weighted_counts_poles = weighted_counts_poles.sum(axis=0)
-        
+
     for i in range(Nk):
         if Np > 0:
             if counts_poles[i] != 0:
@@ -179,16 +182,16 @@ def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
     '''
     assert np.abs((k_ell[1]-k_ell[0]) - (k_ell[-1]-k_ell[-2])) < 1.e-6
     kzlen = n1d//2 + 1
-    nthread = numba.get_num_threads()
-    Np = len(poles)
+    numba.get_num_threads()
+    len(poles)
     Pk = np.zeros((n1d, n1d, kzlen), dtype=dtype)
     dk = dtype(2. * np.pi / L)
     k_ell = k_ell.astype(dtype)
     P_ell = P_ell.astype(dtype)
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
-        tid = numba.get_thread_id()
+        numba.get_thread_id()
         i2 = i**2 if i <= n1d//2 else (n1d - i)**2
         for j in range(n1d):
             j2 = j**2 if j <= n1d//2 else (n1d - j)**2
@@ -226,15 +229,15 @@ def get_smoothing(n1d, L, R, dtype=np.float32):
     Gaussian smoothing for a 3D k-vector of the form exp(-k^2 R^2/2)
     '''
     kzlen = n1d//2 + 1
-    nthread = numba.get_num_threads()
+    numba.get_num_threads()
     Sk = np.zeros((n1d, n1d, kzlen), dtype=dtype)
     dk = dtype(2. * np.pi / L)
     dk2 = dtype(dk**2)
     R2 = dtype(R**2)
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
-        tid = numba.get_thread_id()
+        numba.get_thread_id()
         i2 = i**2 if i <= n1d//2 else (n1d - i)**2
         for j in range(n1d):
             j2 = j**2 if j <= n1d//2 else (n1d - j)**2
@@ -249,12 +252,12 @@ def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
     Multiply delta by mu2
     '''
     kzlen = n1d//2 + 1
-    nthread = nb.get_num_threads()
+    numba.get_num_threads()
     delta_mu2 = np.zeros((n1d, n1d, kzlen), dtype=dtype_c)
-    
+
     # Loop over all k vectors
-    for i in nb.prange(n1d):
-        tid = nb.get_thread_id()
+    for i in numba.prange(n1d):
+        numba.get_thread_id()
         i2 = i**2 if i <= n1d//2 else (n1d - i)**2
         for j in range(n1d):
             j2 = j**2 if j <= n1d//2 else (n1d - j)**2
@@ -279,7 +282,7 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
 
     # define r bins
     r_binc = (r_bins[1:]+r_bins[:-1])*.5
-    
+
     # bin into xi_ell(r)
     nmesh = Xi.shape[0]
     poles = np.array(poles)
@@ -314,8 +317,8 @@ def calc_pk3d(field_fft, L_hMpc, k_bin_edges, mu_bin_edges, field2_fft=None, pol
     gc.collect()
 
     # power spectrum
-    nmesh = raw_p3d.shape[0] 
-    Nmu = len(mu_bin_edges) - 1 
+    nmesh = raw_p3d.shape[0]
+    Nmu = len(mu_bin_edges) - 1
     poles = np.array(poles)
     binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, L_hMpc, k_bin_edges, Nmu, raw_p3d, poles)
 
@@ -471,7 +474,7 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, L_hMpc, paste, n
     # calculate power spectrum
     k_bin_edges, mu_bin_edges = get_k_mu_edges(L_hMpc, k_hMpc_max, nbins_k, nbins_mu, logk)
     pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, L_hMpc, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles)
-    
+
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:] + mu_bin_edges[:-1])*.5

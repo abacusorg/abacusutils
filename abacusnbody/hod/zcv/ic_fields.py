@@ -187,7 +187,7 @@ def get_fields(delta_lin, Lbox, nmesh):
     delta_fft = rfftn(delta_lin, workers=-1).astype(np.complex64)
     fmean = np.mean(delta_lin)
     d = delta_lin-fmean
-    print("generated delta")
+    print("Generated delta")
 
     # get delta^2
     d2 = delta_lin * delta_lin
@@ -195,20 +195,20 @@ def get_fields(delta_lin, Lbox, nmesh):
     d2 -= fmean
     del delta_lin
     gc.collect()
-    print("generated delta^2")
+    print("Generated delta^2")
 
     # get s^2
     s2 = get_dk_to_s2(delta_fft, nmesh, Lbox)
     fmean = np.mean(s2)
     s2 -= fmean
-    print("generated s_ij s^ij")
+    print("Generated s_ij s^ij")
 
     # get n^2
     n2 = get_dk_to_n2(delta_fft, nmesh, Lbox)
-    print("generated nabla^2")
+    print("Generated nabla^2")
     return d, d2, s2, n2
 
-def main(path2config, cv_type, alt_simname=None):
+def main(path2config, cv_type, alt_simname=None, verbose=False):
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     if cv_type == "zcv":
@@ -226,6 +226,8 @@ def main(path2config, cv_type, alt_simname=None):
     else:
         sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock'] # doesn't matter
+    if verbose:
+        print("Read CV parameters")
 
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
@@ -241,6 +243,7 @@ def main(path2config, cv_type, alt_simname=None):
 
     # check if filtered ic saved
     if os.path.exists(ic_fn):
+        # load density and displacement fields
         f = asdf.open(ic_fn)
         dens = f['data']['dens'][:, :, :]
         disp_x = f['data']['disp_x'][:, :, :]
@@ -250,16 +253,21 @@ def main(path2config, cv_type, alt_simname=None):
     else:
         # load density field
         dens = load_dens(ic_dir, sim_name, nmesh)
+        if verbose:
+            print("Loaded density field")
 
         # load displacement field
         disp_x, disp_y, disp_z = load_disp(ic_dir, sim_name, nmesh)
+        if verbose:
+            print("Loaded displacement field")
 
         # apply filtering at 0.5 k_Ny
         dens = gaussian_filter(dens, nmesh, Lbox, kcut)
         disp_x = gaussian_filter(disp_x, nmesh, Lbox, kcut)
         disp_y = gaussian_filter(disp_y, nmesh, Lbox, kcut)
         disp_z = gaussian_filter(disp_z, nmesh, Lbox, kcut)
-        #print("dtype should be float32", dens.dtype, disp_x.dtype)
+        if verbose:
+            print("Applied Gaussian filter")
 
         # save filtered field using asdf compression
         header = {}
@@ -273,6 +281,8 @@ def main(path2config, cv_type, alt_simname=None):
         table['disp_y'] = disp_y
         table['disp_z'] = disp_z
         compress_asdf(str(ic_fn), table, header)
+        if verbose:
+            print("Saved filtered displacement and density fields")
 
     # not sure what the displacements are used for (maybe later?)
     del disp_x, disp_y, disp_z
@@ -297,7 +307,7 @@ def main(path2config, cv_type, alt_simname=None):
         table['nabla2'] = n2
         table['tidal2'] = s2
         compress_asdf(str(fields_fn), table, header)
-        print("Saved fields for this simulation")
+        print("Saved all filtered fields for this simulation")
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass
@@ -309,5 +319,6 @@ if __name__ == "__main__":
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     parser.add_argument('--alt_simname', help='Alternative simulation name')
     parser.add_argument('--cv_type', help='Type of control variates to use (ZelDovich or Linear)', default=DEFAULTS['cv_type'])
+    parser.add_argument('--verbose', action='store_true', help='Print out useful statements')
     args = vars(parser.parse_args())
     main(**args)

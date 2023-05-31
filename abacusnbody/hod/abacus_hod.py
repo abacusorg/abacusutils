@@ -853,6 +853,8 @@ class AbacusHOD:
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        config['power_params']['nmesh'] = config['power_params'].get(config['power_params']['nmesh'], config['zcv_params']['nmesh'])
+        assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], "`nmesh` in `power_params` and `zcv_params` should match."
 
         # create save directory
         save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
@@ -947,12 +949,14 @@ class AbacusHOD:
         # ZCV module has optional dependencies, don't import unless necessary
         from .zcv.tools_jdr import run_zcv_field
         from .zcv.tracer_power import get_tracer_power
-        from ..analysis.power_spectrum.get_xi_from_pk import pk_to_xi
+        from ..analysis.power_spectrum import pk_to_xi
 
         # compute real space and redshift space
         assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        config['power_params']['nmesh'] = config['power_params'].get(config['power_params']['nmesh'], config['zcv_params']['nmesh'])
+        assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], "`nmesh` in `power_params` and `zcv_params` should match."
 
         # create save directory
         save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']

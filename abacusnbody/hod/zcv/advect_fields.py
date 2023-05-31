@@ -66,7 +66,6 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
     # k_Ny = np.pi*nmesh/Lbox
 
     # define k, mu bins
-    n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5
@@ -225,7 +224,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
 
     # get the box k and mu modes
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
-    
+
     # initiate final arrays
     pk_auto = []
     # pk_cross = []
@@ -295,4 +294,9 @@ if __name__ == "__main__":
     parser.add_argument('--save_3D_power', help='Record full 3D power spectrum', action='store_true')
     parser.add_argument('--only_requested_fields', help='Save only the requested fields in the yaml file (not recommended)', action='store_true')
     args = vars(parser.parse_args())
-    main(**args)
+    if args['want_rsd']:
+        for want_rsd in [True, False]:
+            args['want_rsd'] = want_rsd
+            main(**args)
+    else:
+        main(**args)

@@ -55,7 +55,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     # k_Ny = np.pi*nmesh/Lbox
 
     # define k, mu bins
-    n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5
@@ -261,7 +260,6 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     np.pi*nmesh/Lbox
 
     # define k, mu bins
-    n_perp = n_los = nmesh
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bin_edges[1:]+k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:]+mu_bin_edges[:-1])*.5

@@ -29,7 +29,6 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 from scipy.signal import savgol_filter
-from scipy.special import legendre
 
 from abacusnbody.analysis.power_spectrum import get_k_mu_edges, project_3d_to_poles, expand_poles_to_3d, get_smoothing
 from abacusnbody.metadata import get_meta
@@ -1022,7 +1021,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     kth_new = np.arange(kth.min(), kth.max(), np.min(np.diff(kth)))
     pk_z1_new = np.interp(kth_new, kth, pk_z1)
     kth, pk_z1_new = kth_new, pk_z1_new
-    
+
     # rewind back to initial redshift of the simulation
     p_m_lin = D_ratio**2*pk_z1
 
