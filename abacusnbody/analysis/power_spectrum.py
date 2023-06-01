@@ -1,11 +1,10 @@
 """
 # immediate important:
 make the prepare steps easier (and for zenbu Xi too)
-need to fix the array size in zcv (because now we return different stuff)
 (ask Lehman) do documentation (maybe start with docstrings)
 
 you might be able to speed up ic_fields
-maybe make the power nmesh not a required argument (with get) and then provide bear minimum files
+maybe make the power nmesh not a required argument (with get) and then provide bare minimum files
 
 # immediate cosmetic:
 you could fix jdr's bias thing to be yours which would help if a user wants custom 1 delta delta2 etc.
@@ -23,7 +22,7 @@ import gc
 import numpy as np
 import numba
 import asdf
-from scipy.fft import rfftn, irfftn, fftfreq, rfftfreq
+from scipy.fft import rfftn, irfftn, fftfreq
 
 from .tsc import tsc_parallel
 from .cic import cic_serial
@@ -355,18 +354,18 @@ def get_field(pos, L_hMpc, nmesh, paste, w=None, d=0.):
 def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
     '''
     Expand power spectrum multipoles to a 3D power spectrum evaluated at the fundamental modes of the box.
-    '''    
+    '''
     kzlen = n1d//2 + 1
-    nthread = numba.get_num_threads()
+    numba.get_num_threads()
     dk = dtype(2. * np.pi / L)
     d = dtype(d)
-    norm = dtype(0.5/nmesh**3)
+    norm = dtype(0.5/n1d**3)
     fac = dtype(0.5 * d) * 1j
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
         #tid = numba.get_thread_id()
-        kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk 
+        kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk
         for j in range(n1d):
             ky = dtype(j)*dk if j < n1d//2 else dtype(j - n1d)*dk
             for k in range(kzlen):
