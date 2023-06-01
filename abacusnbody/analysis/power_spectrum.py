@@ -23,7 +23,7 @@ import gc
 import numpy as np
 import numba
 import asdf
-from scipy.fft import rfftn, irfftn, fftfreq, rfftfreq
+from scipy.fft import rfftn, irfftn, fftfreq
 
 from .tsc import tsc_parallel
 from .cic import cic_serial
@@ -355,18 +355,18 @@ def get_field(pos, L_hMpc, nmesh, paste, w=None, d=0.):
 def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
     '''
     Expand power spectrum multipoles to a 3D power spectrum evaluated at the fundamental modes of the box.
-    '''    
+    '''
     kzlen = n1d//2 + 1
-    nthread = numba.get_num_threads()
+    numba.get_num_threads()
     dk = dtype(2. * np.pi / L)
     d = dtype(d)
     norm = dtype(0.5/nmesh**3)
     fac = dtype(0.5 * d) * 1j
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
         #tid = numba.get_thread_id()
-        kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk 
+        kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk
         for j in range(n1d):
             ky = dtype(j)*dk if j < n1d//2 else dtype(j - n1d)*dk
             for k in range(kzlen):
