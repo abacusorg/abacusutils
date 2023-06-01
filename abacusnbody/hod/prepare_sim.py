@@ -41,18 +41,18 @@ def subsample_halos(m, MT):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
     if MT:
-        # # for elgs
-        # mask1 = x < 11.4
-        # mask2 = x < 11.6
-        # downfactors[mask1] = 0.2/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
-        # downfactors[mask2&(~mask1)] = 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.3)*25))
-        # downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.7)*10))
+        # for elgs
+        mask1 = x < 11.4
+        mask2 = x < 11.6
+        downfactors[mask1] = 0.2/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
+        downfactors[mask2&(~mask1)] = 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.3)*25))
+        downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.7)*10))
         
-        # for bgs
-        mask1 = x < 11.0
-        mask2 = x < 11.2
-        downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
-        downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
+        # # for bgs
+        # mask1 = x < 11.0
+        # mask2 = x < 11.2
+        # downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
+        # downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
         return downfactors
     else:
         downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 11.8)*10)) # LRG only, default 12.3, set to 12.0 for z = 1.1
