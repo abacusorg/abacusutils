@@ -351,14 +351,33 @@ def get_field(pos, L_hMpc, nmesh, paste, w=None, d=0.):
         field -= 1. # leads to -1 in the complex field
     return field
 
+@numba.njit(parallel=True, fastmath=True)
+def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
+    '''
+    Expand power spectrum multipoles to a 3D power spectrum evaluated at the fundamental modes of the box.
+    '''    
+    kzlen = n1d//2 + 1
+    nthread = numba.get_num_threads()
+    dk = dtype(2. * np.pi / L)
+    d = dtype(d)
+    norm = dtype(0.5/nmesh**3)
+    fac = dtype(0.5 * d) * 1j
+    
+    # Loop over all k vectors
+    for i in numba.prange(n1d):
+        #tid = numba.get_thread_id()
+        kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk 
+        for j in range(n1d):
+            ky = dtype(j)*dk if j < n1d//2 else dtype(j - n1d)*dk
+            for k in range(kzlen):
+                kz = dtype(k)*dk
+                field_fft[i, j, k] += field_shift_fft[i, j, k]*np.exp(fac * (kx + ky + kz))
+                field_fft[i, j, k] *= norm
+
 def get_interlaced_field_fft(pos, field, L_hMpc, nmesh, paste, w):
 
     # cell width
     d = L_hMpc / nmesh
-
-    # natural wavemodes
-    k = (fftfreq(nmesh, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
-    kz = (rfftfreq(nmesh, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
 
     # offset by half a cell
     field_shift = get_field(pos, L_hMpc, nmesh, paste, w, d=0.5*d)
@@ -367,12 +386,11 @@ def get_interlaced_field_fft(pos, field, L_hMpc, nmesh, paste, w):
     gc.collect()
 
     # fourier transform shifted field and sum them up
-    field_fft = np.zeros((len(k), len(k), len(kz)), dtype=np.complex64)
-    field_fft[:, :, :] = rfftn(field, workers=-1) + rfftn(field_shift, workers=-1) * \
-                         np.exp(0.5 * 1j * (k[:, np.newaxis, np.newaxis] + \
-                                            k[np.newaxis, :, np.newaxis] + \
-                                            kz[np.newaxis, np.newaxis, :]) *d)
-    field_fft *= 0.5 / field.size
+    field_fft = rfftn(field, workers=-1)
+    field_shift_fft = rfftn(field_shift, workers=-1)
+    shift_field_fft(field_fft, field_shift_fft, nmesh, L_hMpc, d)
+    del field_shift_fft
+    gc.collect()
     print("field fft", field_fft.dtype)
     return field_fft
 
