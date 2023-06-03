@@ -875,7 +875,7 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, c
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_max, nbins_k, nbins_mu, logk)
     p3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles)
     if len(poles) == 0:
-        binned_poles, Npoles = []
+        binned_poles, Npoles = [], []
     
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
