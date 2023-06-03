@@ -30,7 +30,32 @@ warnings.filterwarnings('ignore', category=AsdfWarning)
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, only_requested_fields=False):
+    r"""
+    Advect the initial conditions fields (1cb, delta, delta^2, s^2, nabla^2) to
+    some desired redshift and saving the 3D Fourier fields and power spectra in
+    ASDF files along the way.
 
+    Parameters
+    ----------
+    path2config : str
+        name of the yaml containing parameter specifications.
+    want_rsd : bool, optional
+        compute the advected fields and power spectra in redshift space?
+        Default is False.
+    alt_simname : str, optional
+        specify simulation name if different from yaml file.
+    save_3D_power : bool, optional
+        save the 3D power spectra in individual ASDF files.
+        Default is False.
+    only_requested_fields : bool, optional
+        instead of all 5 fields, use only the `fields` specified in `zcv_params`.
+        Default is False.
+    
+    Returns
+    -------
+    pk_ij_dict : dict
+        dictionary containing the auto- and cross-power spectra of the 5 fields.
+    """
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']

@@ -20,6 +20,26 @@ from .ic_fields import compress_asdf
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def main(path2config, alt_simname=None, save_3D_power=False):
+    r"""
+    Advect the initial conditions density field to some desired redshift 
+    and saving the 3D Fourier fields (delta, delta*mu^2) and power spectra in
+    ASDF files along the way.
+
+    Parameters
+    ----------
+    path2config : str
+        name of the yaml containing parameter specifications.
+    alt_simname : str, optional
+        specify simulation name if different from yaml file.
+    save_3D_power : bool, optional
+        save the 3D power spectra in individual ASDF files.
+        Default is False.
+
+    Returns
+    -------
+    pk_lin_dict : dict
+        dictionary containing the auto- and cross-power spectra of the 2 fields.
+    """    
     # field names
     keynames = ['delta', 'deltamu2']
 

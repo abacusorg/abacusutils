@@ -1,9 +1,3 @@
-"""Script for saving the initial conditions fields.
-
-Possible speedups: save the fields separately to save space;Make the k
-arrays smaller and presave them
-
-"""
 import argparse
 import gc
 import os
@@ -24,8 +18,8 @@ warnings.filterwarnings('ignore', category=AsdfWarning)
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml', 'cv_type': 'zcv'}
 
 def compress_asdf(asdf_fn, table, header):
-    """
-    Given the file name of the asdf file, the table and the header, compress the table info and save as `asdf_fn'
+    r"""
+    Compress the dictionaries `table` and `header` using blsc into an ASDF file, `asdf_fn`.
     """
     # cram into a dictionary
     data_dict = {}
@@ -45,7 +39,7 @@ def compress_asdf(asdf_fn, table, header):
 
 def load_dens(ic_dir, sim_name, nmesh):
     """
-    Load initial condition density field for the given AbacusSummit simulation
+    Load initial condition density field for the given AbacusSummit simulation.
     """
     f = asdf.open(Path(ic_dir) / sim_name / f"ic_dens_N{nmesh:d}.asdf")
     delta_lin = f['data']['density'][:, :, :]
@@ -54,7 +48,7 @@ def load_dens(ic_dir, sim_name, nmesh):
 
 def load_disp(ic_dir, sim_name, nmesh):
     """
-    Load initial condition displacement fields for the given AbacusSummit simulation
+    Load initial condition displacement fields for the given AbacusSummit simulation.
     """
     f = asdf.open(Path(ic_dir) / sim_name / f"ic_disp_N{nmesh:d}.asdf")
     Lbox = f['header']['BoxSize']
@@ -67,14 +61,23 @@ def load_disp(ic_dir, sim_name, nmesh):
 
 def gaussian_filter(field, nmesh, lbox, kcut):
     """
-    Apply a fourier space gaussian filter to a field
-    Inputs:
-    field: the field to filter
-    nmesh: size of the mesh
-    lbox: size of the box
-    kcut: The exponential cutoff to use in the gaussian filter
-    Outputs:
-    f_filt: Gaussian filtered version of field
+    Apply a fourier space gaussian filter to a field.
+
+    Parameters
+    ---------
+    field : array_like
+        the field to filter.
+    nmesh : int
+        size of the mesh.
+    lbox : float
+        size of the box.
+    kcut : float
+        the exponential cutoff to use in the gaussian filter
+
+    Returns
+    -------
+    f_filt : array_like
+        Gaussian filtered version of field
     """
 
     # fourier transform field
@@ -102,7 +105,7 @@ def gaussian_filter(field, nmesh, lbox, kcut):
 
 def delta_ij(i, j):
     """
-    Kronecker delta
+    Output Kronecker delta function.
     """
     if i == j:
         return 1.
@@ -110,17 +113,23 @@ def delta_ij(i, j):
         return 0.
 
 def get_dk_to_s2(delta_k, nmesh, lbox):
-    """
-    Computes the square tidal field from the density FFT
-    s^2 = s_ij s_ij
-    where
-    s_ij = (k_i k_j / k^2 - delta_ij / 3 ) * delta_k
-    Inputs:
-    delta_k: fft'd density
-    nmesh: size of the mesh
-    lbox: size of the box
-    Outputs:
-    tidesq: the s^2 field
+    r"""
+    Computes the square tidal field from the density FFT `s^2 = s_ij s_ij`,
+    where `s_ij = (k_i k_j / k^2 - delta_ij / 3 ) * delta_k`.
+
+    Parameters
+    ----------
+    delta_k : array_like
+        Fourier transformed density field.
+    nmesh : int
+        size of the mesh.
+    lbox : float
+        size of the box.
+
+    Returns
+    -------
+    tidesq : 
+        the tidal field (s^2).
     """
     # get wavenumber grids # TODO could carry this around instead of regenerating every time
     kvals = fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
@@ -154,14 +163,20 @@ def get_dk_to_s2(delta_k, nmesh, lbox):
 
 def get_dk_to_n2(delta_k, nmesh, lbox):
     """
-    Computes the density curvature from the density FFT
-    nabla^2 delta = IFFT(-k^2 delta_k)
-    Inputs:
-    delta_k: fft'd density
-    nmesh: size of the mesh
-    lbox: size of the box
-    Outputs:
-    real_gradsqdelta: the nabla^2 delta field
+    Computes the density curvature from the density field: nabla^2 delta = IFFT(-k^2 delta_k)
+    Parameters
+    ----------
+    delta_k : array_like
+        Fourier transformed density field.
+    nmesh : int
+        size of the mesh.
+    lbox : float
+        size of the box.
+
+    Returns
+    -------
+    real_gradsqdelta : array_like
+        the nabla^2 delta field
     """
     # get wavenumber grids
     kvals = fftfreq(nmesh) * (2 * np.pi * nmesh) / lbox
@@ -181,7 +196,6 @@ def get_dk_to_n2(delta_k, nmesh, lbox):
 def get_fields(delta_lin, Lbox, nmesh):
     """
     Return the fields delta, delta^2, s^2, nabla^2 given the linear density field.
-    Note that you can save the fields separately if they are using too much memory
     """
     # get delta
     delta_fft = rfftn(delta_lin, workers=-1).astype(np.complex64)
@@ -209,6 +223,24 @@ def get_fields(delta_lin, Lbox, nmesh):
     return d, d2, s2, n2
 
 def main(path2config, cv_type, alt_simname=None, verbose=False):
+    r"""
+    Save the initial conditions fields (1cb, delta, delta^2, s^2, nabla^2) as ASDF files.
+
+    Note: you can save the fields separately if they are using too much memory.
+    TODO: the multiplications in Fourier space can be sped up with numba.
+
+    Parameters
+    ----------
+    path2config : str
+        name of the yaml containing parameter specifications.
+    cv_type : str
+        specifies where to find CV parameters in the yaml file ('zcv' or 'lcv')
+    alt_simname : str, optional
+        specify simulation name if different from yaml file.
+    verbose : bool, optional
+        print some useful benchmark statements. Default is False.
+    """
+
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     if cv_type == "zcv":

@@ -1,11 +1,5 @@
-"""Script for pre-saving zenbu for a given redshift and simulation
-
-TODO: Make the kbins nicer (and maybe read as a function here)
-Change format of zenbu_fn to something nicer
-Test no RSD
-Note that the linear power from abacus is cb and not m
-Make c000 reading nicer
-Fix the k-cut that matches zenbu to make pretty
+"""
+Script for pre-saving zenbu for a given redshift and simulation.
 """
 import argparse
 import os
@@ -31,6 +25,9 @@ DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 @jit(nopython=True)
 def meshgrid(x, y, z):
+    """
+    Create a 3D mesh given x, y and z.
+    """
     xx = np.empty(shape=(y.size, x.size, z.size), dtype=x.dtype)
     yy = np.empty(shape=(y.size, x.size, z.size), dtype=y.dtype)
     zz = np.empty(shape=(y.size, x.size, z.size), dtype=z.dtype)
@@ -44,19 +41,29 @@ def meshgrid(x, y, z):
 
 @jit(nopython=True)
 def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
-    """Returns matrix appropriate for convolving a finely evaluated
-    theory prediction with the
+    """
+    Compute matrix appropriate for convolving a finely evaluated
+    theory prediction with the mode coupling matrix.
 
-    Args:
-        nmesh (int): Size of the mesh used for power spectrum measurement
-        lbox (float): Box length
-        kout (np.array): k bins used for power spectrum measurement
-        kin (np.array): . Defaults to None.
-        k2weight (bool, optional): _description_. Defaults to True.
+    Parameters
+    ----------
+    nmesh : int
+        size of the mesh used for power spectrum measurement.
+    lbox : float
+        box size of the simulation.
+    kout : array_like
+        k bins used for power spectrum measurement.
+    kin : array_like
+        Defaults to None.
+    k2weight : bool 
+        Defaults to True.
 
-    Returns:
-        window : np.dot(window, pell_th) gives convovled theory
-        keff: Effective k value of each output k bin.
+    Returns
+    -------
+    window : array_like
+        np.dot(window, pell_th) gives convovled theory
+    keff : array_like
+        effective k value of each output k bin.
     """
 
     kvals = np.zeros(nmesh, dtype=np.float32)
@@ -145,7 +152,10 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
     return window, keff
 
 def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nmax=6, ngauss=6):
-
+    """
+    Compute the ZeNBu power spectra.
+    """
+    
     if pkclass is None:
         pkclass = Class()
         pkclass.set(cfg["Cosmology"])
@@ -175,31 +185,9 @@ def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nm
 def _lpt_pk(k, p_lin, f, cleftobj=None,
             third_order=True, one_loop=True, cutoff=np.pi*700/525.,
             jn=15, N=2700, nmax=8, ngauss=3):
-    '''
-    Returns a spline object which computes the cleft component spectra.
-    Computed either in "full" CLEFT or in "k-expanded" CLEFT (kecleft)
-    which allows for faster redshift dependence.
-    Args:
-        k: array-like
-            Array of wavevectors to compute power spectra at (in h/Mpc).
-        p_lin: array-like
-            Linear power spectrum to produce velocileptors predictions for.
-            If kecleft==True, then should be for z=0, and redshift evolution is
-            handled by passing the appropriate linear growth factor to D.
-        D: float
-            Linear growth factor. Only required if kecleft==True.
-        kecleft: bool
-            Whether to use kecleft or not. Setting kecleft==True
-            allows for faster computation of spectra keeping cosmology
-            fixed and varying redshift if the cleftobj from the
-            previous calculation at the same cosmology is provided to
-            the cleftobj keyword.
-    Returns:
-        cleft_aem : InterpolatedUnivariateSpline
-            Spline that computes basis spectra as a function of k.
-        cleftobt: CLEFT object
-            CLEFT object used to compute basis spectra.
-    '''
+    r"""
+    LPT helper function for creating a bunch of splines.
+    """
 
     lpt  = Zenbu_RSD(k, p_lin, jn=jn, N=N, cutoff=cutoff)
     lpt.make_pltable(f, kv=k, nmax=nmax, ngauss=ngauss)
@@ -221,42 +209,57 @@ def _lpt_pk(k, p_lin, f, cleftobj=None,
     return lpt, p0spline, p2spline, p4spline, pellspline
 
 def _realspace_lpt_pk(k, p_lin, D=None, cleftobj=None, cutoff=np.pi*700/525.):
-    '''
+    r"""
     Returns a spline object which computes the cleft component spectra.
     Computed either in "full" CLEFT or in "k-expanded" CLEFT (kecleft)
     which allows for faster redshift dependence.
-    Args:
-        k: array-like
-            Array of wavevectors to compute power spectra at (in h/Mpc).
-        p_lin: array-like
-            Linear power spectrum to produce velocileptors predictions for.
-            If kecleft==True, then should be for z=0, and redshift evolution is
-            handled by passing the appropriate linear growth factor to D.
-        D: float
-            Linear growth factor. Only required if kecleft==True.
-        kecleft: bool
-            Whether to use kecleft or not. Setting kecleft==True
-            allows for faster computation of spectra keeping cosmology
-            fixed and varying redshift if the cleftobj from the
-            previous calculation at the same cosmology is provided to
-            the cleftobj keyword.
-    Returns:
-        cleft_aem : InterpolatedUnivariateSpline
-            Spline that computes basis spectra as a function of k.
-        cleftobt: CLEFT object
-            CLEFT object used to compute basis spectra.
-    '''
+
+    Parameters
+    ----------
+    k : array-like
+        array of wavevectors to compute power spectra at (in h/Mpc).
+    p_lin : array-like
+        linear power spectrum to produce velocileptors predictions for.
+        If kecleft==True, then should be for z=0, and redshift evolution is
+        handled by passing the appropriate linear growth factor to D.
+    D : float
+        linear growth factor. Only required if kecleft==True.
+    kecleft : bool
+        allows for faster computation of spectra keeping cosmology
+        fixed and varying redshift if the cleftobj from the
+        previous calculation at the same cosmology is provided to
+        the cleftobj keyword.
+    cutoff : float
+        Gaussian cutoff scale.
+
+    Returns
+    -------
+    cleftspline : InterpolatedUnivariateSpline
+        Spline that computes basis spectra as a function of k.
+    cleftobj: CLEFT object
+        CLEFT object used to compute basis spectra.
+    """
 
     zobj = Zenbu(k, p_lin, cutoff=cutoff, N=3000, jn=15)
     zobj.make_ptable(kvec=k)
     cleftpk = zobj.pktable.T
     cleftobj = zobj
-    cleftspline = interp1d(cleftpk[0], cleftpk, fill_value='extrapolate')#, kind='cubic')
+    cleftspline = interp1d(cleftpk[0], cleftpk, fill_value='extrapolate')
 
-    return cleftspline, cleftobj#, cleftpk
+    return cleftspline, cleftobj
 
 def main(path2config, alt_simname=None):
+    """
+    Save the mode-coupling window function and the ZeNBu power spectra 
+    as `npz` files given ZCV specs.
 
+    Parameters
+    ----------
+    path2config : str
+        name of the yaml containing parameter specifications.
+    alt_simname : str, optional
+        specify simulation name if different from yaml file.
+    """
     # read zcv parameters
     config = yaml.safe_load(open(path2config))
     zcv_dir = config['zcv_params']['zcv_dir']

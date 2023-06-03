@@ -1,24 +1,5 @@
-# Martin:
-# kmax_fit in the yaml file (maybe also sg params)
-# bias is reported
-
-# Joe:
-# combine spectra rsd uses alpha and not nabla?
-# sg_window depends on the k spacing; needs to perhaps depend on k-range
-# window function setting to zero past nyquist
-# how to do bias fitting best
-# zenbu convention is same as nbody
-# leggauss stuff in combine spectra with the alphas
-# nabla is never used in combine_spectra rsd
-
-# TODO:
-# divisions by zero (isclose)
-# savgol weirdness
-# bias fitting nicer (and also more flexible for the user to decide what they are fitting)
-# r_zt_proj = cov_zn / np.sqrt(var_zz * var_nn) # need to figure out why infinity is first value
-
 """
-Tools for applying variance reduction (ZCV and LCV) (base of script by Joe DeRose).
+Tools for applying variance reduction (ZCV and LCV) (based on scripts from Joe DeRose).
 """
 import gc
 from pathlib import Path
@@ -45,7 +26,7 @@ warnings.filterwarnings('ignore', category=AsdfWarning)
 
 def combine_spectra(k, spectra, bias_params, rsd=False, numerical_nabla=False):
     """
-    ZCV: Given some bias parameters, compute the model power spectra
+    ZCV: Given some bias parameters, compute the model power spectra.
     """
 
     if rsd:
@@ -94,7 +75,7 @@ def combine_spectra(k, spectra, bias_params, rsd=False, numerical_nabla=False):
 
 def combine_cross_spectra(k, spectra, bias_params, rsd=False):
     """
-    ZCV: Given some bias parameters, compute the model power spectra (no shotnoise in cross)
+    ZCV: Given some bias parameters, compute the model power spectra (no shotnoise in cross).
     """
     if rsd:
         # shape is cross power spectrum templates, len(multipoles), len(k_modes)
@@ -120,7 +101,7 @@ def combine_cross_spectra(k, spectra, bias_params, rsd=False):
 def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=False):
     """
     LCV: Convert measured templates into tracer-model power spectrum given bias parameters
-    assuming the Kaiser approximation (Chen et al. 2019, 1907.00043)
+    assuming the Kaiser approximation (Chen et al. 2019, 1907.00043).
 
     RecSym equation:
         < D (b delta + f mu2 delta, tr > = D * (b < delta, tr> + f < mu2 delta, tr >)
@@ -152,7 +133,7 @@ def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R
 def combine_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=False):
     """
     LCV: Convert measured templates into model-model power spectrum given bias parameters
-    assuming the Kaiser approximation (Chen et al. 2019, 1907.00043)
+    assuming the Kaiser approximation (Chen et al. 2019, 1907.00043).
 
     RecSym equation:
         < D (b delta + f mu2 delta, D (b delta + f mu2 delta) > =
@@ -207,7 +188,7 @@ def get_poles(k, pk, D, bias, f_growth, poles=[0, 2, 4]):
 
 def multipole_cov(pell, ell):
     """
-    Factors appearing in the covariance matrix that couple the multipoles
+    Factors appearing in the covariance matrix that couple the multipoles.
     """
     if ell==0:
         cov = 2 * pell[0,:]**2 + 2/5 * pell[1,:]**2 + 2/9 * pell[2,:]**2
@@ -225,7 +206,7 @@ def multipole_cov(pell, ell):
 
 def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     """
-    ZCV: Infer the bias based on the template power spectrum and tracer measurements
+    ZCV: Infer the bias based on the template power spectrum and tracer measurements.
     """
     # apply cuts to power spectra
     kidx_max = k.searchsorted(kmax)
@@ -246,7 +227,7 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
 
 def combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr_fns, nmesh, Lbox, R, rec_algo):
     """
-    LCV: Given bias parameters, compute the model-model auto and cross correlation for the 3D k-vector
+    LCV: Given bias parameters, compute the model-model auto and cross correlation for the 3D k-vector.
     """
     if rec_algo == "reciso":
         S = get_smoothing(nmesh, Lbox, R)
@@ -261,7 +242,7 @@ def combine_field_spectra_k3D_lcv(bias, f_growth, D, power_lin_fns, power_rsd_tr
 
 def combine_field_spectra_k3D(bias, power_ij_fns, keynames):
     """
-    ZCV: Given bias parameters, compute the model-model cross correlation for the 3D k-vector
+    ZCV: Given bias parameters, compute the model-model cross correlation for the 3D k-vector.
     """
     # match convention of combine_spectra
     if len(bias) >= 3:
@@ -282,7 +263,7 @@ def combine_field_spectra_k3D(bias, power_ij_fns, keynames):
 
 def combine_field_cross_spectra_k3D(bias, power_tr_fns, keynames):
     """
-    ZCV: Given bias parameters, compute the model-tracer cross correlation for the 3D k-vector
+    ZCV: Given bias parameters, compute the model-tracer cross correlation for the 3D k-vector.
     """
     # match convention of combine_spectra
     if len(bias) >= 3:
@@ -297,7 +278,7 @@ def combine_field_cross_spectra_k3D(bias, power_tr_fns, keynames):
 
 def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rsd, rec_algo, R, ellmax=2, kmin=0.0):
     """
-    LCV: Function for getting the linear bias in the Kaiser approximation
+    LCV: Function for getting the linear bias in the Kaiser approximation.
     """
     # cut the tracer power spectrum in the k range of interest
     pk_tt = power_rsd_tr_dict['P_ell_tr_tr'][:ellmax, :, 0]
@@ -323,7 +304,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
 
 def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
     """
-    ZCV: Function for reading the power spectra and saving them in the same format as Zenbu
+    ZCV: Function for reading the power spectra and saving them in the same format as Zenbu.
     """
     k = power_tr_dict['k_binc'].flatten()
     mu = np.zeros((len(k), 1))
@@ -363,7 +344,7 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
 
 def get_cfg(sim_name, z_this, nmesh):
     """
-    ZCV: Configuration parameters
+    ZCV: Configuration parameters.
     """
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']

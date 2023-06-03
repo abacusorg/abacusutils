@@ -25,7 +25,28 @@ except ImportError:
 
 
 def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power=False):
+    """
+    Compute the auto- and cross-correlation between a galaxy catalog (`tracer_pos`)
+    and the advected Zel'dovich fields.
 
+    Parameters
+    ----------
+    tracer_pos : array_like
+        galaxy positions with shape (N, 3)
+    want_rsd : bool
+        compute the power spectra in redshift space?
+    config : str
+        name of the yaml containing parameter specifications.
+    save_3D_power : bool, optional
+        save the 3D power spectra in individual ASDF files.
+        Default is False.
+
+    Returns
+    -------
+    pk_tr_dict : dict
+        dictionary containing the auto- and cross-power spectra of 
+        the tracer with the 5 fields.
+    """
     # read zcv parameters
     advected_dir = config['zcv_params']['zcv_dir']  # input of advected fields
     tracer_dir = config['zcv_params']['zcv_dir']  # output of tracers
@@ -94,8 +115,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     boltz.compute()
 
     # file to save to
-    # ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
-    # fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
     fields_fft_fn = []
     for i in range(len(keynames)):
         fields_fft_fn.append(advected_dir_z_dir / f"advected_{keynames[i]}_field{rsd_str}_fft_nmesh{nmesh:d}.asdf")
@@ -112,11 +131,6 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     # compute growth factor
     D = boltz.scale_independent_growth_factor(z_this)
     D /= boltz.scale_independent_growth_factor(z_ic)
-    # Ha = boltz.Hubble(z_this) * 299792.458
-    # if want_rsd:
-    #     f_growth = boltz.scale_independent_growth_factor_f(z_this)
-    # else:
-    #     f_growth = 0.
     print("D = ", D)
 
     # field names and growths
@@ -229,6 +243,32 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     return pk_tr_dict
 
 def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, save_3D_power=False, want_load_tr_fft=False):
+    """
+    Compute the auto- and cross-correlation between a galaxy catalog (`tracer_pos`)
+    and the advected initial conditions fields (delta, delta*mu^2).
+
+    Parameters
+    ----------
+    tracer_pos : array_like
+        galaxy positions with shape (N, 3)
+    random_pos : array_like
+        randoms positions with shape (M, 3)
+    want_rsd : bool
+        compute the power spectra in redshift space?
+    config : str
+        name of the yaml containing parameter specifications.
+    save_3D_power : bool, optional
+        save the 3D power spectra in individual ASDF files.
+        Default is False.
+    want_load_tr_fft : bool, optional
+        want to load provided 3D Fourier tracer field? Default is False.
+
+    Returns
+    -------
+    pk_tr_dict : dict
+        dictionary containing the auto- and cross-power spectra of 
+        the tracer with the 2 fields.
+    """
     # field names
     keynames = ['delta', 'deltamu2']
 
