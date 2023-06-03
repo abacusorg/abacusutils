@@ -44,7 +44,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     Returns
     -------
     pk_tr_dict : dict
-        dictionary containing the auto- and cross-power spectra of 
+        dictionary containing the auto- and cross-power spectra of
         the tracer with the 5 fields.
     """
     # read zcv parameters
@@ -266,7 +266,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     Returns
     -------
     pk_tr_dict : dict
-        dictionary containing the auto- and cross-power spectra of 
+        dictionary containing the auto- and cross-power spectra of
         the tracer with the 2 fields.
     """
     # field names

@@ -21,7 +21,7 @@ DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
 def main(path2config, alt_simname=None, save_3D_power=False):
     r"""
-    Advect the initial conditions density field to some desired redshift 
+    Advect the initial conditions density field to some desired redshift
     and saving the 3D Fourier fields (delta, delta*mu^2) and power spectra in
     ASDF files along the way.
 
@@ -39,7 +39,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     -------
     pk_lin_dict : dict
         dictionary containing the auto- and cross-power spectra of the 2 fields.
-    """    
+    """
     # field names
     keynames = ['delta', 'deltamu2']
 
