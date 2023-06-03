@@ -1,6 +1,6 @@
 
 r"""
-The power spectrum module contains various useful tools for computing power 
+The power spectrum module contains various useful tools for computing power
 spectra (wedges, multipoles and beyond) in the cubic box.
 """
 
@@ -26,13 +26,13 @@ FACTORIAL_LOOKUP_TABLE = np.array([
 def factorial(n):
     r"""
     Compute the factorial for some integer.
-    
+
     Parameters
     ----------
     n : int
         integer number for which to calculate the factorial.
         Must be less than or equal to 20 and non-negative.
-    
+
     Returns
     -------
     factorial : int
@@ -47,12 +47,12 @@ def factorial(n):
 def factorial_slow(x):
     r"""
     Brute-force compute the factorial for some integer.
-    
+
     Parameters
     ----------
     x : int
         integer number for which to calculate the factorial.
-    
+
     Returns
     -------
     n : int
@@ -67,14 +67,14 @@ def factorial_slow(x):
 def n_choose_k(n, k):
     r"""
     Compute binomial coefficient for a choice of two integers (n, k).
-    
+
     Parameters
     ----------
     n : int
         the integer `n` in n-choose-k.
     k : int
         the integer `k` in n-choose-k.
-    
+
     Returns
     -------
     x : int
@@ -86,7 +86,7 @@ def n_choose_k(n, k):
 @numba.njit
 def P_n(x, n, dtype=np.float32):
     r"""
-    Computes Legendre polynomial of order n for some squared quantity x. Maximum tested 
+    Computes Legendre polynomial of order n for some squared quantity x. Maximum tested
     order of the polynomial is 10, after which we see deviations from `scipy`.
 
     Parameters
@@ -283,7 +283,7 @@ def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
     Pk : array_like
         array of shape (n1d, n1d, n1d//2+1) containing 3D power spectrum modes.
     """
-    
+
     assert np.abs((k_ell[1]-k_ell[0]) - (k_ell[-1]-k_ell[-2])) < 1.e-6
     kzlen = n1d//2 + 1
     numba.get_num_threads()
@@ -466,7 +466,7 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
 def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
     r"""
     Obtain bin edges of the k wavenumbers and mu angles.
-    
+
     Parameters
     ----------
     Lbox : float
@@ -474,8 +474,8 @@ def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
     k_max : float
         maximum k wavenumber.
     n_k_bins : int
-        number of bins of k, which ranges from 0 to `k_max` if `logk == True` 
-        and 2pi/L (incl.) to `k_max` if `logk == False`. 
+        number of bins of k, which ranges from 0 to `k_max` if `logk == True`
+        and 2pi/L (incl.) to `k_max` if `logk == False`.
     n_mu_bins : int
         number of bins of mu, which ranges from 0 to 1.
     logk : bool
@@ -486,7 +486,7 @@ def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
     k_bin_edges
         edges of the k wavenumbers.
     mu_bin_edges
-        edges of the mu angles.   
+        edges of the mu angles.
     """
     # define k-binning
     if logk:
@@ -517,7 +517,7 @@ def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles
     field2_fft : array_like, optional
         second Fourier 3D field, used in cross-correlation.
     poles : array_like, optional
-        Legendre multipoles of the power spectrum or correlation function.        
+        Legendre multipoles of the power spectrum or correlation function.
 
     Returns
     -------
@@ -707,7 +707,7 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced):
     field_fft : array_like
         interlaced 3D Fourier field.
     """
-    
+
     # get field in real space
     field = get_field(pos, Lbox, nmesh, paste, w)
     print("field, pos", field.dtype, pos.dtype)
@@ -789,8 +789,8 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, c
     z1 : array_like
         particle positions in the z dimension.
     nbins_k : int
-        number of bins of k, which ranges from 0 to `k_max` if `logk == True` 
-        and 2pi/L (incl.) to `k_max` if `logk == False`. 
+        number of bins of k, which ranges from 0 to `k_max` if `logk == True`
+        and 2pi/L (incl.) to `k_max` if `logk == False`.
     nbins_mu : int
         number of bins of mu, which ranges from 0 to 1.
     k_max : float
@@ -815,7 +815,7 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, c
         second set of particle positions in the y dimension.
     z2 : array_like, optional
         second set of particle positions in the z dimension.
-    poles : 
+    poles :
         Legendre multipoles of the power spectrum or correlation function.
 
     Returns
@@ -876,7 +876,7 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, c
     p3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles)
     if len(poles) == 0:
         binned_poles, Npoles = [], []
-    
+
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:] + mu_bin_edges[:-1])*.5

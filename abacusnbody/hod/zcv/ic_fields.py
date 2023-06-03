@@ -128,7 +128,7 @@ def get_dk_to_s2(delta_k, nmesh, lbox):
 
     Returns
     -------
-    tidesq : 
+    tidesq :
         the tidal field (s^2).
     """
     # get wavenumber grids # TODO could carry this around instead of regenerating every time

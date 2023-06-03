@@ -55,7 +55,7 @@ def periodic_window_function(nmesh, lbox, kout, kin, k2weight=True):
         k bins used for power spectrum measurement.
     kin : array_like
         Defaults to None.
-    k2weight : bool 
+    k2weight : bool
         Defaults to True.
 
     Returns
@@ -155,7 +155,7 @@ def zenbu_spectra(k, z, cfg, kin, pin, pkclass=None, N=2700, jn=15, rsd=True, nm
     """
     Compute the ZeNBu power spectra.
     """
-    
+
     if pkclass is None:
         pkclass = Class()
         pkclass.set(cfg["Cosmology"])
@@ -250,7 +250,7 @@ def _realspace_lpt_pk(k, p_lin, D=None, cleftobj=None, cutoff=np.pi*700/525.):
 
 def main(path2config, alt_simname=None):
     """
-    Save the mode-coupling window function and the ZeNBu power spectra 
+    Save the mode-coupling window function and the ZeNBu power spectra
     as `npz` files given ZCV specs.
 
     Parameters
