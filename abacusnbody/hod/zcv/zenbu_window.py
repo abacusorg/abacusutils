@@ -312,7 +312,7 @@ def main(path2config, alt_simname=None, want_xi=False):
             logk = False
             n_k_bins = nmesh//2
             n_mu_bins = 1
-        
+
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
