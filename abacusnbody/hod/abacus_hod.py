@@ -845,7 +845,7 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
-        from .zcv.tools_jdr import run_zcv
+        from .zcv.tools_cv import run_zcv
         from .zcv.tracer_power import get_tracer_power
         from ..analysis.power_spectrum import get_k_mu_edges
 
@@ -947,7 +947,7 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
-        from .zcv.tools_jdr import run_zcv_field
+        from .zcv.tools_cv import run_zcv_field
         from .zcv.tracer_power import get_tracer_power
         from ..analysis.power_spectrum import pk_to_xi
 
