@@ -31,22 +31,23 @@ def combine_spectra(k, spectra, bias_params, rsd=False, numerical_nabla=False):
 
     if rsd:
         # shape is power spectrum templates, len(multipoles), len(k_modes)
-        pkvec = np.zeros((17, spectra.shape[1], spectra.shape[2]))
+        pkvec = np.zeros((14, spectra.shape[1], spectra.shape[2]))
         pkvec[:10, ...] = spectra[:10, ...]
 
         # read out bias terms
-        bias_params = np.hstack([bias_params, np.zeros(10-len(bias_params))])
-        b1, b2, bs, alpha0, alpha2, alpha4, alpha6, sn, sn2, sn4 = bias_params
+        bias_params = np.hstack([bias_params, np.zeros(5-len(bias_params))])
+        b1, b2, bs, bk2, sn = bias_params
         bias_monomials = np.array([1,
                                    2*b1, b1**2,
                                    b2, b1*b2, 0.25*b2**2,
                                    2*bs, 2*b1*bs, b2*bs, bs**2,
-                                   alpha0, alpha2, alpha4, alpha6, sn, sn2, sn4])
+                                   2*bk2, 2*bk2*b1, bk2*b2, 2*bk2*bs])
 
         # sum for each multipole and combine into pk
         p0 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,0,:], axis=0)
         p2 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,1,:], axis=0)
         p4 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,2,:], axis=0)
+
         pk = np.stack([p0, p2, p4])
     else:
         # shape is power spectrum templates, len(k_modes)
@@ -81,9 +82,9 @@ def combine_cross_spectra(k, spectra, bias_params, rsd=False):
         # shape is cross power spectrum templates, len(multipoles), len(k_modes)
         pkvec = np.zeros((5, spectra.shape[1], spectra.shape[2]))
         pkvec[:5, ...] = spectra[:5,...]
-        bias_params = np.hstack([bias_params, np.zeros(10-len(bias_params))])
-        b1, b2, bs, alpha0, alpha2, alpha4, alpha6, sn, sn2, sn4 = bias_params
-        bias_monomials = np.array([1, b1, 0.5 * b2, bs, alpha0])
+        bias_params = np.hstack([bias_params, np.zeros(5-len(bias_params))])
+        b1, b2, bs, bk, sn = bias_params
+        bias_monomials = np.array([1, b1, 0.5 * b2, bs, bk])
         p0 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,0,:], axis=0) #+ sn
         p2 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,1,:], axis=0) #+ sn2
         p4 = np.sum(bias_monomials[:,np.newaxis] * pkvec[:,2,:], axis=0) #+ sn4
@@ -122,7 +123,6 @@ def combine_cross_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R
         f_eff = f_growth * (1.-S)
         if rsd:
             f_eff = f_eff.reshape(1, len(k), 1)
-            print(f_eff.shape, spectra_dict['P_ell_delta_tr'].shape)
             pk = D * (bias * spectra_dict['P_ell_delta_tr'] +
                       f_eff * spectra_dict['P_ell_deltamu2_tr'])
         else:
@@ -159,7 +159,6 @@ def combine_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=
         f_eff = f_growth * (1.-S)
         if rsd:
             f_eff = f_eff.reshape(1, len(k), 1)
-            print(f_eff.shape, spectra_dict['P_ell_delta_delta'].shape)
             pk = D**2 * (2. * bias * f_eff * spectra_dict['P_ell_deltamu2_delta'] +
                          f_eff**2 * spectra_dict['P_ell_deltamu2_deltamu2'] +
                          bias**2 * spectra_dict['P_ell_delta_delta'])
@@ -207,6 +206,7 @@ def multipole_cov(pell, ell):
 def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
     """
     ZCV: Infer the bias based on the template power spectrum and tracer measurements.
+    Note that the bias parameter ordering corresponds to rsd == False.
     """
     # apply cuts to power spectra
     kidx_max = k.searchsorted(kmax)
@@ -218,7 +218,7 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
 
     # initial guesses for the biases (keynames starts with 1cb)
     bvec0 = np.zeros(len(keynames)) # b1, b2, bs, bn, sn
-
+    
     # minimize loss function
     def loss(bvec):
         return np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_kcut, np.hstack([bvec[:-1], np.zeros(5 - len(bvec)), bvec[-1]]), rsd=rsd)) ** 2 / (2 * pk_tt_kcut ** 2))
@@ -443,9 +443,9 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
 
     # measure bias in real space
     bvec_opt = measure_2pt_bias(k, pk_ij_zz_real[:, :, 0], pk_tt_real[0, :, 0], kmax, keynames, rsd=False)
-    bias_vec = np.hstack(([1.], bvec_opt['x']))
+    bias_vec = np.hstack([1., bvec_opt['x'][:-1], np.zeros(5 - len(bvec_opt['x'])), bvec_opt['x'][-1]]) # 1, b1, b2, bs, bn, sn
     print("bias", bias_vec)
-
+    
     # decide what to input depending on whether rsd requested or not
     if want_rsd:
         pk_tt_input = pk_tt_poles[0,...]
@@ -473,7 +473,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     pk_zz = combine_spectra(k_binc, pk_ij_zz_input, bias_vec[1:], rsd=want_rsd)
     pk_zenbu = combine_spectra(k_binc, pk_ij_zenbu, bias_vec[1:], rsd=want_rsd)
     pk_zn = combine_cross_spectra(k_binc, pk_ij_zt_input, bias_vec[1:], rsd=want_rsd)
-
+    
     # compute the stochasticity power spectrum
     shotnoise = (pk_tt_input - 2. * pk_zn + pk_zz)[0]
     pk_nn_nosn = pk_tt_input.copy()
@@ -522,7 +522,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     if want_rsd:
         pk_zenbu = np.hstack(pk_zenbu)
         pk_zenbu = np.dot(window.T, pk_zenbu).reshape(len(poles),-1)
-
+        
     # beta needs to be smooth for best results
     pk_nn_betasmooth = pk_tt_input - beta_smooth * (pk_zz - pk_zenbu)
 
@@ -534,7 +534,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dict['rho_tr_ZD_sn_lim'] = r_zt_sn_lim
     zcv_dict['Pk_ZD_ZD_ell'] = pk_zz
     zcv_dict['Pk_tr_ZD_ell'] = pk_zn
-    zcv_dict['Pk_tr_tr_ell'] = pk_tt_poles
+    zcv_dict['Pk_tr_tr_ell'] = pk_tt_input
     zcv_dict['Nk_tr_tr_ell'] = nmodes
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
@@ -609,24 +609,22 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     # project 3d measurements in real space to monopole
     pk_nn = asdf.open(power_tr_fns[0])['data']['P_k3D_tr_tr']
     pk_nn = project_3d_to_poles(k_bins, pk_nn, Lbox, poles=[0])[0].flatten()/Lbox**3
-    print("pk_nn", pk_nn[:10])
     pk_ij = np.zeros((15, len(pk_nn)))
     counter = 0
     for i in range(len(keynames)):
         for j in range(len(keynames)):
             if i < j:
                 continue
-            print("projecting", keynames[i], keynames[j])
+            print("Projecting", keynames[i], keynames[j])
             pk = asdf.open(power_ij_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}']
             pk = project_3d_to_poles(k_bins, pk, Lbox, poles=[0])
             pk_ij[counter] = pk[0].flatten()/Lbox**3
-            print("pk_ij", pk_ij[counter, :10])
             nmodes = pk[1].flatten()
             counter += 1
 
     # infer the bias in real space
     bvec_opt = measure_2pt_bias(k_binc, pk_ij, pk_nn, kmax, keynames, rsd=False)
-    bias_vec = np.hstack(([1.], bvec_opt['x'])) # b1, b2, bs, bn, sn
+    bias_vec = np.hstack([1., bvec_opt['x'][:-1], np.zeros(5 - len(bvec_opt['x'])), bvec_opt['x'][-1]]) # 1, b1, b2, bs, bn, sn
     print("bias", bias_vec)
 
     # load the presaved window function
@@ -668,7 +666,6 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
         var_nn = 2 * pk_nn_proj ** 2
 
     # cross-correlation coefficient
-    #print("var_zz, var_nn", var_zz, var_nn)
     with np.errstate(divide='ignore'):
         r_zt_proj = cov_zn / np.sqrt(var_zz * var_nn)
         #r_zt_proj[np.isclose(var_zz * var_nn, 0.)] = 0.
@@ -678,8 +675,6 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     with np.errstate(divide='ignore'):
         beta_proj = cov_zn / var_zz
         #beta_proj[np.isclose(var_zz, 0.)] = 0.
-    #print("beta proj", beta_proj)
-    #print("r_zt proj ", r_zt_proj)
     beta_damp = 0.5 * (1 - np.tanh((k_binc - k0)/dk_cv)) * beta_proj
     beta_damp = np.atleast_2d(beta_damp)
     beta_damp[:, :k_binc.searchsorted(beta1_k)] = 1.
@@ -702,11 +697,11 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     header['nmesh'] = nmesh
     header['kcut'] = kcut
     compress_asdf(str(power_cv_tr_fn), pk_tr_dict, header)
-    print("compressed")
+    print("Compressed")
 
     # project to multipoles
     pk_nn_betasmooth, nmodes = project_3d_to_poles(k_bins, pk_nn, Lbox, poles)
-    pk_nn = pk_nn_proj.reshape(1, len(poles), len(k_binc))
+    pk_nn = pk_nn_proj.reshape(len(poles), len(k_binc))
     pk_zz = pk_zz_proj
     pk_zn = pk_zn_proj
     r_zt = r_zt_proj
@@ -994,7 +989,6 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     # load input linear power
     kth = meta['CLASS_power_spectrum']['k (h/Mpc)']
     pk_z1 = meta['CLASS_power_spectrum']['P (Mpc/h)^3']
-    print("how many ks are saved", len(kth))
 
     # make the k-values equidistant
     choice = kth < np.sqrt(3.)*1.2*np.pi*nmesh/Lbox # sqrt(3)*1.2*Nyquist
@@ -1042,7 +1036,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
         for j in range(len(keynames)):
             if i < j:
                 continue
-            print("projecting", i, j)
+            print("Projecting", i, j)
             pk = asdf.open(power_lin_fns[counter])['data'][f'P_k3D_{keynames[i]}_{keynames[j]}']
             pk = project_3d_to_poles(k_bins, pk, Lbox, poles=[0])
             pk_ij[f"P_ell_{keynames[i]}_{keynames[j]}"] = (pk[0].flatten()/Lbox**3).reshape(1, len(pk_tt), 1)
@@ -1119,7 +1113,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     header['nmesh'] = nmesh
     header['kcut'] = kcut
     compress_asdf(str(power_cv_tr_fn), pk_tr_dict, header)
-    print("compressed")
+    print("Compressed")
 
     # project to multipoles
     pk_tt_betasmooth, nmodes = project_3d_to_poles(k_bins, pk_tt, Lbox, poles)
