@@ -3,6 +3,7 @@ Script for pre-saving zenbu for a given redshift and simulation.
 """
 import argparse
 import os
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -248,7 +249,7 @@ def _realspace_lpt_pk(k, p_lin, D=None, cleftobj=None, cutoff=np.pi*700/525.):
 
     return cleftspline, cleftobj
 
-def main(path2config, alt_simname=None):
+def main(path2config, alt_simname=None, want_xi=False):
     """
     Save the mode-coupling window function and the ZeNBu power spectra
     as `npz` files given ZCV specs.
@@ -273,12 +274,6 @@ def main(path2config, alt_simname=None):
     else:
         sim_name = config['sim_params']['sim_name']
     z_this = config['sim_params']['z_mock']
-    k_hMpc_max = config['power_params']['k_hMpc_max']
-    logk = config['power_params']['logk']
-    n_k_bins = config['power_params']['nbins_k']
-    n_mu_bins = config['power_params']['nbins_mu']
-    rsd = config['HOD_params']['want_rsd']
-    rsd_str = "_rsd" if rsd else ""
 
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
@@ -294,7 +289,6 @@ def main(path2config, alt_simname=None):
     cosmo = {}
     cosmo['output'] = 'mPk mTk'
     cosmo['P_k_max_h/Mpc'] = 20.
-    int(sim_name.split('ph')[-1])
     for k in ('H0', 'omega_b', 'omega_cdm',
               'omega_ncdm', 'N_ncdm', 'N_ur',
               'n_s', 'A_s', 'alpha_s',
@@ -302,12 +296,28 @@ def main(path2config, alt_simname=None):
     ):
         cosmo[k] = meta[k]
 
+    # power params
+    k_hMpc_max = config['power_params'].get('k_hMpc_max', np.pi*nmesh/Lbox)
+    logk = config['power_params'].get('logk', False)
+    n_k_bins = config['power_params'].get('nbins_k', nmesh//2)
+    n_mu_bins = config['power_params'].get('nbins_mu', 1)
+    rsd = config['HOD_params']['want_rsd']
+    rsd_str = "_rsd" if rsd else ""
+
+    # make sure that the parameters are set correctly
+    if want_xi:
+        if not (np.isclose(k_hMpc_max, np.pi*nmesh/Lbox) & logk == False & n_k_bins == nmesh//2 & n_mu_bins == 1):
+            warnings.warn("Setting the parameters correctly for Xi computation")
+            k_hMpc_max = np.pi*nmesh/Lbox
+            logk = False
+            n_k_bins = nmesh//2
+            n_mu_bins = 1
+        
     # define k bins
     k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1])*.5
 
     # name of file to save to
-
     if not logk:
         dk = k_bins[1]-k_bins[0]
     else:
@@ -375,5 +385,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
     parser.add_argument('--path2config', help='Path to the config file', default=DEFAULTS['path2config'])
     parser.add_argument('--alt_simname', help='Alternative simulation name')
+    parser.add_argument('--want_xi', help='Set up parameters for Xi computation', action='store_true')
     args = vars(parser.parse_args())
     main(**args)

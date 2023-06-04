@@ -5,6 +5,7 @@ spectra (wedges, multipoles and beyond) in the cubic box.
 """
 
 import gc
+import warnings
 
 import numpy as np
 import numba
@@ -587,6 +588,7 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0.):
         else:
             tsc_parallel(pos, field, Lbox, weights=w)
     elif paste == 'CIC':
+        warnings.warn("Note that currently CIC pasting, unlike TSC, supports only a non-parallel implementation.")
         if d != 0.:
             cic_serial(pos + np.float32(d), field, Lbox, weights=w)
         else:

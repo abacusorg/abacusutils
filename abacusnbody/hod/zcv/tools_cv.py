@@ -716,12 +716,12 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
     zcv_dict['k_binc'] = k_binc
     zcv_dict['poles'] = poles
     zcv_dict['rho_tr_ZD'] = r_zt
-    zcv_dict['Pk_ZD_ZD_ell'] = pk_zz
-    zcv_dict['Pk_tr_ZD_ell'] = pk_zn
-    zcv_dict['Pk_tr_tr_ell'] = pk_nn
+    zcv_dict['Pk_ZD_ZD_ell'] = pk_zz*Lbox**3
+    zcv_dict['Pk_tr_ZD_ell'] = pk_zn*Lbox**3
+    zcv_dict['Pk_tr_tr_ell'] = pk_nn*Lbox**3
     zcv_dict['Nk_tr_tr_ell'] = nmodes
-    zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
-    zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
+    zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth*Lbox**3
+    zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu*Lbox**3
     zcv_dict['bias'] = bias_vec[1:]
     return zcv_dict
 
@@ -1117,7 +1117,6 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # project to multipoles
     pk_tt_betasmooth, nmodes = project_3d_to_poles(k_bins, pk_tt, Lbox, poles)
-    pk_tt = pk_tt_proj.reshape(1, len(poles), len(k_binc))
 
     # changing format (note that projection multiplies by L^3, so we get rid of that)
     pk_tt_betasmooth = pk_tt_betasmooth.reshape(len(poles), len(k_binc))/Lbox**3
@@ -1133,11 +1132,11 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     lcv_dict['k_binc'] = k_binc
     lcv_dict['poles'] = poles
     lcv_dict['rho_tr_lf'] = r_lt_proj
-    lcv_dict['Pk_lf_lf_ell'] = pk_ll_proj
-    lcv_dict['Pk_tr_lf_ell'] = pk_lt_proj
-    lcv_dict['Pk_tr_tr_ell'] = pk_tt_proj
+    lcv_dict['Pk_lf_lf_ell'] = pk_ll_proj*Lbox**3
+    lcv_dict['Pk_tr_lf_ell'] = pk_lt_proj*Lbox**3
+    lcv_dict['Pk_tr_tr_ell'] = pk_tt_proj*Lbox**3
     lcv_dict['Nk_tr_tr_ell'] = nmodes
-    lcv_dict['Pk_tr_tr_ell_lcv'] = pk_tt_betasmooth
-    lcv_dict['Pk_lf_lf_ell_CLASS'] = p_m_lin_input
+    lcv_dict['Pk_tr_tr_ell_lcv'] = pk_tt_betasmooth*Lbox**3
+    lcv_dict['Pk_lf_lf_ell_CLASS'] = p_m_lin_input*Lbox**3
     lcv_dict['bias'] = bias
     return lcv_dict

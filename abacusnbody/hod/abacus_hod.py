@@ -853,6 +853,7 @@ class AbacusHOD:
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        assert config['power_params']['nbins_mu'] == 1, "Currently wedges are not implemented; need to change ZeNBu"
         if 'nmesh' not in config['power_params'].keys():
             config['power_params']['nmesh'] = config['zcv_params']['nmesh']
         assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], "`nmesh` in `power_params` and `zcv_params` should match."
@@ -956,6 +957,7 @@ class AbacusHOD:
         assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        assert config['power_params']['nbins_mu'] == 1, "Currently wedges are not implemented; need to change ZeNBu"
         if 'nmesh' not in config['power_params'].keys():
             config['power_params']['nmesh'] = config['zcv_params']['nmesh']
         assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], "`nmesh` in `power_params` and `zcv_params` should match."
