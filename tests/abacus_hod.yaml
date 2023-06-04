@@ -96,6 +96,7 @@ zcv_params:
     ic_dir: "/global/cfs/projectdirs/desi/cosmosim/Abacus/ic/"
     nmesh: 8
     kcut: 0.2261946710584651  # k_Ny/2
+    fields: ["1cb", "delta", "delta2", "tidal2", "nabla2"]
 
 power_params:
     nbins_k: 4 # nmesh/2

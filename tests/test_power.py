@@ -29,7 +29,6 @@ def test_power(power_test_data, interlaced, compensated, paste):
     z = power_test_data['z']
 
     # specifications of the power spectrum computation
-    paste = "CIC"
     nmesh = 72
     nbins_mu = 4
     logk = False
