@@ -218,7 +218,7 @@ def measure_2pt_bias(k, pk_ij, pk_tt, kmax, keynames, kmin=0.0, rsd=False):
 
     # initial guesses for the biases (keynames starts with 1cb)
     bvec0 = np.zeros(len(keynames)) # b1, b2, bs, bn, sn
-    
+
     # minimize loss function
     def loss(bvec):
         return np.sum((pk_tt_kcut - combine_spectra(kcut, pk_ij_kcut, np.hstack([bvec[:-1], np.zeros(5 - len(bvec)), bvec[-1]]), rsd=rsd)) ** 2 / (2 * pk_tt_kcut ** 2))
@@ -445,7 +445,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     bvec_opt = measure_2pt_bias(k, pk_ij_zz_real[:, :, 0], pk_tt_real[0, :, 0], kmax, keynames, rsd=False)
     bias_vec = np.hstack([1., bvec_opt['x'][:-1], np.zeros(5 - len(bvec_opt['x'])), bvec_opt['x'][-1]]) # 1, b1, b2, bs, bn, sn
     print("bias", bias_vec)
-    
+
     # decide what to input depending on whether rsd requested or not
     if want_rsd:
         pk_tt_input = pk_tt_poles[0,...]
@@ -473,7 +473,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     pk_zz = combine_spectra(k_binc, pk_ij_zz_input, bias_vec[1:], rsd=want_rsd)
     pk_zenbu = combine_spectra(k_binc, pk_ij_zenbu, bias_vec[1:], rsd=want_rsd)
     pk_zn = combine_cross_spectra(k_binc, pk_ij_zt_input, bias_vec[1:], rsd=want_rsd)
-    
+
     # compute the stochasticity power spectrum
     shotnoise = (pk_tt_input - 2. * pk_zn + pk_zz)[0]
     pk_nn_nosn = pk_tt_input.copy()
@@ -522,7 +522,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     if want_rsd:
         pk_zenbu = np.hstack(pk_zenbu)
         pk_zenbu = np.dot(window.T, pk_zenbu).reshape(len(poles),-1)
-        
+
     # beta needs to be smooth for best results
     pk_nn_betasmooth = pk_tt_input - beta_smooth * (pk_zz - pk_zenbu)
 

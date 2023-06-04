@@ -8,8 +8,8 @@ sim_params:
     output_dir: '/pscratch/sd/b/boryanah/AbacusHOD_scratch/mocks_box_output/'
 #    subsample_dir: '/pscratch/sd/b/boryanah/AbacusHOD_scratch/mocks_box_subsample/' # empty
     subsample_dir: '//pscratch/sd/s/sihany/summit_subsamples_cleaned_desi/'
-    z_mock: 0.500 
-    
+    z_mock: 0.500
+
 prepare_sim:
     Nparallel_load: 16
 
@@ -38,7 +38,7 @@ HOD_params:
         LRG: True
         ELG: False
         QSO: False
-    want_rsd: True                 # want RSD? 
+    want_rsd: True                 # want RSD?
     write_to_disk: False
 
     # parameters for setting up the HOD of LRGs
@@ -101,7 +101,6 @@ HOD_params:
         Asat: -2.41898268e-01
         Bcent: -9.37221616e-03
         Bsat: 3.74532572e-02
-        A_s: 1.
         ic: 0.99
 
 # Parameters to be fitted in MCMC
