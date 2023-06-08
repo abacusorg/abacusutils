@@ -16,8 +16,6 @@ from os.path import join as pjoin
 
 import h5py
 import numba
-import numpy as np
-import pytest
 import yaml
 from astropy.io import ascii
 from common import check_close
@@ -62,7 +60,7 @@ def test_hod(tmp_path, reference_mode = False):
 
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
-        bin_params = clustering_params['bin_params']
+        # bin_params = clustering_params['bin_params']
 
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
@@ -94,11 +92,6 @@ def test_hod(tmp_path, reference_mode = False):
 
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
-        write_to_disk = HOD_params['write_to_disk']
-        bin_params = clustering_params['bin_params']
-        rpbins = np.logspace(bin_params['logmin'], bin_params['logmax'], bin_params['nbins'])
-        pimax = clustering_params['pimax']
-        pi_bin_size = clustering_params['pi_bin_size']
 
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
@@ -127,7 +120,8 @@ def test_hod(tmp_path, reference_mode = False):
         config['zcv_params']['tracer_dir'] = pjoin(tmp_path, 'zcv_tracer_data')
         mock_dict = newBall.run_hod(newBall.tracers, want_rsd = config['HOD_params']['want_rsd'], write_to_disk = False, Nthread = 2)
         del mock_dict['ELG']  # drop ELG since zcv works with a single tracer currently
-        zcv_dict = newBall.apply_zcv(mock_dict, config)
+        # zcv_dict =
+        newBall.apply_zcv(mock_dict, config)
 
 if __name__ == '__main__':
     with tempfile.TemporaryDirectory() as tmpdir:

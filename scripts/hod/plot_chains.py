@@ -1,7 +1,6 @@
 import argparse
 import os
 
-import getdist
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -25,11 +24,11 @@ def main(path2config):
     ch_params = config['ch_config_params']
 
     # parameters
-    n_iter = ch_params['sampleIterations']
+    # n_iter = ch_params['sampleIterations']
     w_rat = ch_params['walkersRatio']
     b_iter = ch_params['burninIterations']
     par_names = fit_params.keys()
-    lab_names = par_names
+    # lab_names = par_names
     n_par = len(par_names)
 
     # what are we plotting

@@ -1,12 +1,12 @@
 '''
 '''
 
-'''
-The AbacusHOD module generates HOD tracers from Abacus simulations.
-A high-level overview of this module can be found in
-https://abacusutils.readthedocs.io/en/latest/hod.html
-or docs/hod.rst.
-'''
+
+# The AbacusHOD module generates HOD tracers from Abacus simulations.
+# A high-level overview of this module can be found in
+# https://abacusutils.readthedocs.io/en/latest/hod.html
+# or docs/hod.rst.
+
 
 import gc
 import time
@@ -20,9 +20,21 @@ from astropy.io import ascii
 from numba import njit
 from parallel_numpy_rng import MTGenerator
 
-from .GRAND_HOD import *
-from .power_spectrum import calc_power
-from .tpcf_corrfunc import calc_multipole_fast, calc_wp_fast, calc_xirppi_fast
+from ..analysis.power_spectrum import calc_power
+from ..analysis.tpcf_corrfunc import (
+    calc_multipole_fast,
+    calc_wp_fast,
+    calc_xirppi_fast,
+)
+from .GRAND_HOD import (
+    gen_gal_cat,
+    n_cen_LRG,
+    n_sat_LRG_modified,
+    N_cen_ELG_v1,
+    N_sat_elg,
+    N_cen_QSO,
+    N_sat_generic,
+)
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -30,7 +42,7 @@ class AbacusHOD:
     """
     A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
     """
-    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, n_chunks=1):
+    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, n_chunks=1, skip_staging=False): # TESTING
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
@@ -100,7 +112,7 @@ class AbacusHOD:
         self.want_shear = HOD_params.get('want_shear', False)
         self.want_rsd = HOD_params['want_rsd']
 
-        if not clustering_params == None:
+        if clustering_params is not None:
             # clusteringparameters
             self.pimax = clustering_params.get('pimax', None)
             self.pi_bin_size = clustering_params.get('pi_bin_size', None)
@@ -113,23 +125,25 @@ class AbacusHOD:
         self.n_chunks = n_chunks
         assert self.chunk < self.n_chunks, "Total number of chunks needs to be larger than current chunk index"
 
-        # load the subsample particles
-        self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
+        if not skip_staging:
+            # load the subsample particles
+            self.halo_data, self.particle_data, self.params, self.mock_dir = self.staging()
 
+            # determine the halo mass function
+            self.logMbins = np.linspace(
+                np.log10(np.min(self.halo_data['hmass'])),
+                np.log10(np.max(self.halo_data['hmass'])), 101)
+            self.deltacbins = np.linspace(-0.5, 0.5, 101)
+            self.fenvbins = np.linspace(-0.5, 0.5, 101)
 
-        # determine the halo mass function
-        self.logMbins = np.linspace(
-            np.log10(np.min(self.halo_data['hmass'])),
-            np.log10(np.max(self.halo_data['hmass'])), 101)
-        self.deltacbins = np.linspace(-0.5, 0.5, 101)
-        self.fenvbins = np.linspace(-0.5, 0.5, 101)
-        self.shearbins = np.linspace(-0.5, 0.5, 101)
-
-        self.halo_mass_func, edges = np.histogramdd(
-            np.vstack((np.log10(self.halo_data['hmass']), self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
-                       self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))))).T,
-            bins = [self.logMbins, self.deltacbins, self.fenvbins],
-            weights = self.halo_data['hmultis'])
+            self.halo_mass_func, edges = np.histogramdd(
+                np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
+                bins = [self.logMbins, self.deltacbins, self.fenvbins],
+                weights = self.halo_data['hmultis'])
+        else:
+            from abacusnbody.metadata import get_meta
+            meta = get_meta(self.sim_name, redshift=0.1)
+            self.lbox = meta['BoxSize']
 
         self.halo_mass_func_wshear, edges = np.histogramdd(
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
@@ -183,7 +197,8 @@ class AbacusHOD:
         n_jump = int(np.ceil(len(halo_info_fns)/n_chunks))
         start = ((chunk)*n_jump)
         end = ((chunk+1)*n_jump)
-        if end > len(halo_info_fns): end = len(halo_info_fns)
+        if end > len(halo_info_fns):
+            end = len(halo_info_fns)
         params['numslabs'] = end-start
         self.lbox = header['BoxSize']
 
@@ -280,10 +295,13 @@ class AbacusHOD:
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
             halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
-            halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
-            halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles
+
+            halo_deltac = maskedhalos['deltac_rank'] # halo concentration
+            halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
+            # halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
+            # halo_pnum = maskedhalos['npoutA'].astype(int) # number of particles
             halo_multi = maskedhalos['multi_halos']
-            halo_submask = maskedhalos['mask_subsample'].astype(bool)
+            # halo_submask = maskedhalos['mask_subsample'].astype(bool)
             halo_randoms = maskedhalos['randoms']
 
             hpos[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_pos
@@ -472,7 +490,7 @@ class AbacusHOD:
             in the catalog are always centrals and the rest are satellites.
 
         """
-        if tracers == None:
+        if tracers is None:
             tracers = self.tracers
         if reseed:
             start = time.time()
@@ -522,7 +540,7 @@ class AbacusHOD:
         dictionary of satellite fraction of each tracer.
 
         """
-        if tracers == None:
+        if tracers is None:
             tracers = self.tracers
 
         ngal_dict = {}
@@ -739,7 +757,8 @@ class AbacusHOD:
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
                     clustering[tr1+'_'+tr2] = calc_xirppi_fast(x1, y1, z1, rpbins, pimax, pi_bin_size,
                         self.lbox, Nthread)
@@ -759,7 +778,8 @@ class AbacusHOD:
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
                     new_multi = calc_multipole_fast(x1, y1, z1, sbins,
                         self.lbox, Nthread, nbins_mu = nbins_mu)
@@ -837,7 +857,8 @@ class AbacusHOD:
             z1 = mock_dict[tr1]['z']
             w1 = mock_dict[tr1].get('w', None)
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
                     k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
@@ -871,25 +892,66 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
-        from .zcv.tools_jdr import run_zcv
+        from .zcv.tools_cv import run_zcv
         from .zcv.tracer_power import get_tracer_power
+        from ..analysis.power_spectrum import get_k_mu_edges
 
         # compute real space and redshift space
         #assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
         assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
-        assert len(config['power_params']['poles']) == 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        assert config['power_params']['nbins_mu'] == 1, "Currently wedges are not implemented; need to change ZeNBu"
+        if 'nmesh' not in config['power_params'].keys():
+            config['power_params']['nmesh'] = config['zcv_params']['nmesh']
+        assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], "`nmesh` in `power_params` and `zcv_params` should match."
 
         # create save directory
         save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
         save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
         rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
 
+        # define bins
+        Lbox = self.lbox
+        k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, config['power_params']['k_hMpc_max'], config['power_params']['nbins_k'], config['power_params']['nbins_mu'], config['power_params']['logk'])
+        k_binc = 0.5*(k_bin_edges[1:]+k_bin_edges[:-1])
+        mu_binc = 0.5*(mu_bin_edges[1:]+mu_bin_edges[:-1])
+
+        # get file names
+        if not config['power_params']['logk']:
+            dk = k_bin_edges[1]-k_bin_edges[0]
+        else:
+            dk = np.log(k_bin_edges[1]/k_bin_edges[0])
+        if config['power_params']['nbins_k'] == config['zcv_params']['nmesh']//2:
+            power_rsd_tr_fn = save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf"
+            power_rsd_ij_fn = save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf"
+            power_tr_fn = save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}.asdf"
+            power_ij_fn = save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf"
+        else:
+            power_rsd_tr_fn = save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+            power_rsd_ij_fn = save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+            power_tr_fn = save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+            power_ij_fn = save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+        pk_fns = [power_rsd_tr_fn, power_rsd_ij_fn, power_tr_fn, power_ij_fn]
+        for fn in pk_fns:
+            try:
+                assert np.isclose(asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']), f"Mismatching file: {str(fn)}"
+            except FileNotFoundError:
+                pass
+
         if load_presaved:
-            pk_rsd_tr_dict = asdf.open(save_z_dir / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
-            pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+            pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
+            pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
+            assert np.allclose(k_binc, pk_rsd_tr_dict['k_binc']), f"Mismatching file: {str(power_rsd_tr_fn)}"
+            assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
+            assert np.allclose(mu_binc, pk_rsd_tr_dict['mu_binc']), f"Mismatching file: {str(power_rsd_tr_fn)}"
+            assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
             if config['HOD_params']['want_rsd']:
-                pk_tr_dict = asdf.open(save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
-                pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+                pk_tr_dict = asdf.open(power_tr_fn)['data']
+                pk_ij_dict = asdf.open(power_ij_fn)['data']
+                assert np.allclose(k_binc, pk_tr_dict['k_binc']), f"Mismatching file: {str(power_tr_fn)}"
+                assert np.allclose(k_binc, pk_ij_dict['k_binc']), f"Mismatching file: {str(power_ij_fn)}"
+                assert np.allclose(mu_binc, pk_tr_dict['mu_binc']), f"Mismatching file: {str(power_tr_fn)}"
+                assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), f"Mismatching file: {str(power_ij_fn)}"
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
@@ -898,12 +960,14 @@ class AbacusHOD:
             for tr in mock_dict.keys():
                 # obtain the positions
                 tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
-                del mock_dict; gc.collect()
+                del mock_dict
+                gc.collect()
 
                 # get power spectra for this tracer
                 pk_rsd_tr_dict = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config)
-                pk_rsd_ij_dict = asdf.open(save_z_dir / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
-
+                pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
+                assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
+                assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), f"Mismatching file: {str(power_rsd_ij_fn)}"
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
                 mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False,
@@ -911,16 +975,108 @@ class AbacusHOD:
                 for tr in mock_dict.keys():
                     # obtain the positions
                     tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
-                    del mock_dict; gc.collect()
+                    del mock_dict
+                    gc.collect()
 
                     # get power spectra for this tracer
                     pk_tr_dict = get_tracer_power(tracer_pos, want_rsd=False, config=config)
-                    pk_ij_dict = asdf.open(save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf")['data']
+                    pk_ij_dict = asdf.open(power_ij_fn)['data']
+                    assert np.allclose(k_binc, pk_ij_dict['k_binc']), f"Mismatching file: {str(power_ij_fn)}"
+                    assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), f"Mismatching file: {str(power_ij_fn)}"
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
         # run the final part and save
         zcv_dict = run_zcv(pk_rsd_tr_dict, pk_rsd_ij_dict, pk_tr_dict, pk_ij_dict, config)
+        return zcv_dict
+
+    def apply_zcv_xi(self, mock_dict, config, load_presaved=False):
+        """
+        Apply control variates reduction of the variance to a power spectrum observable.
+        """
+
+        # ZCV module has optional dependencies, don't import unless necessary
+        from .zcv.tools_cv import run_zcv_field
+        from .zcv.tracer_power import get_tracer_power
+        from ..analysis.power_spectrum import pk_to_xi
+
+        # compute real space and redshift space
+        assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
+        assert len(mock_dict.keys()) == 1, "Currently implemented only a single tracer" # should make a dict of dicts, but need cross
+        assert len(config['power_params']['poles']) <= 3, "Currently implemented only multipoles 0, 2, 4; need to change ZeNBu"
+        assert config['power_params']['nbins_mu'] == 1, "Currently wedges are not implemented; need to change ZeNBu"
+        if 'nmesh' not in config['power_params'].keys():
+            config['power_params']['nmesh'] = config['zcv_params']['nmesh']
+        assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], "`nmesh` in `power_params` and `zcv_params` should match."
+
+        # create save directory
+        save_dir = Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
+        save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
+        rsd_str = "_rsd" if config['HOD_params']['want_rsd'] else ""
+
+        # construct names of files based on fields
+        keynames = config['zcv_params']['fields']
+
+        # tracer and field file names
+        pk_rsd_tr_fns = []
+        pk_tr_fns = []
+        pk_rsd_ij_fns = []
+        pk_ij_fns = []
+        pk_rsd_tr_fns.append(save_z_dir / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf")
+        pk_tr_fns.append(save_z_dir / f"power_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf")
+        for i in range(len(keynames)):
+            pk_rsd_tr_fns.append(save_z_dir / f"power{rsd_str}_{keynames[i]}_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf")
+            pk_tr_fns.append(save_z_dir / f"power_{keynames[i]}_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf")
+            for j in range(len(keynames)):
+                if i < j:
+                    continue
+                pk_rsd_ij_fns.append(save_z_dir / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf")
+                pk_ij_fns.append(save_z_dir / f"power_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf")
+
+        if not load_presaved:
+            # run version with rsd or without rsd
+            for tr in mock_dict.keys():
+
+                # obtain the positions
+                tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
+                del mock_dict; gc.collect() # noqa: E702
+
+                pk_rsd_tr_fns = get_tracer_power(tracer_pos, config['HOD_params']['want_rsd'], config, save_3D_power=True)
+                del tracer_pos; gc.collect() # noqa: E702
+
+            # run version without rsd if rsd was requested
+            if config['HOD_params']['want_rsd']:
+                mock_dict = self.run_hod(self.tracers, want_rsd=False, reseed=None, write_to_disk=False,
+                                         Nthread=16, verbose=False, fn_ext=None) # TODO: reseed
+                for tr in mock_dict.keys():
+                    # obtain the positions
+                    tracer_pos = (np.vstack((mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])).T).astype(np.float32)
+                    del mock_dict; gc.collect() # noqa: E702
+
+                    pk_tr_fns = get_tracer_power(tracer_pos, False, config, save_3D_power=True)
+                    del tracer_pos; gc.collect() # noqa: E702
+            else:
+                pk_tr_fns, pk_ij_fns = None, None # TODO: unsure
+
+        # pass field names as a list to run_zcv
+        pks = [pk_rsd_tr_fns, pk_rsd_ij_fns, pk_tr_fns, pk_ij_fns]
+        for pk_fns in pks:
+            if pk_fns is not None:
+                for fn in pk_fns:
+                    assert np.isclose(asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']), f"Mismatching file: {str(fn)}"
+        zcv_dict = run_zcv_field(pk_rsd_tr_fns, pk_rsd_ij_fns, pk_tr_fns, pk_ij_fns, config)
+
+        # convert 3d power spectrum to correlation function multipoles
+        r_bins = np.linspace(0., 200., 201)
+        pk_rsd_tr_fns = [save_z_dir / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"] # TODO: same as other (could check that we have this if presaved)
+        power_cv_tr_fn = save_z_dir / f"power{rsd_str}_ZCV_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf" # TODO: should be an output (could check that we have this if presaved; run_zcv too)
+        r_binc, binned_poles_zcv, Npoles = pk_to_xi(power_cv_tr_fn, self.lbox, r_bins, poles=config['power_params']['poles'], key='P_k3D_tr_tr_zcv')
+        r_binc, binned_poles, Npoles = pk_to_xi(pk_rsd_tr_fns[0], self.lbox, r_bins, poles=config['power_params']['poles'], key='P_k3D_tr_tr')
+        zcv_dict['Xi_tr_tr_ell_zcv'] = binned_poles_zcv
+        zcv_dict['Xi_tr_tr_ell'] = binned_poles
+        zcv_dict['Np_tr_tr_ell'] = Npoles
+        zcv_dict['r_binc'] = r_binc
+
         return zcv_dict
 
     def compute_wp(self, mock_dict, rpbins, pimax, pi_bin_size, Nthread = 8):
@@ -957,7 +1113,8 @@ class AbacusHOD:
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
             for i2, tr2 in enumerate(mock_dict.keys()):
-                if i1 > i2: continue # cross-correlations are symmetric
+                if i1 > i2:
+                    continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
                     clustering[tr1+'_'+tr2] = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
@@ -1004,19 +1161,19 @@ class AbacusHOD:
 
         """
 
-        if output_dir == None:
+        if output_dir is None:
             output_dir = Path(self.output_dir)
-        if simname == None:
+        if simname is None:
             simname = Path(self.sim_name)
-        if sim_dir == None:
+        if sim_dir is None:
             sim_dir = Path(self.sim_dir)
-        if z_mock == None:
+        if z_mock is None:
             z_mock = self.z_mock
-        if want_rsd == None:
+        if want_rsd is None:
             want_rsd = self.want_rsd
-        if tracers == None:
+        if tracers is None:
             tracers = self.tracers.keys()
-        mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
+        # mock_dir = output_dir / simname / ('z%4.3f'%self.z_mock)
 
         if want_rsd:
             rsd_string = "_rsd"

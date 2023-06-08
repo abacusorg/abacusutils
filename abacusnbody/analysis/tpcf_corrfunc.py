@@ -1,15 +1,11 @@
 # allsims testhod rsd
-import gc
 import time
 
-import Corrfunc
-import numba
 import numpy as np
 # from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
 # from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
 # from Corrfunc.theory.DDrppi import
-from Corrfunc.theory import DDrppi, DDsmu, wp, xi
-from numba import njit
+from Corrfunc.theory import DDrppi, DDsmu
 from scipy.special import legendre
 
 
@@ -139,10 +135,11 @@ def calc_multipole_fast(x1, y1, z1, sbins,
     # to do: make this native
     cf_start = time.time()
     sbins = sbins.astype(np.float32)
+
     x1 = x1.astype(np.float32)
     y1 = y1.astype(np.float32)
     z1 = z1.astype(np.float32)
-    pos1 = np.array([x1, y1, z1]).T % lbox
+    # pos1 = np.array([x1, y1, z1]).T % lbox
     lbox = np.float32(lbox)
 
     if autocorr == 1:

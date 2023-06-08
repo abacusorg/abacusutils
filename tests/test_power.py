@@ -20,7 +20,7 @@ def power_test_data():
 @pytest.mark.parametrize('compensated', [False,True], ids=['nocomp','comp'])
 @pytest.mark.parametrize('paste', ['CIC','TSC'])
 def test_power(power_test_data, interlaced, compensated, paste):
-    from abacusnbody.hod.power_spectrum import calc_power
+    from abacusnbody.analysis.power_spectrum import calc_power
 
     # load data
     Lbox = power_test_data['Lbox']
@@ -29,7 +29,6 @@ def test_power(power_test_data, interlaced, compensated, paste):
     z = power_test_data['z']
 
     # specifications of the power spectrum computation
-    paste = "CIC"
     nmesh = 72
     nbins_mu = 4
     logk = False
@@ -45,9 +44,9 @@ def test_power(power_test_data, interlaced, compensated, paste):
     int_str = "_interlaced" if interlaced else ""
     fn = DATA_POWER / f"nbody_{paste}{comp_str}{int_str}.npz"
     data = np.load(fn)
-    k_nbody = data['k']
+    # k_nbody = data['k']
     Pkmu_nbody = data['power'].real
-    Nkmu_nbody = data['modes']
+    # Nkmu_nbody = data['modes']
 
     # loop over all mu values
     for i in range(Pkmu_nbody.shape[1]):

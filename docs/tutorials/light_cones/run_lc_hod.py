@@ -9,7 +9,6 @@ $ python ./run_lc_hod.py --help
 
 import argparse
 
-import numpy as np
 import yaml
 
 from abacusnbody.hod.abacus_hod import AbacusHOD
@@ -31,7 +30,8 @@ def main(path2config):
 
     # run the HODs (note: the first time you call the function run_hod, the script takes a bit to compile)
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
-    mock_dict = newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=write_to_disk, Nthread=16)
+    # mock_dict =
+    newBall.run_hod(tracers=newBall.tracers, want_rsd=want_rsd, write_to_disk=write_to_disk, Nthread=16)
 
 class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
     pass

@@ -6,7 +6,7 @@ import numba
 import numpy as np
 from astropy.io import ascii
 from astropy.table import Table
-from numba import jit, njit, types
+from numba import njit, types
 from numba.typed import Dict
 
 # import yaml
@@ -127,7 +127,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
 
     # parse out the hod parameters
     logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
-        LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]
+        LRG_design_array[0], LRG_design_array[1], LRG_design_array[2], LRG_design_array[3], LRG_design_array[4]  # noqa
     ic_L, alpha_c_L, Ac_L, Bc_L = LRG_decorations_array[10], LRG_decorations_array[0], \
         LRG_decorations_array[6], LRG_decorations_array[8]
 
@@ -138,9 +138,9 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
     ELG_decorations_array[10], ELG_decorations_array[12]
 
     logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
-        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]
+        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]  # noqa
     alpha_c_Q, Ac_Q, Bc_Q, ic_Q = QSO_decorations_array[0], QSO_decorations_array[6], QSO_decorations_array[8],\
-    QSO_decorations_array[10]
+    QSO_decorations_array[10]  # noqa
 
     H = len(mass)
 
@@ -165,7 +165,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
                 ELG_marker += N_cen_ELG_v1(mass[i], pmax_E, Q_E, logM_cut_E_temp, sigma_E, gamma_E) * ic_E * multis[i]
             QSO_marker = ELG_marker
             if want_QSO:
-                logM_cut_Q_temp = logM_cut_Q + Ac_Q * deltac[i] + Bc_Q * fenv[i]
+                # logM_cut_Q_temp = logM_cut_Q + Ac_Q * deltac[i] + Bc_Q * fenv[i]
                 QSO_marker += N_cen_QSO(mass[i], logM_cut_Q, sigma_Q) * ic_Q * multis[i]
 
             if randoms[i] <= LRG_marker:
@@ -285,7 +285,7 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
                 qso_z[j3] = pos[i,2]
                 qso_vz[j3] = vel[i,2] + alpha_c_Q * vdev[i] # velocity bias
                 # rsd only applies to the z direction
-                if rsd and origin != None:
+                if rsd and origin is not None:
                     nx = qso_x[j3] - origin[0]
                     ny = qso_y[j3] - origin[1]
                     nz = qso_z[j3] - origin[2]
@@ -366,7 +366,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, hsh
         ELG_decorations_array[13], ELG_decorations_array[14], ELG_decorations_array[15], ELG_decorations_array[16]
 
     logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
-        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4]
+        QSO_design_array[0], QSO_design_array[1], QSO_design_array[2], QSO_design_array[3], QSO_design_array[4] # noqa
     alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
         QSO_decorations_array[1], QSO_decorations_array[2], QSO_decorations_array[3], QSO_decorations_array[4], \
         QSO_decorations_array[5], QSO_decorations_array[6], QSO_decorations_array[7], QSO_decorations_array[8], \
@@ -548,7 +548,7 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, hsh
                 qso_vy[j3] = hvel[i, 1] + alpha_s_Q * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 qso_z[j3] = ppos[i, 2]
                 qso_vz[j3] = hvel[i, 2] + alpha_s_Q * (pvel[i, 2] - hvel[i, 2]) # velocity bias
-                if rsd and origin != None:
+                if rsd and origin is not None:
                     nx = qso_x[j3] - origin[0]
                     ny = qso_y[j3] - origin[1]
                     nz = qso_z[j3] - origin[2]
@@ -909,7 +909,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
 
     """
 
-    if not type(rsd) is bool:
+    if type(rsd) is not bool:
         raise ValueError("Error: rsd has to be a boolean")
 
     # find the halos, populate them with galaxies and write them to files
@@ -940,7 +940,8 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
             os.makedirs(outdir, exist_ok = True)
 
             # save to file
-            outdict = HOD_dict[tracer].pop('Ncent', None)
+            # outdict =
+            HOD_dict[tracer].pop('Ncent', None)
             table = Table(HOD_dict[tracer], meta = {'Ncent': Ncent, 'Gal_type': tracer, **tracers[tracer]})
             if params['chunk'] == -1:
                 ascii.write(table, outdir / (f"{tracer}s.dat"), overwrite = True, format = 'ecsv')
