@@ -4,7 +4,6 @@ import numba
 import numpy as np
 import numpy.linalg as la
 from numba import njit
-from scipy.interpolate import interpn
 from scipy.ndimage import gaussian_filter
 
 # from nbodykit.lab import ArrayCatalog, FieldMesh

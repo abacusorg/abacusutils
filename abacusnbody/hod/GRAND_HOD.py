@@ -809,9 +809,9 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     # for each halo, generate central galaxies and output to file
     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'],
-             halos_array['hrandoms'], halos_array['hveldev'], 
-             halos_array.get('hdeltac', np.zeros(len(halos_array['hmass']))), 
-             halos_array.get('hfenv', np.zeros(len(halos_array['hmass']))), 
+             halos_array['hrandoms'], halos_array['hveldev'],
+             halos_array.get('hdeltac', np.zeros(len(halos_array['hmass']))),
+             halos_array.get('hfenv', np.zeros(len(halos_array['hmass']))),
              halos_array.get('hshear', np.zeros(len(halos_array['hmass']))),
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array,
              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread, origin)
@@ -830,10 +830,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     start = time.time()
     LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'],
-             subsample['pweights'], subsample['prandoms'], 
-             subsample.get('pdeltac', np.zeros(len(subsample['phid']))), 
-             subsample.get('pfenv', np.zeros(len(subsample['phid']))), 
-             subsample.get('pshear', np.zeros(len(subsample['phid']))), 
+             subsample['pweights'], subsample['prandoms'],
+             subsample.get('pdeltac', np.zeros(len(subsample['phid']))),
+             subsample.get('pfenv', np.zeros(len(subsample['phid']))),
+             subsample.get('pshear', np.zeros(len(subsample['phid']))),
              enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'], subsample['pranksc'],
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],

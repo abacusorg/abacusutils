@@ -147,7 +147,7 @@ class AbacusHOD:
 
         self.halo_mass_func_wshear, edges = np.histogramdd(
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
-                       self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))), 
+                       self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))),
                        self.halo_data.get('hshear', np.zeros(len(self.halo_data['hmass']))))).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins, self.shearbins],
             weights = self.halo_data['hmultis'])
@@ -426,7 +426,7 @@ class AbacusHOD:
             halo_data["hdeltac"] = hdeltac
             halo_data["hfenv"] = hfenv
             particle_data["pdeltac"] = pdeltac
-            particle_data["pfenv"] = pfenv                    
+            particle_data["pfenv"] = pfenv
         if self.want_shear:
             halo_data["hshear"] = hshear
             particle_data["pshear"] = pshear
@@ -619,7 +619,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, shearbins, halo_mass_func, p_max, Q,
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As, 
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As,
                    Acent, Asat, Bcent, Bsat, Ccent, Csat,
                    logM1_EE, alpha_EE, logM1_EL, alpha_EL, ic, Delta_a, Nthread):
         """

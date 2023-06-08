@@ -18,12 +18,9 @@ from pathlib import Path
 import h5py
 import numba
 import numpy as np
-import numpy.linalg as la
 import yaml
-from astropy.table import Table
-from numba import jit, njit, types
-from scipy.interpolate import NearestNDInterpolator, interpn
-from scipy.ndimage import gaussian_filter
+from numba import njit
+from scipy.interpolate import interpn
 from scipy.spatial import cKDTree
 
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -47,7 +44,7 @@ def subsample_halos(m, MT):
         downfactors[mask1] = 0.2/(1.0 + 10*np.exp(-(x[mask1] - 11.2)*25))
         downfactors[mask2&(~mask1)] = 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.3)*25))
         downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.7)*10))
-        
+
         # # for bgs
         # mask1 = x < 11.0
         # mask2 = x < 11.2
@@ -685,7 +682,7 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
     cat = CompaSOHaloCatalog(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0'), fields = ['N'], cleaned = True)
     header = cat.header
     Lbox = header['BoxSizeHMpc']
-    cell = Lbox/N_dim
+    Lbox/N_dim
     print("compiled all halos", "took time", time.time() - start)
 
     start = time.time()
