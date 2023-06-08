@@ -133,7 +133,7 @@ def calc_multipole_fast(x1, y1, z1, sbins,
 
     # single precision mode
     # to do: make this native
-    cf_start = time.time()
+    time.time()
     sbins = sbins.astype(np.float32)
 
     x1 = x1.astype(np.float32)

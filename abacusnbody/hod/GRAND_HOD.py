@@ -131,9 +131,8 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
     ic_L, alpha_c_L, Ac_L, Bc_L = LRG_decorations_array[10], LRG_decorations_array[0], \
         LRG_decorations_array[6], LRG_decorations_array[8]
 
-    pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E = \
-        ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
-        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7]
+    pmax_E, Q_E, logM_cut_E, sigma_E, gamma_E = \
+        ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[4], ELG_design_array[7]
     alpha_c_E, Ac_E, Bc_E, Cc_E, ic_E = ELG_decorations_array[0], ELG_decorations_array[6], ELG_decorations_array[8],\
     ELG_decorations_array[10], ELG_decorations_array[12]
 
@@ -356,9 +355,8 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, hsh
         LRG_decorations_array[5], LRG_decorations_array[6], LRG_decorations_array[7], LRG_decorations_array[8], \
         LRG_decorations_array[9], LRG_decorations_array[10]
 
-    pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E = \
-        ELG_design_array[0], ELG_design_array[1], ELG_design_array[2], ELG_design_array[3], ELG_design_array[4],\
-        ELG_design_array[5], ELG_design_array[6], ELG_design_array[7], ELG_design_array[8]
+    logM_cut_E, kappa_E, logM1_E, alpha_E, A_E = \
+        ELG_design_array[2], ELG_design_array[3], ELG_design_array[5], ELG_design_array[6], ELG_design_array[8]
     alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
         ELG_decorations_array[1], ELG_decorations_array[2], ELG_decorations_array[3], ELG_decorations_array[4], \
         ELG_decorations_array[5], ELG_decorations_array[6], ELG_decorations_array[7], ELG_decorations_array[8], \
@@ -809,9 +807,9 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     # for each halo, generate central galaxies and output to file
     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'],
-             halos_array['hrandoms'], halos_array['hveldev'], 
-             halos_array.get('hdeltac', np.zeros(len(halos_array['hmass']))), 
-             halos_array.get('hfenv', np.zeros(len(halos_array['hmass']))), 
+             halos_array['hrandoms'], halos_array['hveldev'],
+             halos_array.get('hdeltac', np.zeros(len(halos_array['hmass']))),
+             halos_array.get('hfenv', np.zeros(len(halos_array['hmass']))),
              halos_array.get('hshear', np.zeros(len(halos_array['hmass']))),
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array,
              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread, origin)
@@ -830,10 +828,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     start = time.time()
     LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'],
-             subsample['pweights'], subsample['prandoms'], 
-             subsample.get('pdeltac', np.zeros(len(subsample['phid']))), 
-             subsample.get('pfenv', np.zeros(len(subsample['phid']))), 
-             subsample.get('pshear', np.zeros(len(subsample['phid']))), 
+             subsample['pweights'], subsample['prandoms'],
+             subsample.get('pdeltac', np.zeros(len(subsample['phid']))),
+             subsample.get('pfenv', np.zeros(len(subsample['phid']))),
+             subsample.get('pshear', np.zeros(len(subsample['phid']))),
              enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'], subsample['pranksc'],
              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
              QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],

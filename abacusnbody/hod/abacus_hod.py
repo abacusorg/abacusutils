@@ -147,7 +147,7 @@ class AbacusHOD:
 
         self.halo_mass_func_wshear, edges = np.histogramdd(
             np.vstack((np.log10(self.halo_data['hmass']), self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
-                       self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))), 
+                       self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))),
                        self.halo_data.get('hshear', np.zeros(len(self.halo_data['hmass']))))).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins, self.shearbins],
             weights = self.halo_data['hmultis'])
@@ -426,7 +426,7 @@ class AbacusHOD:
             halo_data["hdeltac"] = hdeltac
             halo_data["hfenv"] = hfenv
             particle_data["pdeltac"] = pdeltac
-            particle_data["pfenv"] = pfenv                    
+            particle_data["pfenv"] = pfenv
         if self.want_shear:
             halo_data["hshear"] = hshear
             particle_data["pshear"] = pshear
@@ -619,7 +619,7 @@ class AbacusHOD:
     @staticmethod
     @njit(fastmath = True, parallel = True)
     def _compute_ngal_elg(logMbins, deltacbins, fenvbins, shearbins, halo_mass_func, p_max, Q,
-                   logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As, 
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As,
                    Acent, Asat, Bcent, Bsat, Ccent, Csat,
                    logM1_EE, alpha_EE, logM1_EL, alpha_EL, ic, Delta_a, Nthread):
         """
@@ -639,20 +639,20 @@ class AbacusHOD:
         for i in numba.prange(len(logMbins) - 1):
             for j in range(len(deltacbins) - 1):
                 for k in range(len(fenvbins) - 1):
-                    for l in range(len(shearbins) - 1):
+                    for el in range(len(shearbins) - 1):
                         Mh_temp = 10**logMs[i]
-                        logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k] + Ccent * shears[l]
-                        M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k] + Csat * shears[l])
+                        logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k] + Ccent * shears[el]
+                        M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k] + Csat * shears[el])
                         ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma) * ic
                         nsat_temp = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As) * ic
                         # conformity treatment
 
-                        M1_conf =  10**(logM1_EE + Asat * deltacs[j] + Bsat * fenvs[k] + Csat * shears[l])
+                        M1_conf =  10**(logM1_EE + Asat * deltacs[j] + Bsat * fenvs[k] + Csat * shears[el])
                         nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_EE, As) * ic
                         # we cannot calculate the number of EL conformal satellites with this approach, so we ignore it for now.
 
-                        ngal_cent += halo_mass_func[i, j, k, l] * ncent_temp
-                        ngal_sat += halo_mass_func[i, j, k, l] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
+                        ngal_cent += halo_mass_func[i, j, k, el] * ncent_temp
+                        ngal_sat += halo_mass_func[i, j, k, el] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
                         # print(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As)
         return ngal_cent, ngal_sat
 

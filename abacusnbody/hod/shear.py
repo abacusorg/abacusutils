@@ -4,7 +4,6 @@ import numba
 import numpy as np
 import numpy.linalg as la
 from numba import njit
-from scipy.interpolate import interpn
 from scipy.ndimage import gaussian_filter
 
 # from nbodykit.lab import ArrayCatalog, FieldMesh
@@ -195,7 +194,8 @@ def get_tidal(dfour, karr, N_dim, R):
     for a in range(N_dim):
         for b in range(N_dim):
             for c in range(N_dim):
-                if (a, b, c) == (0, 0, 0): continue
+                if (a, b, c) == (0, 0, 0):
+                    continue
 
                 ksq = karr[a]**2 + karr[b]**2 + karr[c]**2
                 # smoothed density Gauss fourier
