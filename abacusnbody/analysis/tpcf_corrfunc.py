@@ -192,7 +192,6 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     lbox = np.float32(lbox)
 
     if autocorr == 1:
-        print("sample size", len(x1))
         results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
             boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
