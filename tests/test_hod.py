@@ -4,10 +4,11 @@ and `AbacusHOD` to generate mock galaxies, and comparing the results to a refere
 catalog.
 
 To run the tests, use:
-    $ pytest test_hod.py
+    $ pytest tests/test_hod.py
 
 To generate new reference, run:
-    $ python test_hod.py
+    $ python tests/test_hod.py
+from base directory
 """
 
 import tempfile
@@ -82,6 +83,7 @@ def test_hod(tmp_path, reference_mode = False):
         newhalos = h5py.File(savedir+'/halos_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r')['halos']
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
         for i in range(len(newhalos)):
+            print(newhalos[i], temphalos[i])
             for j in range(len(newhalos[i])):
                 assert check_close(newhalos[i][j], temphalos[i][j])
         newparticles = h5py.File(savedir+'/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r')['particles']

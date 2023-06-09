@@ -108,6 +108,8 @@ class AbacusHOD:
 
         # HOD parameter choices
         self.want_ranks = HOD_params.get('want_ranks', False)
+        self.want_AB = HOD_params.get('want_AB', False)
+        self.want_shear = HOD_params.get('want_shear', False)
         self.want_rsd = HOD_params['want_rsd']
 
         if clustering_params is not None:
@@ -133,6 +135,7 @@ class AbacusHOD:
                 np.log10(np.max(self.halo_data['hmass'])), 101)
             self.deltacbins = np.linspace(-0.5, 0.5, 101)
             self.fenvbins = np.linspace(-0.5, 0.5, 101)
+            self.shearbins = np.linspace(-0.5, 0.5, 101)
 
             self.halo_mass_func, edges = np.histogramdd(
                 np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
@@ -142,6 +145,13 @@ class AbacusHOD:
             from abacusnbody.metadata import get_meta
             meta = get_meta(self.sim_name, redshift=0.1)
             self.lbox = meta['BoxSize']
+
+        self.halo_mass_func_wshear, edges = np.histogramdd(
+            np.vstack((np.log10(self.halo_data['hmass']), self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
+                       self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))),
+                       self.halo_data.get('hshear', np.zeros(len(self.halo_data['hmass']))))).T,
+            bins = [self.logMbins, self.deltacbins, self.fenvbins, self.shearbins],
+            weights = self.halo_data['hmultis'])
 
     def staging(self):
         """
@@ -229,8 +239,11 @@ class AbacusHOD:
         hrandoms = np.empty([Nhalos_tot])
         hveldev = np.empty([Nhalos_tot])
         hsigma3d = np.empty([Nhalos_tot])
-        hdeltac = np.empty([Nhalos_tot])
-        hfenv = np.empty([Nhalos_tot])
+        if self.want_AB:
+            hdeltac = np.empty([Nhalos_tot])
+            hfenv = np.empty([Nhalos_tot])
+        if self.want_shear:
+            hshear = np.empty([Nhalos_tot])
 
         ppos = np.empty((Nparts_tot, 3))
         pvel = np.empty((Nparts_tot, 3))
@@ -240,8 +253,11 @@ class AbacusHOD:
         pNp = np.empty([Nparts_tot])
         psubsampling = np.empty([Nparts_tot])
         prandoms = np.empty([Nparts_tot])
-        pdeltac = np.empty([Nparts_tot])
-        pfenv = np.empty([Nparts_tot])
+        if self.want_AB:
+            pdeltac = np.empty([Nparts_tot])
+            pfenv = np.empty([Nparts_tot])
+        if self.want_shear:
+            pshear = np.empty([Nparts_tot])
 
         # ranks
         if self.want_ranks:
@@ -280,6 +296,7 @@ class AbacusHOD:
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
             halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
+
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
             halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
             # halo_pstart = maskedhalos['npstartA'].astype(int) # starting index of particles
@@ -296,8 +313,14 @@ class AbacusHOD:
             hrandoms[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_randoms
             hveldev[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_vel_dev
             hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_sigma3d
-            hdeltac[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_deltac
-            hfenv[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_fenv
+            if self.want_AB:
+                halo_deltac = maskedhalos['deltac_rank'] # halo concentration
+                halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
+                hdeltac[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_deltac
+                hfenv[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_fenv
+            if self.want_shear:
+                halo_shear = maskedhalos['shear_rank'] # halo velocities, km/s
+                hshear[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_shear
             halo_ticker += Nhalos[eslab-start]
 
             # extract particle data that we need
@@ -312,8 +335,11 @@ class AbacusHOD:
             part_Np = subsample['Np'] # number of particles that end up in the halo
             part_subsample = subsample['downsample_halo']
             part_randoms = subsample['randoms']
-            part_deltac = subsample['halo_deltac']
-            part_fenv = subsample['halo_fenv']
+            if self.want_AB:
+                part_deltac = subsample['halo_deltac']
+                part_fenv = subsample['halo_fenv']
+            if self.want_shear:
+                part_shear = subsample['halo_shear']
 
             if self.want_ranks:
                 assert 'ranks' in part_fields
@@ -352,8 +378,11 @@ class AbacusHOD:
             pNp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_Np
             psubsampling[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_subsample
             prandoms[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_randoms
-            pdeltac[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_deltac
-            pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
+            if self.want_AB:
+                pdeltac[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_deltac
+                pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
+            if self.want_shear:
+                pshear[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_shear
             parts_ticker += Nparts[eslab-start]
 
         # sort halos by hid, important for conformity
@@ -368,8 +397,11 @@ class AbacusHOD:
             hrandoms = hrandoms[sortind]
             hveldev = hveldev[sortind]
             hsigma3d = hsigma3d[sortind]
-            hdeltac = hdeltac[sortind]
-            hfenv = hfenv[sortind]
+            if self.want_AB:
+                hdeltac = hdeltac[sortind]
+                hfenv = hfenv[sortind]
+            if self.want_shear:
+                hshear = hshear[sortind]
         assert np.all(hid[:-1] <= hid[1:])
 
         halo_data = {"hpos": hpos,
@@ -379,9 +411,8 @@ class AbacusHOD:
                      "hmultis": hmultis,
                      "hrandoms": hrandoms,
                      "hveldev": hveldev,
-                     "hsigma3d": hsigma3d,
-                     "hdeltac": hdeltac,
-                     "hfenv": hfenv}
+                     "hsigma3d": hsigma3d}
+
         pweights = 1/pNp/psubsampling
         pinds = _searchsorted_parallel(hid, phid)
         particle_data = {"ppos": ppos,
@@ -391,9 +422,16 @@ class AbacusHOD:
                          "phid": phid,
                          "pweights": pweights,
                          "prandoms": prandoms,
-                         "pdeltac": pdeltac,
-                         "pfenv": pfenv,
                          "pinds": pinds}
+        if self.want_AB:
+            halo_data["hdeltac"] = hdeltac
+            halo_data["hfenv"] = hfenv
+            particle_data["pdeltac"] = pdeltac
+            particle_data["pfenv"] = pfenv
+        if self.want_shear:
+            halo_data["hshear"] = hshear
+            particle_data["pshear"] = pshear
+
         if self.want_ranks:
             particle_data['pranks'] = p_ranks
             particle_data['pranksv'] = p_ranksv
@@ -522,16 +560,21 @@ class AbacusHOD:
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'ELG':
                 newngal = AbacusHOD._compute_ngal_elg(
-                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func,
+                    self.logMbins, self.deltacbins, self.fenvbins, self.shearbins, self.halo_mass_func_wshear,
                     tracer_hod['p_max'], tracer_hod['Q'], tracer_hod['logM_cut'],
                     tracer_hod['kappa'], tracer_hod['sigma'], tracer_hod['logM1'],
                     tracer_hod['alpha'], tracer_hod['gamma'], tracer_hod.get('logM_cut_pr', 0),
                     tracer_hod.get('logM1_pr', 0), tracer_hod.get('A_s', 1),
                     tracer_hod.get('Acent', 0), tracer_hod.get('Asat', 0),
                     tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0),
-                    tracer_hod.get('delta_M1', 0), tracer_hod.get('delta_alpha', 0),
-                    tracer_hod.get('alpha1', 0), tracer_hod.get('beta', 0),
+                    tracer_hod.get('Ccent', 0), tracer_hod.get('Csat', 0),
+                    tracer_hod.get('logM1_EE', tracer_hod['logM1']),
+                    tracer_hod.get('alpha_EE', tracer_hod['alpha']),
+                    tracer_hod.get('logM1_EL', tracer_hod['logM1']),
+                    tracer_hod.get('alpha_EL', tracer_hod['alpha']),
                     tracer_hod.get('ic', 1), Delta_a, Nthread)
+                print("newngal", newngal)
+
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
             elif etracer == 'QSO':
@@ -576,9 +619,10 @@ class AbacusHOD:
 
     @staticmethod
     @njit(fastmath = True, parallel = True)
-    def _compute_ngal_elg(logMbins, deltacbins, fenvbins, halo_mass_func, p_max, Q,
-                          logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As, Acent, Asat, Bcent, Bsat,
-                          delta_M1, delta_alpha, alpha1, beta, ic, Delta_a, Nthread):
+    def _compute_ngal_elg(logMbins, deltacbins, fenvbins, shearbins, halo_mass_func, p_max, Q,
+                   logM_cut, kappa, sigma, logM1, alpha, gamma, logM_cut_pr, logM1_pr, As,
+                   Acent, Asat, Bcent, Bsat, Ccent, Csat,
+                   logM1_EE, alpha_EE, logM1_EL, alpha_EL, ic, Delta_a, Nthread):
         """
         internal helper to compute number of LRGs
         """
@@ -587,6 +631,7 @@ class AbacusHOD:
         logMs = 0.5*(logMbins[1:] + logMbins[:-1])
         deltacs = 0.5*(deltacbins[1:] + deltacbins[:-1])
         fenvs = 0.5*(fenvbins[1:] + fenvbins[:-1])
+        shears = 0.5*(shearbins[1:] + shearbins[:-1])
         ngal_cent = 0
         ngal_sat = 0
         # z-evolving HOD
@@ -595,18 +640,21 @@ class AbacusHOD:
         for i in numba.prange(len(logMbins) - 1):
             for j in range(len(deltacbins) - 1):
                 for k in range(len(fenvbins) - 1):
-                    Mh_temp = 10**logMs[i]
-                    logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k]
-                    M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k])
-                    ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma) * ic
-                    nsat_temp = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As) * ic
-                    # conformity treatment
-                    M1_conf = M1_temp*10**delta_M1
-                    alpha_conf = alpha + delta_alpha
-                    nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_conf, As, alpha1, beta) * ic
+                    for el in range(len(shearbins) - 1):
+                        Mh_temp = 10**logMs[i]
+                        logM_cut_temp = logM_cut + Acent * deltacs[j] + Bcent * fenvs[k] + Ccent * shears[el]
+                        M1_temp = 10**(logM1 + Asat * deltacs[j] + Bsat * fenvs[k] + Csat * shears[el])
+                        ncent_temp = N_cen_ELG_v1(Mh_temp, p_max, Q, logM_cut_temp, sigma, gamma) * ic
+                        nsat_temp = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As) * ic
+                        # conformity treatment
 
-                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp
-                    ngal_sat += halo_mass_func[i, j, k] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
+                        M1_conf =  10**(logM1_EE + Asat * deltacs[j] + Bsat * fenvs[k] + Csat * shears[el])
+                        nsat_conf = N_sat_elg(Mh_temp, 10**logM_cut_temp, kappa, M1_conf, alpha_EE, As) * ic
+                        # we cannot calculate the number of EL conformal satellites with this approach, so we ignore it for now.
+
+                        ngal_cent += halo_mass_func[i, j, k, el] * ncent_temp
+                        ngal_sat += halo_mass_func[i, j, k, el] * (nsat_temp * (1-ncent_temp) + nsat_conf * ncent_temp)
+                        # print(Mh_temp, 10**logM_cut_temp, kappa, M1_temp, alpha, As)
         return ngal_cent, ngal_sat
 
     @staticmethod
@@ -724,7 +772,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_multipole(self, mock_dict, rpbins, pimax, Nthread = 8):
+    def compute_multipole(self, mock_dict, rpbins, pimax, sbins, nbins_mu, Nthread = 8):
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
@@ -734,8 +782,8 @@ class AbacusHOD:
                 if i1 > i2:
                     continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
-                    new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
-                        self.lbox, Nthread)
+                    new_multi = calc_multipole_fast(x1, y1, z1, sbins,
+                        self.lbox, Nthread, nbins_mu = nbins_mu)
                     new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
                     clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
                 else:
