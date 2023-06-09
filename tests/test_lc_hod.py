@@ -116,4 +116,4 @@ def test_hod(tmp_path, reference_mode = False):
             assert check_close(data[ekey], data1[ekey])
 
 if __name__ == '__main__':
-    test_hod(".", reference_mode = True)
+    test_hod(".", reference_mode = False)
