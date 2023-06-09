@@ -135,6 +135,7 @@ class AbacusHOD:
                 np.log10(np.max(self.halo_data['hmass'])), 101)
             self.deltacbins = np.linspace(-0.5, 0.5, 101)
             self.fenvbins = np.linspace(-0.5, 0.5, 101)
+            self.shearbins = np.linspace(-0.5, 0.5, 101)
 
             self.halo_mass_func, edges = np.histogramdd(
                 np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,

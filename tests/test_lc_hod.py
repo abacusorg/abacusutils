@@ -2,10 +2,11 @@
 Like `test_hod.py`, but for the light cone halos & mocks.
 
 To run the tests, use:
-    $ pytest test_hod.py
+    $ pytest tests/test_lc_hod.py
 
 To generate new reference, run:
-    $ python test_hod.py
+    $ python tests/test_lc_hod.py
+from base directory
 """
 
 from os.path import dirname
@@ -115,4 +116,4 @@ def test_hod(tmp_path, reference_mode = False):
             assert check_close(data[ekey], data1[ekey])
 
 if __name__ == '__main__':
-    test_hod(".", reference_mode = False)
+    test_hod(".", reference_mode = True)

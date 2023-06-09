@@ -14,7 +14,7 @@ import multiprocessing
 import os
 from itertools import repeat
 from pathlib import Path
-from time import time
+import time
 import h5py
 import numba
 import numpy as np
