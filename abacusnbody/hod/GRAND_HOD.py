@@ -335,6 +335,9 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
     ID_dict['QSO'] = qso_id
     return LRG_dict, ELG_dict, QSO_dict, ID_dict, keep
 
+@njit(parallel = True, fastmath = True)
+def gen_sats_nfw():
+    return 0
 
 @njit(parallel = True, fastmath = True)
 def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, hshear,
