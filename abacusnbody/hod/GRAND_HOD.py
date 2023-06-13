@@ -790,23 +790,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         logM_cut_L = logM_cut_L + logM_cut_pr*Delta_a
         logM1_L = logM1_L + logM1_pr*Delta_a
 
-        #         alpha_c = LRG_HOD.get('alpha_c', 0.0)
-        #         alpha_s = LRG_HOD.get('alpha_s', 1.0)
-        #         s = LRG_HOD.get('s', 0.0)
-        #         s_p = LRG_HOD.get('s_p', 0.0)
-        #         s_v = LRG_HOD.get('s_v', 0.0)
-        #         s_r = LRG_HOD.get('s_r', 0.0)
-        #         Ac = LRG_HOD.get('Acent', 0.0)
-        #         As = LRG_HOD.get('Asat', 0.0)
-        #         Bc = LRG_HOD.get('Bcent', 0.0)
-        #         Bs = LRG_HOD.get('Bsat', 0.0)
-        #         ic = LRG_HOD.get('ic', 1.0)
-
-        #         LRG_design_array = np.array([logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L])
-        #         LRG_decorations_array = np.array([alpha_c, alpha_s, s, s_v, s_p, s_r, Ac, As, Bc, Bs, ic])
-
         # numba typed dict
-        LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float32)
+        LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
         LRG_hod_dict['logM_cut'] = logM_cut_L
         LRG_hod_dict['logM1'] = logM1_L
         LRG_hod_dict['sigma'] = LRG_HOD.get('sigma', 0.0)
@@ -825,12 +810,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         LRG_hod_dict['ic'] = LRG_HOD.get('ic', 1.0)
         
     else:
-        # B.H. TODO: this will go when we switch to dictionaried and for loops
         want_LRG = False
-        # LRG_design_array = np.zeros(5)
-        # LRG_decorations_array = np.zeros(11)
-        
-        LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float32)
+        LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
 
 
     if 'ELG' in tracers.keys():
@@ -845,34 +826,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         logM_cut_E = logM_cut_E + logM_cut_pr*Delta_a
         logM1_E = logM1_E + logM1_pr*Delta_a
 
-        #         alpha_c_E = ELG_HOD.get('alpha_c', 0.0)
-        #         alpha_s_E = ELG_HOD.get('alpha_s', 1.0)
-        #         s_E = ELG_HOD.get('s', 0.0)
-        #         s_p_E = ELG_HOD.get('s_p', 0.0)
-        #         s_v_E = ELG_HOD.get('s_v', 0.0)
-        #         s_r_E = ELG_HOD.get('s_r', 0.0)
-        #         Ac_E = ELG_HOD.get('Acent', 0.0)
-        #         As_E = ELG_HOD.get('Asat', 0.0)
-        #         Bc_E = ELG_HOD.get('Bcent', 0.0)
-        #         Bs_E = ELG_HOD.get('Bsat', 0.0)
-        #         Cc_E = ELG_HOD.get('Ccent', 0.0)
-        #         Cs_E = ELG_HOD.get('Csat', 0.0)
-        #         ic_E = ELG_HOD.get('ic', 1.0)
-
-        #         # conformity params
-        #         logM1_EE = ELG_HOD.get('logM1_EE', logM1_E)
-        #         alpha_EE = ELG_HOD.get('alpha_EE', alpha_E)
-
-        #         logM1_EL = ELG_HOD.get('logM1_EL', logM1_E)
-        #         alpha_EL = ELG_HOD.get('alpha_EL', alpha_E)
-
-        #         ELG_design_array = np.array(
-        #             [pmax_E, Q_E, logM_cut_E, kappa_E, sigma_E, logM1_E, alpha_E, gamma_E, A_E])
-        #         ELG_decorations_array = np.array([alpha_c_E, alpha_s_E, s_E, s_v_E, s_p_E, s_r_E,
-        #                             Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL])
-
         # numba typed dict
-        ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float32)
+        ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
         ELG_hod_dict['pmax'] = ELG_HOD.get('p_max', 0.0)
         ELG_hod_dict['Q'] = ELG_HOD.get('Q', 0.0)
         ELG_hod_dict['logM_cut'] = logM_cut_E
@@ -901,15 +856,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         ELG_hod_dict['alpha_EE'] = ELG_HOD.get('alpha_EE', ELG_hod_dict['alpha'])
         ELG_hod_dict['logM1_EL'] = ELG_HOD.get('logM1_EL', ELG_hod_dict['logM1'])
         ELG_hod_dict['alpha_EL'] = ELG_HOD.get('alpha_EL', ELG_hod_dict['alpha'])
-
-        
+     
     else:
-        # B.H. TODO: this will go when we switch to dictionaried and for loops
-        # ELG_design_array = np.zeros(8)
-        # ELG_decorations_array = np.zeros(11)
-        
         want_ELG = False
-        ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float32)
+        ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
 
     if 'QSO' in tracers.keys():
         # QSO design
@@ -921,26 +871,9 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         logM1_pr = QSO_HOD.get('logM1_pr', 0.0)
         logM_cut_Q = logM_cut_Q + logM_cut_pr*Delta_a
         logM1_Q = logM1_Q + logM1_pr*Delta_a
-
-        #         alpha_c_Q = QSO_HOD.get('alpha_c', 0.0)
-        #         alpha_s_Q = QSO_HOD.get('alpha_s', 1.0)
-        #         s_Q = QSO_HOD.get('s', 0.0)
-        #         s_p_Q = QSO_HOD.get('s_p', 0.0)
-        #         s_v_Q = QSO_HOD.get('s_v', 0.0)
-        #         s_r_Q = QSO_HOD.get('s_r', 0.0)
-        #         Ac_Q = QSO_HOD.get('Acent', 0.0)
-        #         As_Q = QSO_HOD.get('Asat', 0.0)
-        #         Bc_Q = QSO_HOD.get('Bcent', 0.0)
-        #         Bs_Q = QSO_HOD.get('Bsat', 0.0)
-        #         ic_Q = QSO_HOD.get('ic', 1.0)
-
-        #         QSO_design_array = np.array(
-        #             [logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q])
-        #         QSO_decorations_array = np.array(
-        #             [alpha_c_Q, alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q])
-
+        
         # numba typed dict
-        QSO_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float32)
+        QSO_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
         QSO_hod_dict['logM_cut'] = logM_cut_Q
         QSO_hod_dict['logM1'] = logM1_Q
         QSO_hod_dict['sigma'] = QSO_HOD.get('sigma', 0.0)
@@ -959,12 +892,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         QSO_hod_dict['ic'] = QSO_HOD.get('ic', 1.0)
         
     else:
-        # B.H. TODO: this will go when we switch to dictionaried and for loops
-        # QSO_design_array = np.zeros(5)
-        # QSO_decorations_array = np.zeros(11)
-        
         want_QSO = False
-        QSO_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float32)
+        QSO_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
 
     start = time.time()
 
@@ -972,15 +901,6 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     inv_velz2kms = 1/velz2kms
     lbox = params['Lbox']
     origin = params['origin']
-    # for each halo, generate central galaxies and output to file
-    #     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = \
-    #     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'],
-    #              halos_array['hrandoms'], halos_array['hveldev'],
-    #              halos_array.get('hdeltac', np.zeros(len(halos_array['hmass']))),
-    #              halos_array.get('hfenv', np.zeros(len(halos_array['hmass']))),
-    #              halos_array.get('hshear', np.zeros(len(halos_array['hmass']))),
-    #              LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array, QSO_design_array,
-    #              QSO_decorations_array, rsd, inv_velz2kms, lbox, want_LRG, want_ELG, want_QSO, Nthread, origin)
 
     LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = \
     gen_cent(halos_array['hpos'], halos_array['hvel'], halos_array['hmass'], halos_array['hid'], halos_array['hmultis'],
@@ -993,16 +913,6 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         print("generating centrals took ", time.time() - start)
 
     start = time.time()
-    # LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
-    # gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'],
-    #          subsample['pweights'], subsample['prandoms'],
-    #          subsample.get('pdeltac', np.zeros(len(subsample['phid']))),
-    #          subsample.get('pfenv', np.zeros(len(subsample['phid']))),
-    #          subsample.get('pshear', np.zeros(len(subsample['phid']))),
-    #          enable_ranks, subsample['pranks'], subsample['pranksv'], subsample['pranksp'], subsample['pranksr'], subsample['pranksc'],
-    #          LRG_design_array, LRG_decorations_array, ELG_design_array, ELG_decorations_array,
-    #          QSO_design_array, QSO_decorations_array, rsd, inv_velz2kms, lbox, params['Mpart'],
-    #          want_LRG, want_ELG, want_QSO, Nthread, origin, keep_cent[subsample['pinds']])
     LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = \
     gen_sats(subsample['ppos'], subsample['pvel'], subsample['phvel'], subsample['phmass'], subsample['phid'],
              subsample['pweights'], subsample['prandoms'],
