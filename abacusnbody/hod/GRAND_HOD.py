@@ -116,7 +116,6 @@ def wrap(x, L):
         return x + L
     return x
 
-
 @njit(parallel=True, fastmath=True)
 def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
     LRG_hod_dict, ELG_hod_dict, QSO_hod_dict, 
@@ -130,18 +129,18 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
         logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
             LRG_hod_dict['logM_cut'], LRG_hod_dict['logM1'], LRG_hod_dict['sigma'], LRG_hod_dict['alpha'], LRG_hod_dict['kappa']
         ic_L, alpha_c_L, Ac_L, Bc_L = LRG_hod_dict['ic'], LRG_hod_dict['alpha_c'], \
-            LRG_hod_dict['Ac'], LRG_hod_dict['Bc']
+            LRG_hod_dict['Acent'], LRG_hod_dict['Bcent']
 
     if want_ELG:
         pmax_E, Q_E, logM_cut_E, sigma_E, gamma_E = \
-            ELG_hod_dict['pmax'], ELG_hod_dict['Q'], ELG_hod_dict['logM_cut'], ELG_hod_dict['sigma'], ELG_hod_dict['gamma']
-        alpha_c_E, Ac_E, Bc_E, Cc_E, ic_E = ELG_hod_dict['alpha_c'], ELG_hod_dict['Ac'], ELG_hod_dict['Bc'],\
-        ELG_hod_dict['Cc'], ELG_hod_dict['ic']
+            ELG_hod_dict['p_max'], ELG_hod_dict['Q'], ELG_hod_dict['logM_cut'], ELG_hod_dict['sigma'], ELG_hod_dict['gamma']
+        alpha_c_E, Ac_E, Bc_E, Cc_E, ic_E = ELG_hod_dict['alpha_c'], ELG_hod_dict['Acent'], ELG_hod_dict['Bcent'],\
+        ELG_hod_dict['Ccent'], ELG_hod_dict['ic']
 
     if want_QSO:
         logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
             QSO_hod_dict['logM_cut'], QSO_hod_dict['kappa'], QSO_hod_dict['sigma'], QSO_hod_dict['logM1'], QSO_hod_dict['alpha']
-        alpha_c_Q, Ac_Q, Bc_Q, ic_Q = QSO_hod_dict['alpha_c'], QSO_hod_dict['Ac'], QSO_hod_dict['Bc'], QSO_hod_dict['ic']
+        alpha_c_Q, Ac_Q, Bc_Q, ic_Q = QSO_hod_dict['alpha_c'], QSO_hod_dict['Acent'], QSO_hod_dict['Bcent'], QSO_hod_dict['ic']
 
     H = len(mass)
 
@@ -420,25 +419,26 @@ def gen_sats_nfw(LRG_hod_dict, ELG_hod_dict, QSO_hod_dict, want_LRG, want_ELG, w
             LRG_hod_dict['logM_cut'], LRG_hod_dict['logM1'], LRG_hod_dict['sigma'], LRG_hod_dict['alpha'], LRG_hod_dict['kappa']
         alpha_s_L, s_L, s_v_L, s_p_L, s_r_L, Ac_L, As_L, Bc_L, Bs_L, ic_L = \
             LRG_hod_dict['alpha_s'], LRG_hod_dict['s'], LRG_hod_dict['s_v'], LRG_hod_dict['s_p'], \
-            LRG_hod_dict['s_r'], LRG_hod_dict['Ac'], LRG_hod_dict['As'], LRG_hod_dict['Bc'], \
-            LRG_hod_dict['Bs'], LRG_hod_dict['ic']
+            LRG_hod_dict['s_r'], LRG_hod_dict['Acent'], LRG_hod_dict['Asat'], LRG_hod_dict['Bcent'], \
+            LRG_hod_dict['Bsat'], LRG_hod_dict['ic']
 
     if want_ELG:
         logM_cut_E, kappa_E, logM1_E, alpha_E, A_E = \
-            ELG_hod_dict['logM_cut'], ELG_hod_dict['kappa'], ELG_hod_dict['logM1'], ELG_hod_dict['alpha'], ELG_hod_dict['A']
+            ELG_hod_dict['logM_cut'], ELG_hod_dict['kappa'], ELG_hod_dict['logM1'], ELG_hod_dict['alpha'], ELG_hod_dict['A_s']
         alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
             ELG_hod_dict['alpha_s'], ELG_hod_dict['s'], ELG_hod_dict['s_v'], ELG_hod_dict['s_p'], \
-            ELG_hod_dict['s_r'], ELG_hod_dict['Ac'], ELG_hod_dict['As'], ELG_hod_dict['Bc'], \
-            ELG_hod_dict['Bs'], ELG_hod_dict['Cc'], ELG_hod_dict['Cs'], ELG_hod_dict['ic'], \
+            ELG_hod_dict['s_r'], ELG_hod_dict['Acent'], ELG_hod_dict['Asat'], ELG_hod_dict['Bcent'], \
+            ELG_hod_dict['Bsat'], ELG_hod_dict['Ccent'], ELG_hod_dict['Csat'], ELG_hod_dict['ic'], \
             ELG_hod_dict['logM1_EE'], ELG_hod_dict['alpha_EE'], ELG_hod_dict['logM1_EL'], ELG_hod_dict['alpha_EL']
+        
 
     if want_QSO:
         logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
             QSO_hod_dict['logM_cut'], QSO_hod_dict['kappa'], QSO_hod_dict['sigma'], QSO_hod_dict['logM1'], QSO_hod_dict['alpha']
         alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
             QSO_hod_dict['alpha_s'], QSO_hod_dict['s'], QSO_hod_dict['s_v'], QSO_hod_dict['s_p'], \
-            QSO_hod_dict['s_r'], QSO_hod_dict['Ac'], QSO_hod_dict['As'], QSO_hod_dict['Bc'], \
-            QSO_hod_dict['Bs'], QSO_hod_dict['ic']
+            QSO_hod_dict['s_r'], QSO_hod_dict['Acent'], QSO_hod_dict['Asat'], QSO_hod_dict['Bcent'], \
+            QSO_hod_dict['Bsat'], QSO_hod_dict['ic']
 
     return 0
 
@@ -452,31 +452,30 @@ def gen_sats(ppos, pvel, hvel, hmass, hid, weights, randoms, hdeltac, hfenv, hsh
     Generate satellite galaxies in place in memory with a two pass numba parallel implementation.
     """
 
-    # standard hod design
     if want_LRG:
         logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
             LRG_hod_dict['logM_cut'], LRG_hod_dict['logM1'], LRG_hod_dict['sigma'], LRG_hod_dict['alpha'], LRG_hod_dict['kappa']
         alpha_s_L, s_L, s_v_L, s_p_L, s_r_L, Ac_L, As_L, Bc_L, Bs_L, ic_L = \
             LRG_hod_dict['alpha_s'], LRG_hod_dict['s'], LRG_hod_dict['s_v'], LRG_hod_dict['s_p'], \
-            LRG_hod_dict['s_r'], LRG_hod_dict['Ac'], LRG_hod_dict['As'], LRG_hod_dict['Bc'], \
-            LRG_hod_dict['Bs'], LRG_hod_dict['ic']
+            LRG_hod_dict['s_r'], LRG_hod_dict['Acent'], LRG_hod_dict['Asat'], LRG_hod_dict['Bcent'], \
+            LRG_hod_dict['Bsat'], LRG_hod_dict['ic']
 
     if want_ELG:
         logM_cut_E, kappa_E, logM1_E, alpha_E, A_E = \
-            ELG_hod_dict['logM_cut'], ELG_hod_dict['kappa'], ELG_hod_dict['logM1'], ELG_hod_dict['alpha'], ELG_hod_dict['A']
+            ELG_hod_dict['logM_cut'], ELG_hod_dict['kappa'], ELG_hod_dict['logM1'], ELG_hod_dict['alpha'], ELG_hod_dict['A_s']
         alpha_s_E, s_E, s_v_E, s_p_E, s_r_E, Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
             ELG_hod_dict['alpha_s'], ELG_hod_dict['s'], ELG_hod_dict['s_v'], ELG_hod_dict['s_p'], \
-            ELG_hod_dict['s_r'], ELG_hod_dict['Ac'], ELG_hod_dict['As'], ELG_hod_dict['Bc'], \
-            ELG_hod_dict['Bs'], ELG_hod_dict['Cc'], ELG_hod_dict['Cs'], ELG_hod_dict['ic'], \
+            ELG_hod_dict['s_r'], ELG_hod_dict['Acent'], ELG_hod_dict['Asat'], ELG_hod_dict['Bcent'], \
+            ELG_hod_dict['Bsat'], ELG_hod_dict['Ccent'], ELG_hod_dict['Csat'], ELG_hod_dict['ic'], \
             ELG_hod_dict['logM1_EE'], ELG_hod_dict['alpha_EE'], ELG_hod_dict['logM1_EL'], ELG_hod_dict['alpha_EL']
-
+        
     if want_QSO:
         logM_cut_Q, kappa_Q, sigma_Q, logM1_Q, alpha_Q = \
             QSO_hod_dict['logM_cut'], QSO_hod_dict['kappa'], QSO_hod_dict['sigma'], QSO_hod_dict['logM1'], QSO_hod_dict['alpha']
         alpha_s_Q, s_Q, s_v_Q, s_p_Q, s_r_Q, Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
             QSO_hod_dict['alpha_s'], QSO_hod_dict['s'], QSO_hod_dict['s_v'], QSO_hod_dict['s_p'], \
-            QSO_hod_dict['s_r'], QSO_hod_dict['Ac'], QSO_hod_dict['As'], QSO_hod_dict['Bc'], \
-            QSO_hod_dict['Bs'], QSO_hod_dict['ic']
+            QSO_hod_dict['s_r'], QSO_hod_dict['Acent'], QSO_hod_dict['Asat'], QSO_hod_dict['Bcent'], \
+            QSO_hod_dict['Bsat'], QSO_hod_dict['ic']
 
     H = len(hmass) # num of particles
 
@@ -781,6 +780,11 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
 
     if 'LRG' in tracers.keys():
         want_LRG = True
+        
+        LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
+        for key, value in LRG_HOD.items():
+            LRG_hod_dict[key] = value
+        
         # LRG design and decorations
         logM_cut_L, logM1_L = map(LRG_HOD.get, ('logM_cut', 'logM1'))
         # z-evolving HOD
@@ -790,24 +794,14 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         logM_cut_L = logM_cut_L + logM_cut_pr*Delta_a
         logM1_L = logM1_L + logM1_pr*Delta_a
 
-        # numba typed dict
-        LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
         LRG_hod_dict['logM_cut'] = logM_cut_L
         LRG_hod_dict['logM1'] = logM1_L
-        LRG_hod_dict['sigma'] = LRG_HOD.get('sigma', 0.0)
-        LRG_hod_dict['alpha'] = LRG_HOD.get('alpha', 0.0)
-        LRG_hod_dict['kappa'] = LRG_HOD.get('kappa', 0.0)
-        LRG_hod_dict['alpha_c'] = LRG_HOD.get('alpha_c', 0.0)
-        LRG_hod_dict['alpha_s'] = LRG_HOD.get('alpha_s', 1.0)
-        LRG_hod_dict['s'] = LRG_HOD.get('s', 0.0)
-        LRG_hod_dict['s_p'] = LRG_HOD.get('s_p', 0.0)
-        LRG_hod_dict['s_v'] = LRG_HOD.get('s_v', 0.0)
-        LRG_hod_dict['s_r'] = LRG_HOD.get('s_r', 0.0)
-        LRG_hod_dict['Ac'] = LRG_HOD.get('Acent', 0.0)
-        LRG_hod_dict['As'] = LRG_HOD.get('Asat', 0.0)
-        LRG_hod_dict['Bc'] = LRG_HOD.get('Bcent', 0.0)
-        LRG_hod_dict['Bs'] = LRG_HOD.get('Bsat', 0.0)
-        LRG_hod_dict['ic'] = LRG_HOD.get('ic', 1.0)
+        
+        LRG_hod_dict['Acent'] = LRG_HOD.get('Acent', 0.0)
+        LRG_hod_dict['Asat'] = LRG_HOD.get('Asat', 0.0)
+        LRG_hod_dict['Bcent'] = LRG_HOD.get('Bcent', 0.0)
+        LRG_hod_dict['Bsat'] = LRG_HOD.get('Bsat', 0.0)
+        # LRG_hod_dict['ic'] = LRG_HOD.get('ic', 1.0)
         
     else:
         want_LRG = False
@@ -817,6 +811,11 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     if 'ELG' in tracers.keys():
         # ELG design
         want_ELG = True
+
+        ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
+        for key, value in ELG_HOD.items():
+            ELG_hod_dict[key] = value
+        
         logM_cut_E, logM1_E = map(ELG_HOD.get, ('logM_cut', 'logM1'))
 
         # z-evolving HOD
@@ -826,31 +825,16 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         logM_cut_E = logM_cut_E + logM_cut_pr*Delta_a
         logM1_E = logM1_E + logM1_pr*Delta_a
 
-        # numba typed dict
-        ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
-        ELG_hod_dict['pmax'] = ELG_HOD.get('p_max', 0.0)
-        ELG_hod_dict['Q'] = ELG_HOD.get('Q', 0.0)
         ELG_hod_dict['logM_cut'] = logM_cut_E
-        ELG_hod_dict['kappa'] = ELG_HOD.get('kappa', 0.0)
-        ELG_hod_dict['sigma'] = ELG_HOD.get('sigma', 0.0)
         ELG_hod_dict['logM1'] = logM1_E
-        ELG_hod_dict['alpha'] = ELG_HOD.get('alpha', 0.0)
-        ELG_hod_dict['gamma'] = ELG_HOD.get('gamma', 0.0)
-        ELG_hod_dict['A'] = ELG_HOD.get('A_s', 0.0)
-        
-        ELG_hod_dict['alpha_c'] = ELG_HOD.get('alpha_c', 0.0)
-        ELG_hod_dict['alpha_s'] = ELG_HOD.get('alpha_s', 1.0)
-        ELG_hod_dict['s'] = ELG_HOD.get('s', 0.0)
-        ELG_hod_dict['s_p'] = ELG_HOD.get('s_p', 0.0)
-        ELG_hod_dict['s_v'] = ELG_HOD.get('s_v', 0.0)
-        ELG_hod_dict['s_r'] = ELG_HOD.get('s_r', 0.0)
-        ELG_hod_dict['Ac'] = ELG_HOD.get('Acent', 0.0)
-        ELG_hod_dict['As'] = ELG_HOD.get('Asat', 0.0)
-        ELG_hod_dict['Bc'] = ELG_HOD.get('Bcent', 0.0)
-        ELG_hod_dict['Bs'] = ELG_HOD.get('Bsat', 0.0)
-        ELG_hod_dict['Cc'] = ELG_HOD.get('Ccent', 0.0)
-        ELG_hod_dict['Cs'] = ELG_HOD.get('Csat', 0.0)
-        ELG_hod_dict['ic'] = ELG_HOD.get('ic', 1.0)   
+
+        ELG_hod_dict['Acent'] = ELG_HOD.get('Acent', 0.0)
+        ELG_hod_dict['Asat'] = ELG_HOD.get('Asat', 0.0)
+        ELG_hod_dict['Bcent'] = ELG_HOD.get('Bcent', 0.0)
+        ELG_hod_dict['Bsat'] = ELG_HOD.get('Bsat', 0.0)
+        ELG_hod_dict['Ccent'] = ELG_HOD.get('Ccent', 0.0)
+        ELG_hod_dict['Csat'] = ELG_HOD.get('Csat', 0.0)
+        # ELG_hod_dict['ic'] = ELG_HOD.get('ic', 1.0)   
         # conformity params
         ELG_hod_dict['logM1_EE'] = ELG_HOD.get('logM1_EE', ELG_hod_dict['logM1'])
         ELG_hod_dict['alpha_EE'] = ELG_HOD.get('alpha_EE', ELG_hod_dict['alpha'])
@@ -864,6 +848,10 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
     if 'QSO' in tracers.keys():
         # QSO design
         want_QSO = True
+        QSO_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
+        for key, value in QSO_HOD.items():
+            QSO_hod_dict[key] = value
+            
         logM_cut_Q, logM1_Q = map(QSO_HOD.get, ('logM_cut', 'logM1'))
         # z-evolving HOD
         Delta_a = 1./(1+params['z']) - 1./(1+QSO_HOD.get('z_pivot', params['z']))
@@ -872,24 +860,14 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         logM_cut_Q = logM_cut_Q + logM_cut_pr*Delta_a
         logM1_Q = logM1_Q + logM1_pr*Delta_a
         
-        # numba typed dict
-        QSO_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
         QSO_hod_dict['logM_cut'] = logM_cut_Q
         QSO_hod_dict['logM1'] = logM1_Q
-        QSO_hod_dict['sigma'] = QSO_HOD.get('sigma', 0.0)
-        QSO_hod_dict['alpha'] = QSO_HOD.get('alpha', 0.0)
-        QSO_hod_dict['kappa'] = QSO_HOD.get('kappa', 0.0)
-        QSO_hod_dict['alpha_c'] = QSO_HOD.get('alpha_c', 0.0)
-        QSO_hod_dict['alpha_s'] = QSO_HOD.get('alpha_s', 1.0)
-        QSO_hod_dict['s'] = QSO_HOD.get('s', 0.0)
-        QSO_hod_dict['s_p'] = QSO_HOD.get('s_p', 0.0)
-        QSO_hod_dict['s_v'] = QSO_HOD.get('s_v', 0.0)
-        QSO_hod_dict['s_r'] = QSO_HOD.get('s_r', 0.0)
-        QSO_hod_dict['Ac'] = QSO_HOD.get('Acent', 0.0)
-        QSO_hod_dict['As'] = QSO_HOD.get('Asat', 0.0)
-        QSO_hod_dict['Bc'] = QSO_HOD.get('Bcent', 0.0)
-        QSO_hod_dict['Bs'] = QSO_HOD.get('Bsat', 0.0)
-        QSO_hod_dict['ic'] = QSO_HOD.get('ic', 1.0)
+        
+        QSO_hod_dict['Acent'] = QSO_HOD.get('Acent', 0.0)
+        QSO_hod_dict['Asat'] = QSO_HOD.get('Asat', 0.0)
+        QSO_hod_dict['Bcent'] = QSO_HOD.get('Bcent', 0.0)
+        QSO_hod_dict['Bsat'] = QSO_HOD.get('Bsat', 0.0)
+        # QSO_hod_dict['ic'] = QSO_HOD.get('ic', 1.0)
         
     else:
         want_QSO = False
