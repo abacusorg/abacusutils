@@ -440,7 +440,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
         # compute delta concentration
         print("computing c rank")
-        halos_c = halos['r90_L2com']/halos['r25_L2com']
+        halos_c = halos['r98_L2com']/halos['r25_L2com']
         deltac_rank = np.zeros(len(halos))
         for ibin in range(nbins):
             mmask = (allmasses > mbins[ibin]) & (allmasses < mbins[ibin + 1])
@@ -590,7 +590,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 # compute the perihelion distance for NFW profile
                 m = halos['N'][j]*Mpart / h # in kg
                 rs = halos['r25_L2com'][j]
-                c = halos['r90_L2com'][j]/rs
+                c = halos['r98_L2com'][j]/rs
                 r0_kpc = r0*1000 # kpc
                 alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
 
