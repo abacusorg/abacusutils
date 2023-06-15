@@ -662,7 +662,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
+def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown = 100):
     start = time.time()
     fns = glob.glob(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/field_rv_A/*asdf')
     partpos = []
@@ -697,7 +697,9 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
     start = time.time()
     shearmark = get_shear(dens_smooth, N_dim, Lbox)
     print("finished shear mark, took time", time.time() - start)
-
+    
+    # output file
+    np.save(fn+".npy", shearmark)
     return shearmark
 
 def main(path2config, params = None, alt_simname = None, alt_z = None, newseed = 600, halo_lc = False, overwrite = 1):
@@ -741,8 +743,12 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
         Ndim = config['HOD_params'].get('shear_N', 1000)
         Rsm = config['HOD_params'].get('shear_R', 2)
         partdown = config['HOD_params'].get('partdown', 100)
-        print("computing shear field")
-        shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, partdown)
+        shear_fn = savedir+"/shear_N"+str(Ndim)+"_R"+str(Rsm)+"_down"+str(partdown)
+        if os.path.exists(shear_fn+".npy"):
+            shearmark = np.load(shear_fn+".npy")
+        else:
+            print("computing shear field")
+            shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, partdown)
     else:
         shearmark = None
     # N_dim = config['HOD_params']['Ndim']
