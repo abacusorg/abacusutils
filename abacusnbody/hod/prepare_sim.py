@@ -27,7 +27,7 @@ from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import read_asdf
 
 from .shear import smooth_density, get_shear
-from ..analysis.tsc import tsc
+from ..analysis.tsc import tsc_parallel
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -689,7 +689,7 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
     start = time.time()
     # dens = np.zeros((N_dim, N_dim, N_dim))
     # numba_tsc_3D(pos_parts, dens, Lbox)
-    dens = tsc.tsc_parallel(pos_parts, N_dim, Lbox)
+    dens = tsc_parallel(pos_parts, N_dim, Lbox)
     print("finished TSC, took time", time.time() - start)
     start = time.time()
     dens_smooth = smooth_density(dens, R, N_dim, Lbox)
