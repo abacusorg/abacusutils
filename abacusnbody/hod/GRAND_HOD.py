@@ -437,35 +437,37 @@ def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms
         logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
             LRG_hod_dict['logM_cut'], LRG_hod_dict['logM1'], LRG_hod_dict['sigma'], LRG_hod_dict['alpha'], LRG_hod_dict['kappa']
         Ac_L, As_L, Bc_L, Bs_L, ic_L = \
-            LRG_hod_dict['Acent'], LRG_hod_dict['Asat'], LRG_hod_dict['Bcent'], \
-            LRG_hod_dict['Bsat'], LRG_hod_dict['ic']
-        f_sigv_L = LRG_hod_dict['f_sigv']
+            LRG_hod_dict.get('Acent', 0), LRG_hod_dict.get('Asat', 0), LRG_hod_dict.get('Bcent', 0), \
+            LRG_hod_dict.get('Bsat', 0), LRG_hod_dict.get('ic', 1)
+        f_sigv_L = LRG_hod_dict.get('f_sigv', 0)
 
     if want_ELG:
         logM_cut_E, kappa_E, logM1_E, alpha_E, A_E = \
             ELG_hod_dict['logM_cut'], ELG_hod_dict['kappa'], ELG_hod_dict['logM1'], ELG_hod_dict['alpha'], ELG_hod_dict['A_s']
-        Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
-            ELG_hod_dict['Acent'], ELG_hod_dict['Asat'], ELG_hod_dict['Bcent'], \
-            ELG_hod_dict['Bsat'], ELG_hod_dict['Ccent'], ELG_hod_dict['Csat'], ELG_hod_dict['ic'], \
-            ELG_hod_dict['logM1_EE'], ELG_hod_dict['alpha_EE'], ELG_hod_dict['logM1_EL'], ELG_hod_dict['alpha_EL']
-        f_sigv_E = ELG_hod_dict['f_sigv']
-        exp_frac = ELG_hod_dict.get('exp_frac', 0),
-        exp_scale = ELG_hod_dict.get('exp_scale', 1),
+        Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, = \
+            ELG_hod_dict.get('Acent', 0), ELG_hod_dict.get('Asat', 0), ELG_hod_dict.get('Bcent', 0), \
+            ELG_hod_dict.get('Bsat', 0), ELG_hod_dict.get('Ccent', 0), ELG_hod_dict.get('Csat', 0), ELG_hod_dict.get('ic', 1)
+        logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
+            ELG_hod_dict.get('logM1_EE', logM1_E), ELG_hod_dict.get('alpha_EE', alpha_E), \
+            ELG_hod_dict.get('logM1_EL', logM1_E), ELG_hod_dict.get('alpha_EL', alpha_E)
+        f_sigv_E = ELG_hod_dict.get('f_sigv', 0)
+        exp_frac = ELG_hod_dict.get('exp_frac', 0)
+        exp_scale = ELG_hod_dict.get('exp_scale', 1)
         nfw_rescale = ELG_hod_dict.get('nfw_rescale', 1)
 
     if want_QSO:
         logM_cut_Q, kappa_Q, logM1_Q, alpha_Q = \
             QSO_hod_dict['logM_cut'], QSO_hod_dict['kappa'], QSO_hod_dict['logM1'], QSO_hod_dict['alpha']
         Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
-            QSO_hod_dict['Acent'], QSO_hod_dict['Asat'], QSO_hod_dict['Bcent'], \
-            QSO_hod_dict['Bsat'], QSO_hod_dict['ic']
-        f_sigv_Q = QSO_hod_dict['f_sigv']
+            QSO_hod_dict.get('Acent', 0), QSO_hod_dict.get('Asat', 0), QSO_hod_dict.get('Bcent', 0), \
+            QSO_hod_dict.get('Bsat', 0), QSO_hod_dict.get('ic', 1)
+        f_sigv_Q = QSO_hod_dict.get('f_sigv', 0)
 
     # compute nsate for each halo
     # figuring out the number of particles kept for each thread
-    num_sats_L = np.zeros(len(hid))
-    num_sats_E = np.zeros(len(hid))
-    num_sats_Q = np.zeros(len(hid))
+    num_sats_L = np.zeros(len(hid), dtype = np.int64)
+    num_sats_E = np.zeros(len(hid), dtype = np.int64)
+    num_sats_Q = np.zeros(len(hid), dtype = np.int64)
     hstart = np.rint(np.linspace(0, len(hid), Nthread + 1)).astype(np.int64) # starting index of each thread
     for tid in numba.prange(Nthread): #numba.prange(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
@@ -500,9 +502,9 @@ def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms
                 num_sats_Q[i] = np.random.poisson(base_p_Q)
 
     # generate rdpos
-    rd_pos_L = getPointsOnSphere(len(np.sum(num_sats_L)), Nthread)
-    rd_pos_E = getPointsOnSphere(len(np.sum(num_sats_E)), Nthread)
-    rd_pos_Q = getPointsOnSphere(len(np.sum(num_sats_Q)), Nthread)
+    rd_pos_L = getPointsOnSphere(np.sum(num_sats_L), Nthread)
+    rd_pos_E = getPointsOnSphere(np.sum(num_sats_E), Nthread)
+    rd_pos_Q = getPointsOnSphere(np.sum(num_sats_Q), Nthread)
 
     # put satellites on NFW
     h_id_L, x_sat_L, y_sat_L, z_sat_L, vx_sat_L, vy_sat_L, vz_sat_L, M_L\
@@ -915,6 +917,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         LRG_hod_dict['Asat'] = LRG_HOD.get('Asat', 0.0)
         LRG_hod_dict['Bcent'] = LRG_HOD.get('Bcent', 0.0)
         LRG_hod_dict['Bsat'] = LRG_HOD.get('Bsat', 0.0)
+        LRG_hod_dict['ic'] = LRG_HOD.get('ic', 1.0)
 
     else:
         want_LRG = False
@@ -947,6 +950,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         ELG_hod_dict['Bsat'] = ELG_HOD.get('Bsat', 0.0)
         ELG_hod_dict['Ccent'] = ELG_HOD.get('Ccent', 0.0)
         ELG_hod_dict['Csat'] = ELG_HOD.get('Csat', 0.0)
+        ELG_hod_dict['ic'] = ELG_HOD.get('ic', 1.0)
         ELG_hod_dict['logM1_EE'] = ELG_HOD.get('logM1_EE', ELG_hod_dict['logM1'])
         ELG_hod_dict['alpha_EE'] = ELG_HOD.get('alpha_EE', ELG_hod_dict['alpha'])
         ELG_hod_dict['logM1_EL'] = ELG_HOD.get('logM1_EL', ELG_hod_dict['logM1'])
@@ -978,6 +982,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         QSO_hod_dict['Asat'] = QSO_HOD.get('Asat', 0.0)
         QSO_hod_dict['Bcent'] = QSO_HOD.get('Bcent', 0.0)
         QSO_hod_dict['Bsat'] = QSO_HOD.get('Bsat', 0.0)
+        QSO_hod_dict['ic'] = QSO_HOD.get('ic', 1.0)
 
     else:
         want_QSO = False

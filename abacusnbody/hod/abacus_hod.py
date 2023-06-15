@@ -475,6 +475,10 @@ class AbacusHOD:
             Needs to feed in a long array of random numbers drawn from an NFW profile.
             !!! NFW profile is unoptimized. It has different velocity bias. It does not support lightcone. !!!
 
+        ``NFW_draw``: np.array
+            A long array of random numbers drawn from an NFW profile. P(x) = 1./(x*(1+x)**2)*x**2. default ``None``.
+            Only needed if ``want_nfw == True``.
+
         ``reseed``: int
             re-generate random numbers? supply random number seed. This overwrites the pre-generated random numbers, at a performance cost.
             Default ``None``.
@@ -786,7 +790,7 @@ class AbacusHOD:
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_multipole(self, mock_dict, rpbins, pimax, sbins, nbins_mu, Nthread = 8):
+    def compute_multipole(self, mock_dict, rpbins, pimax, sbins, nbins_mu, orders = [0, 2], Nthread = 8):
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
             x1 = mock_dict[tr1]['x']
@@ -797,7 +801,7 @@ class AbacusHOD:
                     continue # cross-correlations are symmetric
                 if i1 == i2: # auto corr
                     new_multi = calc_multipole_fast(x1, y1, z1, sbins,
-                        self.lbox, Nthread, nbins_mu = nbins_mu)
+                        self.lbox, Nthread, nbins_mu = nbins_mu, orders = orders)
                     new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread)
                     clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
                 else:
@@ -805,14 +809,15 @@ class AbacusHOD:
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
                     new_multi = calc_multipole_fast(x1, y1, z1, rpbins,
-                        self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2)
+                        self.lbox, Nthread, x2 = x2, y2 = y2, z2 = z2, nbins_mu = nbins_mu, orders = orders)
                     new_wp = calc_wp_fast(x1, y1, z1, rpbins, pimax, self.lbox, Nthread,
                         x2 = x2, y2 = y2, z2 = z2)
                     clustering[tr1+'_'+tr2] = np.concatenate((new_wp, new_multi))
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
         return clustering
 
-    def compute_power(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', num_cells = 550, compensated = False, interlaced = False):
+    def compute_power(self, mock_dict, nbins_k, nbins_mu, k_hMpc_max, logk, poles = [], paste = 'TSC', 
+                      num_cells = 550, compensated = False, interlaced = False):
         r"""
         Computes :math:`P(k, \mu)` and/or :math:`P_\ell(k)`.
 
