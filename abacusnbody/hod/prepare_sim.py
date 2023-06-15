@@ -697,7 +697,7 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown = 100):
     start = time.time()
     shearmark = get_shear(dens_smooth, N_dim, Lbox)
     print("finished shear mark, took time", time.time() - start)
-    
+
     # output file
     np.save(fn+".npy", shearmark)
     return shearmark
