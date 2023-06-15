@@ -1,6 +1,5 @@
 import time
 
-import numba
 import numpy as np
 import numpy.linalg as la
 from numba import njit

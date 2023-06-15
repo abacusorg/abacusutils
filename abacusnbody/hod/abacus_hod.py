@@ -472,7 +472,7 @@ class AbacusHOD:
 
         ``want_nfw``: bool
             Distribute satellites on NFW instead of particles? default ``False``.
-            Needs to feed in a long array of random numbers drawn from an NFW profile. 
+            Needs to feed in a long array of random numbers drawn from an NFW profile.
             !!! NFW profile is unoptimized. It has different velocity bias. It does not support lightcone. !!!
 
         ``reseed``: int
