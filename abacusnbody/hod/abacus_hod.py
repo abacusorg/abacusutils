@@ -239,6 +239,8 @@ class AbacusHOD:
         hrandoms = np.empty([Nhalos_tot])
         hveldev = np.empty([Nhalos_tot])
         hsigma3d = np.empty([Nhalos_tot])
+        hc = np.empty([Nhalos_tot])
+        hrvir = np.empty([Nhalos_tot])
         if self.want_AB:
             hdeltac = np.empty([Nhalos_tot])
             hfenv = np.empty([Nhalos_tot])
@@ -295,6 +297,8 @@ class AbacusHOD:
             halo_vels = maskedhalos['v_L2com'] # halo velocities, km/s
             halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
             halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
+            halo_c = maskedhalos['r98_L2com']/maskedhalos['r25_L2com'] # concentration
+            halo_rvir = maskedhalos['r98_L2com'] # rvir but using r98
             halo_mass = maskedhalos['N']*params['Mpart'] # halo mass, Msun / h, 200b
 
             halo_deltac = maskedhalos['deltac_rank'] # halo concentration
@@ -313,6 +317,8 @@ class AbacusHOD:
             hrandoms[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_randoms
             hveldev[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_vel_dev
             hsigma3d[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_sigma3d
+            hc[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_c
+            hrvir[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_rvir
             if self.want_AB:
                 halo_deltac = maskedhalos['deltac_rank'] # halo concentration
                 halo_fenv = maskedhalos['fenv_rank'] # halo velocities, km/s
@@ -411,7 +417,9 @@ class AbacusHOD:
                      "hmultis": hmultis,
                      "hrandoms": hrandoms,
                      "hveldev": hveldev,
-                     "hsigma3d": hsigma3d}
+                     "hsigma3d": hsigma3d,
+                     "hc": hc,
+                     "hrvir": hrvir}
 
         pweights = 1/pNp/psubsampling
         pinds = _searchsorted_parallel(hid, phid)
@@ -447,7 +455,7 @@ class AbacusHOD:
 
         return halo_data, particle_data, params, mock_dir
 
-    def run_hod(self, tracers = None, want_rsd = True, reseed = None, write_to_disk = False,
+    def run_hod(self, tracers = None, want_rsd = True, want_nfw = False, NFW_draw = None, reseed = None, write_to_disk = False,
         Nthread = 16, verbose = False, fn_ext = None):
         """
         Runs a custom HOD.
@@ -461,6 +469,11 @@ class AbacusHOD:
 
         ``want_rsd``: bool
             enable RSD? default ``True``.
+
+        ``want_nfw``: bool
+            Distribute satellites on NFW instead of particles? default ``False``.
+            Needs to feed in a long array of random numbers drawn from an NFW profile. 
+            !!! NFW profile is unoptimized. It has different velocity bias. It does not support lightcone. !!!
 
         ``reseed``: int
             re-generate random numbers? supply random number seed. This overwrites the pre-generated random numbers, at a performance cost.
@@ -510,6 +523,7 @@ class AbacusHOD:
         mock_dict = gen_gal_cat(self.halo_data, self.particle_data, tracers, self.params, Nthread,
             enable_ranks = self.want_ranks,
             rsd = want_rsd,
+            nfw = want_nfw,
             write_to_disk = write_to_disk,
             savedir = self.mock_dir,
             verbose = verbose,
