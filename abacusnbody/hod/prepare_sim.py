@@ -27,7 +27,7 @@ from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import read_asdf
 
 from .shear import smooth_density, get_shear
-from ..analysis.analysis import tsc
+from ..analysis.tsc import tsc
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
