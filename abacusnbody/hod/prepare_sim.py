@@ -26,7 +26,8 @@ from scipy.spatial import cKDTree
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import read_asdf
 
-from .shear import numba_tsc_3D, smooth_density, get_shear
+from .shear import smooth_density, get_shear
+from ..analysis.tsc import tsc_parallel
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -440,7 +441,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
         # compute delta concentration
         print("computing c rank")
-        halos_c = halos['r90_L2com']/halos['r25_L2com']
+        halos_c = halos['r98_L2com']/halos['r25_L2com']
         deltac_rank = np.zeros(len(halos))
         for ibin in range(nbins):
             mmask = (allmasses > mbins[ibin]) & (allmasses < mbins[ibin + 1])
@@ -590,7 +591,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
                 # compute the perihelion distance for NFW profile
                 m = halos['N'][j]*Mpart / h # in kg
                 rs = halos['r25_L2com'][j]
-                c = halos['r90_L2com'][j]/rs
+                c = halos['r98_L2com'][j]/rs
                 r0_kpc = r0*1000 # kpc
                 alpha = 1.0/(np.log(1+c)-c/(1+c))*2*6.67e-11*m*2e30/r0_kpc/3.086e+19/1e6
 
@@ -661,7 +662,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
     print("pre process particle number ", len_old, " post process particle number ", len(parts))
 
-def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
+def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown = 100):
     start = time.time()
     fns = glob.glob(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/field_rv_A/*asdf')
     partpos = []
@@ -686,8 +687,9 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
     print("compiled all halos", "took time", time.time() - start)
 
     start = time.time()
-    dens = np.zeros((N_dim, N_dim, N_dim))
-    numba_tsc_3D(pos_parts, dens, Lbox)
+    # dens = np.zeros((N_dim, N_dim, N_dim))
+    # numba_tsc_3D(pos_parts, dens, Lbox)
+    dens = tsc_parallel(pos_parts, N_dim, Lbox)
     print("finished TSC, took time", time.time() - start)
     start = time.time()
     dens_smooth = smooth_density(dens, R, N_dim, Lbox)
@@ -696,6 +698,8 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, partdown = 100):
     shearmark = get_shear(dens_smooth, N_dim, Lbox)
     print("finished shear mark, took time", time.time() - start)
 
+    # output file
+    np.save(fn+".npy", shearmark)
     return shearmark
 
 def main(path2config, params = None, alt_simname = None, alt_z = None, newseed = 600, halo_lc = False, overwrite = 1):
@@ -739,8 +743,12 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
         Ndim = config['HOD_params'].get('shear_N', 1000)
         Rsm = config['HOD_params'].get('shear_R', 2)
         partdown = config['HOD_params'].get('partdown', 100)
-        print("computing shear field")
-        shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, partdown)
+        shear_fn = savedir+"/shear_N"+str(Ndim)+"_R"+str(Rsm)+"_down"+str(partdown)
+        if os.path.exists(shear_fn+".npy"):
+            shearmark = np.load(shear_fn+".npy")
+        else:
+            print("computing shear field")
+            shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, shear_fn, partdown)
     else:
         shearmark = None
     # N_dim = config['HOD_params']['Ndim']
@@ -784,8 +792,3 @@ if __name__ == "__main__":
     main(**args)
 
     print("done")
-
-    # for i in [3,4]: # [20, 21, 22, 23, 24, 0, 1, 2]:
-    #     simname = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
-    #     for z in [0.575]:
-    #         main(args['path2config'], alt_simname = simname, alt_z = z)
