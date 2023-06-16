@@ -748,7 +748,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
             shearmark = np.load(shear_fn+".npy")
         else:
             print("computing shear field")
-            shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, partdown)
+            shearmark = calc_shearmark(simdir, simname, z_mock, Ndim, Rsm, shear_fn, partdown)
     else:
         shearmark = None
     # N_dim = config['HOD_params']['Ndim']
@@ -792,8 +792,3 @@ if __name__ == "__main__":
     main(**args)
 
     print("done")
-
-    # for i in [3,4]: # [20, 21, 22, 23, 24, 0, 1, 2]:
-    #     simname = 'AbacusSummit_base_c000_ph'+str(i).zfill(3)
-    #     for z in [0.575]:
-    #         main(args['path2config'], alt_simname = simname, alt_z = z)

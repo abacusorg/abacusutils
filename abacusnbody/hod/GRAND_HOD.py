@@ -363,7 +363,7 @@ def getPointsOnSphere(nPoints, Nthread, seed=None):
     return ur
 
 @njit(parallel=True, fastmath=True)
-def _compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c, M, Rvir,
+def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c, M, Rvir,
                       rd_pos, num_sat, f_sigv, vel_sat = 'rd_normal', Nthread = 16,
                       exp_frac=0, exp_scale=1, nfw_rescale=1):
 
@@ -422,7 +422,7 @@ def _compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c
                     'Wrong vel_sat argument only "rd_normal"')
     return h_id, x_sat, y_sat, z_sat, vx_sat, vy_sat, vz_sat, M
 
-@njit(parallel = True, fastmath = True)
+@njit(fastmath = True)
 def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms, hc, hrvir,
                  LRG_hod_dict, ELG_hod_dict, QSO_hod_dict, want_LRG, want_ELG, want_QSO,
                  rsd, inv_velz2kms, lbox, keep_cent, vel_sat = 'rd_normal', Nthread = 16):
@@ -463,15 +463,16 @@ def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms
             QSO_hod_dict.get('Bsat', 0), QSO_hod_dict.get('ic', 1)
         f_sigv_Q = QSO_hod_dict.get('f_sigv', 0)
 
+    # numba.set_num_threads(Nthread)
+
     # compute nsate for each halo
     # figuring out the number of particles kept for each thread
     num_sats_L = np.zeros(len(hid), dtype = np.int64)
     num_sats_E = np.zeros(len(hid), dtype = np.int64)
     num_sats_Q = np.zeros(len(hid), dtype = np.int64)
     hstart = np.rint(np.linspace(0, len(hid), Nthread + 1)).astype(np.int64) # starting index of each thread
-    for tid in numba.prange(Nthread): #numba.prange(Nthread):
+    for tid in range(Nthread): 
         for i in range(hstart[tid], hstart[tid + 1]):
-            # print(logM1, As, hdeltac[i], Bs, hfenv[i])
             if want_LRG:
                 M1_L_temp = 10**(logM1_L + As_L * hdeltac[i] + Bs_L * hfenv[i])
                 logM_cut_L_temp = logM_cut_L + Ac_L * hdeltac[i] + Bc_L * hfenv[i]
@@ -508,15 +509,15 @@ def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms
 
     # put satellites on NFW
     h_id_L, x_sat_L, y_sat_L, z_sat_L, vx_sat_L, vy_sat_L, vz_sat_L, M_L\
-    = _compute_fast_NFW(NFW_draw, hid, hpos[:, 0], hpos[:, 1], hpos[:, 2], hvel[:, 0], hvel[:, 1], hvel[:, 2],
+    = compute_fast_NFW(NFW_draw, hid, hpos[:, 0], hpos[:, 1], hpos[:, 2], hvel[:, 0], hvel[:, 1], hvel[:, 2],
                         hvrms, hc, hmass, hrvir, rd_pos_L, num_sats_L, f_sigv_L, vel_sat, Nthread,
                         exp_frac, exp_scale, nfw_rescale)
     h_id_E, x_sat_E, y_sat_E, z_sat_E, vx_sat_E, vy_sat_E, vz_sat_E, M_E\
-    = _compute_fast_NFW(NFW_draw, hid, hpos[:, 0], hpos[:, 1], hpos[:, 2], hvel[:, 0], hvel[:, 1], hvel[:, 2],
+    = compute_fast_NFW(NFW_draw, hid, hpos[:, 0], hpos[:, 1], hpos[:, 2], hvel[:, 0], hvel[:, 1], hvel[:, 2],
                         hvrms, hc, hmass, hrvir, rd_pos_E, num_sats_E, f_sigv_E, vel_sat, Nthread,
                         exp_frac, exp_scale, nfw_rescale)
     h_id_Q, x_sat_Q, y_sat_Q, z_sat_Q, vx_sat_Q, vy_sat_Q, vz_sat_Q, M_Q\
-    = _compute_fast_NFW(NFW_draw, hid, hpos[:, 0], hpos[:, 1], hpos[:, 2], hvel[:, 0], hvel[:, 1], hvel[:, 2],
+    = compute_fast_NFW(NFW_draw, hid, hpos[:, 0], hpos[:, 1], hpos[:, 2], hvel[:, 0], hvel[:, 1], hvel[:, 2],
                         hvrms, hc, hmass, hrvir, rd_pos_Q, num_sats_Q, f_sigv_Q, vel_sat, Nthread,
                         exp_frac, exp_scale, nfw_rescale)
     # do rsd

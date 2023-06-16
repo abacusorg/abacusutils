@@ -528,6 +528,7 @@ class AbacusHOD:
             enable_ranks = self.want_ranks,
             rsd = want_rsd,
             nfw = want_nfw,
+            NFW_draw = NFW_draw,
             write_to_disk = write_to_disk,
             savedir = self.mock_dir,
             verbose = verbose,
