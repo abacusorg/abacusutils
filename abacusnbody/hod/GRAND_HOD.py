@@ -471,7 +471,7 @@ def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms
     num_sats_E = np.zeros(len(hid), dtype = np.int64)
     num_sats_Q = np.zeros(len(hid), dtype = np.int64)
     hstart = np.rint(np.linspace(0, len(hid), Nthread + 1)).astype(np.int64) # starting index of each thread
-    for tid in range(Nthread): 
+    for tid in range(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
             if want_LRG:
                 M1_L_temp = 10**(logM1_L + As_L * hdeltac[i] + Bs_L * hfenv[i])
