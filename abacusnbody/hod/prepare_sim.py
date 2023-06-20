@@ -664,6 +664,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, tracer_flags, MT, want_ran
 
 def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown = 100):
     start = time.time()
+
     fns = glob.glob(simdir+'/'+simname+'/halos/z'+str(z_mock).ljust(5, '0')+'/field_rv_A/*asdf')
     partpos = []
     for efn in fns:
@@ -728,6 +729,8 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
         halo_info_fns = list(sorted((Path(simdir) / Path(simname) / 'halos' / ('z%4.3f'%z_mock) / 'halo_info').glob('*.asdf')))
     numslabs = len(halo_info_fns)
 
+    os.makedirs(savedir, exist_ok = True)
+
     if numslabs == 0:
         raise ValueError('prepare_sim could not find any slabs!')
 
@@ -753,8 +756,6 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
         shearmark = None
     # N_dim = config['HOD_params']['Ndim']
     nthread = int(np.floor(multiprocessing.cpu_count()/config['prepare_sim']['Nparallel_load']))
-
-    os.makedirs(savedir, exist_ok = True)
 
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(prepare_slab, zip(range(numslabs), repeat(savedir),
