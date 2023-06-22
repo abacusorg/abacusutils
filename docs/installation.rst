@@ -19,13 +19,19 @@ the source:
 
     $ pip install abacusutils
 
-This command will also give access to the command-line :doc:`pipes` functionality.
+This will install most dependencies, with the exception of some "hard to install"
+dependencies like Corrfunc or classy. (Corrfunc, for example, is considered hard to
+install because it has non-Python dependencies that need to be available at install
+time).  To install everything, use:
+::
 
-There are several sets of optional dependencies:
+    $ pip install abacusutils[all]
 
-    * ``abacusutils[zcv]``: for the zeldovich control variates module
-    * ``abacusutils[extra]``: extra packages required by scripts and auxiliary
-      code
+All the pip-installed functionality is pure-Python, using numba for any performance-intensive
+routines.  The command-line :doc:`pipes` functionality also becomes available after a
+pip install.
+
+Developers may wish to use:
     * ``abacusutils[test]``: packages required to run the tests
     * ``abacusutils[docs]``: to build the docs
 
@@ -34,9 +40,6 @@ There are several sets of optional dependencies:
     this is no longer required, instead using the `extension mechanism
     <https://asdf.readthedocs.io/en/stable/asdf/extending/extensions.html>`_
     of ASDF 2.8.
-
-All the pip-installed functionality is pure-Python, using numba for any performance-intensive
-routines.
 
 For Developers
 --------------
@@ -50,19 +53,18 @@ the repo and install the package in pip "editable mode":
 
     $ git clone https://github.com/abacusorg/abacusutils.git
     $ cd abacusutils
-    $ pip install -e .[extra]  # install from current dir in editable mode, including extras
+    $ pip install -e .[all]  # install all deps from current dir in editable mode
 
 The ``-e`` flag ("editable") is optional but recommended so that the installed copy is just a
 link to the cloned repo (and thus modifications to the Python code will be seen by code that
 imports abacusutils).
 
-The ``.[extra]`` syntax says to install from the current directory (``.``), including the
-set of "optional dependencies" called ``extra``.  This includes Python packages needed
-to run things in the ``scripts`` directory.
+The ``.[all]`` syntax says to install from the current directory (``.``), including the
+set of "optional dependencies" called ``all``.
 
 .. warning::
     If you first install via pip and then later clone the repo, don't forget to
-    run ``pip install -e .[extra]`` in the repo.  Otherwise, you will have two
+    run ``pip install -e .[all]`` in the repo.  Otherwise, you will have two
     copies of abacusutils: one cloned, and one installed via pip.
 
 pre-commit

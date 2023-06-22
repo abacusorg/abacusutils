@@ -21,7 +21,7 @@ try:
     from classy import Class
 except ImportError:
     raise ImportError('Could not import classy. Install abacusutils with '
-        '"pip install abacusutils[zcv]" to install zcv dependencies.')
+        '"pip install abacusutils[all]" to install zcv dependencies.')
 
 
 def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power=False):

@@ -22,7 +22,7 @@ try:
     from classy import Class
 except ImportError:
     raise ImportError('Could not import classy. Install abacusutils with '
-        '"pip install abacusutils[zcv]" to install zcv dependencies.')
+        '"pip install abacusutils[all]" to install zcv dependencies.')
 
 from asdf.exceptions import AsdfWarning
 warnings.filterwarnings('ignore', category=AsdfWarning)

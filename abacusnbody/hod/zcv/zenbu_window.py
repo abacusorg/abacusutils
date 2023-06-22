@@ -20,7 +20,7 @@ try:
     from ZeNBu.zenbu_rsd import Zenbu_RSD
 except ImportError:
     raise ImportError('Missing imports for zcv. Install abacusutils with '
-        '"pip install abacusutils[zcv]" to install zcv dependencies.')
+        '"pip install abacusutils[all]" to install zcv dependencies.')
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 
