@@ -408,7 +408,7 @@ def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c,
                     ind = np.random.randint(0, len(NFW_draw))
                 etaVir = NFW_draw[ind]/c[i]*nfw_rescale
 
-            p = etaVir * Rvir[i] / 1000
+            p = etaVir * Rvir[i]
             x_sat[i] = x_h[i] + rd_pos[i, 0] * p
             y_sat[i] = y_h[i] + rd_pos[i, 1] * p
             z_sat[i] = z_h[i] + rd_pos[i, 2] * p
