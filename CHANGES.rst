@@ -20,6 +20,10 @@ Enhancements
 - Add power spectrum to `metadata` module [#69]
 - Upgrade docs and CI [#71]
 
+Installation
+~~~~~~~~~~~~
+- Refactor optional dependencies; Corrfunc now optional. Migrate build to pyproject.toml. [#89]
+
 1.3.0 (2022-06-08)
 ------------------
 
