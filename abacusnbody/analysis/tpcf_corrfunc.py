@@ -2,10 +2,13 @@
 import time
 
 import numpy as np
-# from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
-# from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
-# from Corrfunc.theory.DDrppi import
-from Corrfunc.theory import DDrppi, DDsmu
+try:
+    from Corrfunc.theory import DDrppi, DDsmu
+except ImportError as e:
+    raise ImportError('Could not import Corrfunc. Install abacusutils with '
+        '"pip install abacusutils[all]" to install Corrfunc.') \
+        from e
+
 from scipy.special import legendre
 
 
