@@ -99,7 +99,7 @@ def P_n(x, n, dtype=np.float32):
 
     Returns
     -------
-   sum : float
+    sum : float
         evaluation of the polynomial at `x`.
     """
     sum = dtype(0.)
