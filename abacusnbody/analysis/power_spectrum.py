@@ -15,6 +15,13 @@ from scipy.fft import rfftn, irfftn, fftfreq
 from .tsc import tsc_parallel
 from .cic import cic_serial
 
+__all__ = ['pk_to_xi',
+           'calc_power',
+           'project_3d_to_poles',
+           'get_k_mu_edges',
+           'calc_pk3d',
+           ]
+
 # the first 20 factorials
 FACTORIAL_LOOKUP_TABLE = np.array([
     1, 1, 2, 6, 24, 120, 720, 5040, 40320,
