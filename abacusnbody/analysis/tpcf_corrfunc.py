@@ -17,6 +17,7 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
     Calculate the multipoles of the two point correlation function
     after first computing `~halotools.mock_observables.s_mu_tpcf`.
     This is copied over from halotools. Original author was Duncan Campbell.
+
     Parameters
     ----------
     s_mu_tcpf_result : np.ndarray
@@ -28,10 +29,12 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
         Must be between [0,1].
     order : int, optional
         order of the multpole returned.
+
     Returns
     -------
     xi_l : np.array
         multipole of ``s_mu_tcpf_result`` of the indicated order.
+
     Examples
     --------
     For demonstration purposes we create a randomly distributed set of points within a
