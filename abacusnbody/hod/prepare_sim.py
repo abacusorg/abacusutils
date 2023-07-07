@@ -730,7 +730,7 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     cleaning = config['sim_params']['cleaned_halos']
     if 'halo_lc' in config['sim_params'].keys():
         halo_lc = config['sim_params']['halo_lc']
-        
+
     # build in some redshift checks
     ztype = None
     if halo_lc:
