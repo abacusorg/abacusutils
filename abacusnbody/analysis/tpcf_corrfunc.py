@@ -100,7 +100,7 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     if autocorr == 1:
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax, 
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
                          X1 = x1, Y1 = y1, Z1 = z1, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     else:
@@ -109,8 +109,8 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
         z2 = z2.astype(np.float32)
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax, 
-                         X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True, 
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
+                         X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True,
                          max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
@@ -199,7 +199,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     if autocorr == 1:
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax, 
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
                          X1 = x1, Y1 = y1, Z1 = z1, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
@@ -209,7 +209,7 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
         z2 = z2.astype(np.float32)
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax, 
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
                          X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
