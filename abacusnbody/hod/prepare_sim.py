@@ -325,7 +325,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, z_type, tracer_flags, MT, 
         vel_key = 'v_L2com'
         N_key = 'N'
 
-    if z_type == 'primary':
+    if z_type == 'primary' or z_type == 'lightcone':
         cat = CompaSOHaloCatalog(slabname, subsamples=dict(A=True, rv=True), fields = [N_key,
             pos_key, vel_key, 'r90_L2com', 'r25_L2com', 'r98_L2com', 'npstartA', 'npoutA', id_key, 'sigmav3d_L2com'],
             cleaned = cleaning)
@@ -344,7 +344,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, z_type, tracer_flags, MT, 
     if cleaning:
         halos = halos[halos['N'] > 0]
 
-    if z_type == 'primary':
+    if z_type == 'primary' or z_type == 'lightcone':
         parts = cat.subsamples
     header = cat.header
     Lbox = cat.header['BoxSizeHMpc']
@@ -491,7 +491,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, z_type, tracer_flags, MT, 
     halos_pnum_new = np.zeros(len(halos))
 
     # particle arrays for ranks and mask
-    if z_type == 'primary':
+    if z_type == 'primary' or z_type == 'lightcone':
         mask_parts = np.zeros(len(parts))
         len_old = len(parts)
         ranks_parts = np.full(len_old, -1.0)
@@ -637,7 +637,7 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, z_type, tracer_flags, MT, 
     newfile.close()
 
     # output the new particle file
-    if z_type == 'primary':
+    if z_type == 'primary' or z_type == 'lightcone':
         print("adding rank fields to particle data ")
         mask_parts = mask_parts.astype(bool)
         parts = parts[mask_parts]
@@ -726,20 +726,22 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     simname = config['sim_params']['sim_name'] # "AbacusSummit_base_c000_ph006"
     simdir = config['sim_params']['sim_dir']
     z_mock = float(config['sim_params']['z_mock'])
+    savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0')
+    cleaning = config['sim_params']['cleaned_halos']
+    if 'halo_lc' in config['sim_params'].keys():
+        halo_lc = config['sim_params']['halo_lc']
+        
     # build in some redshift checks
     ztype = None
-    if z_mock in [3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]:
+    if halo_lc:
+        ztype = 'lightcone'
+    elif z_mock in [3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]:
         ztype = 'primary'
     elif z_mock in [0.15, 0.25, 0.35, 0.45, 0.575, 0.65, 0.725, 0.875, 0.95, 1.025, 1.175, 1.25,
                     1.325, 1.475, 1.55, 1.625, 1.85, 2.25, 2.75, 3.0, 5.0, 8.0]:
         ztype = 'secondary'
     else:
         raise Exception("illegal redshift")
-
-    savedir = config['sim_params']['subsample_dir']+simname+"/z"+str(z_mock).ljust(5, '0')
-    cleaning = config['sim_params']['cleaned_halos']
-    if 'halo_lc' in config['sim_params'].keys():
-        halo_lc = config['sim_params']['halo_lc']
 
     if halo_lc:
         halo_info_fns = [str(Path(simdir) / Path(simname) / ('z%4.3f'%z_mock) / 'lc_halo_info.asdf')]
@@ -761,6 +763,8 @@ def main(path2config, params = None, alt_simname = None, alt_z = None, newseed =
     want_shear = config['HOD_params'].get('want_shear', False)
     # if want shear, calculate shear field first
     if want_shear:
+        if (not ztype == 'primary') and (not halo_lc):
+            raise Exception("redshift does not have particle data, cant compute shear")
         Ndim = config['HOD_params'].get('shear_N', 1000)
         Rsm = config['HOD_params'].get('shear_R', 2)
         partdown = config['HOD_params'].get('partdown', 100)

@@ -98,6 +98,16 @@ class AbacusHOD:
         self.output_dir = sim_params.get('output_dir', './')
         self.halo_lc = sim_params.get('halo_lc', False)
 
+        ztype = None
+        if self.z_mock in [3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]:
+            ztype = 'primary'
+        elif self.z_mock in [0.15, 0.25, 0.35, 0.45, 0.575, 0.65, 0.725, 0.875, 0.95, 1.025, 1.175, 1.25,
+                        1.325, 1.475, 1.55, 1.625, 1.85, 2.25, 2.75, 3.0, 5.0, 8.0]:
+            ztype = 'secondary'
+        else:
+            raise Exception("illegal redshift")
+        self.ztype = ztype
+
         # tracers
         tracer_flags = HOD_params['tracer_flags']
         tracers = {}
