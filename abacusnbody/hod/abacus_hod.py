@@ -108,7 +108,7 @@ class AbacusHOD:
             ztype = 'secondary'
         else:
             raise Exception("illegal redshift")
-        self.ztype = ztype
+        self.z_type = ztype
 
         # tracers
         tracer_flags = HOD_params['tracer_flags']
