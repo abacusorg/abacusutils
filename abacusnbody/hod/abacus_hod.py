@@ -232,10 +232,10 @@ class AbacusHOD:
             particlefilename = str(particlefilename) + '_new.h5'
 
             newfile = h5py.File(halofilename, 'r')
-            newpart = h5py.File(particlefilename, 'r')
-
             Nhalos[eslab-start] = len(newfile['halos'])
-            Nparts[eslab-start] = len(newpart['particles'])
+            if self.z_type == 'primary' or self.z_type == 'lightcone':
+                newpart = h5py.File(particlefilename, 'r')
+                Nparts[eslab-start] = len(newpart['particles'])
 
         Nhalos = Nhalos.astype(int)
         Nparts = Nparts.astype(int)
