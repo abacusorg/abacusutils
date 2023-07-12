@@ -898,11 +898,11 @@ class AbacusHOD:
                     continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
-                    clustering[tr1+'_'+tr2] = pk3d
-                    clustering[tr1+'_'+tr2+'_modes'] = N3d
-                    clustering[tr1+'_'+tr2+'_ell'] = binned_poles
-                    clustering[tr1+'_'+tr2+'_ell_modes'] = Npoles
+                    power = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
+                    clustering[tr1+'_'+tr2] = power['power']
+                    clustering[tr1+'_'+tr2+'_modes'] = power['N_mode']
+                    clustering[tr1+'_'+tr2+'_ell'] = power['poles']
+                    clustering[tr1+'_'+tr2+'_ell_modes'] = power['N_mode_poles']
                 else:
                     print(tr1+'_'+tr2)
                     x2 = mock_dict[tr2]['x']
@@ -910,18 +910,18 @@ class AbacusHOD:
                     z2 = mock_dict[tr2]['z']
                     pos2 = np.stack((x2,y2,z2), axis=1)
                     w2 = mock_dict[tr2].get('w', None)
-                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced,
+                    power = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced,
                                                       w = w1, pos2 = pos2, w2 = w2, poles = poles)
-                    clustering[tr1+'_'+tr2] = pk3d
-                    clustering[tr1+'_'+tr2+'_modes'] = N3d
-                    clustering[tr1+'_'+tr2+'_ell'] = binned_poles
-                    clustering[tr1+'_'+tr2+'_ell_modes'] = Npoles
+                    clustering[tr1+'_'+tr2] = power['power']
+                    clustering[tr1+'_'+tr2+'_modes'] = power['N_mode']
+                    clustering[tr1+'_'+tr2+'_ell'] = power['poles']
+                    clustering[tr1+'_'+tr2+'_ell_modes'] = power['N_mode_poles']
                     clustering[tr2+'_'+tr1] = clustering[tr1+'_'+tr2]
                     clustering[tr2+'_'+tr1+'_modes'] = clustering[tr1+'_'+tr2+'_modes']
                     clustering[tr2+'_'+tr1+'_ell'] = clustering[tr1+'_'+tr2+'_ell']
                     clustering[tr2+'_'+tr1+'_ell_modes'] = clustering[tr1+'_'+tr2+'_ell_modes']
-        clustering['k_binc'] = k_binc
-        clustering['mu_binc'] = mu_binc
+        clustering['k_binc'] = power['k_mid']
+        clustering['mu_binc'] = power['mu_mid'][0]
         return clustering
 
     def apply_zcv(self, mock_dict, config, load_presaved=False):

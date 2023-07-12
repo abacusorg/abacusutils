@@ -12,7 +12,7 @@ import numpy as np
 import yaml
 from scipy.fft import rfftn
 
-from abacusnbody.analysis.power_spectrum import (calc_pk3d, get_k_mu_edges, get_delta_mu2, get_W_compensated)
+from abacusnbody.analysis.power_spectrum import (calc_pk_from_deltak, get_k_mu_edges, get_delta_mu2, get_W_compensated)
 from abacusnbody.metadata import get_meta
 
 from .ic_fields import compress_asdf
@@ -138,7 +138,7 @@ def main(path2config, alt_simname=None, save_3D_power=False):
 
             else:
                 # compute power spectrum
-                pk3d, N3d, binned_poles, Npoles = calc_pk3d(fields_fft[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=fields_fft[keynames[j]], poles=poles)
+                pk3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(fields_fft[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=fields_fft[keynames[j]], poles=np.asarray(poles))
                 pk_lin_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
                 pk_lin_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
                 pk_lin_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles

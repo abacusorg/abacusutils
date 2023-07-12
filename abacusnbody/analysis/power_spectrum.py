@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import numba
 import asdf
+from astropy.table import Table
 from scipy.fft import rfftn, irfftn, fftfreq
 
 from .tsc import tsc_parallel
@@ -20,7 +21,7 @@ __all__ = ['pk_to_xi',
            'calc_power',
            'project_3d_to_poles',
            'get_k_mu_edges',
-           'calc_pk3d',
+           'calc_pk_from_deltak',
            ]
 
 MAX_THREADS = numba.config.NUMBA_NUM_THREADS
@@ -273,7 +274,7 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     """
     assert np.max(poles) <= 10, "numba implementation works up to ell = 10"
     nmesh = raw_p3d.shape[0]
-    poles = np.array(poles)
+    poles = np.asarray(poles)
     raw_p3d = np.asarray(raw_p3d)
     binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu=1, weights=raw_p3d, poles=poles)
     binned_poles *= Lbox**3
@@ -483,7 +484,7 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
 
     # bin into xi_ell(r)
     nmesh = Xi.shape[0]
-    poles = np.array(poles)
+    poles = np.asarray(poles)
     _, _, binned_poles, Npoles = bin_kmu(nmesh, Lbox, r_bins, Nmu=1, weights=Xi, poles=poles, space='real')
     binned_poles *= nmesh**3
     return r_binc, binned_poles, Npoles
@@ -528,9 +529,10 @@ def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
 
 
 @numba.njit(parallel=True, fastmath=True)
-def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=None, nthread=MAX_THREADS):
+def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=np.empty(0, 'i8'), nthread=MAX_THREADS):
     r"""
-    Calculate the power spectrum of a given Fourier field.
+    Calculate the power spectrum of a given Fourier field, with binning in (k,mu).
+    Optionally computes Legendre multipoles in k bins.
 
     Parameters
     ----------
@@ -544,16 +546,17 @@ def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles
         edges of the mu angles.
     field2_fft : array_like, optional
         second Fourier 3D field, used in cross-correlation.
-    poles : array_like, optional
+    poles : np.ndarray, optional
         Legendre multipoles of the power spectrum or correlation function.
+        Probably has to be a Numpy array, or Numba will complain.
     nthread : int, optional
         Number of numba threads to use
 
     Returns
     -------
-    p3d : array_like
+    binned_pk : array_like
         mean power spectrum per (k, mu) wedge.
-    N3d : array_like
+    Nmode : array_like
         number of modes per (k, mu) wedge.
     binned_poles : array_like
         mean power spectrum per k for each Legendre multipole.
@@ -571,15 +574,13 @@ def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles
     # power spectrum
     nmesh = raw_p3d.shape[0]
     Nmu = len(mu_bin_edges) - 1
-    if poles is None:
-        poles = np.empty(0)
-    binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu, raw_p3d, poles, nthread=nthread)
+    binned_pk, Nmode, binned_poles, N_mode_poles = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu, raw_p3d, poles, nthread=nthread)
 
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
-    p3d = binned_p3d * Lbox**3
+    binned_pk *= Lbox**3
     if len(poles) > 0:
         binned_poles *= Lbox**3
-    return p3d, N3d, binned_poles, Npoles
+    return binned_pk, Nmode, binned_poles, N_mode_poles
 
 
 def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS):
@@ -873,11 +874,9 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
                poles = None, nthread = MAX_THREADS,
                ):
     r"""
-    Compute the 3D power spectrum given particle positions by first painting them on a cubic
-    mesh and then applying Fourier transforms and mode counting. Can output Legendre multipoles,
-    (k, mu) wedges, or both.
-
-    TODO: Return a dict or astropy table.
+    Compute the 3D power spectrum given particle positions by first painting them on a
+    cubic mesh and then applying Fourier transforms and mode counting. Outputs (k,mu)
+    wedges by default; can also output Legendre multipoles.
 
     pos : array_like
         particle positions, shape (N,3)
@@ -915,19 +914,30 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
 
     Returns
     -------
-    k_binc : array_like
-        arithmetic bin centers of the mu angles
-    mu_binc : array_like
-        arithmetic bin centers of the k wavenumbers.
-    p3d : array_like
-        mean power spectrum per (k, mu) wedge.
-    N3d : array_like
-        number of modes per (k, mu) wedge.
-    binned_poles : array_like
-        mean power spectrum per k for each Legendre multipole.
-    Npoles : array_like
-        number of modes per k.
+    power : astropy.Table
+        The power spectrum in an astropy Table of length ``nbins_k``.
+        The columns are:
+        - ``k_mid``: arithmetic bin centers of the k wavenumbers, shape ``(nbins_k,)``
+        - ``mu_mid``: arithmetic bin centers of the mu angles, shape ``(nbins_k,nbins_mu)``
+        - ``power``: mean power spectrum per (k, mu) wedge, shape ``(nbins_k,nbins_mu)``
+        - ``N_mode``: number of modes per (k, mu) wedge, shape ``(nbins_k,nbins_mu)``
+
+        If multipoles are requested via ``poles``, the table includes:
+        - ``poles``: mean Legendre multipole coefficients, shape ``(nbins_k,nbins_mu)``
+        - ``N_mode_poles``: number of modes per pole, shape ``(nbins_k,len(poles))``
+
+        The ``meta`` field of the table will have metadata about the power spectrum.
     """
+
+    meta = dict(Lbox=Lbox,
+                logk=logk,
+                paste=paste,
+                nmesh=nmesh,
+                compensated=compensated,
+                interlaced=interlaced,
+                poles=poles,
+                nthread=nthread,
+                )
 
     # get the window function
     if compensated:
@@ -945,13 +955,27 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
     else:
         field2_fft = None
 
+    poles = np.asarray(poles or [], dtype=np.int64)
+
     # calculate power spectrum
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_max, nbins_k, nbins_mu, logk)
-    p3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles, nthread=nthread)
-    if poles is None:
-        binned_poles, Npoles = [], []
+    pk, N_mode, binned_poles, N_mode_poles = calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles, nthread=nthread)
 
     # define bin centers
     k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
     mu_binc = (mu_bin_edges[1:] + mu_bin_edges[:-1])*.5
-    return k_binc, mu_binc, p3d, N3d, binned_poles, Npoles
+
+    res = dict(
+        k_mid=k_binc,
+        mu_mid=np.broadcast_to(mu_binc, pk.shape),
+        power=pk,
+        N_mode=N_mode,
+        )
+    if len(poles) > 0:
+        res |= dict(
+            poles=binned_poles.T,
+            N_mode_poles=N_mode_poles,
+            )
+    res = Table(res, meta=meta)
+
+    return res

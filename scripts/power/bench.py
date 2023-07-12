@@ -7,7 +7,7 @@ import numba
 import numpy as np
 
 from abacusnbody.analysis.power_spectrum import (
-    # calc_pk3d,
+    # calc_pk_from_deltak,
     calc_power,
     # get_field_fft,
     # get_k_mu_edges,
