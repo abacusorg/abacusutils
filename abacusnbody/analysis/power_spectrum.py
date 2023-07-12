@@ -912,9 +912,9 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
     Returns
     -------
     k_binc : array_like
-        airthmetic bin centers of the mu angles
+        arithmetic bin centers of the mu angles
     mu_binc : array_like
-        airthmetic bin centers of the k wavenumbers.
+        arithmetic bin centers of the k wavenumbers.
     p3d : array_like
         mean power spectrum per (k, mu) wedge.
     N3d : array_like
