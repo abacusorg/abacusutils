@@ -16,6 +16,13 @@ from .tsc import tsc_parallel
 from .cic import cic_serial
 
 
+__all__ = ['pk_to_xi',
+           'calc_power',
+           'project_3d_to_poles',
+           'get_k_mu_edges',
+           'calc_pk3d',
+           ]
+
 MAX_THREADS = numba.config.NUMBA_NUM_THREADS
 
 # the first 20 factorials
@@ -106,7 +113,7 @@ def P_n(x, n, dtype=np.float32):
 
     Returns
     -------
-   sum : float
+    sum : float
         evaluation of the polynomial at `x`.
     """
     sum = dtype(0.)

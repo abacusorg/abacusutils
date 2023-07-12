@@ -22,6 +22,10 @@ by installing "abacusutils":
 ```
 pip install abacusutils
 ```
+or
+```
+pip install abacusutils[all]
+```
 
 For more information, see <https://abacusutils.readthedocs.io/en/latest/installation.html>.
 

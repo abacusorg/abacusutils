@@ -98,6 +98,18 @@ class AbacusHOD:
         self.output_dir = sim_params.get('output_dir', './')
         self.halo_lc = sim_params.get('halo_lc', False)
 
+        ztype = None
+        if self.halo_lc:
+            ztype = 'lightcone'
+        elif self.z_mock in [3.0, 2.5, 2.0, 1.7, 1.4, 1.1, 0.8, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]:
+            ztype = 'primary'
+        elif self.z_mock in [0.15, 0.25, 0.35, 0.45, 0.575, 0.65, 0.725, 0.875, 0.95, 1.025, 1.175, 1.25,
+                        1.325, 1.475, 1.55, 1.625, 1.85, 2.25, 2.75, 3.0, 5.0, 8.0]:
+            ztype = 'secondary'
+        else:
+            raise Exception("illegal redshift")
+        self.z_type = ztype
+
         # tracers
         tracer_flags = HOD_params['tracer_flags']
         tracers = {}
@@ -220,10 +232,10 @@ class AbacusHOD:
             particlefilename = str(particlefilename) + '_new.h5'
 
             newfile = h5py.File(halofilename, 'r')
-            newpart = h5py.File(particlefilename, 'r')
-
             Nhalos[eslab-start] = len(newfile['halos'])
-            Nparts[eslab-start] = len(newpart['particles'])
+            if self.z_type == 'primary' or self.z_type == 'lightcone':
+                newpart = h5py.File(particlefilename, 'r')
+                Nparts[eslab-start] = len(newpart['particles'])
 
         Nhalos = Nhalos.astype(int)
         Nparts = Nparts.astype(int)
@@ -329,67 +341,68 @@ class AbacusHOD:
                 hshear[halo_ticker: halo_ticker + Nhalos[eslab-start]] = halo_shear
             halo_ticker += Nhalos[eslab-start]
 
-            # extract particle data that we need
-            newpart = h5py.File(particlefilename, 'r')
-            subsample = newpart['particles']
-            part_fields = subsample.dtype.fields.keys()
-            part_pos = subsample['pos']
-            part_vel = subsample['vel']
-            part_hvel = subsample['halo_vel']
-            part_halomass = subsample['halo_mass'] # msun / h
-            part_haloid = subsample['halo_id'].astype(int)
-            part_Np = subsample['Np'] # number of particles that end up in the halo
-            part_subsample = subsample['downsample_halo']
-            part_randoms = subsample['randoms']
-            if self.want_AB:
-                part_deltac = subsample['halo_deltac']
-                part_fenv = subsample['halo_fenv']
-            if self.want_shear:
-                part_shear = subsample['halo_shear']
+            if self.z_type == 'primary' or self.z_type == 'lightcone':
+                # extract particle data that we need
+                newpart = h5py.File(particlefilename, 'r')
+                subsample = newpart['particles']
+                part_fields = subsample.dtype.fields.keys()
+                part_pos = subsample['pos']
+                part_vel = subsample['vel']
+                part_hvel = subsample['halo_vel']
+                part_halomass = subsample['halo_mass'] # msun / h
+                part_haloid = subsample['halo_id'].astype(int)
+                part_Np = subsample['Np'] # number of particles that end up in the halo
+                part_subsample = subsample['downsample_halo']
+                part_randoms = subsample['randoms']
+                if self.want_AB:
+                    part_deltac = subsample['halo_deltac']
+                    part_fenv = subsample['halo_fenv']
+                if self.want_shear:
+                    part_shear = subsample['halo_shear']
 
-            if self.want_ranks:
-                assert 'ranks' in part_fields
-                assert 'ranksv' in part_fields
-                part_ranks = subsample['ranks']
-                part_ranksv = subsample['ranksv']
+                if self.want_ranks:
+                    assert 'ranks' in part_fields
+                    assert 'ranksv' in part_fields
+                    part_ranks = subsample['ranks']
+                    part_ranksv = subsample['ranksv']
 
-                if 'ranksp' in part_fields:
-                    part_ranksp = subsample['ranksp']
-                else:
-                    part_ranksp = np.zeros(len(subsample))
+                    if 'ranksp' in part_fields:
+                        part_ranksp = subsample['ranksp']
+                    else:
+                        part_ranksp = np.zeros(len(subsample))
 
-                if 'ranksr' in part_fields:
-                    part_ranksr = subsample['ranksr']
-                else:
-                    part_ranksr = np.zeros(len(subsample))
+                    if 'ranksr' in part_fields:
+                        part_ranksr = subsample['ranksr']
+                    else:
+                        part_ranksr = np.zeros(len(subsample))
 
-                if 'ranksc' in part_fields:
-                    part_ranksc = subsample['ranksc']
-                else:
-                    part_ranksc = np.zeros(len(subsample))
+                    if 'ranksc' in part_fields:
+                        part_ranksc = subsample['ranksc']
+                    else:
+                        part_ranksc = np.zeros(len(subsample))
 
-                p_ranks[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranks
-                p_ranksv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksv
-                p_ranksp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksp
-                p_ranksr[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksr
-                p_ranksc[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksc
+                    p_ranks[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranks
+                    p_ranksv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksv
+                    p_ranksp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksp
+                    p_ranksr[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksr
+                    p_ranksc[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_ranksc
 
-            # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
-            # particle_data = vstack([particle_data, new_part_table])
-            ppos[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_pos
-            pvel[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_vel
-            phvel[parts_ticker: parts_ticker + Nparts[eslab-start]] =  part_hvel
-            phmass[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_halomass
-            phid[parts_ticker: parts_ticker + Nparts[eslab-start]] =  part_haloid
-            pNp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_Np
-            psubsampling[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_subsample
-            prandoms[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_randoms
-            if self.want_AB:
-                pdeltac[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_deltac
-                pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
-            if self.want_shear:
-                pshear[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_shear
-            parts_ticker += Nparts[eslab-start]
+                # #     part_data_slab += [part_ranks, part_ranksv, part_ranksp, part_ranksr]
+                # particle_data = vstack([particle_data, new_part_table])
+                ppos[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_pos
+                pvel[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_vel
+                phvel[parts_ticker: parts_ticker + Nparts[eslab-start]] =  part_hvel
+                phmass[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_halomass
+                phid[parts_ticker: parts_ticker + Nparts[eslab-start]] =  part_haloid
+                pNp[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_Np
+                psubsampling[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_subsample
+                prandoms[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_randoms
+                if self.want_AB:
+                    pdeltac[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_deltac
+                    pfenv[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_fenv
+                if self.want_shear:
+                    pshear[parts_ticker: parts_ticker + Nparts[eslab-start]] = part_shear
+                parts_ticker += Nparts[eslab-start]
 
         # sort halos by hid, important for conformity
         if not np.all(hid[:-1] <= hid[1:]):
@@ -510,6 +523,8 @@ class AbacusHOD:
         """
         if tracers is None:
             tracers = self.tracers
+        if self.z_type == 'secondary':
+            assert want_nfw
         if reseed:
             start = time.time()
             # np.random.seed(reseed)

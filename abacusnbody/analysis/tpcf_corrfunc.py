@@ -2,10 +2,13 @@
 import time
 
 import numpy as np
-# from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
-# from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
-# from Corrfunc.theory.DDrppi import
-from Corrfunc.theory import DDrppi, DDsmu
+try:
+    from Corrfunc.theory import DDrppi, DDsmu
+except ImportError as e:
+    raise ImportError('Could not import Corrfunc. Install abacusutils with '
+        '"pip install abacusutils[all]" to install Corrfunc.') \
+        from e
+
 from scipy.special import legendre
 
 
@@ -14,6 +17,7 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
     Calculate the multipoles of the two point correlation function
     after first computing `~halotools.mock_observables.s_mu_tpcf`.
     This is copied over from halotools. Original author was Duncan Campbell.
+
     Parameters
     ----------
     s_mu_tcpf_result : np.ndarray
@@ -25,10 +29,12 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
         Must be between [0,1].
     order : int, optional
         order of the multpole returned.
+
     Returns
     -------
     xi_l : np.array
         multipole of ``s_mu_tcpf_result`` of the indicated order.
+
     Examples
     --------
     For demonstration purposes we create a randomly distributed set of points within a
@@ -98,15 +104,20 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     lbox = np.float32(lbox)
 
     if autocorr == 1:
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
-            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
+        # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
+        #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
+                         X1 = x1, Y1 = y1, Z1 = z1, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     else:
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
-            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
+        # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
+        #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
+                         X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True,
+                         max_cells_per_dim = num_cells, verbose = False)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
 
@@ -192,16 +203,20 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     lbox = np.float32(lbox)
 
     if autocorr == 1:
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
-            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
+        #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
+                         X1 = x1, Y1 = y1, Z1 = z1, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     else:
         print("sample size", len(x1), len(x2))
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
-            boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
+        #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
+                         X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
         DD_counts = results['npairs']
     print("corrfunc took time ", time.time() - cf_start)
     DD_counts = DD_counts.reshape((len(rpbins) - 1, int(pimax)))
