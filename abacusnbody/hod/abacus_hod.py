@@ -876,13 +876,14 @@ class AbacusHOD:
             x1 = mock_dict[tr1]['x']
             y1 = mock_dict[tr1]['y']
             z1 = mock_dict[tr1]['z']
+            pos1 = np.stack((x1,y1,z1), axis=1)
             w1 = mock_dict[tr1].get('w', None)
             for i2, tr2 in enumerate(mock_dict.keys()):
                 if i1 > i2:
                     continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
                     clustering[tr1+'_'+tr2+'_modes'] = N3d
                     clustering[tr1+'_'+tr2+'_ell'] = binned_poles
@@ -892,9 +893,10 @@ class AbacusHOD:
                     x2 = mock_dict[tr2]['x']
                     y2 = mock_dict[tr2]['y']
                     z2 = mock_dict[tr2]['z']
+                    pos2 = np.stack((x2,y2,z2), axis=1)
                     w2 = mock_dict[tr2].get('w', None)
-                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(x1, y1, z1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced,
-                                                      w = w1, x2 = x2, y2 = y2, z2 = z2, w2 = w2, poles = poles)
+                    k_binc, mu_binc, pk3d, N3d, binned_poles, Npoles = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced,
+                                                      w = w1, pos2 = pos2, w2 = w2, poles = poles)
                     clustering[tr1+'_'+tr2] = pk3d
                     clustering[tr1+'_'+tr2+'_modes'] = N3d
                     clustering[tr1+'_'+tr2+'_ell'] = binned_poles

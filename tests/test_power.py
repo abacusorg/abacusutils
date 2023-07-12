@@ -24,9 +24,7 @@ def test_power(power_test_data, interlaced, compensated, paste):
 
     # load data
     Lbox = power_test_data['Lbox']
-    x = power_test_data['x']
-    y = power_test_data['y']
-    z = power_test_data['z']
+    pos = power_test_data['pos']
 
     # specifications of the power spectrum computation
     nmesh = 72
@@ -36,7 +34,7 @@ def test_power(power_test_data, interlaced, compensated, paste):
     nbins_k = nmesh//2
 
     # compute power
-    k_binc, mu_binc, Pkmu, Nkmu, binned_poles, Npoles = calc_power(x, y, z, nbins_k, nbins_mu, k_hMpc_max, logk,
+    k_binc, mu_binc, Pkmu, Nkmu, binned_poles, Npoles = calc_power(pos, nbins_k, nbins_mu, k_hMpc_max, logk,
                                                                     Lbox, paste, nmesh, compensated, interlaced)
 
     # load presaved nbodykit computation

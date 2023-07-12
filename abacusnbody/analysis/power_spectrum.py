@@ -15,6 +15,9 @@ from scipy.fft import rfftn, irfftn, fftfreq
 from .tsc import tsc_parallel
 from .cic import cic_serial
 
+
+MAX_THREADS = numba.config.NUMBA_NUM_THREADS
+
 # the first 20 factorials
 FACTORIAL_LOOKUP_TABLE = np.array([
     1, 1, 2, 6, 24, 120, 720, 5040, 40320,
@@ -22,6 +25,7 @@ FACTORIAL_LOOKUP_TABLE = np.array([
     6227020800, 87178291200, 1307674368000,
     20922789888000, 355687428096000, 6402373705728000,
     121645100408832000, 2432902008176640000], dtype=np.int64)
+
 
 @numba.njit
 def factorial(n):
@@ -44,6 +48,7 @@ def factorial(n):
     factorial = FACTORIAL_LOOKUP_TABLE[n]
     return factorial
 
+
 @numba.njit
 def factorial_slow(x):
     r"""
@@ -64,6 +69,7 @@ def factorial_slow(x):
         n *= i
     return n
 
+
 @numba.njit
 def n_choose_k(n, k):
     r"""
@@ -83,6 +89,7 @@ def n_choose_k(n, k):
     """
     x = factorial(n)//(factorial(k)*factorial(n-k))
     return x
+
 
 @numba.njit
 def P_n(x, n, dtype=np.float32):
@@ -114,7 +121,9 @@ def P_n(x, n, dtype=np.float32):
 
 
 @numba.njit(parallel=True, fastmath=True)
-def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32, space='fourier'):
+def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
+            space='fourier', nthread=MAX_THREADS,
+            ):
     r"""
     Compute mean and count modes in (k,mu) bins for a 3D rfft mesh of shape (n1d, n1d, n1d//2+1)
     or a real mesh of shape (n1d, n1d, n1d).
@@ -144,6 +153,8 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32, 
     space : str
         options are Fourier space, `fourier`, which computes power spectrum,
         or configuration-space, `real`, which computes the correlation function.
+    nthread : int, optional
+        Number of numba threads to use
 
     Returns
     -------
@@ -156,6 +167,9 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32, 
     counts_poles
         number of modes per k.
     """
+
+    numba.set_num_threads(nthread)
+
     kzlen = n1d//2 + 1
     Nk = len(kedges) - 1
     if space == 'fourier':
@@ -230,6 +244,7 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32, 
                 weighted_counts[i, j] /= dtype(counts[i, j])
     return weighted_counts, counts, weighted_counts_poles, counts_poles
 
+
 def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     r"""
     Project 3D power spectrum into multipoles of the power spectrum.
@@ -259,6 +274,7 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu=1, weights=raw_p3d, poles=poles)
     binned_poles *= Lbox**3
     return binned_poles, Npoles
+
 
 @numba.njit(parallel=True, fastmath=True)
 def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
@@ -313,6 +329,7 @@ def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
                         Pk[i, j, k] += linear_interp(np.sqrt(kmag2)*dk, k_ell, P_ell[ip]) * P_n(mu2, poles[ip])
     return Pk
 
+
 @numba.njit
 def linear_interp(xd, x, y):
     r"""
@@ -342,6 +359,7 @@ def linear_interp(xd, x, y):
     fl = np.int64(f)
     yd = y[fl] + (f - fl) * (y[fl+1] - y[fl])
     return yd
+
 
 @numba.njit(parallel=True, fastmath=True)
 def get_smoothing(n1d, L, R, dtype=np.float32):
@@ -379,6 +397,7 @@ def get_smoothing(n1d, L, R, dtype=np.float32):
                 kmag2 = dtype(i2 + j2 + k**2)
                 Sk[i, j, k] = np.exp(-kmag2*dk2*R2/2.)
     return Sk
+
 
 @numba.njit(parallel=True, fastmath=True)
 def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
@@ -422,6 +441,7 @@ def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
                 delta_mu2[i, j, k] = delta[i, j, k] * mu2
     return delta_mu2
 
+
 def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
     r"""
     Transform 3D power spectrum into correlation function multipoles.
@@ -464,6 +484,7 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
     binned_poles *= nmesh**3
     return r_binc, binned_poles, Npoles
 
+
 def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
     r"""
     Obtain bin edges of the k wavenumbers and mu angles.
@@ -501,7 +522,9 @@ def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
     mu_bin_edges = np.linspace(0., 1., n_mu_bins + 1)
     return k_bin_edges, mu_bin_edges
 
-def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=[]):
+
+@numba.njit(parallel=True, fastmath=True)
+def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=None, nthread=MAX_THREADS):
     r"""
     Calculate the power spectrum of a given Fourier field.
 
@@ -519,6 +542,8 @@ def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles
         second Fourier 3D field, used in cross-correlation.
     poles : array_like, optional
         Legendre multipoles of the power spectrum or correlation function.
+    nthread : int, optional
+        Number of numba threads to use
 
     Returns
     -------
@@ -531,19 +556,20 @@ def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles
     Npoles : array_like
         number of modes per k.
     """
+    numba.set_num_threads(nthread)
+
     # get raw power
     if field2_fft is not None:
         raw_p3d = (np.conj(field_fft)*field2_fft).real
     else:
         raw_p3d = (np.abs(field_fft)**2)
-    del field_fft
-    gc.collect()
 
     # power spectrum
     nmesh = raw_p3d.shape[0]
     Nmu = len(mu_bin_edges) - 1
-    poles = np.array(poles)
-    binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu, raw_p3d, poles)
+    if poles is None:
+        poles = np.empty(0)
+    binned_p3d, N3d, binned_poles, Npoles = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu, raw_p3d, poles, nthread=nthread)
 
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     p3d = binned_p3d * Lbox**3
@@ -551,8 +577,8 @@ def calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles
         binned_poles *= Lbox**3
     return p3d, N3d, binned_poles, Npoles
 
-# @profile
-def get_field(pos, Lbox, nmesh, paste, w=None, d=0.):
+
+def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS):
     r"""
     Construct real-space 3D field given particle positions.
 
@@ -570,6 +596,8 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0.):
         weights for each particle.
     d : float, optional
         uniform shift to particle positions.
+    nthread : int, optional
+        Number of numba threads to use
 
     Returns
     -------
@@ -579,24 +607,73 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0.):
     # check if weights are requested
     if w is not None:
         assert pos.shape[0] == len(w)
-    pos = pos.astype(np.float32)
-    field = np.zeros((nmesh, nmesh, nmesh), dtype=np.float32)
+    pos = pos.astype(np.float32, copy=False)
+
+    paste = paste.upper()
     if paste == 'TSC':
         if d != 0.:
             # TODO: could add an offset parameter to tsc_parallel
-            tsc_parallel(pos + np.float32(d), field, Lbox, weights=w)
+            field = tsc_parallel(pos + d, nmesh, Lbox, weights=w, nthread=nthread)
         else:
-            tsc_parallel(pos, field, Lbox, weights=w)
+            field = tsc_parallel(pos, nmesh, Lbox, weights=w, nthread=nthread)
     elif paste == 'CIC':
+        field = np.zeros((nmesh, nmesh, nmesh), dtype=np.float32)
         warnings.warn("Note that currently CIC pasting, unlike TSC, supports only a non-parallel implementation.")
         if d != 0.:
-            cic_serial(pos + np.float32(d), field, Lbox, weights=w)
+            cic_serial(pos + d, field, Lbox, weights=w)
         else:
             cic_serial(pos, field, Lbox, weights=w)
     if w is None: # in the zcv code the weights are already normalized, so don't normalize here
-        field /= (pos.shape[0]/nmesh**3.) # same as passing "Value" to nbodykit (1+delta)(x) V(x)
-        field -= 1. # leads to -1 in the complex field
+        # TODO assuming normalized weights is fragile
+        # same as passing "Value" to nbodykit (1+delta)(x) V(x)
+        # leads to -1 in the complex field
+        normalize_field(field, inplace=True, tot_weight=len(pos), nthread=nthread)
     return field
+
+
+@numba.njit(parallel=True, fastmath=True)
+def normalize_field(field, tot_weight=None, inplace=False, nthread=MAX_THREADS):
+    '''
+    Normalize a cosmological density field to the overdensity convention:
+
+    ``overdens = field / field.mean() - 1``
+
+    If you know the total weight already (i.e. ``field.sum()``, you can pass that as
+    the ``tot_weight`` argument to accelerate the computation.
+
+    Parameters
+    ----------
+    field : array_like
+        The field to normalize
+
+    tot_weight : float, optional
+        The total weight, i.e. ``field.sum()``
+
+    inplace : bool, optional
+        Whether to normalize in-place
+
+    Returns
+    -------
+    overdens : np.ndarray
+        The normalized overdensity field
+    '''
+
+    numba.set_num_threads(nthread)
+
+    dtype = field.dtype.type
+    if tot_weight is None:
+        # TODO parallel=True doesn't accept dtype
+        tot_weight = field.sum()
+
+    norm = dtype(field.size / tot_weight)
+    if inplace:
+        flatfield = field.reshape(-1)
+        for i in numba.prange(len(flatfield)):
+            flatfield[i] = flatfield[i]*norm - dtype(1.)
+    else:
+        field = field*norm - dtype(1.)
+    return field
+
 
 @numba.njit(parallel=True, fastmath=True)
 def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
@@ -642,6 +719,7 @@ def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
                 field_fft[i, j, k] += field_shift_fft[i, j, k]*np.exp(fac * (kx + ky + kz))
                 field_fft[i, j, k] *= norm
 
+
 def get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w):
     r"""
     Calculate interlaced field from particle positions and return 3D Fourier field.
@@ -682,8 +760,8 @@ def get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w):
     print("field fft", field_fft.dtype)
     return field_fft
 
-# @profile
-def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced):
+
+def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthread=MAX_THREADS):
     r"""
     Calculate field from particle positions and return 3D Fourier field.
 
@@ -703,6 +781,8 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced):
         want to apply first-order compensated filter?
     interlaced : bool
         want to apply interlacing?
+    nthread : int, optional
+        Number of numba threads to use
 
     Returns
     -------
@@ -711,23 +791,31 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced):
     """
 
     # get field in real space
-    field = get_field(pos, Lbox, nmesh, paste, w)
-    print("field, pos", field.dtype, pos.dtype)
+    field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread)
+
     if interlaced:
         # get interlaced field
         field_fft = get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w)
     else:
         # get Fourier modes from skewers grid
-        field_fft = rfftn(field, workers=-1) / np.float32(field.size)
-    # get rid of pos, field
-    del pos, w, field
-    gc.collect()
+        inv_size = np.float32(1 / field.size)
+        field_fft = rfftn(field, overwrite_x=True, workers=nthread)
+        _normalize(field_fft, inv_size, nthread=nthread)
 
     # apply compensation filter
     if compensated:
         assert W is not None
         field_fft /= (W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :(nmesh//2+1)])
     return field_fft
+
+
+@numba.njit(parallel=True, fastmath=True)
+def _normalize(field, a, nthread=MAX_THREADS):
+    numba.set_num_threads(nthread)
+    flatfield = field.reshape(-1)
+    for i in numba.prange(len(flatfield)):
+        flatfield[i] *= a
+
 
 def get_W_compensated(Lbox, nmesh, paste, interlaced):
     r"""
@@ -775,21 +863,20 @@ def get_W_compensated(Lbox, nmesh, paste, interlaced):
         del s
     return W
 
-# @profile
-def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, compensated = True, interlaced = True, w = None, x2 = None, y2 = None, z2 = None, w2 = None, poles=[]):
+
+def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
+               compensated = True, interlaced = True, w = None, pos2 = None, w2 = None,
+               poles = None, nthread = MAX_THREADS,
+               ):
     r"""
     Compute the 3D power spectrum given particle positions by first painting them on a cubic
     mesh and then applying Fourier transforms and mode counting. Can output Legendre multipoles,
     (k, mu) wedges, or both.
 
-    TODO: Return a dictionary.
+    TODO: Return a dict or astropy table.
 
-    x1 : array_like
-        particle positions in the x dimension.
-    y1 : array_like
-        particle positions in the y dimension.
-    z1 : array_like
-        particle positions in the z dimension.
+    pos : array_like
+        particle positions, shape (N,3)
     nbins_k : int
         number of bins of k, which ranges from 0 to `k_max` if `logk == True`
         and 2pi/L (incl.) to `k_max` if `logk == False`.
@@ -817,8 +904,10 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, c
         second set of particle positions in the y dimension.
     z2 : array_like, optional
         second set of particle positions in the z dimension.
-    poles :
+    poles : None or list of int, optional
         Legendre multipoles of the power spectrum or correlation function.
+    nthread : int, optional
+        Number of numba threads to use
 
     Returns
     -------
@@ -842,41 +931,20 @@ def calc_power(x1, y1, z1, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh, c
     else:
         W = None
 
-    # express more conveniently
-    pos = np.zeros((len(x1), 3), dtype=np.float32)
-    pos[:, 0] = x1
-    pos[:, 1] = y1
-    pos[:, 2] = z1
-    del x1, y1, z1
-    gc.collect()
-
     # convert to fourier space
-    field_fft = get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced)
-    del pos
-    gc.collect()
+    field_fft = get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthread=nthread)
 
     # if second field provided
-    if x2 is not None:
-        assert (y2 is not None) and (z2 is not None)
-        # assemble the positions and compute density field
-        pos2 = np.zeros((len(x2), 3), dtype=np.float32)
-        pos2[:, 0] = x2
-        pos2[:, 1] = y2
-        pos2[:, 2] = z2
-        del x2, y2, z2
-        gc.collect()
-
+    if pos2 is not None:
         # convert to fourier space
-        field2_fft = get_field_fft(pos2, Lbox, nmesh, paste, w2, W, compensated, interlaced)
-        del pos2
-        gc.collect()
+        field2_fft = get_field_fft(pos2, Lbox, nmesh, paste, w2, W, compensated, interlaced, nthread=nthread)
     else:
         field2_fft = None
 
     # calculate power spectrum
     k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_max, nbins_k, nbins_mu, logk)
-    p3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles)
-    if len(poles) == 0:
+    p3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles, nthread=nthread)
+    if poles is None:
         binned_poles, Npoles = [], []
 
     # define bin centers
