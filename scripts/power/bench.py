@@ -43,7 +43,7 @@ def main(**kwargs):
     numba.set_num_threads(nthread)
     # compute power
     calc_power(pos, nbins_k, nbins_mu, kmax, logk,
-            Lbox, paste, nmesh, compensated, interlaced,
+            Lbox, paste, nmesh, compensated, interlaced, #poles=[0,2],
             nthread=nthread
             )
 
@@ -51,7 +51,7 @@ def main(**kwargs):
     for _ in range(nrep):
         # field_fft = get_field_fft(pos, Lbox, nmesh, paste, None, None, compensated, interlaced, nthread=nthread)
         # k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, kmax, nbins_k, nbins_mu, logk)
-        # p3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft, Lbox, k_bin_edges, mu_bin_edges, None, None, nthread=nthread)
+        # p3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, None, None, nthread=nthread)
         calc_power(pos, nbins_k, nbins_mu, kmax, logk,
                 Lbox, paste, nmesh, compensated, interlaced,
                 nthread=nthread

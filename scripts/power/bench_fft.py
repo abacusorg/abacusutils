@@ -6,7 +6,7 @@ import timeit
 import click
 import numpy as np
 
-# import scipy.fft
+import scipy.fft  # noqa: F401
 # import mkl_fft._scipy_fft_backend as be
 # Set mkl_fft to be used as backend of SciPy's FFT functions.
 # scipy.fft.set_global_backend(be)
