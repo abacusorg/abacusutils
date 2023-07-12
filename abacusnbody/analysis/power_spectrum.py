@@ -128,7 +128,7 @@ def P_n(x, n, dtype=np.float32):
 
 
 @numba.njit(parallel=True, fastmath=True)
-def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
+def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.float32,
             space='fourier', nthread=MAX_THREADS,
             ):
     r"""
@@ -165,13 +165,13 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
 
     Returns
     -------
-    weighted_counts : array_like
+    weighted_counts : ndarray of float
         mean power spectrum per (k, mu) wedge.
-    counts : array_like
+    counts : ndarray of int
         number of modes per (k, mu) wedge.
-    weighted_counts_poles : array_like
+    weighted_counts_poles : ndarray of float
         mean power spectrum per k for each Legendre multipole.
-    counts_poles
+    counts_poles : ndarray of int
         number of modes per k.
     """
 
@@ -191,10 +191,9 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
     weighted_counts = np.zeros((nthread, Nk, Nmu), dtype=dtype)
     Np = len(poles)
     if Np == 0:
-        poles = np.zeros(1, dtype=np.int64) # so that compiler does not complain
+        poles = np.empty(0, dtype=np.int64)  # so that compiler does not complain
     else:
         poles = poles.astype(np.int64)
-    counts_poles = np.zeros((nthread, Nk), dtype=np.int64)
     weighted_counts_poles = np.zeros((nthread, len(poles), Nk), dtype=dtype)
 
     # Loop over all k vectors
@@ -210,7 +209,7 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
                     invkmag2 = kmag2**-1
                     mu2 = dtype(k**2) * invkmag2
                 else:
-                    mu2 = dtype(0.) # matches nbodykit
+                    mu2 = dtype(0.)  # matches nbodykit
 
                 if kmag2 < kedges2[0]:
                     continue
@@ -227,7 +226,6 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
                 counts[tid, bk, bmu] += 1 if k == 0 else 2
                 weighted_counts[tid, bk, bmu] += weights[i, j, k] if k == 0 else dtype(2.)*weights[i, j, k]
                 if Np > 0:
-                    counts_poles[tid, bk] += 1 if k == 0 else 2
                     for ip in range(len(poles)):
                         pole = poles[ip]
                         if pole == 0:
@@ -238,14 +236,13 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.array([]), dtype=np.float32,
 
     counts = counts.sum(axis=0)
     weighted_counts = weighted_counts.sum(axis=0)
-    counts_poles = counts_poles.sum(axis=0)
     weighted_counts_poles = weighted_counts_poles.sum(axis=0)
+    counts_poles = counts.sum(axis=1)
 
     for i in range(Nk):
         if Np > 0:
             if counts_poles[i] != 0:
-                for ip in range(len(poles)):
-                    weighted_counts_poles[ip, i] /= dtype(counts_poles[i])
+                weighted_counts_poles[:, i] /= dtype(counts_poles[i])
         for j in range(Nmu):
             if counts[i, j] != 0:
                 weighted_counts[i, j] /= dtype(counts[i, j])
