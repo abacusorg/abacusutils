@@ -5,6 +5,7 @@ ci:
 exclude: |
   (?x)(
     ^scripts/disBatch/|
+    ^scripts/\w*/bench\w*.py|
     ^tests/Mini_N64_L32/|
     \.asdf$|
     \.svg$
