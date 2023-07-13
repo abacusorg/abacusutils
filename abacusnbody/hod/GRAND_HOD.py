@@ -362,7 +362,7 @@ def getPointsOnSphere(nPoints, Nthread, seed=None):
             ur[i, 2] = np.cos(dec)
     return ur
 
-@njit(fastmath=True) # parallel=True, 
+@njit(fastmath=True) # parallel=True,
 def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c, M, Rvir,
                       rd_pos, num_sat, f_sigv, vel_sat = 'rd_normal', Nthread = 16,
                       exp_frac=0, exp_scale=1, nfw_rescale=1):
