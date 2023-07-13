@@ -362,7 +362,7 @@ def getPointsOnSphere(nPoints, Nthread, seed=None):
             ur[i, 2] = np.cos(dec)
     return ur
 
-@njit(parallel=True, fastmath=True)
+@njit(fastmath=True) # parallel=True,
 def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c, M, Rvir,
                       rd_pos, num_sat, f_sigv, vel_sat = 'rd_normal', Nthread = 16,
                       exp_frac=0, exp_scale=1, nfw_rescale=1):
@@ -372,7 +372,7 @@ def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c,
     c: r98/r25
     vrms_h: 'sigmav3d_L2com'
     """
-    numba.set_num_threads(Nthread)
+    # numba.set_num_threads(Nthread)
     # figuring out the number of halos kept for each thread
     h_id = np.repeat(h_id, num_sat)
     M = np.repeat(M, num_sat)
@@ -401,7 +401,7 @@ def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c,
             #    ind = np.random.randint(0, len(NFW_draw))
             #etaVir = NFW_draw[ind]/c[i]  # =r/rvir
             if np.random.uniform(0,1)<exp_frac:
-                tt = np.random.exponential(scale=exp_scale)
+                tt = np.random.exponential(exp_scale, size = 1)[0]
                 etaVir = tt/c[i]
             else:
                 while (NFW_draw[ind] > c[i]):

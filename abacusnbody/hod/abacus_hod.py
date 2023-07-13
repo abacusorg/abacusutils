@@ -216,8 +216,8 @@ class AbacusHOD:
         self.lbox = header['BoxSize']
 
         # count ther number of halos and particles
-        Nhalos = np.empty(params['numslabs'])
-        Nparts = np.empty(params['numslabs'])
+        Nhalos = np.zeros(params['numslabs'])
+        Nparts = np.zeros(params['numslabs'])
         for eslab in range(start, end):
             if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
