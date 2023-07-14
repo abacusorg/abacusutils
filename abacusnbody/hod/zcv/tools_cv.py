@@ -654,7 +654,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
 
     # expand zenbu to 3D power spectrum
     assert np.isclose(np.min(np.diff(k_binc)), np.max(np.diff(k_binc))), "For custom interpolation, need equidistant k-values"
-    pk_zz[:, :, :] -= expand_poles_to_3d(k_binc, pk_zenbu, nmesh, Lbox, np.array(poles))/np.float32(Lbox**3)
+    pk_zz[:, :, :] -= expand_poles_to_3d(k_binc, pk_zenbu, nmesh, Lbox, np.asarray(poles))/np.float32(Lbox**3)
 
     # disconnected covariance
     if want_rsd:
@@ -1069,7 +1069,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # expand multipole to 3D power spectra (this is the C-mu_C part)
     assert np.isclose(np.min(np.diff(kth)), np.max(np.diff(kth))), "For custom interpolation, need equidistant k-values"
-    pk_ll[:, :, :] -= expand_poles_to_3d(kth, p_m_lin_poles, nmesh, Lbox, np.array(poles))/np.float32(Lbox**3)
+    pk_ll[:, :, :] -= expand_poles_to_3d(kth, p_m_lin_poles, nmesh, Lbox, np.asarray(poles))/np.float32(Lbox**3)
     gc.collect()
 
     # disconnected covariance

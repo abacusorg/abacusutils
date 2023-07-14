@@ -19,6 +19,7 @@ Enhancements
 ~~~~~~~~~~~~
 - Add power spectrum to `metadata` module [#69]
 - Upgrade docs and CI [#71]
+- Power spectrum optimization and parallelization [#102]
 
 Installation
 ~~~~~~~~~~~~

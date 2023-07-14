@@ -7,7 +7,10 @@ from nbodykit.source.catalog import UniformCatalog
 
 
 @click.command()
-def main():
+@click.option('-r', '--nrep', default=3)
+def main(**kwargs):
+    nrep = kwargs['nrep']
+
     comm = nbodykit.CurrentMPIComm.get()
 
     N = 10**7
@@ -16,16 +19,17 @@ def main():
     cat = UniformCatalog(N, BoxSize=1., dtype='f4')
 
     t = -timeit.default_timer()
-    cat.to_mesh(Nmesh=ngrid, resampler='tsc', compensated=False,
-        interlaced=False, dtype='f4',
-    ).compute()
+    for _ in range(nrep):
+        cat.to_mesh(Nmesh=ngrid, resampler='tsc', compensated=False,
+            interlaced=False, dtype='f4',
+        ).compute()
     t += timeit.default_timer()
 
     # print(np.sum(mesh))
 
     if comm.rank == 0:
-        print(f'Time: {t:.4g} sec')
-        print(f'Rate: {N/1e6/t:.4g}M part/sec')
+        print(f'Time: {t/nrep:.4g} sec x {nrep} rep')
+        print(f'Rate: {N/(t/nrep)/1e6:.4g} M part/sec')
 
 
 if __name__ == '__main__':

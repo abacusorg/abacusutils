@@ -107,9 +107,7 @@ def generate_nbody(power_test_data, interlaced=False, compensated=False, paste='
     # load data
     power_test_data = power_test_data()
     Lbox = power_test_data['Lbox']
-    x = power_test_data['x']
-    y = power_test_data['y']
-    z = power_test_data['z']
+    pos = power_test_data['pos']
 
     # specifications of the power spectrum computation
     nmesh = 72
@@ -125,7 +123,7 @@ def generate_nbody(power_test_data, interlaced=False, compensated=False, paste='
     fn = f"tests/data_power/nbody_{paste}{comp_str}{int_str}.npz"
 
     # create mesh object
-    cat = ArrayCatalog({'Position': np.vstack((x, y, z)).T})
+    cat = ArrayCatalog({'Position': pos.T})
 
     # convert to a MeshSource, apply compensation (same as nbodykit, but need to apply manually, as it fails on some nbodykit versions)
     mesh = cat.to_mesh(window=paste.lower(), Nmesh=nmesh, BoxSize=Lbox, interlaced=interlaced, compensated=False, position='Position')
