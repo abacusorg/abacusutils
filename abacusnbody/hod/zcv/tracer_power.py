@@ -442,6 +442,7 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
     header['Lbox'] = Lbox
     header['nmesh'] = nmesh
     header['kcut'] = kcut
+
     if want_save:
         compress_asdf(str(power_tr_fn), pk_tr_dict, header)
     return pk_tr_dict

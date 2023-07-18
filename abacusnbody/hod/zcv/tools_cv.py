@@ -282,7 +282,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
     LCV: Function for getting the linear bias in the Kaiser approximation.
     """
     # cut the tracer power spectrum in the k range of interest
-    pk_tt = power_rsd_tr_dict['P_ell_tr_tr'][:ellmax, :, 0]
+    pk_tt = power_rsd_tr_dict['P_ell_tr_tr'][:ellmax, :]#, 0]
     kidx_max = k.searchsorted(kmax)
     kidx_min = k.searchsorted(kmin)
     kcut = k[kidx_min:kidx_max]
@@ -297,7 +297,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
 
     # define loss function as the fractional difference squared
     def loss(bias):
-        return np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0]) ** 2 / (2 * pk_tt_kcut ** 2))
+        return np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :]) ** 2 / (2 * pk_tt_kcut ** 2))
 
     # fit for the bias
     out = minimize(loss, 1.)
@@ -996,7 +996,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     kth, pk_z1 = kth[choice], pk_z1[choice]
     kth_new = np.arange(kth.min(), kth.max(), np.min(np.diff(kth)))
     pk_z1_new = np.interp(kth_new, kth, pk_z1)
-    kth, pk_z1_new = kth_new, pk_z1_new
+    kth, pk_z1 = kth_new, pk_z1_new
 
     # rewind back to initial redshift of the simulation
     p_m_lin = D_ratio**2*pk_z1

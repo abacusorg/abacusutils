@@ -200,10 +200,10 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
     # Loop over all k vectors
     for i in numba.prange(n1d):
         tid = numba.get_thread_id()
-        i2 = i**2 if i <= n1d//2 else (n1d - i)**2
+        i2 = i**2 if i < n1d//2 else (i - n1d)**2
         for j in range(n1d):
             bk,bmu = 0,0
-            j2 = j**2 if j <= n1d//2 else (n1d - j)**2
+            j2 = j**2 if j < n1d//2 else (j - n1d)**2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
                 if kmag2 > 0:
@@ -317,9 +317,9 @@ def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
     # Loop over all k vectors
     for i in numba.prange(n1d):
         numba.get_thread_id()
-        i2 = i**2 if i <= n1d//2 else (n1d - i)**2
+        i2 = i**2 if i < n1d//2 else (i - n1d)**2
         for j in range(n1d):
-            j2 = j**2 if j <= n1d//2 else (n1d - j)**2
+            j2 = j**2 if j < n1d//2 else (j - n1d)**2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
                 if kmag2 > 0:
@@ -395,9 +395,9 @@ def get_smoothing(n1d, L, R, dtype=np.float32):
     # Loop over all k vectors
     for i in numba.prange(n1d):
         numba.get_thread_id()
-        i2 = i**2 if i <= n1d//2 else (n1d - i)**2
+        i2 = i**2 if i < n1d//2 else (i - n1d)**2
         for j in range(n1d):
-            j2 = j**2 if j <= n1d//2 else (n1d - j)**2
+            j2 = j**2 if j <= n1d//2 else (j - n1d)**2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
                 Sk[i, j, k] = np.exp(-kmag2*dk2*R2/2.)
@@ -433,9 +433,9 @@ def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
     # Loop over all k vectors
     for i in numba.prange(n1d):
         numba.get_thread_id()
-        i2 = i**2 if i <= n1d//2 else (n1d - i)**2
+        i2 = i**2 if i < n1d//2 else (i - n1d)**2
         for j in range(n1d):
-            j2 = j**2 if j <= n1d//2 else (n1d - j)**2
+            j2 = j**2 if j < n1d//2 else (j - n1d)**2
             for k in range(kzlen):
                 kmag2 = dtype_f(i2 + j2 + k**2)
                 if kmag2 > 0:
@@ -618,7 +618,7 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS):
     if paste == 'TSC':
         if d != 0.:
             # TODO: could add an offset parameter to tsc_parallel
-            field = tsc_parallel(pos + d, nmesh, Lbox, weights=w, nthread=nthread)
+            field = tsc_parallel(pos, nmesh, Lbox, weights=w, nthread=nthread, offset=d)
         else:
             field = tsc_parallel(pos, nmesh, Lbox, weights=w, nthread=nthread)
     elif paste == 'CIC':
@@ -724,8 +724,8 @@ def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
                 field_fft[i, j, k] += field_shift_fft[i, j, k]*np.exp(fac * (kx + ky + kz))
                 field_fft[i, j, k] *= norm
 
-
-def get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w):
+#def get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w):
+def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS):
     r"""
     Calculate interlaced field from particle positions and return 3D Fourier field.
 
@@ -750,15 +750,20 @@ def get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w):
     # cell width
     d = Lbox / nmesh
 
+    # fourier transform shifted field and sum them up
+    field = get_field(pos, Lbox, nmesh, paste, w)
+    field_fft = rfftn(field, workers=-1)
+    del field
+    gc.collect()
+
     # offset by half a cell
     field_shift = get_field(pos, Lbox, nmesh, paste, w, d=0.5*d)
+    field_shift_fft = rfftn(field_shift, workers=-1)
     print("shift", field_shift.dtype, pos.dtype)
+    del field_shift
     del pos, w
     gc.collect()
 
-    # fourier transform shifted field and sum them up
-    field_fft = rfftn(field, workers=-1)
-    field_shift_fft = rfftn(field_shift, workers=-1)
     shift_field_fft(field_fft, field_shift_fft, nmesh, Lbox, d)
     del field_shift_fft
     gc.collect()
@@ -797,11 +802,16 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthrea
 
     # get field in real space
     field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread)
-
+    print("field, pos", field.dtype, pos.dtype)
     if interlaced:
         # get interlaced field
-        field_fft = get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w)
+        #field_fft = get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w)
+        # TESTING!
+        field_fft = get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=nthread)
     else:
+        # get field in real space # TESTING!!!!
+        field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread)
+        
         # get Fourier modes from skewers grid
         inv_size = np.float32(1 / field.size)
         field_fft = rfftn(field, overwrite_x=True, workers=nthread)

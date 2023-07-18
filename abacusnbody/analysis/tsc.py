@@ -8,7 +8,7 @@ __all__ = ['tsc_parallel', 'partition_parallel']
 
 
 def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
-    npartition=None, sort=False, coord=0, verbose=False,
+    npartition=None, sort=False, coord=0, verbose=False, offset=0. # TESTING
 ):
     '''
     A parallel implementation of TSC mass assignment using numba. The algorithm
@@ -150,7 +150,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     wraptime = -timeit.default_timer()
     if wrap:
         # This could be on-the-fly instead of in-place, if needed
-        _wrap_inplace(pos, box)
+        _wrap_inplace(pos, box, offset=offset) # TESTING
     wraptime += timeit.default_timer()
     if verbose:
         print(f'Wrap time: {wraptime:.4g} sec')
@@ -189,9 +189,11 @@ def _zeros_parallel(shape, dtype=np.float32):
 
 
 @numba.njit(parallel=True)
-def _wrap_inplace(pos, box):
+def _wrap_inplace(pos, box, offset=0., dtype=np.float32):
+    offset = dtype(offset)
     for i in numba.prange(len(pos)):
         for j in range(3):
+            pos[i, j] += offset # TESTING!!!!
             if pos[i,j] >= box:
                 pos[i,j] -= box
             elif pos[i,j] < 0:
