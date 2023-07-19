@@ -1,13 +1,12 @@
 Changelog
 =========
 
-
-1.4.0 (upcoming)
-----------------
-- HOD now supports a new ELG conformity model
+1.4.0 (2023-07-??)
+------------------
 
 New Features
 ~~~~~~~~~~~~
+- HOD now supports a new ELG conformity model
 - Add a power spectrum module, and a zeldovich control variates (ZCV) module that uses it [#68]
 - New parallel TSC module [#79]
 
