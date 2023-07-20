@@ -97,6 +97,7 @@ class AbacusHOD:
         self.z_mock = sim_params['z_mock']
         self.output_dir = sim_params.get('output_dir', './')
         self.halo_lc = sim_params.get('halo_lc', False)
+        self.force_mt = sim_params.get('force_mt', False) # use MT subsamples for LRG?
 
         ztype = None
         if self.halo_lc:
@@ -219,7 +220,7 @@ class AbacusHOD:
         Nhalos = np.zeros(params['numslabs'])
         Nparts = np.zeros(params['numslabs'])
         for eslab in range(start, end):
-            if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
+            if ('ELG' not in self.tracers.keys()) and ('QSO' not in self.tracers.keys()) and (not self.force_mt):
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
@@ -288,7 +289,7 @@ class AbacusHOD:
         for eslab in range(start, end):
 
             print("Loading simulation by slab, ", eslab)
-            if 'ELG' not in self.tracers.keys() and 'QSO' not in self.tracers.keys():
+            if ('ELG' not in self.tracers.keys()) and ('QSO' not in self.tracers.keys()) and (not self.force_mt):
                 halofilename = subsample_dir / ('halos_xcom_%d_seed600_abacushod_oldfenv'%eslab)
                 particlefilename = subsample_dir / ('particles_xcom_%d_seed600_abacushod_oldfenv'%eslab)
             else:
