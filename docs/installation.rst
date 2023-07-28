@@ -5,7 +5,8 @@ Installation
 
 Requirements
 ------------
-abacusutils should work with Python 3.7-3.10 on all mainstream Linux distributions.
+abacusutils should work with Python 3.8-3.11 (and possibly earlier versions, too)
+on all mainstream Linux distributions.
 MacOS support should be possible, but is presently not working and help would be
 needed to finish adding Mac support (see
 `this PR <https://github.com/abacusorg/abacusutils/pull/59>`_).
@@ -40,6 +41,11 @@ Developers may wish to use:
     this is no longer required, instead using the `extension mechanism
     <https://asdf.readthedocs.io/en/stable/asdf/extending/extensions.html>`_
     of ASDF 2.8.
+
+Note that installing abacusutils should allow you to read any Abacus ASDF file,
+even if you don't use abacusutils and go directly through
+the ASDF package.  abacusutils installs a setuptools "entry point" that provides
+decompression hooks to ASDF so it can read our custom compression.
 
 For Developers
 --------------
