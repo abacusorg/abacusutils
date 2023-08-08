@@ -202,7 +202,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
 
         # Initiate fields
         for i in range(len(keynames)):
-            if os.path.exists(fields_fft_fn[i]): continue
+            if os.path.exists(fields_fft_fn[i]):
+                continue
             print(keynames[i])
             if i == 0:
                 w = None
@@ -266,7 +267,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
 
             if save_3D_power:
                 power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{nmesh:d}.asdf"
-                if os.path.exists(power_ij_fn): continue
+                if os.path.exists(power_ij_fn):
+                    continue
                 # construct
                 field_fft_i = field_fft_i[f'{keynames[i]}_Re'] + 1j*field_fft_i[f'{keynames[i]}_Im']
                 field_fft_j = field_fft_j[f'{keynames[j]}_Re'] + 1j*field_fft_j[f'{keynames[j]}_Im']

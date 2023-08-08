@@ -810,7 +810,7 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthrea
     else:
         # get field in real space # TESTING!!!!
         field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread)
-        
+
         # get Fourier modes from skewers grid
         inv_size = np.float32(1 / field.size)
         field_fft = rfftn(field, overwrite_x=True, workers=nthread)
