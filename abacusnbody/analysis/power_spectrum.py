@@ -869,9 +869,21 @@ def get_W_compensated(Lbox, nmesh, paste, interlaced):
     return W
 
 
-def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
-               compensated = True, interlaced = True, w = None, pos2 = None, w2 = None,
-               poles = None, nthread = MAX_THREADS,
+def calc_power(pos,
+               Lbox,
+               nbins_k = None,
+               nbins_mu = 1,
+               k_max = None,
+               logk = False,
+               paste = 'tsc',
+               nmesh = 128,
+               compensated = True,
+               interlaced = True,
+               w = None,
+               pos2 = None,
+               w2 = None,
+               poles = None,
+               nthread = MAX_THREADS,
                ):
     r"""
     Compute the 3D power spectrum given particle positions by first painting them on a
@@ -880,20 +892,24 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
 
     pos : array_like
         particle positions, shape (N,3)
-    nbins_k : int
-        number of bins of k, which ranges from 0 to `k_max` if `logk == True`
-        and 2pi/L (incl.) to `k_max` if `logk == False`.
-    nbins_mu : int
-        number of bins of mu, which ranges from 0 to 1.
-    k_max : float
-        maximum k wavenumber.
-    logk : bool
-        Logarithmic or linear k bins
     Lbox : float
         box size of the simulation.
-    paste : str
+    nbins_k : int, optional
+        number of bins of k, which ranges from 0 to `k_max` if `logk == True`
+        and 2pi/L (incl.) to `k_max` if `logk == False`.
+        Default is None, which sets `nbins_k` to `nmesh`.
+    nbins_mu : int, optional
+        number of bins of mu, which ranges from 0 to 1.
+        Default is 1.
+    k_max : float, optional
+        maximum k wavenumber.
+        Default is None, which sets `k_max` to k_Nyquist of the mesh.
+    logk : bool, optional
+        Logarithmic or linear k bins
+        Default is False.
+    paste : str, optional
         particle pasting approach (CIC or TSC).
-    nmesh : int
+    nmesh : int, optional
         size of the 3d array along x and y dimension.
     compensated : bool, optional
         want to apply first-order compensated filter? Default is True.
@@ -909,6 +925,7 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
         second set of particle positions in the z dimension.
     poles : None or list of int, optional
         Legendre multipoles of the power spectrum or correlation function.
+        Default of None gives the monopole.
     nthread : int, optional
         Number of numba threads to use
 
@@ -928,6 +945,10 @@ def calc_power(pos, nbins_k, nbins_mu, k_max, logk, Lbox, paste, nmesh,
 
         The ``meta`` field of the table will have metadata about the power spectrum.
     """
+    if nbins_k is None:
+        nbins_k = nmesh
+    if k_max is None:
+        k_max = np.pi * nmesh / Lbox
 
     meta = dict(Lbox=Lbox,
                 logk=logk,
