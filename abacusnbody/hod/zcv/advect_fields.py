@@ -217,7 +217,6 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
             del w
             gc.collect()
             table = {}
-            print("tus")
             table[f'{keynames[i]}_Re'] = np.array(field_fft.real, dtype=np.float32)
             table[f'{keynames[i]}_Im'] = np.array(field_fft.imag, dtype=np.float32)
             del field_fft
@@ -225,7 +224,6 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
 
             # write out the advected fields
             header = {}
-            print("tuks")
             header['sim_name'] = sim_name
             header['Lbox'] = Lbox
             header['nmesh'] = nmesh

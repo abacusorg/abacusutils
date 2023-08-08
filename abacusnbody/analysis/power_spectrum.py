@@ -397,7 +397,7 @@ def get_smoothing(n1d, L, R, dtype=np.float32):
         numba.get_thread_id()
         i2 = i**2 if i < n1d//2 else (i - n1d)**2
         for j in range(n1d):
-            j2 = j**2 if j <= n1d//2 else (j - n1d)**2
+            j2 = j**2 if j < n1d//2 else (j - n1d)**2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
                 Sk[i, j, k] = np.exp(-kmag2*dk2*R2/2.)
@@ -617,7 +617,6 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS):
     paste = paste.upper()
     if paste == 'TSC':
         if d != 0.:
-            # TODO: could add an offset parameter to tsc_parallel
             field = tsc_parallel(pos, nmesh, Lbox, weights=w, nthread=nthread, offset=d)
         else:
             field = tsc_parallel(pos, nmesh, Lbox, weights=w, nthread=nthread)

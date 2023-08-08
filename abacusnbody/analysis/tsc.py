@@ -8,7 +8,7 @@ __all__ = ['tsc_parallel', 'partition_parallel']
 
 
 def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
-    npartition=None, sort=False, coord=0, verbose=False, offset=0. # TESTING
+    npartition=None, sort=False, coord=0, verbose=False, offset=0.
 ):
     '''
     A parallel implementation of TSC mass assignment using numba. The algorithm
@@ -150,7 +150,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     wraptime = -timeit.default_timer()
     if wrap:
         # This could be on-the-fly instead of in-place, if needed
-        _wrap_inplace(pos, box, offset=offset) # TESTING
+        _wrap_inplace(pos, box)
     wraptime += timeit.default_timer()
     if verbose:
         print(f'Wrap time: {wraptime:.4g} sec')
@@ -169,7 +169,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         starts = np.array([0,len(pos)], dtype=np.int64)
 
     tsctime = -timeit.default_timer()
-    _tsc_parallel(ppart, starts, densgrid, box, weights=wpart)
+    _tsc_parallel(ppart, starts, densgrid, box, weights=wpart, offset=offset)
     tsctime += timeit.default_timer()
 
     if verbose:
@@ -189,11 +189,9 @@ def _zeros_parallel(shape, dtype=np.float32):
 
 
 @numba.njit(parallel=True)
-def _wrap_inplace(pos, box, offset=0., dtype=np.float32):
-    offset = dtype(offset)
+def _wrap_inplace(pos, box, dtype=np.float32):
     for i in numba.prange(len(pos)):
         for j in range(3):
-            pos[i, j] += offset # TESTING!!!!
             if pos[i,j] >= box:
                 pos[i,j] -= box
             elif pos[i,j] < 0:
@@ -201,7 +199,7 @@ def _wrap_inplace(pos, box, offset=0., dtype=np.float32):
 
 
 @numba.njit(parallel=True)
-def _tsc_parallel(ppart, starts, dens, box, weights):
+def _tsc_parallel(ppart, starts, dens, box, weights, offset):
     npartition = len(starts) - 1
     for i in numba.prange((npartition + 1)//2):
         if weights is not None:
@@ -213,6 +211,7 @@ def _tsc_parallel(ppart, starts, dens, box, weights):
             dens,
             box,
             weights=wslice,
+            offset=offset,
         )
     if npartition > 1:
         for i in numba.prange((npartition + 1)//2):
@@ -225,6 +224,7 @@ def _tsc_parallel(ppart, starts, dens, box, weights):
                 dens,
                 box,
                 weights=wslice,
+                offset=offset,
             )
 
 
@@ -358,7 +358,7 @@ def _rightwrap(x, L):
 
 
 @numba.njit(fastmath=True)
-def _tsc_scatter(positions, density, boxsize, weights=None):
+def _tsc_scatter(positions, density, boxsize, weights=None, offset=0.):
     '''
     TSC worker function. Expects particles in domain [0,boxsize).
     Supports 3D and 2D.
@@ -376,6 +376,7 @@ def _tsc_scatter(positions, density, boxsize, weights=None):
     if threeD:
         inv_hz = ftype(gz/boxsize)
 
+    offset = ftype(offset)
     W = ftype(1.)
     have_W = weights is not None
 
@@ -386,10 +387,10 @@ def _tsc_scatter(positions, density, boxsize, weights=None):
             W = ftype(weights[n])
 
         # convert to a position in the grid
-        px = positions[n,0] * inv_hx
-        py = positions[n,1] * inv_hy
+        px = (positions[n,0] + offset) * inv_hx
+        py = (positions[n,1] + offset) * inv_hy
         if threeD:
-            pz = positions[n,2] * inv_hz
+            pz = (positions[n,2] + offset) * inv_hz
 
         # round to nearest cell center
         ix = itype(round(px))
@@ -419,14 +420,14 @@ def _tsc_scatter(positions, density, boxsize, weights=None):
 
         # find the wrapped x,y,z grid locations of the points we need to change
         # negative indices will be automatically wrapped
-        ixm1 = ix - itype(1)
+        ixm1 = _rightwrap(ix - itype(1), gx)
         ixw  = _rightwrap(ix, gx)
         ixp1 = _rightwrap(ix + itype(1), gx)
-        iym1 = iy - itype(1)
+        iym1 = _rightwrap(iy - itype(1), gy)
         iyw  = _rightwrap(iy, gy)
         iyp1 = _rightwrap(iy + itype(1), gy)
         if threeD:
-            izm1 = iz - itype(1)
+            izm1 = _rightwrap(iz - itype(1), gz)
             izw  = _rightwrap(iz, gz)
             izp1 = _rightwrap(iz + itype(1), gz)
         else:
