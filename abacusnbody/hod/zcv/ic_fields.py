@@ -8,7 +8,7 @@ import asdf
 import numpy as np
 import yaml
 #from np.fft import fftfreq, fftn, ifftn
-from scipy.fft import fftfreq, rfftfreq, rfftn, irfftn
+from scipy.fft import rfftn, irfftn
 
 from abacusnbody.metadata import get_meta
 
@@ -117,7 +117,7 @@ def filter_field(delta_k, n1d, L, kcut, dtype=np.float32):
     numba.get_num_threads()
     dk = dtype(2. * np.pi / L)
     norm = dtype(2. * kcut**2)
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
         kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk
@@ -129,7 +129,7 @@ def filter_field(delta_k, n1d, L, kcut, dtype=np.float32):
                 delta_k[i, j, k] = np.exp(-kmag2 / norm) * delta_k[i, j, k]
     return delta_k
 
-    
+
 @numba.njit(parallel=True, fastmath=True)
 def get_n2_fft(delta_k, n1d, L, dtype=np.float32):
     r"""
@@ -155,10 +155,10 @@ def get_n2_fft(delta_k, n1d, L, dtype=np.float32):
     kzlen = n1d//2 + 1
     numba.get_num_threads()
     dk = dtype(2. * np.pi / L)
-        
+
     # initialize field
     n2_fft = np.zeros((n1d, n1d, kzlen), dtype=delta_k.dtype)
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
         kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk
@@ -203,10 +203,10 @@ def get_sij_fft(i_comp, j_comp, delta_k, n1d, L, dtype=np.float32):
         delta_ij_over_3 = dtype(1./3.)
     else:
         delta_ij_over_3 = dtype(0.)
-        
+
     # initialize field
     s_ij_fft = np.zeros((n1d, n1d, kzlen), dtype=delta_k.dtype)
-    
+
     # Loop over all k vectors
     for i in numba.prange(n1d):
         kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk
@@ -243,7 +243,7 @@ def add_ij(final_field, field_to_add, n1d, factor=1., dtype=np.float32):
         for j in range(n1d):
             for k in range(n1d):
                 final_field[i, j, k] += factor * field_to_add[i, j, k]**2
-    return 
+    return
 
 def get_dk_to_s2(delta_k, nmesh, lbox):
     r"""
@@ -324,11 +324,11 @@ def get_fields(delta_lin, Lbox, nmesh):
     fmean = np.mean(s2)
     s2 -= fmean
     print("Generated s_ij s^ij")
-    
+
     # get n^2
     n2 = get_dk_to_n2(delta_fft, nmesh, Lbox)
     print("Generated nabla^2")
-    
+
     return d, d2, s2, n2
 
 def main(path2config, alt_simname=None, verbose=False):
@@ -379,7 +379,7 @@ def main(path2config, alt_simname=None, verbose=False):
     # file to save the filtered ic
     ic_fn = Path(save_dir) / f"ic_filt_nmesh{nmesh:d}.asdf"
     fields_fn = Path(save_dir) / f"fields_nmesh{nmesh:d}.asdf"
-    
+
     # check if filtered ic saved
     if os.path.exists(ic_fn):
         # load density and displacement fields
