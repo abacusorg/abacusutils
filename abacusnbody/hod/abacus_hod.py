@@ -898,7 +898,7 @@ class AbacusHOD:
                     continue # cross-correlations are symmetric
                 if i1 == i2:
                     print(tr1+'_'+tr2)
-                    power = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
+                    power = calc_power(pos1, Lbox, nbins_k, nbins_mu, k_hMpc_max, logk, paste, num_cells, compensated, interlaced, w = w1, poles = poles)
                     clustering[tr1+'_'+tr2] = power['power']
                     clustering[tr1+'_'+tr2+'_modes'] = power['N_mode']
                     clustering[tr1+'_'+tr2+'_ell'] = power['poles']
@@ -910,7 +910,7 @@ class AbacusHOD:
                     z2 = mock_dict[tr2]['z']
                     pos2 = np.stack((x2,y2,z2), axis=1)
                     w2 = mock_dict[tr2].get('w', None)
-                    power = calc_power(pos1, nbins_k, nbins_mu, k_hMpc_max, logk, Lbox, paste, num_cells, compensated, interlaced,
+                    power = calc_power(pos1, Lbox, nbins_k, nbins_mu, k_hMpc_max, logk, paste, num_cells, compensated, interlaced,
                                                       w = w1, pos2 = pos2, w2 = w2, poles = poles)
                     clustering[tr1+'_'+tr2] = power['power']
                     clustering[tr1+'_'+tr2+'_modes'] = power['N_mode']
