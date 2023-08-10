@@ -189,7 +189,7 @@ def _zeros_parallel(shape, dtype=np.float32):
 
 
 @numba.njit(parallel=True)
-def _wrap_inplace(pos, box, dtype=np.float32):
+def _wrap_inplace(pos, box):
     for i in numba.prange(len(pos)):
         for j in range(3):
             if pos[i,j] >= box:
