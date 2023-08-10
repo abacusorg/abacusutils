@@ -1014,13 +1014,13 @@ def calc_power(pos,
         N_mode=N_mode,
         )
     if return_mubins:
-        res |= dict(
+        res.update(
             mu_min=np.broadcast_to(mubins[:-1], pk.shape),
             mu_max=np.broadcast_to(mubins[1:], pk.shape),
             mu_mid=np.broadcast_to(mu_binc, pk.shape),
             )
     if len(poles) > 0:
-        res |= dict(
+        res.update(
             poles=binned_poles.T,
             N_mode_poles=N_mode_poles,
             )
