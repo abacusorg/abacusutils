@@ -530,7 +530,7 @@ def get_k_mu_edges(Lbox, k_max, kbins, mubins, logk):
     if isinstance(mubins, int):
         # define mu-binning
         mubins = np.linspace(0., 1., mubins+1)
-    
+
     return kbins, mubins
 
 
