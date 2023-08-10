@@ -729,8 +729,7 @@ def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
                 field_fft[i, j, k] += field_shift_fft[i, j, k]*np.exp(fac * (kx + ky + kz))
                 field_fft[i, j, k] *= norm
 
-#def get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w):
-def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS):
+def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS, verbose=False):
     r"""
     Calculate interlaced field from particle positions and return 3D Fourier field.
 
@@ -757,14 +756,15 @@ def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS):
 
     # fourier transform shifted field and sum them up
     field = get_field(pos, Lbox, nmesh, paste, w)
-    field_fft = rfftn(field, workers=-1)
+    field_fft = rfftn(field, workers=nthread)
     del field
     gc.collect()
 
     # offset by half a cell
     field_shift = get_field(pos, Lbox, nmesh, paste, w, d=0.5*d)
-    field_shift_fft = rfftn(field_shift, workers=-1)
-    print("shift", field_shift.dtype, pos.dtype)
+    field_shift_fft = rfftn(field_shift, workers=nthread)
+    if verbose:
+        print("shift", field_shift.dtype, pos.dtype)
     del field_shift
     del pos, w
     gc.collect()
@@ -772,11 +772,12 @@ def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS):
     shift_field_fft(field_fft, field_shift_fft, nmesh, Lbox, d)
     del field_shift_fft
     gc.collect()
-    print("field fft", field_fft.dtype)
+    if verbose:
+        print("field fft", field_fft.dtype)
     return field_fft
 
 
-def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthread=MAX_THREADS):
+def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthread=MAX_THREADS, verbose=False):
     r"""
     Calculate field from particle positions and return 3D Fourier field.
 
@@ -807,14 +808,13 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthrea
 
     # get field in real space
     field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread)
-    print("field, pos", field.dtype, pos.dtype)
+    if verbose:
+        print("field, pos", field.dtype, pos.dtype)
     if interlaced:
         # get interlaced field
-        #field_fft = get_interlaced_field_fft(pos, field, Lbox, nmesh, paste, w)
-        # TESTING!
         field_fft = get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=nthread)
     else:
-        # get field in real space # TESTING!!!!
+        # get field in real space
         field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread)
 
         # get Fourier modes from skewers grid
