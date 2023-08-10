@@ -490,7 +490,7 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
     return r_binc, binned_poles, Npoles
 
 
-def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
+def get_k_mu_edges(Lbox, k_max, kbins, mubins, logk):
     r"""
     Obtain bin edges of the k wavenumbers and mu angles.
 
@@ -500,11 +500,13 @@ def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
         box size of the simulation.
     k_max : float
         maximum k wavenumber.
-    n_k_bins : int
-        number of bins of k, which ranges from 0 to `k_max` if `logk == True`
-        and 2pi/L (incl.) to `k_max` if `logk == False`.
-    n_mu_bins : int
-        number of bins of mu, which ranges from 0 to 1.
+    kbins : int or array_like
+        An int indicating the number of bins of k, which ranges
+        from 0 to `k_max` if `logk`, and 2pi/L to `k_max` if not.
+        Or an array-like, which will be returned unchanged.
+    mubins : int or array_like
+        An int indicating the number of bins of mu, which ranges from 0 to 1.
+        Or an array-like, which will be returned unchanged.
     logk : bool
         Logarithmic or linear k bins
 
@@ -515,17 +517,21 @@ def get_k_mu_edges(Lbox, k_max, n_k_bins, n_mu_bins, logk):
     mu_bin_edges
         edges of the mu angles.
     """
-    # define k-binning
-    if logk:
-        # set minimum k to make sure we cover fundamental mode
-        k_min = (1.-1.e-4)*2.*np.pi/Lbox
-        k_bin_edges = np.geomspace(k_min, k_max, n_k_bins+1)
-    else:
-        k_bin_edges = np.linspace(0., k_max, n_k_bins+1)
 
-    # define mu-binning
-    mu_bin_edges = np.linspace(0., 1., n_mu_bins + 1)
-    return k_bin_edges, mu_bin_edges
+    if isinstance(kbins, int):
+        # define k-binning
+        if logk:
+            # set minimum k to make sure we cover fundamental mode
+            k_min = (1.-1.e-4)*2.*np.pi/Lbox
+            kbins = np.geomspace(k_min, k_max, kbins+1)
+        else:
+            kbins = np.linspace(0., k_max, kbins+1)
+
+    if isinstance(mubins, int):
+        # define mu-binning
+        mubins = np.linspace(0., 1., mubins+1)
+    
+    return kbins, mubins
 
 
 @numba.njit(parallel=True, fastmath=True)
@@ -880,8 +886,8 @@ def get_W_compensated(Lbox, nmesh, paste, interlaced):
 
 def calc_power(pos,
                Lbox,
-               nbins_k = None,
-               nbins_mu = 1,
+               kbins = None,
+               mubins = None,
                k_max = None,
                logk = False,
                paste = 'tsc',
@@ -903,23 +909,25 @@ def calc_power(pos,
         particle positions, shape (N,3)
     Lbox : float
         box size of the simulation.
-    nbins_k : int, optional
-        number of bins of k, which ranges from 0 to `k_max` if `logk == True`
-        and 2pi/L (incl.) to `k_max` if `logk == False`.
-        Default is None, which sets `nbins_k` to `nmesh`.
-    nbins_mu : int, optional
-        number of bins of mu, which ranges from 0 to 1.
-        Default is 1.
+    kbins : int, array_like, or None, optional
+        An int indicating the number of bins of k, which ranges
+        from 0 to `k_max` if `logk`, and 2pi/L to `k_max` if not.
+        Or an array-like, which will be used as-is.
+        Default is None, which sets `kbins` to `nmesh`.
+    mubins : int, None, or array_like, optional
+        An int indicating the number of bins of mu, which ranges from 0 to 1.
+        Or an array-like, which will be used as-is.
+        Default of None sets `mubins` to 1.
     k_max : float, optional
         maximum k wavenumber.
         Default is None, which sets `k_max` to k_Nyquist of the mesh.
     logk : bool, optional
-        Logarithmic or linear k bins
+        Logarithmic or linear k bins. Ignored if `kbins` is array-like.
         Default is False.
     paste : str, optional
-        particle pasting approach (CIC or TSC).
+        particle pasting approach (CIC or TSC). Default is 'tsc'.
     nmesh : int, optional
-        size of the 3d array along x and y dimension.
+        size of the 3d array along x and y dimension. Default is 128.
     compensated : bool, optional
         want to apply first-order compensated filter? Default is True.
     interlaced : bool, optional
@@ -954,10 +962,13 @@ def calc_power(pos,
 
         The ``meta`` field of the table will have metadata about the power spectrum.
     """
-    if nbins_k is None:
-        nbins_k = nmesh
+    if kbins is None:
+        kbins = nmesh
     if k_max is None:
         k_max = np.pi * nmesh / Lbox
+    return_mubins = mubins is not None
+    if mubins is None:
+        mubins = 1
 
     meta = dict(Lbox=Lbox,
                 logk=logk,
@@ -988,19 +999,26 @@ def calc_power(pos,
     poles = np.asarray(poles or [], dtype=np.int64)
 
     # calculate power spectrum
-    k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_max, nbins_k, nbins_mu, logk)
-    pk, N_mode, binned_poles, N_mode_poles = calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=field2_fft, poles=poles, nthread=nthread)
+    kbins, mubins = get_k_mu_edges(Lbox, k_max, kbins, mubins, logk)
+    pk, N_mode, binned_poles, N_mode_poles = calc_pk_from_deltak(field_fft, Lbox, kbins, mubins, field2_fft=field2_fft, poles=poles, nthread=nthread)
 
     # define bin centers
-    k_binc = (k_bin_edges[1:] + k_bin_edges[:-1])*.5
-    mu_binc = (mu_bin_edges[1:] + mu_bin_edges[:-1])*.5
+    k_binc = (kbins[1:] + kbins[:-1])*.5
+    mu_binc = (mubins[1:] + mubins[:-1])*.5
 
     res = dict(
+        k_min=kbins[:-1],
+        k_max=kbins[1:],
         k_mid=k_binc,
-        mu_mid=np.broadcast_to(mu_binc, pk.shape),
         power=pk,
         N_mode=N_mode,
         )
+    if return_mubins:
+        res |= dict(
+            mu_min=np.broadcast_to(mubins[:-1], pk.shape),
+            mu_max=np.broadcast_to(mubins[1:], pk.shape),
+            mu_mid=np.broadcast_to(mu_binc, pk.shape),
+            )
     if len(poles) > 0:
         res |= dict(
             poles=binned_poles.T,
