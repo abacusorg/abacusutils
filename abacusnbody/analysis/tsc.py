@@ -93,7 +93,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     if nthread < 0:
         nthread = numba.config.NUMBA_NUM_THREADS
     if verbose:
-            print(f'nthread={nthread}')
+        print(f'nthread={nthread}')
 
     numba.set_num_threads(nthread)
     if type(densgrid) is int:
@@ -126,12 +126,11 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         raise ValueError(
             f'npartition {npartition} not divisible by 2'
             )
-    if nthread > 1 and npartition < 2*nthread:
-         warnings.warn(
-            f'npartition {npartition} not large enough to use'
-            f' all {nthread} threads; should be 2*nthread',
-            stacklevel=2,
-            )
+    if verbose and nthread > 1 and npartition < 2*nthread:
+        print(f'npartition {npartition} not large enough to use'
+              f' all {nthread} threads; should be 2*nthread',
+              stacklevel=2,
+              )
 
     def _check_dtype(a, name):
         if a.itemsize > 4:
