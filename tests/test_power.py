@@ -34,8 +34,8 @@ def test_power(power_test_data, interlaced, compensated, paste):
     nbins_k = nmesh//2
 
     # compute power
-    res = calc_power(pos, nbins_k, nbins_mu, k_hMpc_max, logk,
-                       Lbox, paste, nmesh, compensated, interlaced,
+    res = calc_power(pos, Lbox, nbins_k, nbins_mu, k_hMpc_max, logk,
+                       paste, nmesh, compensated, interlaced,
                        )
 
     # load presaved nbodykit computation
