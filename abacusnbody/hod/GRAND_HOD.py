@@ -1102,7 +1102,7 @@ def gen_gal_cat(halo_data, particle_data, tracers, params, Nthread = 16,
 
     """
 
-    if type(rsd) is not bool:
+    if not isinstance(rsd, bool):
         raise ValueError("Error: rsd has to be a boolean")
 
     # find the halos, populate them with galaxies and write them to files

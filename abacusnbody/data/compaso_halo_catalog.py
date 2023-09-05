@@ -286,7 +286,7 @@ class CompaSOHaloCatalog:
         # For the moment, coerce pathlib to str
         if isinstance(path, PurePath):
             path = str(path)
-        if type(path) is str:
+        if isinstance(path, str):
             path = [path]  # dir or file
         else:
             # if list, must be all files
@@ -366,7 +366,7 @@ class CompaSOHaloCatalog:
 
     def _setup_unpack_bits(self, unpack_bits):
         # validate unpack_bits
-        if type(unpack_bits) is str:
+        if isinstance(unpack_bits, str):
             unpack_bits = [unpack_bits]
         if unpack_bits not in (True,False):
             try:
@@ -393,7 +393,7 @@ class CompaSOHaloCatalog:
             if load_subsamples is True:
                 load_subsamples = dict(A=True, B=True, rv=True, pid=True)
 
-            if type(load_subsamples) == dict:
+            if isinstance(load_subsamples, dict):
                 load_AB = [k for k in 'AB' if load_subsamples.get(k)]  # ['A', 'B']
 
                 # Check for conflicts between rv, pos, vel. Must be done before list-ifying to distinguish False and not given.
@@ -428,7 +428,7 @@ class CompaSOHaloCatalog:
                 if load_subsamples:
                     raise ValueError(f'Unrecognized keys in `load_subsamples`: {list(load_subsamples)}')
 
-            elif type(load_subsamples) == str:
+            elif isinstance(load_subsamples, str):
                 # This section is deprecated, will remove in mid-2021
                 warnings.warn('Passing a string to `load_subsamples` is deprecated; use a dict instead, like: `load_subsamples=dict(A=True, rv=True)`', FutureWarning)
 
@@ -443,7 +443,7 @@ class CompaSOHaloCatalog:
                 load_pidrv = subsamp_match.group('pidrv')
                 if load_pidrv == 'all':
                     load_pidrv = ['pid','rv']
-                if type(load_pidrv) == str:
+                if isinstance(load_pidrv, str):
                     # Turn this into a list so that the .remove() operation below doesn't complain
                     load_pidrv = [load_pidrv]
                 if 'field' in load_halofield:
@@ -474,7 +474,7 @@ class CompaSOHaloCatalog:
             if halo_lc:
                 fields += list(halo_lc_dt.names)
 
-        if type(fields) == str:
+        if isinstance(fields, str):
             fields = [fields]
         # Convert any other iter, like tuple
         fields = list(fields)
@@ -832,7 +832,7 @@ class CompaSOHaloCatalog:
                 column = self.halo_field_loaders[pat](match,rawhalos,halos)
 
                 # The loader is allowed to return a dict if it incidentally loaded multiple columns
-                if type(column) == dict:
+                if isinstance(column, dict):
                     assert field in column
                     for k in column:
                         halos[k][:] = column[k]

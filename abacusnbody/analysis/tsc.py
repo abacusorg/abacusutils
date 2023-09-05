@@ -96,9 +96,9 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         print(f'nthread={nthread}')
 
     numba.set_num_threads(nthread)
-    if type(densgrid) is int:
+    if isinstance(densgrid, (int, np.integer)):
         densgrid = (densgrid,densgrid,densgrid)
-    if type(densgrid) is tuple:
+    if isinstance(densgrid, tuple):
         densgrid = _zeros_parallel(densgrid)
     n1d = densgrid.shape[coord]
 
