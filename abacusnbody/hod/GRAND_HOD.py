@@ -362,7 +362,7 @@ def getPointsOnSphere(nPoints, Nthread, seed=None):
             ur[i, 2] = np.cos(dec)
     return ur
 
-@njit(fastmath=True) # parallel=True,
+@njit(fastmath=True, parallel=True) # parallel=True,
 def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c, M, Rvir,
                       rd_pos, num_sat, f_sigv, vel_sat = 'rd_normal', Nthread = 16,
                       exp_frac=0, exp_scale=1, nfw_rescale=1):
@@ -422,7 +422,7 @@ def compute_fast_NFW(NFW_draw, h_id, x_h, y_h, z_h, vx_h, vy_h, vz_h, vrms_h, c,
                     'Wrong vel_sat argument only "rd_normal"')
     return h_id, x_sat, y_sat, z_sat, vx_sat, vy_sat, vz_sat, M
 
-@njit(fastmath = True)
+@njit(fastmath = True, parallel=True)
 def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms, hc, hrvir,
                  LRG_hod_dict, ELG_hod_dict, QSO_hod_dict, want_LRG, want_ELG, want_QSO,
                  rsd, inv_velz2kms, lbox, keep_cent, vel_sat = 'rd_normal', Nthread = 16):
@@ -437,33 +437,33 @@ def gen_sats_nfw(NFW_draw, hpos, hvel, hmass, hid, hdeltac, hfenv, hshear, hvrms
         logM_cut_L, logM1_L, sigma_L, alpha_L, kappa_L = \
             LRG_hod_dict['logM_cut'], LRG_hod_dict['logM1'], LRG_hod_dict['sigma'], LRG_hod_dict['alpha'], LRG_hod_dict['kappa']
         Ac_L, As_L, Bc_L, Bs_L, ic_L = \
-            LRG_hod_dict.get('Acent', 0), LRG_hod_dict.get('Asat', 0), LRG_hod_dict.get('Bcent', 0), \
-            LRG_hod_dict.get('Bsat', 0), LRG_hod_dict.get('ic', 1)
-        f_sigv_L = LRG_hod_dict.get('f_sigv', 0)
+            LRG_hod_dict['Acent'], LRG_hod_dict['Asat'], LRG_hod_dict['Bcent'], \
+            LRG_hod_dict['Bsat'], LRG_hod_dict['ic']
+        f_sigv_L = LRG_hod_dict['f_sigv']
 
     if want_ELG:
         logM_cut_E, kappa_E, logM1_E, alpha_E, A_E = \
             ELG_hod_dict['logM_cut'], ELG_hod_dict['kappa'], ELG_hod_dict['logM1'], ELG_hod_dict['alpha'], ELG_hod_dict['A_s']
         Ac_E, As_E, Bc_E, Bs_E, Cc_E, Cs_E, ic_E, = \
-            ELG_hod_dict.get('Acent', 0), ELG_hod_dict.get('Asat', 0), ELG_hod_dict.get('Bcent', 0), \
-            ELG_hod_dict.get('Bsat', 0), ELG_hod_dict.get('Ccent', 0), ELG_hod_dict.get('Csat', 0), ELG_hod_dict.get('ic', 1)
+            ELG_hod_dict['Acent'], ELG_hod_dict['Asat'], ELG_hod_dict['Bcent'], \
+            ELG_hod_dict['Bsat'], ELG_hod_dict['Ccent'], ELG_hod_dict['Csat'], ELG_hod_dict['ic']
         logM1_EE, alpha_EE, logM1_EL, alpha_EL = \
-            ELG_hod_dict.get('logM1_EE', logM1_E), ELG_hod_dict.get('alpha_EE', alpha_E), \
-            ELG_hod_dict.get('logM1_EL', logM1_E), ELG_hod_dict.get('alpha_EL', alpha_E)
-        f_sigv_E = ELG_hod_dict.get('f_sigv', 0)
-        exp_frac = ELG_hod_dict.get('exp_frac', 0)
-        exp_scale = ELG_hod_dict.get('exp_scale', 1)
-        nfw_rescale = ELG_hod_dict.get('nfw_rescale', 1)
+            ELG_hod_dict['logM1_EE'], ELG_hod_dict['alpha_EE'], \
+            ELG_hod_dict['logM1_EL'], ELG_hod_dict['alpha_EL']
+        f_sigv_E = ELG_hod_dict['f_sigv']
+        exp_frac = ELG_hod_dict['exp_frac']
+        exp_scale = ELG_hod_dict['exp_scale']
+        nfw_rescale = ELG_hod_dict['nfw_rescale']
 
     if want_QSO:
         logM_cut_Q, kappa_Q, logM1_Q, alpha_Q = \
             QSO_hod_dict['logM_cut'], QSO_hod_dict['kappa'], QSO_hod_dict['logM1'], QSO_hod_dict['alpha']
         Ac_Q, As_Q, Bc_Q, Bs_Q, ic_Q = \
-            QSO_hod_dict.get('Acent', 0), QSO_hod_dict.get('Asat', 0), QSO_hod_dict.get('Bcent', 0), \
-            QSO_hod_dict.get('Bsat', 0), QSO_hod_dict.get('ic', 1)
-        f_sigv_Q = QSO_hod_dict.get('f_sigv', 0)
+            QSO_hod_dict['Acent'], QSO_hod_dict['Asat'], QSO_hod_dict['Bcent'], \
+            QSO_hod_dict['Bsat'], QSO_hod_dict['ic']
+        f_sigv_Q = QSO_hod_dict['f_sigv']
 
-    # numba.set_num_threads(Nthread)
+    numba.set_num_threads(Nthread)
 
     # compute nsate for each halo
     # figuring out the number of particles kept for each thread
@@ -920,6 +920,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         LRG_hod_dict['Bsat'] = LRG_HOD.get('Bsat', 0.0)
         LRG_hod_dict['ic'] = LRG_HOD.get('ic', 1.0)
 
+        LRG_hod_dict['f_sigv'] = LRG_HOD.get('f_sigv', 0)
+
     else:
         want_LRG = False
         LRG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
@@ -957,6 +959,11 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         ELG_hod_dict['logM1_EL'] = ELG_HOD.get('logM1_EL', ELG_hod_dict['logM1'])
         ELG_hod_dict['alpha_EL'] = ELG_HOD.get('alpha_EL', ELG_hod_dict['alpha'])
 
+        ELG_hod_dict['f_sigv'] = ELG_HOD.get('f_sigv', 0)
+        ELG_hod_dict['exp_frac'] = ELG_HOD.get('exp_frac', 0)
+        ELG_hod_dict['exp_scale'] = ELG_HOD.get('exp_scale', 1)
+        ELG_hod_dict['nfw_rescale'] = ELG_HOD.get('nfw_rescale', 1)
+
     else:
         want_ELG = False
         ELG_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
@@ -984,6 +991,8 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         QSO_hod_dict['Bcent'] = QSO_HOD.get('Bcent', 0.0)
         QSO_hod_dict['Bsat'] = QSO_HOD.get('Bsat', 0.0)
         QSO_hod_dict['ic'] = QSO_HOD.get('ic', 1.0)
+
+        QSO_hod_dict['f_sigv'] = QSO_HOD.get('f_sigv', 0)
 
     else:
         want_QSO = False
