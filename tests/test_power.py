@@ -24,9 +24,7 @@ def test_power(power_test_data, interlaced, compensated, paste):
 
     # load data
     Lbox = power_test_data['Lbox']
-    x = power_test_data['x']
-    y = power_test_data['y']
-    z = power_test_data['z']
+    pos = power_test_data['pos']
 
     # specifications of the power spectrum computation
     nmesh = 72
@@ -36,8 +34,9 @@ def test_power(power_test_data, interlaced, compensated, paste):
     nbins_k = nmesh//2
 
     # compute power
-    k_binc, mu_binc, Pkmu, Nkmu, binned_poles, Npoles = calc_power(x, y, z, nbins_k, nbins_mu, k_hMpc_max, logk,
-                                                                    Lbox, paste, nmesh, compensated, interlaced)
+    res = calc_power(pos, Lbox, nbins_k, nbins_mu, k_hMpc_max, logk,
+                       paste, nmesh, compensated, interlaced,
+                       )
 
     # load presaved nbodykit computation
     comp_str = "_compensated" if compensated else ""
@@ -51,7 +50,7 @@ def test_power(power_test_data, interlaced, compensated, paste):
     # loop over all mu values
     for i in range(Pkmu_nbody.shape[1]):
         # compute the fractional difference [%] (note bin edges defined different)
-        frac_diff = np.abs(1.-(Pkmu_nbody[:, i]/Pkmu[:-1, i]).real)*100.
+        frac_diff = np.abs(1.-(Pkmu_nbody[:, i]/res['power'][:-1, i]).real)*100.
 
         # several stats of that
         mean_diff = np.nanmean(frac_diff)

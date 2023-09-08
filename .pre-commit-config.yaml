@@ -5,14 +5,15 @@ ci:
 exclude: |
   (?x)(
     ^scripts/disBatch/|
+    ^scripts/\w*/bench\w*.py|
     ^tests/Mini_N64_L32/|
     \.asdf$|
     \.svg$
   )
 
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.0.263"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.0.287"
     hooks:
       - id: ruff
         # TODO: turning off line length check

@@ -2,10 +2,13 @@
 import time
 
 import numpy as np
-# from Corrfunc.mocks.DDrppi_mocks import DDrppi_mocks
-# from Corrfunc.utils import convert_3d_counts_to_cf, convert_rp_pi_counts_to_wp
-# from Corrfunc.theory.DDrppi import
-from Corrfunc.theory import DDrppi, DDsmu
+try:
+    from Corrfunc.theory import DDrppi, DDsmu
+except ImportError as e:
+    raise ImportError('Could not import Corrfunc. Install abacusutils with '
+        '"pip install abacusutils[all]" to install Corrfunc.') \
+        from e
+
 from scipy.special import legendre
 
 
@@ -14,6 +17,7 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
     Calculate the multipoles of the two point correlation function
     after first computing `~halotools.mock_observables.s_mu_tpcf`.
     This is copied over from halotools. Original author was Duncan Campbell.
+
     Parameters
     ----------
     s_mu_tcpf_result : np.ndarray
@@ -25,10 +29,12 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
         Must be between [0,1].
     order : int, optional
         order of the multpole returned.
+
     Returns
     -------
     xi_l : np.array
         multipole of ``s_mu_tcpf_result`` of the indicated order.
+
     Examples
     --------
     For demonstration purposes we create a randomly distributed set of points within a

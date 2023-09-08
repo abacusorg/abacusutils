@@ -1,10 +1,78 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=61",
     "wheel",
     "setuptools_scm>=6.2",
+    "pip>=21.2",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "abacusutils"
+authors = [{name = "Daniel Eisenstein"},
+           {name = "Philip Pinto"},
+           {name = "Lehman Garrison", email = "lgarrison@flatironinstitute.org"},
+           {name = "Nina Maksimova"},
+           {name = "Sownak Bose"},
+           {name = "Boryana Hadzhiyska"},
+           {name = "Sihan (Sandy) Yuan"},
+           ]
+description = "Python code to read halo catalogs and other Abacus N-body data products"
+dependencies = [
+    'numpy>=1.16',
+    'blosc>=1.9.2',
+    'astropy>=4.0.0',
+    'scipy>=1.5.0',
+    'numba>=0.56',
+    'asdf>=2.8',
+    'h5py',
+    'pyyaml',
+    'msgpack>=1',
+    'parallel_numpy_rng>=0.1.2',
+    "asdf-astropy>=0.3; python_version>='3.8'",
+]
+readme = "README.md"
+requires-python = ">=3.7"
+urls = {Repository = "https://github.com/abacusorg/abacusutils"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+dynamic = ["version"]
+
+[project.scripts]
+pipe_asdf = "abacusnbody.data.pipe_asdf:main"
+
+[project.entry-points."asdf.extensions"]
+abacusutils = "abacusnbody.data.asdf:AbacusExtension"
+
+[project.optional-dependencies]
+all = [
+    'ZeNBu @ git+https://github.com/sfschen/ZeNBu.git',
+    'classy',
+    'Corrfunc>=2',
+    'emcee',
+    'schwimmbad',
+    'getdist',
+    'dynesty',
+    'dill',
+    'click',
+]
+docs = [
+    'sphinx >= 4.2',
+    'sphinx-book-theme >= 0.3',
+    'myst_nb >= 0.17.1',
+]
+test = [
+    'abacusutils[all]',
+    'pytest',
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["abacusnbody*"]
 
 [tool.setuptools_scm]
 write_to = "abacusnbody/version.py"

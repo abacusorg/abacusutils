@@ -17,9 +17,10 @@ from .ic_fields import compress_asdf
 
 try:
     from classy import Class
-except ImportError:
+except ImportError as e:
     raise ImportError('Missing imports for zcv. Install abacusutils with '
-        '"pip install abacusutils[zcv]" to install zcv dependencies.')
+        '"pip install abacusutils[all]" to install zcv dependencies.') \
+        from e
 
 from asdf.exceptions import AsdfWarning
 warnings.filterwarnings('ignore', category=AsdfWarning)
@@ -281,7 +282,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
     LCV: Function for getting the linear bias in the Kaiser approximation.
     """
     # cut the tracer power spectrum in the k range of interest
-    pk_tt = power_rsd_tr_dict['P_ell_tr_tr'][:ellmax, :, 0]
+    pk_tt = power_rsd_tr_dict['P_ell_tr_tr'][:ellmax, :]#, 0]
     kidx_max = k.searchsorted(kmax)
     kidx_min = k.searchsorted(kmin)
     kcut = k[kidx_min:kidx_max]
@@ -296,7 +297,7 @@ def measure_2pt_bias_lcv(k, power_dict, power_rsd_tr_dict, D, f_growth, kmax, rs
 
     # define loss function as the fractional difference squared
     def loss(bias):
-        return np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :, 0]) ** 2 / (2 * pk_tt_kcut ** 2))
+        return np.sum((pk_tt_kcut - combine_kaiser_spectra(kcut, power_lin_dict, D, bias, f_growth, rec_algo, R, rsd=rsd)[:ellmax, :]) ** 2 / (2 * pk_tt_kcut ** 2))
 
     # fit for the bias
     out = minimize(loss, 1.)
@@ -653,7 +654,7 @@ def run_zcv_field(power_rsd_tr_fns, power_rsd_ij_fns, power_tr_fns, power_ij_fns
 
     # expand zenbu to 3D power spectrum
     assert np.isclose(np.min(np.diff(k_binc)), np.max(np.diff(k_binc))), "For custom interpolation, need equidistant k-values"
-    pk_zz[:, :, :] -= expand_poles_to_3d(k_binc, pk_zenbu, nmesh, Lbox, np.array(poles))/np.float32(Lbox**3)
+    pk_zz[:, :, :] -= expand_poles_to_3d(k_binc, pk_zenbu, nmesh, Lbox, np.asarray(poles))/np.float32(Lbox**3)
 
     # disconnected covariance
     if want_rsd:
@@ -995,7 +996,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     kth, pk_z1 = kth[choice], pk_z1[choice]
     kth_new = np.arange(kth.min(), kth.max(), np.min(np.diff(kth)))
     pk_z1_new = np.interp(kth_new, kth, pk_z1)
-    kth, pk_z1_new = kth_new, pk_z1_new
+    kth, pk_z1 = kth_new, pk_z1_new
 
     # rewind back to initial redshift of the simulation
     p_m_lin = D_ratio**2*pk_z1
@@ -1068,7 +1069,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
 
     # expand multipole to 3D power spectra (this is the C-mu_C part)
     assert np.isclose(np.min(np.diff(kth)), np.max(np.diff(kth))), "For custom interpolation, need equidistant k-values"
-    pk_ll[:, :, :] -= expand_poles_to_3d(kth, p_m_lin_poles, nmesh, Lbox, np.array(poles))/np.float32(Lbox**3)
+    pk_ll[:, :, :] -= expand_poles_to_3d(kth, p_m_lin_poles, nmesh, Lbox, np.asarray(poles))/np.float32(Lbox**3)
     gc.collect()
 
     # disconnected covariance

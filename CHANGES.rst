@@ -1,13 +1,12 @@
 Changelog
 =========
 
-
-1.4.0 (upcoming)
-----------------
-- HOD now supports a new ELG conformity model
+1.4.0 (2023-??-??)
+------------------
 
 New Features
 ~~~~~~~~~~~~
+- HOD now supports a new ELG conformity model
 - Add a power spectrum module, and a zeldovich control variates (ZCV) module that uses it [#68]
 - New parallel TSC module [#79]
 
@@ -19,6 +18,11 @@ Enhancements
 ~~~~~~~~~~~~
 - Add power spectrum to `metadata` module [#69]
 - Upgrade docs and CI [#71]
+- Power spectrum optimization and parallelization [#102]
+
+Installation
+~~~~~~~~~~~~
+- Refactor optional dependencies; Corrfunc now optional. Migrate build to pyproject.toml. [#89]
 
 1.3.0 (2022-06-08)
 ------------------

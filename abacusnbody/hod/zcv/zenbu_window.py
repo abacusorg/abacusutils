@@ -18,9 +18,10 @@ try:
     from classy import Class
     from ZeNBu.zenbu import Zenbu
     from ZeNBu.zenbu_rsd import Zenbu_RSD
-except ImportError:
+except ImportError as e:
     raise ImportError('Missing imports for zcv. Install abacusutils with '
-        '"pip install abacusutils[zcv]" to install zcv dependencies.')
+        '"pip install abacusutils[all]" to install zcv dependencies.') \
+        from e
 
 DEFAULTS = {'path2config': 'config/abacus_hod.yaml'}
 

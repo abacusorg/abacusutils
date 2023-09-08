@@ -9,7 +9,7 @@ import numpy as np
 import yaml
 
 from abacusnbody.analysis.power_spectrum import (
-    calc_pk3d,
+    calc_pk_from_deltak,
     get_field_fft,
     get_k_mu_edges,
     get_W_compensated,
@@ -20,9 +20,10 @@ from .ic_fields import compress_asdf
 
 try:
     from classy import Class
-except ImportError:
+except ImportError as e:
     raise ImportError('Could not import classy. Install abacusutils with '
-        '"pip install abacusutils[zcv]" to install zcv dependencies.')
+        '"pip install abacusutils[all]" to install zcv dependencies.') \
+        from e
 
 from asdf.exceptions import AsdfWarning
 warnings.filterwarnings('ignore', category=AsdfWarning)
@@ -201,7 +202,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
 
         # Initiate fields
         for i in range(len(keynames)):
-
+            if os.path.exists(fields_fft_fn[i]):
+                continue
             print(keynames[i])
             if i == 0:
                 w = None
@@ -264,6 +266,9 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
             field_fft_j = asdf.open(fields_fft_fn[j])['data']
 
             if save_3D_power:
+                power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{nmesh:d}.asdf"
+                if os.path.exists(power_ij_fn):
+                    continue
                 # construct
                 field_fft_i = field_fft_i[f'{keynames[i]}_Re'] + 1j*field_fft_i[f'{keynames[i]}_Im']
                 field_fft_j = field_fft_j[f'{keynames[j]}_Re'] + 1j*field_fft_j[f'{keynames[j]}_Im']
@@ -281,12 +286,11 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
                 header['Lbox'] = Lbox
                 header['nmesh'] = nmesh
                 header['kcut'] = kcut
-                power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{nmesh:d}.asdf"
                 compress_asdf(str(power_ij_fn), pk_ij_dict, header)
                 del field_fft_i, field_fft_j; gc.collect() # noqa: E702
             else:
                 # compute power spectrum
-                pk3d, N3d, binned_poles, Npoles = calc_pk3d(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=poles)
+                pk3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=np.asarray(poles))
                 pk3d *= field_D[i]*field_D[j]
                 binned_poles *= field_D[i]*field_D[j]
                 pk_auto.append(pk3d)
@@ -323,5 +327,6 @@ if __name__ == "__main__":
         for want_rsd in [True, False]:
             args['want_rsd'] = want_rsd
             main(**args)
+            gc.collect()
     else:
         main(**args)
