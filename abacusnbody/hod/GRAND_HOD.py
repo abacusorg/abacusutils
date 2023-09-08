@@ -919,7 +919,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         LRG_hod_dict['Bcent'] = LRG_HOD.get('Bcent', 0.0)
         LRG_hod_dict['Bsat'] = LRG_HOD.get('Bsat', 0.0)
         LRG_hod_dict['ic'] = LRG_HOD.get('ic', 1.0)
-        
+
         LRG_hod_dict['f_sigv'] = LRG_HOD.get('f_sigv', 0)
 
     else:
@@ -991,7 +991,7 @@ def gen_gals(halos_array, subsample, tracers, params, Nthread, enable_ranks, rsd
         QSO_hod_dict['Bcent'] = QSO_HOD.get('Bcent', 0.0)
         QSO_hod_dict['Bsat'] = QSO_HOD.get('Bsat', 0.0)
         QSO_hod_dict['ic'] = QSO_HOD.get('ic', 1.0)
-        
+
         QSO_hod_dict['f_sigv'] = QSO_HOD.get('f_sigv', 0)
 
     else:
