@@ -261,7 +261,7 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
     pi with respect to kz to accelerate the bin search. The same can be used
     in real space where we only need to count the positive rz modes and double them.
     This works because we construct the `Xi(vec r)` by inverse Fourier transforming
-    `P(vec k)`, so we preserve the symmetry. Note that Xi has dimensions of 
+    `P(vec k)`, so we preserve the symmetry. Note that Xi has dimensions of
     (nmesh, nmesh, nmesh).
 
     Parameters
@@ -328,7 +328,7 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
 
             while kmag2 > kedges2[bk+1]:
                 bk += 1
-                
+
             for k in range(kzlen):
                 kz2 = k**2
 
@@ -1042,7 +1042,7 @@ def calc_field(pos,
     field_fft : array_like
         Fourier 3D field.
     """
-    
+
     # get the window function
     if compensated:
         W = get_W_compensated(Lbox, nmesh, paste, interlaced)
@@ -1154,10 +1154,10 @@ def calc_power(pos,
                 nthread=nthread,
                 )
 
-        
+
     # calculate Fourier 3D field
     field_fft, field2_fft = calc_field(pos, Lbox, paste=paste, nmesh=nmesh, compensated=compensated, interlaced=interlaced, w=w, pos2=pos2, w2=w2, nthread=nthread)
-    
+
     poles = np.asarray(poles or [], dtype=np.int64)
 
     # calculate power spectrum
