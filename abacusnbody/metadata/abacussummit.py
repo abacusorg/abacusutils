@@ -45,7 +45,8 @@ def get_meta(simname, redshift=None):
                     metadata[sim] = {}
                     metadata[sim]['param'] = msgpack.loads(af_tree[sim]['param'].data, strict_map_key=False)
                     metadata[sim]['state'] = msgpack.loads(af_tree[sim]['state'].data, strict_map_key=False)
-
+                    if 'CLASS_power_spectrum' in af_tree[sim]:
+                        metadata[sim]['CLASS_power_spectrum'] = af_tree[sim]['CLASS_power_spectrum']
     if simname not in metadata:
         raise ValueError(f'Simulation "{simname}" is not in metadata file "{metadata_fn}"')
 
