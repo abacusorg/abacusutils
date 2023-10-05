@@ -9,7 +9,7 @@ import asdf
 import msgpack
 
 metadata = None
-metadata_fn = 'abacussummit_headers_compressed.asdf'
+metadata_fns = ['abacussummit_headers_compressed.asdf']
 
 def get_meta(simname, redshift=None):
     '''
@@ -30,21 +30,25 @@ def get_meta(simname, redshift=None):
         The time-independent parameters and, if `redshift` is given,
         the time-dependent state values.
     '''
-
+    # TODO: could add cases: if DESI2 in simname, if png in simname, if Summit in simname
     if not simname.startswith('Abacus'):
         simname = 'Abacus' + simname
 
     global metadata
     if metadata is None:
-        with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
-            metadata = dict(af.tree)
-            del metadata['asdf_library'], metadata['history']
-            for sim in metadata:
-                metadata[sim]['param'] = msgpack.loads(metadata[sim]['param'].data, strict_map_key=False)
-                metadata[sim]['state'] = msgpack.loads(metadata[sim]['state'].data, strict_map_key=False)
+        metadata = {}
+        for i, metadata_fn in enumerate(metadata_fns):
+            with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
+                af_tree = dict(af.tree)
+                del af_tree['asdf_library'], af_tree['history']
+                for sim in af_tree:
+                    metadata[sim] = {}
+                    metadata[sim]['param'] = msgpack.loads(af_tree[sim]['param'].data, strict_map_key=False)
+                    metadata[sim]['state'] = msgpack.loads(af_tree[sim]['state'].data, strict_map_key=False)
 
     if simname not in metadata:
         raise ValueError(f'Simulation "{simname}" is not in metadata file "{metadata_fn}"')
+
 
     res = dict(metadata[simname]['param'])
     if 'CLASS_power_spectrum' in metadata[simname]:
