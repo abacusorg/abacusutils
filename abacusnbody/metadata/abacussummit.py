@@ -31,8 +31,8 @@ def get_meta(simname, redshift=None):
         the time-dependent state values.
     '''
 
-    if not simname.startswith('Abacus_'):
-        simname = 'Abacus_' + simname
+    if not simname.startswith('Abacus'):
+        simname = 'Abacus' + simname
 
     global metadata
     if metadata is None:
