@@ -29,7 +29,7 @@ def get_meta(simname, redshift=None):
         the time-dependent state values.
     '''
 
-    if simname.startswith('AbacusSummit'):
+    if simname.startswith('Abacus'):
         return abacussummit.get_meta(simname, redshift=redshift)
 
     raise ValueError(f'It is unknown what simulation set "{simname}" belongs to '
