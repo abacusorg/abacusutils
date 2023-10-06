@@ -9,7 +9,7 @@ import asdf
 import msgpack
 
 metadata = None
-metadata_fns = ['abacussummit_headers_compressed.asdf']
+metadata_fns = ['abacussummit_headers_compressed.asdf', 'abacusdesi2_headers_compressed.asdf']
 
 def get_meta(simname, redshift=None):
     '''
