@@ -6,7 +6,12 @@ for Abacus simulations like AbacusSummit. One can use this module to
 query information about simulations without actually downloading or
 opening any simulation files.
 
-The main entry point is the ``get_meta(simname, redshift=z)`` function.
+If one does have simulation files, then it's recommended to just use those
+instead of this module. The metadata from those files is usually loaded
+and exposed to the user via the Python API; e.g. if using a CompaSO halo
+catalog, one can use `cat.header` to access metadata.
+
+The main entry point to this module is the ``get_meta(simname, redshift=z)`` function.
 Examples and the API are below.
 
 Examples
