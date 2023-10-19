@@ -37,7 +37,8 @@ def get_meta(simname, redshift=None):
     global metadata
     if metadata is None:
         metadata = {}
-        for i, metadata_fn in enumerate(metadata_fns):
+        for i in range(len(metadata_fns)):
+            metadata_fn = metadata_fns[i]
             with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
                 af_tree = dict(af.tree)
                 del af_tree['asdf_library'], af_tree['history']

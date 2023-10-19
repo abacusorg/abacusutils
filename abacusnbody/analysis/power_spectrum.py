@@ -130,7 +130,7 @@ def P_n(x, n, dtype=np.float32):
 
 @numba.njit(parallel=True, fastmath=True)
 def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.float32,
-            space='fourier', nthread=MAX_THREADS,
+            fourier=True, nthread=MAX_THREADS,
             ):
     r"""
     Compute mean and count modes in (k,mu) bins for a 3D rfft mesh of shape (n1d, n1d, n1d//2+1)
@@ -158,9 +158,9 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
         Legendre multipoles of the power spectrum or correlation function.
     dtype : np.dtype
         float type (32 or 64) to use in calculations.
-    space : str
-        options are Fourier space, `fourier`, which computes power spectrum,
-        or configuration-space, `real`, which computes the correlation function.
+    fourier : bool
+        options are Fourier space, True, which computes power spectrum,
+        or configuration-space, False, which computes the correlation function.
     nthread : int, optional
         Number of numba threads to use
 
@@ -180,9 +180,9 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
 
     kzlen = n1d//2 + 1
     Nk = len(kedges) - 1
-    if space == 'fourier':
+    if fourier:
         dk = 2.*np.pi / L
-    elif space == 'real':
+    else:
         dk = L / n1d
     kedges2 = ((kedges/dk)**2).astype(dtype)
     muedges2 = (np.linspace(0., 1., Nmu+1)**2).astype(dtype)
@@ -251,7 +251,7 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
 
 @numba.njit(parallel=True, fastmath=True)
 def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
-            space='fourier', nthread=MAX_THREADS,
+            fourier=True, nthread=MAX_THREADS,
             ):
     r"""
     Compute mean and count modes in (kp, pi) bins for a 3D rfft mesh of shape (n1d, n1d, n1d//2+1)
@@ -280,9 +280,9 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
         array of shape (n1d, n1d, n1d//2+1) containing the power spectrum modes.
     dtype : np.dtype
         float type (32 or 64) to use in calculations.
-    space : str
-        options are Fourier space, `fourier`, which computes power spectrum,
-        or configuration-space, `real`, which computes the correlation function.
+    fourier : bool
+        options are Fourier space, True, which computes power spectrum,
+        or configuration-space, False, which computes the correlation function.
     nthread : int, optional
         Number of numba threads to use
 
@@ -298,9 +298,9 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
 
     kzlen = n1d//2 + 1
     Nk = len(kedges) - 1
-    if space == 'fourier':
+    if fourier:
         dk = 2.*np.pi / L
-    elif space == 'real':
+    else:
         dk = L / n1d
     kedges2 = ((kedges/dk)**2).astype(dtype)
     piedges2 = ((np.linspace(0., pimax, Npi+1)/dk)**2).astype(dtype)
