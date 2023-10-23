@@ -539,7 +539,7 @@ class AbacusHOD:
                 rt = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
                 r2 = np.zeros(len(rt), dtype=np.float32)
                 r2[rt >= 0.5] = -np.log(2*(1-rt[rt >= 0.5]))
-                r2[rt < 0.5] = np.log(2*rt[rt < 0.5])            
+                r2[rt < 0.5] = np.log(2*rt[rt < 0.5])
             else:
                 r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
