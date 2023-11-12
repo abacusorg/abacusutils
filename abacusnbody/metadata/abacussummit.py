@@ -30,15 +30,11 @@ def get_meta(simname, redshift=None):
         The time-independent parameters and, if `redshift` is given,
         the time-dependent state values.
     '''
-    # TODO: could add cases: if DESI2 in simname, if png in simname, if Summit in simname
-    if not simname.startswith('Abacus'):
-        simname = 'Abacus' + simname
 
     global metadata
     if metadata is None:
         metadata = {}
-        for i in range(len(metadata_fns)):
-            metadata_fn = metadata_fns[i]
+        for metadata_fn in metadata_fns:
             with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
                 af_tree = dict(af.tree)
                 del af_tree['asdf_library'], af_tree['history']
