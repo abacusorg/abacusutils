@@ -664,8 +664,10 @@ def get_raw_power(field_fft, field2_fft=None):
         raw_p3d = (np.abs(field_fft)**2)
     return raw_p3d
 
-@numba.njit(parallel=False, fastmath=True)
-def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=np.empty(0, 'i8'), nthread=MAX_THREADS):
+
+def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
+                        field2_fft=None, poles=np.empty(0, 'i8'), squeeze_mu_axis=True,
+                        nthread=MAX_THREADS):
     r"""
     Calculate the power spectrum of a given Fourier field, with binning in (k,mu).
     Optionally computes Legendre multipoles in k bins.
@@ -685,6 +687,9 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=N
     poles : np.ndarray, optional
         Legendre multipoles of the power spectrum or correlation function.
         Probably has to be a Numpy array, or Numba will complain.
+    squeeze_mu_axis : bool, optional
+        Remove the mu axis from the output arrays if it has length 1.
+        Default: True
     nthread : int, optional
         Number of numba threads to use
 
@@ -715,6 +720,12 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=N
     pk3d *= Lbox**3
     if len(poles) > 0:
         binned_poles *= Lbox**3
+
+    if squeeze_mu_axis and Nmu == 1:
+        pk3d = pk3d[:, 0]
+        N3d = N3d[:, 0]
+        k_avg = k_avg[:, 0]
+
     return pk3d, N3d, binned_poles, Npoles, k_avg
 
 
@@ -1031,6 +1042,7 @@ def calc_power(pos,
                pos2 = None,
                w2 = None,
                poles = None,
+               squeeze_mu_axis = True,
                nthread = MAX_THREADS,
                dtype = np.float32,
                ):
@@ -1049,8 +1061,8 @@ def calc_power(pos,
         Or an array-like, which will be used as-is.
         Default is None, which sets `kbins` to `nmesh`.
     mubins : int, None, or array_like, optional
-        An int indicating the number of bins of mu, which ranges from 0 to 1.
-        Or an array-like, which will be used as-is.
+        An int indicating the number of bins of mu. mu ranges from 0 to 1.
+        Or an array-like of bin edges, which will be used as-is.
         Default of None sets `mubins` to 1.
     k_max : float, optional
         maximum k wavenumber.
@@ -1073,6 +1085,9 @@ def calc_power(pos,
     poles : None or list of int, optional
         Legendre multipoles of the power spectrum or correlation function.
         Default of None gives the monopole.
+    squeeze_mu_axis : bool, optional
+        Remove the mu axis from the output arrays if it has length 1.
+        Default: True
     nthread : int, optional
         Number of numba threads to use
     dtype : np.dtype, optional
@@ -1090,7 +1105,7 @@ def calc_power(pos,
         - ``N_mode``: number of modes per (k, mu) wedge, shape ``(nbins_k,nbins_mu)``
 
         If multipoles are requested via ``poles``, the table includes:
-        - ``poles``: mean Legendre multipole coefficients, shape ``(nbins_k,nbins_mu)``
+        - ``poles``: mean Legendre multipole coefficients, shape ``(nbins_k,len(poles))``
         - ``N_mode_poles``: number of modes per pole, shape ``(nbins_k,len(poles))``
 
         The ``meta`` field of the table will have metadata about the power spectrum.
@@ -1111,8 +1126,14 @@ def calc_power(pos,
                 interlaced=interlaced,
                 poles=poles,
                 nthread=nthread,
+                N_pos=len(pos),
+                is_weighted=w is not None,
+                field_dtype=dtype,
+                squeeze_mu_axis=squeeze_mu_axis,
                 )
-
+    if pos2 is not None:
+        meta['N_pos2'] = len(pos2)
+        meta['is_weighted2'] = w2 is not None
 
     # get the window function
     if compensated:
@@ -1134,7 +1155,10 @@ def calc_power(pos,
 
     # calculate power spectrum
     kbins, mubins = get_k_mu_edges(Lbox, k_max, kbins, mubins, logk)
-    pk3d, N3d, binned_poles, Npoles, k_avg = calc_pk_from_deltak(field_fft, Lbox, kbins, mubins, field2_fft=field2_fft, poles=poles, nthread=nthread)
+    pk3d, N3d, binned_poles, Npoles, k_avg = calc_pk_from_deltak(field_fft, Lbox, kbins, mubins,
+                                                                 field2_fft=field2_fft, poles=poles, squeeze_mu_axis=squeeze_mu_axis,
+                                                                 nthread=nthread,
+                                                                 )
 
     # define bin centers
     k_binc = (kbins[1:] + kbins[:-1])*.5
