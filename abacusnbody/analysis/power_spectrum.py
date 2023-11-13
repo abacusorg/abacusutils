@@ -233,9 +233,7 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
                 if Np > 0:
                     for ip in range(len(poles)):
                         pole = poles[ip]
-                        if pole == 0:
-                            weighted_counts_poles[tid, ip, bk] += weights[i, j, k] if k == 0 else dtype(2.)*weights[i, j, k]
-                        else:
+                        if pole != 0:
                             pw = dtype(2*pole + 1)*P_n(mu2, pole)
                             weighted_counts_poles[tid, ip, bk] += weights[i, j, k]*pw if k == 0 else dtype(2.)*weights[i, j, k]*pw
 
@@ -244,6 +242,10 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
     weighted_counts_poles = weighted_counts_poles.sum(axis=0)
     weighted_counts_k = weighted_counts_k.sum(axis=0)
     counts_poles = counts.sum(axis=1)
+
+    for ip,pole in enumerate(poles):
+        if pole == 0:
+            weighted_counts_poles[ip] = weighted_counts.sum(axis=1)
 
     for i in range(Nk):
         if Np > 0:
