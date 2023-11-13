@@ -129,7 +129,7 @@ def P_n(x, n, dtype=np.float32):
 
 
 @numba.njit(parallel=True, fastmath=True)
-def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.float32,
+def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.float32,
             fourier=True, nthread=MAX_THREADS,
             ):
     r"""
@@ -150,8 +150,8 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
         box size of the simulation.
     kedges : array_like
         edges of the k wavenumbers or r separation bins.
-    Nmu : int
-        number of bins of mu, which ranges from 0 to 1.
+    muedges : array_like
+        edges of the mu bins. mu ranges from 0 to 1.
     weights : array_like
         array of shape (n1d, n1d, n1d//2+1) containing the power spectrum modes.
     poles : array_like
@@ -182,12 +182,13 @@ def bin_kmu(n1d, L, kedges, Nmu, weights, poles=np.empty(0, 'i8'), dtype=np.floa
 
     kzlen = n1d//2 + 1
     Nk = len(kedges) - 1
+    Nmu = len(muedges) - 1
     if fourier:
         dk = 2.*np.pi / L
     else:
         dk = L / n1d
     kedges2 = ((kedges/dk)**2).astype(dtype)
-    muedges2 = (np.linspace(0., 1., Nmu+1)**2).astype(dtype)
+    muedges2 = (muedges**2).astype(dtype)
 
     nthread = numba.get_num_threads()
     counts = np.zeros((nthread, Nk, Nmu), dtype=np.int64)
@@ -385,7 +386,8 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     nmesh = raw_p3d.shape[0]
     poles = np.asarray(poles)
     raw_p3d = np.asarray(raw_p3d)
-    binned_p3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu=1, weights=raw_p3d, poles=poles)
+    muedges = np.array([0., 1.])
+    binned_p3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, muedges=muedges, weights=raw_p3d, poles=poles)
     binned_poles *= Lbox**3
     return binned_poles, Npoles
 
@@ -594,7 +596,8 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
     # bin into xi_ell(r)
     nmesh = Xi.shape[0]
     poles = np.asarray(poles)
-    _, _, binned_poles, Npoles, r_avg = bin_kmu(nmesh, Lbox, r_bins, Nmu=1, weights=Xi, poles=poles, space='real')
+    muedges = np.array([0., 1.])
+    _, _, binned_poles, Npoles, r_avg = bin_kmu(nmesh, Lbox, r_bins, muedges=muedges, weights=Xi, poles=poles, space='real')
     binned_poles *= nmesh**3
     return r_binc, binned_poles, Npoles
 
@@ -713,15 +716,14 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
 
     # power spectrum
     nmesh = raw_p3d.shape[0]
-    Nmu = len(mu_bin_edges) - 1
-    pk3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, Nmu, raw_p3d, poles, nthread=nthread)
+    pk3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, mu_bin_edges, raw_p3d, poles, nthread=nthread)
 
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     pk3d *= Lbox**3
     if len(poles) > 0:
         binned_poles *= Lbox**3
 
-    if squeeze_mu_axis and Nmu == 1:
+    if squeeze_mu_axis and len(mu_bin_edges) == 2:
         pk3d = pk3d[:, 0]
         N3d = N3d[:, 0]
         k_avg = k_avg[:, 0]
