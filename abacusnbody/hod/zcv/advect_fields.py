@@ -290,14 +290,14 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
                 del field_fft_i, field_fft_j; gc.collect() # noqa: E702
             else:
                 # compute power spectrum
-                pk3d, N3d, binned_poles, Npoles, k_avg = calc_pk_from_deltak(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=np.asarray(poles))
-                pk3d *= field_D[i]*field_D[j]
-                binned_poles *= field_D[i]*field_D[j]
-                pk_auto.append(pk3d)
-                pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
-                pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
-                pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
-                pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
+                P = calc_pk_from_deltak(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=field_fft_j[f'{keynames[j]}_Re']+1j*field_fft_j[f'{keynames[j]}_Im'], poles=np.asarray(poles))
+                P['power'] *= field_D[i]*field_D[j]
+                P['binned_poles'] *= field_D[i]*field_D[j]
+                pk_auto.append(P['power'])
+                pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = P['power']
+                pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = P['N_modes']
+                pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = P['binned_poles']
+                pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = P['N_mode_poles']
                 del field_fft_i, field_fft_j; gc.collect() # noqa: E702
 
     if not save_3D_power:

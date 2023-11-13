@@ -698,13 +698,13 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
 
     Returns
     -------
-    binned_pk : array_like
+    power : array_like
         mean power spectrum per (k, mu) wedge.
-    Nmode : array_like
+    N_mode : array_like
         number of modes per (k, mu) wedge.
     binned_poles : array_like
         mean power spectrum per k for each Legendre multipole.
-    Npoles : array_like
+    N_mode_poles : array_like
         number of modes per k.
     k_avg : array_like
         mean wavenumber per (k, mu) wedge.
@@ -716,19 +716,19 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
 
     # power spectrum
     nmesh = raw_p3d.shape[0]
-    pk3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, mu_bin_edges, raw_p3d, poles, nthread=nthread)
+    power, N_mode, binned_poles, N_mode_poles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, mu_bin_edges, raw_p3d, poles, nthread=nthread)
 
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
-    pk3d *= Lbox**3
+    power *= Lbox**3
     if len(poles) > 0:
         binned_poles *= Lbox**3
 
     if squeeze_mu_axis and len(mu_bin_edges) == 2:
-        pk3d = pk3d[:, 0]
-        N3d = N3d[:, 0]
+        power = power[:, 0]
+        N_mode = N_mode[:, 0]
         k_avg = k_avg[:, 0]
 
-    return pk3d, N3d, binned_poles, Npoles, k_avg
+    return dict(power=power, N_mode=N_mode, binned_poles=binned_poles, N_mode_poles=N_mode_poles, k_avg=k_avg)
 
 
 def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS, dtype=np.float32):
@@ -1157,10 +1157,10 @@ def calc_power(pos,
 
     # calculate power spectrum
     kbins, mubins = get_k_mu_edges(Lbox, k_max, kbins, mubins, logk)
-    pk3d, N3d, binned_poles, Npoles, k_avg = calc_pk_from_deltak(field_fft, Lbox, kbins, mubins,
-                                                                 field2_fft=field2_fft, poles=poles, squeeze_mu_axis=squeeze_mu_axis,
-                                                                 nthread=nthread,
-                                                                 )
+    P = calc_pk_from_deltak(field_fft, Lbox, kbins, mubins,
+                            field2_fft=field2_fft, poles=poles, squeeze_mu_axis=squeeze_mu_axis,
+                            nthread=nthread,
+                            )
 
     # define bin centers
     k_binc = (kbins[1:] + kbins[:-1])*.5
@@ -1170,20 +1170,20 @@ def calc_power(pos,
         k_min=kbins[:-1],
         k_max=kbins[1:],
         k_mid=k_binc,
-        k_avg=k_avg,
-        power=pk3d,
-        N_mode=N3d,
+        k_avg=P['k_avg'],
+        power=P['power'],
+        N_mode=P['N_mode'],
         )
     if len(poles) > 0:
         res.update(
-            poles=binned_poles.T,
-            N_mode_poles=Npoles,
+            poles=P['binned_poles'].T,
+            N_mode_poles=P['N_mode_poles'],
             )
     if return_mubins:
         res.update(
-            mu_min=np.broadcast_to(mubins[:-1], pk3d.shape),
-            mu_max=np.broadcast_to(mubins[1:], pk3d.shape),
-            mu_mid=np.broadcast_to(mu_binc, pk3d.shape),
+            mu_min=np.broadcast_to(mubins[:-1], res['power'].shape),
+            mu_max=np.broadcast_to(mubins[1:], res['power'].shape),
+            mu_mid=np.broadcast_to(mu_binc, res['power'].shape),
             )
     res = Table(res, meta=meta)
 

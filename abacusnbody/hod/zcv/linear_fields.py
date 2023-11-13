@@ -138,11 +138,11 @@ def main(path2config, alt_simname=None, save_3D_power=False):
 
             else:
                 # compute power spectrum
-                pk3d, N3d, binned_poles, Npoles, k_avg = calc_pk_from_deltak(fields_fft[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=fields_fft[keynames[j]], poles=np.asarray(poles))
-                pk_lin_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = pk3d
-                pk_lin_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = N3d
-                pk_lin_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = binned_poles
-                pk_lin_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = Npoles
+                P = calc_pk_from_deltak(fields_fft[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=fields_fft[keynames[j]], poles=np.asarray(poles))
+                pk_lin_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = P['power']
+                pk_lin_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = P['N_mode']
+                pk_lin_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = P['binned_poles']
+                pk_lin_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = P['N_mode_poles']
 
     # record power spectra
     header = {}
