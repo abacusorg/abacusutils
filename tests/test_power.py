@@ -32,11 +32,17 @@ def test_power(power_test_data, interlaced, compensated, paste):
     logk = False
     k_hMpc_max = np.pi*nmesh/Lbox + 1.e-6 # so that the first bin includes +/- 2pi/L which nbodykit does for this choice of nmesh
     nbins_k = nmesh//2
+    poles = (0,2,4)
 
     # compute power
     res = calc_power(pos, Lbox, nbins_k, nbins_mu, k_hMpc_max, logk,
-                       paste, nmesh, compensated, interlaced,
+                       paste, nmesh, compensated, interlaced, poles=poles,
                        )
+
+    # check that the monopole and bandpower are equal
+    assert np.allclose(res['poles'][:,0],
+                       (res['power'] * res['N_mode']).sum(axis=1) / res['N_mode'].sum(axis=1),
+    )
 
     # load presaved nbodykit computation
     comp_str = "_compensated" if compensated else ""
