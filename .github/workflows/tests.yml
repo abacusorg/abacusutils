@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    # if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     name: build
     runs-on: ubuntu-latest
 
@@ -39,7 +39,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     env:
-      PUBLISH: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+      PUBLISH: true  # ${{ github.event_name == 'release' && github.event.action == 'published' }}
     strategy:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
@@ -90,7 +90,7 @@ jobs:
         ./tests/test_pipe_asdf.sh
 
   upload:
-    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    # if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     needs: [build, tests]
     environment: pypi
     permissions:
