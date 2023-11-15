@@ -24,7 +24,9 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          path: ./dist/*.{whl,tar.gz}
+          path: |
+            ./dist/*.whl
+            ./dist/*.tar.gz
 
   upload:
     needs: [build]
