@@ -68,12 +68,15 @@ jobs:
         pip install -U .[test]
         make -C pipe_asdf
 
-    - name: Install package from wheel
+    - name: Fetch wheel
       if: env.PUBLISH
       uses: actions/download-artifact@v3
       with:
         name: artifact
         path: dist
+
+    - name: Install package from wheel
+      if: env.PUBLISH
       run: |
         pip install $(ls dist/*.whl)[test]
 
