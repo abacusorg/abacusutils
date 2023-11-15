@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    if: env.PUBLISH
+    if: ${{ env.PUBLISH }}
     name: build
     runs-on: ubuntu-latest
 
@@ -69,14 +69,14 @@ jobs:
         make -C pipe_asdf
 
     - name: Fetch wheel
-      if: env.PUBLISH
+      if: ${{ env.PUBLISH }}
       uses: actions/download-artifact@v3
       with:
         name: artifact
         path: dist
 
     - name: Install package from wheel
-      if: env.PUBLISH
+      if: ${{ env.PUBLISH }}
       run: |
         pip install $(ls dist/*.whl)[test]
 
@@ -91,7 +91,7 @@ jobs:
         ./tests/test_pipe_asdf.sh
 
   upload:
-    if: env.PUBLISH
+    if: ${{ env.PUBLISH }}
     needs: [build, tests]
     environment: pypi
     permissions:
