@@ -7,22 +7,10 @@ on: [push]
   #   types: [published]
 
 jobs:
-  build_wheels:
-    name: Build wheels
+  build:
+    name: build
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pypa/cibuildwheel@v2.16.2
-
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
-
-  build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -31,15 +19,15 @@ jobs:
           python -m pip install -U pip
           python -m pip install build
 
-      - name: Build sdist
-        run: python -m build --sdist
+      - name: Build
+        run: python -m build
 
       - uses: actions/upload-artifact@v3
         with:
-          path: dist/*.tar.gz
+          path: ./dist/*.{whl,tar.gz}
 
   upload:
-    needs: [build_wheels, build_sdist]
+    needs: [build]
     environment: pypi
     permissions:
       id-token: write
