@@ -62,20 +62,20 @@ jobs:
         pip install --no-build-isolation classy
 
     - name: Install package from source
-      if: ${{ ! env.PUBLISH }}
+      if: ${{ env.PUBLISH != 'true' }}
       run: |
         pip install -U .[test]
         make -C pipe_asdf
 
     - name: Fetch wheel
-      if: ${{ env.PUBLISH }}
+      if: ${{ env.PUBLISH == 'true' }}
       uses: actions/download-artifact@v3
       with:
         name: artifact
         path: dist
 
     - name: Install package from wheel
-      if: ${{ env.PUBLISH }}
+      if: ${{ env.PUBLISH == 'true'}}
       run: |
         pip install $(ls dist/*.whl)[test]
 
