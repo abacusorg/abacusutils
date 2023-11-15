@@ -16,11 +16,11 @@ from .tsc import tsc_parallel
 from .cic import cic_serial
 
 
-__all__ = ['pk_to_xi',
-           'calc_power',
+__all__ = ['calc_power',
+           'calc_pk_from_deltak',
+           'pk_to_xi',
            'project_3d_to_poles',
            'get_k_mu_edges',
-           'calc_pk_from_deltak',
            ]
 
 MAX_THREADS = numba.config.NUMBA_NUM_THREADS
@@ -1093,8 +1093,8 @@ def calc_power(pos,
     Returns
     -------
     power : astropy.Table
-        The power spectrum in an astropy Table of length ``nbins_k``.
-        The columns are:
+        The power spectrum in an astropy Table of length ``nbins_k``. The columns are:
+
         - ``k_mid``: arithmetic bin centers of the k wavenumbers, shape ``(nbins_k,)``
         - ``k_avg``: mean wavenumber per (k, mu) wedge, shape ``(nbins_k,nbins_mu)``
         - ``mu_mid``: arithmetic bin centers of the mu angles, shape ``(nbins_k,nbins_mu)``
@@ -1102,6 +1102,7 @@ def calc_power(pos,
         - ``N_mode``: number of modes per (k, mu) wedge, shape ``(nbins_k,nbins_mu)``
 
         If multipoles are requested via ``poles``, the table includes:
+
         - ``poles``: mean Legendre multipole coefficients, shape ``(nbins_k,len(poles))``
         - ``N_mode_poles``: number of modes per pole, shape ``(nbins_k,len(poles))``
 
