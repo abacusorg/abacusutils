@@ -186,11 +186,11 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         k_bin_edges, mu_bin_edges = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
 
         # compute the galaxy auto rsd poles
-        pk3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(tr_field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=np.asarray(poles))
-        pk_tr_dict['P_kmu_tr_tr'] = pk3d
-        pk_tr_dict['N_kmu_tr_tr'] = N3d
-        pk_tr_dict['P_ell_tr_tr'] = binned_poles
-        pk_tr_dict['N_ell_tr_tr'] = Npoles
+        P = calc_pk_from_deltak(tr_field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=np.asarray(poles))
+        pk_tr_dict['P_kmu_tr_tr'] = P['power']
+        pk_tr_dict['N_kmu_tr_tr'] = P['N_mode']
+        pk_tr_dict['P_ell_tr_tr'] = P['binned_poles']
+        pk_tr_dict['N_ell_tr_tr'] = P['N_mode_poles']
 
     # loop over fields
     for i in range(len(keynames)):
@@ -222,13 +222,13 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         else:
 
             # compute power spectrum
-            pk3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=tr_field_fft, poles=np.asarray(poles))
-            pk3d *= field_D[i]
-            binned_poles *= field_D[i]
-            pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
-            pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
-            pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
-            pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
+            P = calc_pk_from_deltak(field_fft_i[f'{keynames[i]}_Re']+1j*field_fft_i[f'{keynames[i]}_Im'], Lbox, k_bin_edges, mu_bin_edges, field2_fft=tr_field_fft, poles=np.asarray(poles))
+            P['power'] *= field_D[i]
+            P['binned_poles'] *= field_D[i]
+            pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = P['power']
+            pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = P['N_mode']
+            pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = P['binned_poles']
+            pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = P['N_mode_poles']
             del field_fft_i; gc.collect() # noqa: E702
 
     if save_3D_power:
@@ -401,11 +401,11 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
         power_tr_fns.append(power_tr_fn)
         compress_asdf(str(power_tr_fn), pk_tr_dict, header)
     else:
-        pk3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(tr_field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=np.asarray(poles))
-        pk_tr_dict['P_kmu_tr_tr'] = pk3d
-        pk_tr_dict['N_kmu_tr_tr'] = N3d
-        pk_tr_dict['P_ell_tr_tr'] = binned_poles
-        pk_tr_dict['N_ell_tr_tr'] = Npoles
+        P = calc_pk_from_deltak(tr_field_fft, Lbox, k_bin_edges, mu_bin_edges, field2_fft=None, poles=np.asarray(poles))
+        pk_tr_dict['P_kmu_tr_tr'] = P['power']
+        pk_tr_dict['N_kmu_tr_tr'] = P['N_mode']
+        pk_tr_dict['P_ell_tr_tr'] = P['binned_poles']
+        pk_tr_dict['N_ell_tr_tr'] = P['N_mode_poles']
 
     # initiate final arrays
     for i in range(len(keynames)):
@@ -428,11 +428,11 @@ def get_recon_power(tracer_pos, random_pos, want_rsd, config, want_save=True, sa
             compress_asdf(str(power_tr_fn), pk_tr_dict, header)
         else:
             # compute power spectrum
-            pk3d, N3d, binned_poles, Npoles = calc_pk_from_deltak(fields[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=tr_field_fft, poles=np.asarray(poles))
-            pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = pk3d
-            pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = N3d
-            pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = binned_poles
-            pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = Npoles
+            P = calc_pk_from_deltak(fields[keynames[i]], Lbox, k_bin_edges, mu_bin_edges, field2_fft=tr_field_fft, poles=np.asarray(poles))
+            pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = P['power']
+            pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = P['N_mode']
+            pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = P['binned_poles']
+            pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = P['N_mode_poles']
 
 
     if save_3D_power:
