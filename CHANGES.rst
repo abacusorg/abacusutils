@@ -1,8 +1,24 @@
 Changelog
 =========
 
-1.4.0 (2023-??-??)
+2.0.0 (2023-11-15)
 ------------------
+
+abacusutils 2.0 introduces a power spectrum module based on fast, parallelized TSC
+and FFT, including grid interlacing and window compensation, that can output bandpowers,
+Legendre multipoles, (k,mu) wedges, and more.
+
+The set of default installed dependencies has also been reduced to avoid trouble with
+source-only distributions. Use `pip install abacusutils[all]` if you need functionality
+provided by a non-default dependency.
+
+Furthermore, there's a new Zel'dovich Control Variates (ZCV) module, and the HOD module
+has many additions, performance improvements, and bug fixes.
+
+This is a relatively large release, so the version number has been bumped to 2.0.0.
+
+Supported Python versions are 3.8-3.11. Python 3.7 continues to work, although we'll
+drop support if/when this is no longer the case.
 
 New Features
 ~~~~~~~~~~~~
@@ -13,12 +29,14 @@ New Features
 Fixes
 ~~~~~
 - Bump Numba requirement to fixed version and enable parallelism in env calc [#60]
+- Many small bug fixes
 
 Enhancements
 ~~~~~~~~~~~~
 - Add power spectrum to `metadata` module [#69]
 - Upgrade docs and CI [#71]
 - Power spectrum optimization and parallelization [#102]
+- Compute Xi(rp,pi) from P(k) [#115]
 
 Installation
 ~~~~~~~~~~~~
