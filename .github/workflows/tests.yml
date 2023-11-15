@@ -75,7 +75,7 @@ jobs:
         path: dist
 
     - name: Install package from wheel
-      if: ${{ env.PUBLISH == 'true'}}
+      if: ${{ env.PUBLISH == 'true' }}
       run: |
         pip install $(ls dist/*.whl)[test]
 
@@ -86,6 +86,8 @@ jobs:
         pytest -v
 
     - name: Test pipe_asdf
+      # no C test client from wheels
+      if: ${{ env.PUBLISH != 'true' }}
       run: |
         ./tests/test_pipe_asdf.sh
 
