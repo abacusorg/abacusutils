@@ -32,7 +32,7 @@ jobs:
 
       - name: Install wheel
         run: |
-          python -m pip install dist/*.whl[test]
+          python -m pip install $(ls dist/*.whl)[test]
 
       - name: Test wheel
         run: |
