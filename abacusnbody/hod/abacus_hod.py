@@ -42,7 +42,7 @@ class AbacusHOD:
     """
     A highly efficient multi-tracer HOD code for the AbacusSummmit simulations.
     """
-    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, n_chunks=1, skip_staging=False): # TESTING
+    def __init__(self, sim_params, HOD_params, clustering_params = None, chunk=-1, n_chunks=1, skip_staging=False):
         """
         Loads simulation. The ``sim_params`` dictionary specifies which simulation
         volume to load. The ``HOD_params`` specifies the HOD parameters and tracer
@@ -1109,8 +1109,8 @@ class AbacusHOD:
         r_bins = np.linspace(0., 200., 201)
         pk_rsd_tr_fns = [save_z_dir / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"] # TODO: same as other (could check that we have this if presaved)
         power_cv_tr_fn = save_z_dir / f"power{rsd_str}_ZCV_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf" # TODO: should be an output (could check that we have this if presaved; run_zcv too)
-        r_binc, binned_poles_zcv, Npoles = pk_to_xi(power_cv_tr_fn, self.lbox, r_bins, poles=config['power_params']['poles'], key='P_k3D_tr_tr_zcv')
-        r_binc, binned_poles, Npoles = pk_to_xi(pk_rsd_tr_fns[0], self.lbox, r_bins, poles=config['power_params']['poles'], key='P_k3D_tr_tr')
+        r_binc, binned_poles_zcv, Npoles = pk_to_xi(asdf.open(power_cv_tr_fn)['data']['P_k3D_tr_tr_zcv'], self.lbox, r_bins, poles=config['power_params']['poles'])
+        r_binc, binned_poles, Npoles = pk_to_xi(asdf.open(pk_rsd_tr_fns[0])['data']['P_k3D_tr_tr'], self.lbox, r_bins, poles=config['power_params']['poles'])
         zcv_dict['Xi_tr_tr_ell_zcv'] = binned_poles_zcv
         zcv_dict['Xi_tr_tr_ell'] = binned_poles
         zcv_dict['Np_tr_tr_ell'] = Npoles

@@ -9,7 +9,6 @@ import warnings
 
 import numpy as np
 import numba
-import asdf
 from astropy.table import Table
 from scipy.fft import rfftn, irfftn, fftfreq
 
@@ -558,23 +557,20 @@ def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
     return delta_mu2
 
 
-def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
+def pk_to_xi(Pk, Lbox, r_bins, poles=[0, 2, 4]):
     r"""
     Transform 3D power spectrum into correlation function multipoles.
-    Reads ASDF file locally to save memory.
 
     Parameters
     ----------
-    pk_fn : str
-        Name of ASDF file from which to read power spectrum.
+    Pk : array_like
+        3D power spectrum.
     Lbox : float
         box size of the simulation.
     r_bins : array_like
         r separation bins.
     poles : array_like
         Legendre multipoles of the power spectrum or correlation function.
-    key : str
-        key name in the data structure of the ASDF file containing 3D power spectrum.
 
     Returns
     -------
@@ -586,7 +582,6 @@ def pk_to_xi(pk_fn, Lbox, r_bins, poles=[0, 2, 4], key='P_k3D_tr_tr'):
         number of modes per r bin.
     """
     # apply fourier transform to get 3D correlation
-    Pk = asdf.open(pk_fn)['data'][key] # open inside function to save space
     Xi = irfftn(Pk, workers=-1).real
     del Pk; gc.collect() # noqa: E702
 

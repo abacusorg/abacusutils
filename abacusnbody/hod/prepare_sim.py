@@ -26,7 +26,7 @@ from scipy.spatial import cKDTree
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import read_asdf
 
-from .shear import smooth_density, get_shear
+from ..analysis.shear import smooth_density, get_shear
 from ..analysis.tsc import tsc_parallel
 
 DEFAULTS = {}
