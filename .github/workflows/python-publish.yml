@@ -30,6 +30,14 @@ jobs:
             ./dist/*.whl
             ./dist/*.tar.gz
 
+      - name: Install wheel
+        run: |
+          python -m pip install dist/*.whl[test]
+
+      - name: Test wheel
+        run: |
+          pytest -xv
+
   upload:
     needs: [build]
     environment: pypi
