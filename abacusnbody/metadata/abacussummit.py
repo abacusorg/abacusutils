@@ -45,7 +45,7 @@ def get_meta(simname, redshift=None):
                     if 'CLASS_power_spectrum' in af_tree[sim]:
                         metadata[sim]['CLASS_power_spectrum'] = af_tree[sim]['CLASS_power_spectrum']
     if simname not in metadata:
-        raise ValueError(f'Simulation "{simname}" is not in metadata file "{metadata_fn}"')
+        raise ValueError(f'Simulation "{simname}" is not in metadata files "{metadata_fns}"')
 
 
     res = dict(metadata[simname]['param'])
@@ -58,7 +58,7 @@ def get_meta(simname, redshift=None):
         if not redshift.startswith('z'):
             redshift = 'z' + redshift
         if redshift not in metadata[simname]['state']:
-            raise ValueError(f'Redshift {redshift} metadata not present for "{simname}" in metadata file "{metadata_fn}')
+            raise ValueError(f'Redshift {redshift} metadata not present for "{simname}" in metadata files "{metadata_fns}')
         res.update(metadata[simname]['state'][redshift])
 
     return res
