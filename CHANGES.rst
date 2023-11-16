@@ -37,6 +37,7 @@ Enhancements
 - Upgrade docs and CI [#71]
 - Power spectrum optimization and parallelization [#102]
 - Compute Xi(rp,pi) from P(k) [#115]
+- Update CI test and build infrastructure [#118]
 
 Installation
 ~~~~~~~~~~~~

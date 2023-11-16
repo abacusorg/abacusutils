@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
-    name: build
+    name: Build Wheels
     runs-on: ubuntu-latest
 
     steps:
@@ -34,6 +34,7 @@ jobs:
             ./dist/*.tar.gz
 
   tests:
+    name: Tests
     # always run, but wait for build if publishing
     if: ${{ !cancelled() }}
     needs: [build]
@@ -92,6 +93,7 @@ jobs:
         ./tests/test_pipe_asdf.sh
 
   upload:
+    name: PyPI Upload
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     needs: [build, tests]
     environment: pypi
