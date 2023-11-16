@@ -46,7 +46,7 @@ abacusutils = "abacusnbody.data.asdf:AbacusExtension"
 
 [project.optional-dependencies]
 all = [
-    # 'ZeNBu @ git+https://github.com/sfschen/ZeNBu.git',
+    'ZeNBu @ git+https://github.com/sfschen/ZeNBu.git',
     'classy',
     'Corrfunc>=2',
     'emcee',
