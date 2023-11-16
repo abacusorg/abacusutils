@@ -9,7 +9,7 @@ and FFT, including grid interlacing and window compensation, that can output ban
 Legendre multipoles, (k,mu) wedges, and more.
 
 The set of default installed dependencies has also been reduced to avoid trouble with
-source-only distributions. Use `pip install abacusutils[all]` if you need functionality
+source-only distributions. Use ``pip install abacusutils[all]`` if you need functionality
 provided by a non-default dependency.
 
 Furthermore, there's a new Zel'dovich Control Variates (ZCV) module, and the HOD module
@@ -33,7 +33,7 @@ Fixes
 
 Enhancements
 ~~~~~~~~~~~~
-- Add power spectrum to `metadata` module [#69]
+- Add power spectrum to ``metadata`` module [#69]
 - Upgrade docs and CI [#71]
 - Power spectrum optimization and parallelization [#102]
 - Compute Xi(rp,pi) from P(k) [#115]
