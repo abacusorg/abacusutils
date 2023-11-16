@@ -5,12 +5,22 @@ on:
   schedule:
     # Run weekly, Friday at 7:15 EST.
     - cron: '15 12 * * 5'
-  release:
-    types: [published]
 
 jobs:
   build:
-    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    if: >
+      ${{
+        startsWith(github.ref, 'refs/tags/v0') ||
+        startsWith(github.ref, 'refs/tags/v1') ||
+        startsWith(github.ref, 'refs/tags/v2') ||
+        startsWith(github.ref, 'refs/tags/v3') ||
+        startsWith(github.ref, 'refs/tags/v4') ||
+        startsWith(github.ref, 'refs/tags/v5') ||
+        startsWith(github.ref, 'refs/tags/v6') ||
+        startsWith(github.ref, 'refs/tags/v7') ||
+        startsWith(github.ref, 'refs/tags/v8') ||
+        startsWith(github.ref, 'refs/tags/v9')
+      }}
     name: Build Wheels
     runs-on: ubuntu-latest
 
@@ -36,11 +46,23 @@ jobs:
   tests:
     name: Tests
     # always run, but wait for build if publishing
-    if: ${{ !cancelled() }}
+    if: ${{ ! cancelled() }}
     needs: [build]
     runs-on: ubuntu-latest
     env:
-      PUBLISH: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+      PUBLISH: >
+        ${{
+          startsWith(github.ref, 'refs/tags/v0') ||
+          startsWith(github.ref, 'refs/tags/v1') ||
+          startsWith(github.ref, 'refs/tags/v2') ||
+          startsWith(github.ref, 'refs/tags/v3') ||
+          startsWith(github.ref, 'refs/tags/v4') ||
+          startsWith(github.ref, 'refs/tags/v5') ||
+          startsWith(github.ref, 'refs/tags/v6') ||
+          startsWith(github.ref, 'refs/tags/v7') ||
+          startsWith(github.ref, 'refs/tags/v8') ||
+          startsWith(github.ref, 'refs/tags/v9')
+        }}
     strategy:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
@@ -94,7 +116,19 @@ jobs:
 
   upload:
     name: PyPI Upload
-    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    if: >
+      ${{
+        startsWith(github.ref, 'refs/tags/v0') ||
+        startsWith(github.ref, 'refs/tags/v1') ||
+        startsWith(github.ref, 'refs/tags/v2') ||
+        startsWith(github.ref, 'refs/tags/v3') ||
+        startsWith(github.ref, 'refs/tags/v4') ||
+        startsWith(github.ref, 'refs/tags/v5') ||
+        startsWith(github.ref, 'refs/tags/v6') ||
+        startsWith(github.ref, 'refs/tags/v7') ||
+        startsWith(github.ref, 'refs/tags/v8') ||
+        startsWith(github.ref, 'refs/tags/v9')
+      }}
     needs: [build, tests]
     environment: pypi
     permissions:
