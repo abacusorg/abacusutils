@@ -449,11 +449,11 @@ class AbacusHOD:
                          "pweights": pweights,
                          "prandoms": prandoms,
                          "pinds": pinds}
-        # if self.want_AB:
-        halo_data["hdeltac"] = hdeltac
-        halo_data["hfenv"] = hfenv
-        particle_data["pdeltac"] = pdeltac
-        particle_data["pfenv"] = pfenv
+        if self.want_AB:
+            halo_data["hdeltac"] = hdeltac
+            halo_data["hfenv"] = hfenv
+            particle_data["pdeltac"] = pdeltac
+            particle_data["pfenv"] = pfenv
         if self.want_shear:
             halo_data["hshear"] = hshear
             particle_data["pshear"] = pshear
