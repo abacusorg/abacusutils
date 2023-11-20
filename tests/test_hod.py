@@ -6,7 +6,7 @@ catalog.
 To run the tests, use:
     $ pytest tests/test_hod.py
 
-To generate new reference, run:
+To generate new reference, run with reference_mode = True:
     $ python tests/test_hod.py
 from base directory
 """

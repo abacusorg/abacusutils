@@ -123,6 +123,7 @@ class AbacusHOD:
         self.want_ranks = HOD_params.get('want_ranks', False)
         self.want_AB = HOD_params.get('want_AB', False)
         self.want_shear = HOD_params.get('want_shear', False)
+        self.want_expvel = HOD_params.get('want_expvel', False)
         self.want_rsd = HOD_params['want_rsd']
 
         if clustering_params is not None:
@@ -250,7 +251,7 @@ class AbacusHOD:
         hid = np.empty([Nhalos_tot], dtype = int)
         hmultis = np.empty([Nhalos_tot])
         hrandoms = np.empty([Nhalos_tot])
-        hveldev = np.empty([Nhalos_tot])
+        hveldev = np.empty((Nhalos_tot, 3))
         hsigma3d = np.empty([Nhalos_tot])
         hc = np.empty([Nhalos_tot])
         hrvir = np.empty([Nhalos_tot])
@@ -308,7 +309,10 @@ class AbacusHOD:
             halo_ids = maskedhalos["id"].astype(int) # halo IDs
             halo_pos = maskedhalos["x_L2com"] # halo positions, Mpc / h
             halo_vels = maskedhalos['v_L2com'] # halo velocities, km/s
-            halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
+            if self.want_expvel:
+                halo_vel_dev = maskedhalos["randoms_exp"] # halo velocity dispersions, km/s
+            else:
+                halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
             halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_c = maskedhalos['r98_L2com']/maskedhalos['r25_L2com'] # concentration
             halo_rvir = maskedhalos['r98_L2com'] # rvir but using r98
@@ -531,7 +535,19 @@ class AbacusHOD:
             # np.random.seed(reseed)
             mtg = MTGenerator(np.random.PCG64(reseed))
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
-            r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+            if self.want_expvel:
+                rt0 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+                rt1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+                rt2 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+                rt = np.vstack((rt0, rt1, rt2)).T
+                r2 = np.zeros((len(rt), 3), dtype=np.float32)
+                r2[rt >= 0.5] = -np.log(2*(1-rt[rt >= 0.5]))
+                r2[rt < 0.5] = np.log(2*rt[rt < 0.5])
+            else:
+                r20 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r21 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r22 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r2 = np.vstack((r20, r21, r22)).T
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
             self.halo_data['hrandoms'] = r1
             self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)

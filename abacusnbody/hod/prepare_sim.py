@@ -624,8 +624,10 @@ def prepare_slab(i, savedir, simdir, simname, z_mock, z_type, tracer_flags, MT, 
     halos['npstartA'] = halos_pstart_new
     halos['npoutA'] = halos_pnum_new
     halos['randoms'] = np.random.random(len(halos)) # attaching random numbers
+    halos['randoms_exp'] = (np.random.randint(0, 2, size = (len(halos), 3))*2-1)\
+    *np.random.exponential(scale = np.repeat(halos["sigmav3d_L2com"], 3).reshape((-1, 3))/np.sqrt(3), size = (len(halos), 3)) # attaching random numbers
     halos['randoms_gaus_vrms'] = np.random.normal(loc = 0,
-        scale = halos["sigmav3d_L2com"]/np.sqrt(3), size = len(halos)) # attaching random numbers
+        scale = np.repeat(halos["sigmav3d_L2com"], 3).reshape((-1, 3))/np.sqrt(3), size = (len(halos), 3)) # attaching random numbers
 
     # output halo file
     print("outputting new halo file ")
