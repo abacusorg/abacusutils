@@ -251,7 +251,7 @@ class AbacusHOD:
         hid = np.empty([Nhalos_tot], dtype = int)
         hmultis = np.empty([Nhalos_tot])
         hrandoms = np.empty([Nhalos_tot])
-        hveldev = np.empty([Nhalos_tot])
+        hveldev = np.empty((Nhalos_tot, 3))
         hsigma3d = np.empty([Nhalos_tot])
         hc = np.empty([Nhalos_tot])
         hrvir = np.empty([Nhalos_tot])
@@ -536,12 +536,18 @@ class AbacusHOD:
             mtg = MTGenerator(np.random.PCG64(reseed))
             r1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
             if self.want_expvel:
-                rt = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
-                r2 = np.zeros(len(rt), dtype=np.float32)
+                rt0 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+                rt1 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+                rt2 = mtg.random(size=len(self.halo_data['hrandoms']), nthread=Nthread, dtype=np.float32)
+                rt = np.vstack((rt0, rt1, rt2)).T
+                r2 = np.zeros((len(rt), 3), dtype=np.float32)
                 r2[rt >= 0.5] = -np.log(2*(1-rt[rt >= 0.5]))
                 r2[rt < 0.5] = np.log(2*rt[rt < 0.5])
             else:
-                r2 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r20 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r21 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r22 = mtg.standard_normal(size=len(self.halo_data['hveldev']), nthread=Nthread, dtype=np.float32)
+                r2 = np.vstack((r20, r21, r22)).T
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
             self.halo_data['hrandoms'] = r1
             self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)

@@ -227,11 +227,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
             if keep[i] == 1:
                 # loop thru three directions to assign galaxy velocities and positions
                 lrg_x[j1] = pos[i,0]
-                lrg_vx[j1] = vel[i,0] + alpha_c_L * vdev[i] # velocity bias
+                lrg_vx[j1] = vel[i,0] + alpha_c_L * vdev[i,0] # velocity bias
                 lrg_y[j1] = pos[i,1]
-                lrg_vy[j1] = vel[i,1] + alpha_c_L * vdev[i] # velocity bias
+                lrg_vy[j1] = vel[i,1] + alpha_c_L * vdev[i,1] # velocity bias
                 lrg_z[j1] = pos[i,2]
-                lrg_vz[j1] = vel[i,2] + alpha_c_L * vdev[i] # velocity bias
+                lrg_vz[j1] = vel[i,2] + alpha_c_L * vdev[i,2] # velocity bias
                 # rsd only applies to the z direction
                 if rsd and origin is not None:
                     nx = lrg_x[j1] - origin[0]
@@ -253,11 +253,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
             elif keep[i] == 2:
                 # loop thru three directions to assign galaxy velocities and positions
                 elg_x[j2] = pos[i,0]
-                elg_vx[j2] = vel[i,0] + alpha_c_E * vdev[i] # velocity bias
+                elg_vx[j2] = vel[i,0] + alpha_c_E * vdev[i,0] # velocity bias
                 elg_y[j2] = pos[i,1]
-                elg_vy[j2] = vel[i,1] + alpha_c_E * vdev[i] # velocity bias
+                elg_vy[j2] = vel[i,1] + alpha_c_E * vdev[i,1] # velocity bias
                 elg_z[j2] = pos[i,2]
-                elg_vz[j2] = vel[i,2] + alpha_c_E * vdev[i] # velocity bias
+                elg_vz[j2] = vel[i,2] + alpha_c_E * vdev[i,2] # velocity bias
                 # rsd only applies to the z direction
                 if rsd and origin is not None:
                     nx = elg_x[j2] - origin[0]
@@ -279,11 +279,11 @@ def gen_cent(pos, vel, mass, ids, multis, randoms, vdev, deltac, fenv, shear,
             elif keep[i] == 3:
                 # loop thru three directions to assign galaxy velocities and positions
                 qso_x[j3] = pos[i,0]
-                qso_vx[j3] = vel[i,0] + alpha_c_Q * vdev[i] # velocity bias
+                qso_vx[j3] = vel[i,0] + alpha_c_Q * vdev[i,0] # velocity bias
                 qso_y[j3] = pos[i,1]
-                qso_vy[j3] = vel[i,1] + alpha_c_Q * vdev[i] # velocity bias
+                qso_vy[j3] = vel[i,1] + alpha_c_Q * vdev[i,1] # velocity bias
                 qso_z[j3] = pos[i,2]
-                qso_vz[j3] = vel[i,2] + alpha_c_Q * vdev[i] # velocity bias
+                qso_vz[j3] = vel[i,2] + alpha_c_Q * vdev[i,2] # velocity bias
                 # rsd only applies to the z direction
                 if rsd and origin is not None:
                     nx = qso_x[j3] - origin[0]
