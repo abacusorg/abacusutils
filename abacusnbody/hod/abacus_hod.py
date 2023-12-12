@@ -316,8 +316,7 @@ class AbacusHOD:
                 halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
 
             if len(halo_vel_dev.shape) == 1:
-                warnings.warn("Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. \\
-                x, y velocities may be unreliable.")
+                warnings.warn("Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. x, y velocities may be unreliable.")
                 halo_vel_dev = np.concatenate((halo_vel_dev, halo_vel_dev, halo_vel_dev)).reshape(-1, 3)
             halo_sigma3d = maskedhalos["sigmav3d_L2com"] # 3d velocity dispersion
             halo_c = maskedhalos['r98_L2com']/maskedhalos['r25_L2com'] # concentration
