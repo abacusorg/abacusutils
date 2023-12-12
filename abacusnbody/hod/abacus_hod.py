@@ -314,7 +314,7 @@ class AbacusHOD:
                 halo_vel_dev = maskedhalos["randoms_exp"] # halo velocity dispersions, km/s
             else:
                 halo_vel_dev = maskedhalos["randoms_gaus_vrms"] # halo velocity dispersions, km/s
-                
+
             if len(halo_vel_dev.shape) == 1:
                 warnings.warn("Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. \\
                 x, y velocities may be unreliable.")
