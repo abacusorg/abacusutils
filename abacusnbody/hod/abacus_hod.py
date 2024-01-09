@@ -153,7 +153,9 @@ class AbacusHOD:
             self.shearbins = np.linspace(-0.5, 0.5, 101)
 
             self.halo_mass_func, edges = np.histogramdd(
-                np.vstack((np.log10(self.halo_data['hmass']), self.halo_data['hdeltac'], self.halo_data['hfenv'])).T,
+                np.vstack((np.log10(self.halo_data['hmass']), 
+                           self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))), 
+                           self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))))).T,
                 bins = [self.logMbins, self.deltacbins, self.fenvbins],
                 weights = self.halo_data['hmultis'])
         else:
@@ -161,8 +163,15 @@ class AbacusHOD:
             meta = get_meta(self.sim_name, redshift=0.1)
             self.lbox = meta['BoxSize']
 
+        if self.want_AB:
+            assert 'hfenv' in self.halo_data.keys()
+            assert 'hdeltac' in self.halo_data.keys()
+        if self.want_shear:
+            assert 'hshear' in self.halo_data.keys()
+            
         self.halo_mass_func_wshear, edges = np.histogramdd(
-            np.vstack((np.log10(self.halo_data['hmass']), self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
+            np.vstack((np.log10(self.halo_data['hmass']), 
+                       self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
                        self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))),
                        self.halo_data.get('hshear', np.zeros(len(self.halo_data['hmass']))))).T,
             bins = [self.logMbins, self.deltacbins, self.fenvbins, self.shearbins],
