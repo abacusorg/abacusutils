@@ -153,8 +153,8 @@ class AbacusHOD:
             self.shearbins = np.linspace(-0.5, 0.5, 101)
 
             self.halo_mass_func, edges = np.histogramdd(
-                np.vstack((np.log10(self.halo_data['hmass']), 
-                           self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))), 
+                np.vstack((np.log10(self.halo_data['hmass']),
+                           self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
                            self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))))).T,
                 bins = [self.logMbins, self.deltacbins, self.fenvbins],
                 weights = self.halo_data['hmultis'])
@@ -168,9 +168,9 @@ class AbacusHOD:
             assert 'hdeltac' in self.halo_data.keys()
         if self.want_shear:
             assert 'hshear' in self.halo_data.keys()
-            
+
         self.halo_mass_func_wshear, edges = np.histogramdd(
-            np.vstack((np.log10(self.halo_data['hmass']), 
+            np.vstack((np.log10(self.halo_data['hmass']),
                        self.halo_data.get('hdeltac', np.zeros(len(self.halo_data['hmass']))),
                        self.halo_data.get('hfenv', np.zeros(len(self.halo_data['hmass']))),
                        self.halo_data.get('hshear', np.zeros(len(self.halo_data['hmass']))))).T,
@@ -564,7 +564,10 @@ class AbacusHOD:
                 r2 = np.vstack((r20, r21, r22)).T
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
             self.halo_data['hrandoms'] = r1
-            self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
+            if len(self.halo_data['hveldev'].shape) == 1:
+                self.halo_data['hveldev'] = r20*self.halo_data['hsigma3d']/np.sqrt(3)
+            else:
+                self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
             self.particle_data['prandoms'] = r3
 
             print("gen randoms took, ", time.time() - start)
