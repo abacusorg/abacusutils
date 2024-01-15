@@ -564,7 +564,10 @@ class AbacusHOD:
                 r2 = np.vstack((r20, r21, r22)).T
             r3 = mtg.random(size=len(self.particle_data['prandoms']), nthread=Nthread, dtype=np.float32)
             self.halo_data['hrandoms'] = r1
-            self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
+            if len(self.halo_data['hveldev'].shape) == 1:
+                self.halo_data['hveldev'] = r20*self.halo_data['hsigma3d']/np.sqrt(3)
+            else:
+                self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
             self.particle_data['prandoms'] = r3
 
             print("gen randoms took, ", time.time() - start)
