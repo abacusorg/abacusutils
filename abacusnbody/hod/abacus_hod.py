@@ -567,7 +567,7 @@ class AbacusHOD:
             if len(self.halo_data['hveldev'].shape) == 1:
                 self.halo_data['hveldev'] = r20*self.halo_data['hsigma3d']/np.sqrt(3)
             else:
-                self.halo_data['hveldev'] = r2*self.halo_data['hsigma3d']/np.sqrt(3)
+                self.halo_data['hveldev'] = r2*np.repeat(self.halo_data['hsigma3d'], 3).reshape((-1, 3))/np.sqrt(3)
             self.particle_data['prandoms'] = r3
 
             print("gen randoms took, ", time.time() - start)
