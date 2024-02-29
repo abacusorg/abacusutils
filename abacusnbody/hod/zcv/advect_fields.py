@@ -262,8 +262,8 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
             print("Computing cross-correlation of", keynames[i], keynames[j])
 
             # load field
-            field_fft_i = asdf.open(fields_fft_fn[i])['data']
-            field_fft_j = asdf.open(fields_fft_fn[j])['data']
+            field_fft_i = asdf.open(fields_fft_fn[i], lazy_load=False)['data']
+            field_fft_j = asdf.open(fields_fft_fn[j], lazy_load=False)['data']
 
             if save_3D_power:
                 power_ij_fn = Path(save_z_dir) / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{nmesh:d}.asdf"
@@ -295,7 +295,7 @@ def main(path2config, want_rsd=False, alt_simname=None, save_3D_power=False, onl
                 P['binned_poles'] *= field_D[i]*field_D[j]
                 pk_auto.append(P['power'])
                 pk_ij_dict[f'P_kmu_{keynames[i]}_{keynames[j]}'] = P['power']
-                pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = P['N_modes']
+                pk_ij_dict[f'N_kmu_{keynames[i]}_{keynames[j]}'] = P['N_mode']
                 pk_ij_dict[f'P_ell_{keynames[i]}_{keynames[j]}'] = P['binned_poles']
                 pk_ij_dict[f'N_ell_{keynames[i]}_{keynames[j]}'] = P['N_mode_poles']
                 del field_fft_i, field_fft_j; gc.collect() # noqa: E702
