@@ -17,11 +17,6 @@ import numpy as np
 from asdf.extension import Compressor, Extension
 
 
-def _monkey_patch(*args,**kwargs):
-    raise Exception("Please use abacusnbody.data.asdf.set_nthreads(nthreads)")
-
-asdf.compression.set_decompression_options = _monkey_patch
-
 def set_nthreads(nthreads):
     blosc.set_nthreads(nthreads)
 

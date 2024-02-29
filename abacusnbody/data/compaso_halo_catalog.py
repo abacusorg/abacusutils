@@ -20,17 +20,21 @@ from os.path import join as pjoin
 from pathlib import PurePath
 
 import asdf
-import asdf.compression
 import astropy.table
 import numba as nb
 import numpy as np
 from astropy.table import Table
 
+try:
+    import asdf._compression as asdf_compression
+except ImportError:
+    import asdf.compression as asdf_compression
+
 from . import asdf as _asdf
 from . import bitpacked
 
 try:
-    asdf.compression.validate('blsc')
+    asdf_compression.validate('blsc')
 except Exception as e:
     raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
