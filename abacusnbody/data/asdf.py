@@ -11,7 +11,6 @@ handle Blosc compression.
 import struct
 import time
 
-import asdf
 import blosc
 import numpy as np
 from asdf.extension import Compressor, Extension
