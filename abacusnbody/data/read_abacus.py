@@ -71,9 +71,14 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     '''
 
     import asdf
-    import asdf.compression
+
     try:
-        asdf.compression.validate('blsc')
+        import asdf._compression as asdf_compression
+    except ImportError:
+        import asdf.compression as asdf_compression
+
+    try:
+        asdf_compression.validate('blsc')
     except Exception as e:
         raise Exception("Abacus ASDF extension not properly loaded! \
                         Try reinstalling abacusutils: `pip install 'abacusutils>=1'`, \

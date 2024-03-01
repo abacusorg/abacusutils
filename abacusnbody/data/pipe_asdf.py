@@ -86,11 +86,15 @@ from os.path import isfile
 from timeit import default_timer as timer
 
 import asdf
-import asdf.compression
 import numpy as np
 
 try:
-    asdf.compression.validate('blsc')
+    import asdf._compression as asdf_compression
+except ImportError:
+    import asdf.compression as asdf_compression
+
+try:
+    asdf_compression.validate('blsc')
 except Exception as e:
     raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
 
