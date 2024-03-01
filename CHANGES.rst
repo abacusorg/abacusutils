@@ -1,6 +1,19 @@
 Changelog
 =========
 
+2.0.1 (2024-03-01)
+------------------
+This is a bugfix release primarily to add support for ASDF 3.1.0.
+Several other bugs in the ZCV and HOD modules are also fixed.
+
+Fixes
+~~~~~
+- Fix ASDF error in ZCV module, add ASDF 3.1.0 support [#130]
+- bug fix keys() [#126]
+- Sandydev: fixed reseeding bug [#127]
+- fix reseed bug [#128]
+- backward compatible fix for velocity bias [#121]
+
 2.0.0 (2023-11-15)
 ------------------
 
