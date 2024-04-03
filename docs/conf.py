@@ -73,7 +73,7 @@ html_favicon = 'images/icon_red.png'
 html_show_sourcelink = False
 html_theme_options = {
     "repository_url": "https://github.com/abacusorg/abacusutils",
-    "repository_branch": "master",
+    "repository_branch": "main",
     # "launch_buttons": {
     #     "binderhub_url": "https://mybinder.org",
     #     "notebook_interface": "jupyterlab",
