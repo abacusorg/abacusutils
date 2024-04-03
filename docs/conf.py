@@ -84,6 +84,7 @@ html_theme_options = {
     "use_repository_button": True,
     "use_download_button": True,
     "use_fullscreen_button": False,
+    "path_to_docs": "docs/",
 }
 
 napoleon_google_docstring = False
