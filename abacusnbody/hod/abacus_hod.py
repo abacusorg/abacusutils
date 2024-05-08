@@ -10,6 +10,7 @@ import gc
 import time
 from pathlib import Path
 import warnings
+import logging
 
 import asdf
 import h5py
@@ -99,6 +100,7 @@ class AbacusHOD:
         n_chunks: int, optional
             Number of chunks to split the input from the halo+particle subsample and number of output files in which to write out the galaxy catalogs following the format ``{tracer}s_{chunk}.dat``.
         """
+        self.logger = logging.getLogger('AbacusHOD')
         # simulation details
         self.sim_name = sim_params['sim_name']
         self.sim_dir = sim_params['sim_dir']
@@ -385,7 +387,7 @@ class AbacusHOD:
         halo_ticker = 0
         parts_ticker = 0
         for eslab in range(start, end):
-            print('Loading simulation by slab, ', eslab)
+            self.logger.info(f"Loading simulation slab {eslab}")
             if (
                 ('ELG' not in self.tracers.keys())
                 and ('QSO' not in self.tracers.keys())
@@ -427,9 +429,7 @@ class AbacusHOD:
                 ]  # halo velocity dispersions, km/s
 
             if len(halo_vel_dev.shape) == 1:
-                warnings.warn(
-                    'Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. x, y velocities may be unreliable.'
-                )
+                self.logger.warning("Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. x, y velocities may be unreliable.")
                 halo_vel_dev = np.concatenate(
                     (halo_vel_dev, halo_vel_dev, halo_vel_dev)
                 ).reshape(-1, 3)
@@ -555,7 +555,7 @@ class AbacusHOD:
 
         # sort halos by hid, important for conformity
         if not np.all(hid[:-1] <= hid[1:]):
-            print('sorting halos for conformity calculation')
+            self.logger.info("Sorting halos for conformity calculation.")
             sortind = np.argsort(hid)
             hpos = hpos[sortind]
             hvel = hvel[sortind]
@@ -750,7 +750,7 @@ class AbacusHOD:
                 )
             self.particle_data['prandoms'] = r3
 
-            print('gen randoms took, ', time.time() - start)
+            self.logger.info(f"Randoms generated in elapsed time {time.time() - start:.2f} s.")
 
         start = time.time()
         mock_dict = gen_gal_cat(
@@ -768,7 +768,7 @@ class AbacusHOD:
             verbose=verbose,
             fn_ext=fn_ext,
         )
-        print('gen mocks', time.time() - start)
+        self.logger.info(f'HOD generated in elapsed time {time.time() - start:.2f} s.')
 
         return mock_dict
 
