@@ -16,9 +16,7 @@ repos:
     rev: "v0.4.3"
     hooks:
       - id: ruff
-        # TODO: turning off line length check
-        # When ruff formatting is available, use that to auto-fix
-        args: [--fix, --ignore=E501]
+        args: [--fix]
       - id: ruff-format
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
