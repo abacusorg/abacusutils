@@ -9,7 +9,6 @@
 import gc
 import time
 from pathlib import Path
-import warnings
 import logging
 
 import asdf
@@ -387,7 +386,7 @@ class AbacusHOD:
         halo_ticker = 0
         parts_ticker = 0
         for eslab in range(start, end):
-            self.logger.info(f"Loading simulation slab {eslab}")
+            self.logger.info(f'Loading simulation slab {eslab}')
             if (
                 ('ELG' not in self.tracers.keys())
                 and ('QSO' not in self.tracers.keys())
@@ -429,7 +428,9 @@ class AbacusHOD:
                 ]  # halo velocity dispersions, km/s
 
             if len(halo_vel_dev.shape) == 1:
-                self.logger.warning("Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. x, y velocities may be unreliable.")
+                self.logger.warning(
+                    'Warning: galaxy x, y velocity bias randoms not set, using z randoms instead. x, y velocities may be unreliable.'
+                )
                 halo_vel_dev = np.concatenate(
                     (halo_vel_dev, halo_vel_dev, halo_vel_dev)
                 ).reshape(-1, 3)
@@ -555,7 +556,7 @@ class AbacusHOD:
 
         # sort halos by hid, important for conformity
         if not np.all(hid[:-1] <= hid[1:]):
-            self.logger.info("Sorting halos for conformity calculation.")
+            self.logger.info('Sorting halos for conformity calculation.')
             sortind = np.argsort(hid)
             hpos = hpos[sortind]
             hvel = hvel[sortind]
@@ -750,7 +751,9 @@ class AbacusHOD:
                 )
             self.particle_data['prandoms'] = r3
 
-            self.logger.info(f"Randoms generated in elapsed time {time.time() - start:.2f} s.")
+            self.logger.info(
+                f'Randoms generated in elapsed time {time.time() - start:.2f} s.'
+            )
 
         start = time.time()
         mock_dict = gen_gal_cat(
