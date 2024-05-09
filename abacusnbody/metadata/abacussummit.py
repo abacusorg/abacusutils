@@ -3,11 +3,11 @@ Retrieve the cosmology and other code parameters associated with the
 AbacusSummit simulations.
 """
 
-try:
-    # Python 3.9 and later
+import sys
+
+if sys.version_info >= (3, 9):
     import importlib.resources as resources
-except ImportError:
-    # Python 3.8 and earlier
+else:
     import importlib_resources as resources
 
 import asdf
