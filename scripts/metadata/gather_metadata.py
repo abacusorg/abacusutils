@@ -12,32 +12,35 @@ ABACUSSUMMIT = Path(os.getenv('CFS', '/global/cfs/cdirs')) / 'desi/cosmosim/Abac
 COSMOLOGIES = Path(os.getenv('ABACUS')) / 'external/AbacusSummit/Cosmologies'
 COSM_KEYS = ('A_s', 'alpha_s')
 
+
 def get_state(fn):
     with open(fn) as fp:
         headerlines = fp.readlines()
-    i = next(i for i,ell in enumerate(headerlines) if ell.startswith('#created'))
-    statestr = ''.join(headerlines[i+1:])
+    i = next(i for i, ell in enumerate(headerlines) if ell.startswith('#created'))
+    statestr = ''.join(headerlines[i + 1 :])
 
     return dict(InputFile(str_source=statestr))
+
 
 @click.command()
 @click.option('--small', is_flag=True)
 def main(small=False):
-    '''Gather the simulation headers from the IC files.
+    """Gather the simulation headers from the IC files.
 
     We use the IC files because they contain the growth tables
     and linear Pk, which the other headers don't.
-    '''
+    """
     icdir = ABACUSSUMMIT / 'ic'
 
     if not small:
-        simnames = sorted(list(ABACUSSUMMIT.glob('AbacusSummit_*'))) + \
-            [ABACUSSUMMIT / 'small' / 'AbacusSummit_small_c000_ph3000']
+        simnames = sorted(list(ABACUSSUMMIT.glob('AbacusSummit_*'))) + [
+            ABACUSSUMMIT / 'small' / 'AbacusSummit_small_c000_ph3000'
+        ]
     else:
         simnames = sorted(list((ABACUSSUMMIT / 'small').glob('AbacusSummit_*')))
 
     headers = {}
-    for i,sim in enumerate(tqdm(simnames)):
+    for i, sim in enumerate(tqdm(simnames)):
         param = dict(InputFile(sim / 'abacus.par'))  # static
         ctag = sim.name.split('_')[-2][1:]  # '000'
 
@@ -54,14 +57,16 @@ def main(small=False):
                 except Exception:
                     continue  # nothing!
 
-            state[zdir.name] = {k:v for k,v in zheader.items() if k not in param}
+            state[zdir.name] = {k: v for k, v in zheader.items() if k not in param}
 
         if 'small' in sim.name:
             _icdir = icdir / 'small'
         else:
             _icdir = icdir
 
-        with asdf.open(_icdir / sim.name / 'ic_dens_N576.asdf', lazy_load=True, copy_arrays=True) as af:
+        with asdf.open(
+            _icdir / sim.name / 'ic_dens_N576.asdf', lazy_load=True, copy_arrays=True
+        ) as af:
             icparam = af['header'].copy()
             class_pk = af['CLASS_power_spectrum'].copy()
 
@@ -81,6 +86,7 @@ def main(small=False):
 
     af = asdf.AsdfFile(tree=headers)
     af.write_to('headers.asdf')
+
 
 if __name__ == '__main__':
     main()

@@ -2,12 +2,14 @@
 import time
 
 import numpy as np
+
 try:
     from Corrfunc.theory import DDrppi, DDsmu
 except ImportError as e:
-    raise ImportError('Could not import Corrfunc. Install abacusutils with '
-        '"pip install abacusutils[all]" to install Corrfunc.') \
-        from e
+    raise ImportError(
+        'Could not import Corrfunc. Install abacusutils with '
+        '"pip install abacusutils[all]" to install Corrfunc.'
+    ) from e
 
 from scipy.special import legendre
 
@@ -72,26 +74,51 @@ def tpcf_multipole(s_mu_tcpf_result, mu_bins, order=0):
     order = int(order)
 
     # calculate the center of each mu bin
-    mu_bin_centers = (mu_bins[:-1]+mu_bins[1:])/(2.0)
+    mu_bin_centers = (mu_bins[:-1] + mu_bins[1:]) / (2.0)
 
     # get the Legendre polynomial of the desired order.
     Ln = legendre(order)
 
     # numerically integrate over mu
-    result = (2.0*order + 1.0)/2.0 * np.sum(s_mu_tcpf_result * np.diff(mu_bins) *\
-        (Ln(mu_bin_centers) + Ln(-1.0*mu_bin_centers)), axis=1)
+    result = (
+        (2.0 * order + 1.0)
+        / 2.0
+        * np.sum(
+            s_mu_tcpf_result
+            * np.diff(mu_bins)
+            * (Ln(mu_bin_centers) + Ln(-1.0 * mu_bin_centers)),
+            axis=1,
+        )
+    )
 
     return result
 
-def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
-    pi_bin_size, lbox, Nthread, num_cells = 20, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.
+
+def calc_xirppi_fast(
+    x1,
+    y1,
+    z1,
+    rpbins,
+    pimax,
+    pi_bin_size,
+    lbox,
+    Nthread,
+    num_cells=20,
+    x2=None,
+    y2=None,
+    z2=None,
+):  # all r assumed to be in h-1 mpc units.
     start = time.time()
     if not isinstance(pimax, int):
-        raise ValueError("pimax needs to be an integer")
+        raise ValueError('pimax needs to be an integer')
     if not isinstance(pi_bin_size, int):
-        raise ValueError("pi_bin_size needs to be an integer")
+        raise ValueError('pi_bin_size needs to be an integer')
     if not pimax % pi_bin_size == 0:
-        raise ValueError("pi_bin_size needs to be an integer divisor of pimax, current values are ", pi_bin_size, pimax)
+        raise ValueError(
+            'pi_bin_size needs to be an integer divisor of pimax, current values are ',
+            pi_bin_size,
+            pimax,
+        )
 
     ND1 = float(len(x1))
     if x2 is not None:
@@ -114,8 +141,19 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
     if autocorr == 1:
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
-                         X1 = x1, Y1 = y1, Z1 = z1, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
+        results = DDrppi(
+            autocorr,
+            Nthread,
+            binfile=rpbins,
+            pimax=pimax,
+            X1=x1,
+            Y1=y1,
+            Z1=z1,
+            boxsize=lbox,
+            periodic=True,
+            max_cells_per_dim=num_cells,
+            verbose=False,
+        )
         DD_counts = results['npairs']
     else:
         x2 = x2.astype(np.float32)
@@ -123,25 +161,62 @@ def calc_xirppi_fast(x1, y1, z1, rpbins, pimax,
         z2 = z2.astype(np.float32)
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells, verbose = False)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
-                         X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True,
-                         max_cells_per_dim = num_cells, verbose = False)
+        results = DDrppi(
+            autocorr,
+            Nthread,
+            binfile=rpbins,
+            pimax=pimax,
+            X1=x1,
+            Y1=y1,
+            Z1=z1,
+            X2=x2,
+            Y2=y2,
+            Z2=z2,
+            boxsize=lbox,
+            periodic=True,
+            max_cells_per_dim=num_cells,
+            verbose=False,
+        )
         DD_counts = results['npairs']
-    print("corrfunc took time ", time.time() - cf_start)
+    print('corrfunc took time ', time.time() - cf_start)
 
-    DD_counts_new = np.array([np.sum(DD_counts[i:i+pi_bin_size]) for i in range(0, len(DD_counts), pi_bin_size)])
-    DD_counts_new = DD_counts_new.reshape((len(rpbins) - 1, int(pimax/pi_bin_size)))
+    DD_counts_new = np.array(
+        [
+            np.sum(DD_counts[i : i + pi_bin_size])
+            for i in range(0, len(DD_counts), pi_bin_size)
+        ]
+    )
+    DD_counts_new = DD_counts_new.reshape((len(rpbins) - 1, int(pimax / pi_bin_size)))
 
     # RR_counts_new = np.zeros((len(rpbins) - 1, int(pimax/pi_bin_size)))
-    RR_counts_new = np.pi*(rpbins[1:]**2 - rpbins[:-1]**2)*pi_bin_size / lbox**3 * ND1 * ND2 * 2
+    RR_counts_new = (
+        np.pi
+        * (rpbins[1:] ** 2 - rpbins[:-1] ** 2)
+        * pi_bin_size
+        / lbox**3
+        * ND1
+        * ND2
+        * 2
+    )
     xirppi = DD_counts_new / RR_counts_new[:, None] - 1
-    print("corrfunc took ", time.time() - start, "ngal ", len(x1))
+    print('corrfunc took ', time.time() - start, 'ngal ', len(x1))
     return xirppi
 
 
-def calc_multipole_fast(x1, y1, z1, sbins,
-    lbox, Nthread, nbins_mu = 50, num_cells = 20, x2 = None, y2 = None, z2 = None, orders = [0, 2]):  # all r assumed to be in h-1 mpc units.
-
+def calc_multipole_fast(
+    x1,
+    y1,
+    z1,
+    sbins,
+    lbox,
+    Nthread,
+    nbins_mu=50,
+    num_cells=20,
+    x2=None,
+    y2=None,
+    z2=None,
+    orders=[0, 2],
+):  # all r assumed to be in h-1 mpc units.
     ND1 = float(len(x1))
     if x2 is not None:
         ND2 = len(x2)
@@ -162,19 +237,55 @@ def calc_multipole_fast(x1, y1, z1, sbins,
     lbox = np.float32(lbox)
 
     if autocorr == 1:
-        results = DDsmu(autocorr, Nthread, sbins, 1, nbins_mu, x1, y1, z1, periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
+        results = DDsmu(
+            autocorr,
+            Nthread,
+            sbins,
+            1,
+            nbins_mu,
+            x1,
+            y1,
+            z1,
+            periodic=True,
+            boxsize=lbox,
+            max_cells_per_dim=num_cells,
+        )
         DD_counts = results['npairs']
     else:
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
-        results = DDsmu(autocorr, Nthread, sbins, 1, nbins_mu, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
-            periodic = True, boxsize = lbox, max_cells_per_dim = num_cells)
+        results = DDsmu(
+            autocorr,
+            Nthread,
+            sbins,
+            1,
+            nbins_mu,
+            x1,
+            y1,
+            z1,
+            X2=x2,
+            Y2=y2,
+            Z2=z2,
+            periodic=True,
+            boxsize=lbox,
+            max_cells_per_dim=num_cells,
+        )
         DD_counts = results['npairs']
     DD_counts = DD_counts.reshape((len(sbins) - 1, nbins_mu))
 
-    mu_bins = np.linspace(0, 1, nbins_mu+1)
-    RR_counts = 2*np.pi/3*(sbins[1:, None]**3 - sbins[:-1, None]**3)*(mu_bins[None, 1:] - mu_bins[None, :-1]) / lbox**3 * ND1 * ND2 * 2
+    mu_bins = np.linspace(0, 1, nbins_mu + 1)
+    RR_counts = (
+        2
+        * np.pi
+        / 3
+        * (sbins[1:, None] ** 3 - sbins[:-1, None] ** 3)
+        * (mu_bins[None, 1:] - mu_bins[None, :-1])
+        / lbox**3
+        * ND1
+        * ND2
+        * 2
+    )
 
     xi_s_mu = DD_counts / RR_counts - 1
 
@@ -187,10 +298,11 @@ def calc_multipole_fast(x1, y1, z1, sbins,
     return xi_array
 
 
-def calc_wp_fast(x1, y1, z1, rpbins, pimax,
-    lbox, Nthread, num_cells = 30, x2 = None, y2 = None, z2 = None):  # all r assumed to be in h-1 mpc units.
+def calc_wp_fast(
+    x1, y1, z1, rpbins, pimax, lbox, Nthread, num_cells=30, x2=None, y2=None, z2=None
+):  # all r assumed to be in h-1 mpc units.
     if not isinstance(pimax, int):
-        raise ValueError("pimax needs to be an integer")
+        raise ValueError('pimax needs to be an integer')
 
     ND1 = float(len(x1))
     if x2 is not None:
@@ -213,25 +325,48 @@ def calc_wp_fast(x1, y1, z1, rpbins, pimax,
     if autocorr == 1:
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
-                         X1 = x1, Y1 = y1, Z1 = z1, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        results = DDrppi(
+            autocorr,
+            Nthread,
+            binfile=rpbins,
+            pimax=pimax,
+            X1=x1,
+            Y1=y1,
+            Z1=z1,
+            boxsize=lbox,
+            periodic=True,
+            max_cells_per_dim=num_cells,
+        )
         DD_counts = results['npairs']
     else:
-        print("sample size", len(x1), len(x2))
+        print('sample size', len(x1), len(x2))
         x2 = x2.astype(np.float32)
         y2 = y2.astype(np.float32)
         z2 = z2.astype(np.float32)
         # results = DDrppi(autocorr, Nthread, pimax, rpbins, x1, y1, z1, X2 = x2, Y2 = y2, Z2 = z2,
         #     boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
-        results = DDrppi(autocorr, Nthread, binfile = rpbins, pimax = pimax,
-                         X1 = x1, Y1 = y1, Z1 = z1, X2 = x2, Y2 = y2, Z2 = z2, boxsize = lbox, periodic = True, max_cells_per_dim = num_cells)
+        results = DDrppi(
+            autocorr,
+            Nthread,
+            binfile=rpbins,
+            pimax=pimax,
+            X1=x1,
+            Y1=y1,
+            Z1=z1,
+            X2=x2,
+            Y2=y2,
+            Z2=z2,
+            boxsize=lbox,
+            periodic=True,
+            max_cells_per_dim=num_cells,
+        )
         DD_counts = results['npairs']
-    print("corrfunc took time ", time.time() - cf_start)
+    print('corrfunc took time ', time.time() - cf_start)
     DD_counts = DD_counts.reshape((len(rpbins) - 1, int(pimax)))
 
     # RR_counts = np.zeros((len(rpbins) - 1, int(pimax)))
     # for i in range(len(rpbins) - 1):
-    RR_counts = np.pi*(rpbins[1:]**2 - rpbins[:-1]**2) / lbox**3 * ND1 * ND2 * 2
+    RR_counts = np.pi * (rpbins[1:] ** 2 - rpbins[:-1] ** 2) / lbox**3 * ND1 * ND2 * 2
     xirppi = DD_counts / RR_counts[:, None] - 1
 
-    return 2*np.sum(xirppi, axis = 1)
+    return 2 * np.sum(xirppi, axis=1)

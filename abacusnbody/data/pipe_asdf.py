@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-'''
+"""
 ``pipe_asdf`` is a Python script to unpack Abacus ASDF files (such as
 halo catalog or particle data) and write them out via a Unix pipe (stdout).
 The intention is to provide a simple way for C, C++, Fortran, etc,
@@ -77,7 +77,7 @@ To-do
 ======
 - Add a "-k/--key" flag to read header fields. Decide on a wire protocol.
 - Add CompaSOHaloCatalog hooks to pipe the unpacked data (?)
-'''
+"""
 
 import argparse
 import gc
@@ -96,15 +96,27 @@ except ImportError:
 try:
     asdf_compression.validate('blsc')
 except Exception as e:
-    raise Exception("Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`") from e
+    raise Exception(
+        'Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`'
+    ) from e
 
 DEFAULT_DATA_KEY = 'data'
 DEFAULT_HEADER_KEY = 'header'
 
-def unpack_to_pipe(asdf_fns, fields, data_key=DEFAULT_DATA_KEY, header_key=DEFAULT_HEADER_KEY, pipe=sys.stdout.buffer, nthread=4,
-                    verbose=True):
+
+def unpack_to_pipe(
+    asdf_fns,
+    fields,
+    data_key=DEFAULT_DATA_KEY,
+    header_key=DEFAULT_HEADER_KEY,
+    pipe=sys.stdout.buffer,
+    nthread=4,
+    verbose=True,
+):
     if pipe.isatty():
-        raise RuntimeError('Output pipe appears to be a terminal! Did you mean to pipe or redirect stdout?')
+        raise RuntimeError(
+            'Output pipe appears to be a terminal! Did you mean to pipe or redirect stdout?'
+        )
 
     # begin input validation and header reads
     assert pipe is not None  # can this happen?
@@ -138,27 +150,49 @@ def unpack_to_pipe(asdf_fns, fields, data_key=DEFAULT_DATA_KEY, header_key=DEFAU
             pipe.write(arr)
             del arr
             gc.collect()
-        nbytes_tot += N*field_width
+        nbytes_tot += N * field_width
     pipe.close()  # signal EOF
     tot_time = timer() - start_time
     if verbose:
-        print(f'[pipe_asdf.py] Read + decompressed {nbytes_tot/1e6:.3g} MB in {read_time:.3g} s at {nbytes_tot/1e6/read_time:.3g} MB/s', file=sys.stderr)
-        print(f'[pipe_asdf.py] Processed {nbytes_tot/1e6:.3g} MB in {tot_time:.3g} s at {nbytes_tot/1e6/tot_time:.3g} MB/s', file=sys.stderr)
+        print(
+            f'[pipe_asdf.py] Read + decompressed {nbytes_tot/1e6:.3g} MB in {read_time:.3g} s at {nbytes_tot/1e6/read_time:.3g} MB/s',
+            file=sys.stderr,
+        )
+        print(
+            f'[pipe_asdf.py] Processed {nbytes_tot/1e6:.3g} MB in {tot_time:.3g} s at {nbytes_tot/1e6/tot_time:.3g} MB/s',
+            file=sys.stderr,
+        )
 
 
-
-class _ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+class _ArgParseFormatter(
+    argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter
+):
     pass
 
-def main():
-    '''Invoke the command-line interface'''
-    parser = argparse.ArgumentParser(description='A script to unpack Abacus ASDF files and write the raw data to stdout. '
-                                                    'See https://abacusutils.readthedocs.io/en/latest/pipes.html',
-                                        formatter_class=_ArgParseFormatter)
 
-    parser.add_argument('asdf-file', help='An ASDF file. Multiple may be specified.', nargs='+')
-    parser.add_argument('-f', '--field', help='A field/column to pipe. Multiple -f flags are allowed, in which case fields will be piped in the order they are specified.', action='append')
-    parser.add_argument('--nthread', help='Number of blosc decompression threads (when applicable).  For AbacusSummit, use 1 to 4.', type=int, default=4)
+def main():
+    """Invoke the command-line interface"""
+    parser = argparse.ArgumentParser(
+        description='A script to unpack Abacus ASDF files and write the raw data to stdout. '
+        'See https://abacusutils.readthedocs.io/en/latest/pipes.html',
+        formatter_class=_ArgParseFormatter,
+    )
+
+    parser.add_argument(
+        'asdf-file', help='An ASDF file. Multiple may be specified.', nargs='+'
+    )
+    parser.add_argument(
+        '-f',
+        '--field',
+        help='A field/column to pipe. Multiple -f flags are allowed, in which case fields will be piped in the order they are specified.',
+        action='append',
+    )
+    parser.add_argument(
+        '--nthread',
+        help='Number of blosc decompression threads (when applicable).  For AbacusSummit, use 1 to 4.',
+        type=int,
+        default=4,
+    )
 
     args = parser.parse_args()
     args = vars(args)

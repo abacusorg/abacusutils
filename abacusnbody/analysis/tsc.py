@@ -7,10 +7,20 @@ import numpy as np
 __all__ = ['tsc_parallel', 'partition_parallel']
 
 
-def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
-    npartition=None, sort=False, coord=0, verbose=False, offset=0.
+def tsc_parallel(
+    pos,
+    densgrid,
+    box,
+    weights=None,
+    nthread=-1,
+    wrap=True,
+    npartition=None,
+    sort=False,
+    coord=0,
+    verbose=False,
+    offset=0.0,
 ):
-    '''
+    """
     A parallel implementation of TSC mass assignment using numba. The algorithm
     partitions the particles into stripes of sufficient width that their TSC
     clouds don't overlap, and then does all the even-numbered stripes in
@@ -88,7 +98,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
     dens : ndarray
         The density grid, which may be newly allocated, or the same as the
         input ``densgrid`` argument if that argument was an ndarray.
-    '''
+    """
 
     if nthread < 0:
         nthread = numba.config.NUMBA_NUM_THREADS
@@ -97,7 +107,7 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     numba.set_num_threads(nthread)
     if isinstance(densgrid, (int, np.integer)):
-        densgrid = (densgrid,densgrid,densgrid)
+        densgrid = (densgrid, densgrid, densgrid)
     if isinstance(densgrid, tuple):
         densgrid = _zeros_parallel(densgrid)
     n1d = densgrid.shape[coord]
@@ -106,13 +116,13 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         if nthread > 1:
             # Can be equal to n1d//2, or less than or equal to n1d//3.
             # Must be even, and need not exceed 2*nthread.
-            if 2*nthread >= n1d//2:
-                npartition = n1d//2
+            if 2 * nthread >= n1d // 2:
+                npartition = n1d // 2
                 npartition = 2 * (npartition // 2)
-                if npartition < n1d//2:
-                    npartition = n1d//3
+                if npartition < n1d // 2:
+                    npartition = n1d // 3
             else:
-                npartition = min(n1d//3, 2*nthread)
+                npartition = min(n1d // 3, 2 * nthread)
             npartition = 2 * (npartition // 2)  # must be even
         else:
             npartition = 1
@@ -121,20 +131,20 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
         raise ValueError(
             f'npartition {npartition} must be less than'
             f' ngrid//3 = {n1d//3} or equal to ngrid//2 = {n1d//2}'
-            )
+        )
     if npartition > 1 and npartition % 2 != 0 and nthread > 1:
-        raise ValueError(
-            f'npartition {npartition} not divisible by 2'
-            )
-    if verbose and nthread > 1 and npartition < 2*nthread:
-        print(f'npartition {npartition} not large enough to use'
-              f' all {nthread} threads; should be 2*nthread',
-              stacklevel=2,
-              )
+        raise ValueError(f'npartition {npartition} not divisible by 2')
+    if verbose and nthread > 1 and npartition < 2 * nthread:
+        print(
+            f'npartition {npartition} not large enough to use'
+            f' all {nthread} threads; should be 2*nthread',
+            stacklevel=2,
+        )
 
     def _check_dtype(a, name):
         if a.itemsize > 4:
-            warnings.warn(f'{name}.dtype={a.dtype} instead of np.float32. '
+            warnings.warn(
+                f'{name}.dtype={a.dtype} instead of np.float32. '
                 'float32 is recommended for performance.',
             )
 
@@ -156,16 +166,22 @@ def tsc_parallel(pos, densgrid, box, weights=None, nthread=-1, wrap=True,
 
     if npartition > 1:
         parttime = -timeit.default_timer()
-        ppart, starts, wpart = partition_parallel(pos, npartition, box,
-            weights=weights, nthread=nthread, coord=coord, sort=sort,
-            )
+        ppart, starts, wpart = partition_parallel(
+            pos,
+            npartition,
+            box,
+            weights=weights,
+            nthread=nthread,
+            coord=coord,
+            sort=sort,
+        )
         parttime += timeit.default_timer()
         if verbose:
             print(f'Partition time: {parttime:.4g} sec')
     else:
         ppart = pos
         wpart = weights
-        starts = np.array([0,len(pos)], dtype=np.int64)
+        starts = np.array([0, len(pos)], dtype=np.int64)
 
     tsctime = -timeit.default_timer()
     _tsc_parallel(ppart, starts, densgrid, box, weights=wpart, offset=offset)
@@ -182,7 +198,7 @@ def _zeros_parallel(shape, dtype=np.float32):
     arr = np.empty(shape, dtype=dtype)
 
     for i in numba.prange(shape[0]):
-        arr[i] = 0.
+        arr[i] = 0.0
 
     return arr
 
@@ -191,35 +207,35 @@ def _zeros_parallel(shape, dtype=np.float32):
 def _wrap_inplace(pos, box):
     for i in numba.prange(len(pos)):
         for j in range(3):
-            if pos[i,j] >= box:
-                pos[i,j] -= box
-            elif pos[i,j] < 0:
-                pos[i,j] += box
+            if pos[i, j] >= box:
+                pos[i, j] -= box
+            elif pos[i, j] < 0:
+                pos[i, j] += box
 
 
 @numba.njit(parallel=True)
 def _tsc_parallel(ppart, starts, dens, box, weights, offset):
     npartition = len(starts) - 1
-    for i in numba.prange((npartition + 1)//2):
+    for i in numba.prange((npartition + 1) // 2):
         if weights is not None:
-            wslice = weights[starts[2*i]:starts[2*i + 1]]
+            wslice = weights[starts[2 * i] : starts[2 * i + 1]]
         else:
             wslice = None
         _tsc_scatter(
-            ppart[starts[2*i]:starts[2*i + 1]],
+            ppart[starts[2 * i] : starts[2 * i + 1]],
             dens,
             box,
             weights=wslice,
             offset=offset,
         )
     if npartition > 1:
-        for i in numba.prange((npartition + 1)//2):
+        for i in numba.prange((npartition + 1) // 2):
             if weights is not None:
-                wslice = weights[starts[2*i + 1]:starts[2*i + 2]]
+                wslice = weights[starts[2 * i + 1] : starts[2 * i + 2]]
             else:
                 wslice = None
             _tsc_scatter(
-                ppart[starts[2*i + 1]:starts[2*i + 2]],
+                ppart[starts[2 * i + 1] : starts[2 * i + 2]],
                 dens,
                 box,
                 weights=wslice,
@@ -228,10 +244,16 @@ def _tsc_parallel(ppart, starts, dens, box, weights, offset):
 
 
 @numba.njit(parallel=True, fastmath=True)
-def partition_parallel(pos, npartition, boxsize, weights=None, coord=0,
-    nthread=-1, sort=False,
+def partition_parallel(
+    pos,
+    npartition,
+    boxsize,
+    weights=None,
+    coord=0,
+    nthread=-1,
+    sort=False,
 ):
-    '''
+    """
     A parallel partition.  Partitions a set of positions into ``npartition``
     pieces, using the ``coord`` coordinate (``coord=0`` partitions on ``x``, ``coord=1``
     partitions on ``y``, etc.).
@@ -281,7 +303,7 @@ def partition_parallel(pos, npartition, boxsize, weights=None, coord=0,
 
     wpart : ndarray or None
         The weights, in partitioned order; or None if ``weights`` not given.
-    '''
+    """
 
     if nthread < 0:
         nthread = numba.config.NUMBA_NUM_THREADS
@@ -291,20 +313,20 @@ def partition_parallel(pos, npartition, boxsize, weights=None, coord=0,
 
     # First pass: compute key and per-thread histogram
     dtype = pos.dtype.type
-    inv_pwidth = dtype(npartition/boxsize)
+    inv_pwidth = dtype(npartition / boxsize)
     keys = np.empty(len(pos), dtype=np.int32)
-    counts = np.zeros((nthread,npartition), dtype=np.int32)
-    tstart = np.linspace(0, len(pos), nthread+1).astype(np.int64)
+    counts = np.zeros((nthread, npartition), dtype=np.int32)
+    tstart = np.linspace(0, len(pos), nthread + 1).astype(np.int64)
     for t in numba.prange(nthread):
-        for i in range(tstart[t],tstart[t+1]):
-            keys[i] = min(np.int32(pos[i,coord] * inv_pwidth), npartition-1)
-            counts[t,keys[i]] += 1
+        for i in range(tstart[t], tstart[t + 1]):
+            keys[i] = min(np.int32(pos[i, coord] * inv_pwidth), npartition - 1)
+            counts[t, keys[i]] += 1
 
     # Compute start indices for parallel scatter
-    pointers = np.empty(nthread*npartition, dtype=np.int64)
+    pointers = np.empty(nthread * npartition, dtype=np.int64)
     pointers[0] = 0
     pointers[1:] = np.cumsum(counts.T)[:-1]
-    pointers = np.ascontiguousarray(pointers.reshape(npartition,nthread).T)
+    pointers = np.ascontiguousarray(pointers.reshape(npartition, nthread).T)
 
     starts = np.empty(npartition + 1, dtype=np.int64)
     starts[:-1] = pointers[0]
@@ -315,35 +337,35 @@ def partition_parallel(pos, npartition, boxsize, weights=None, coord=0,
     if weights is not None:
         wsort = np.empty_like(weights)
         for t in numba.prange(nthread):
-            for i in range(tstart[t],tstart[t+1]):
+            for i in range(tstart[t], tstart[t + 1]):
                 k = keys[i]
-                s = pointers[t,k]
+                s = pointers[t, k]
                 for j in range(3):
-                    psort[s,j] = pos[i,j]
+                    psort[s, j] = pos[i, j]
                 wsort[s] = weights[i]
-                pointers[t,k] += 1
+                pointers[t, k] += 1
 
         if sort:
             for i in numba.prange(npartition):
-                part = psort[starts[i]:starts[i+1]]
-                iord = part[:,coord].argsort()
+                part = psort[starts[i] : starts[i + 1]]
+                iord = part[:, coord].argsort()
                 part[:] = part[iord]
-                weightspart = wsort[starts[i]:starts[i+1]]
+                weightspart = wsort[starts[i] : starts[i + 1]]
                 weightspart[:] = weightspart[iord]
     else:
         wsort = None
         for t in numba.prange(nthread):
-            for i in range(tstart[t],tstart[t+1]):
+            for i in range(tstart[t], tstart[t + 1]):
                 k = keys[i]
-                s = pointers[t,k]
+                s = pointers[t, k]
                 for j in range(3):
-                    psort[s,j] = pos[i,j]
-                pointers[t,k] += 1
+                    psort[s, j] = pos[i, j]
+                pointers[t, k] += 1
 
         if sort:
             for i in numba.prange(npartition):
-                part = psort[starts[i]:starts[i+1]]
-                iord = part[:,coord].argsort()
+                part = psort[starts[i] : starts[i + 1]]
+                iord = part[:, coord].argsort()
                 part[:] = part[iord]
 
     return psort, starts, wsort
@@ -357,11 +379,11 @@ def _rightwrap(x, L):
 
 
 @numba.njit(fastmath=True)
-def _tsc_scatter(positions, density, boxsize, weights=None, offset=0.):
-    '''
+def _tsc_scatter(positions, density, boxsize, weights=None, offset=0.0):
+    """
     TSC worker function. Expects particles in domain [0,boxsize).
     Supports 3D and 2D.
-    '''
+    """
     ftype = positions.dtype.type
     itype = np.int16
     threeD = density.ndim == 3
@@ -370,26 +392,26 @@ def _tsc_scatter(positions, density, boxsize, weights=None, offset=0.):
     if threeD:
         gz = itype(density.shape[2])
 
-    inv_hx = ftype(gx/boxsize)
-    inv_hy = ftype(gy/boxsize)
+    inv_hx = ftype(gx / boxsize)
+    inv_hy = ftype(gy / boxsize)
     if threeD:
-        inv_hz = ftype(gz/boxsize)
+        inv_hz = ftype(gz / boxsize)
 
     offset = ftype(offset)
-    W = ftype(1.)
+    W = ftype(1.0)
     have_W = weights is not None
 
-    HALF = ftype(.5)
-    P75 = ftype(.75)
+    HALF = ftype(0.5)
+    P75 = ftype(0.75)
     for n in range(len(positions)):
         if have_W:
             W = ftype(weights[n])
 
         # convert to a position in the grid
-        px = (positions[n,0] + offset) * inv_hx
-        py = (positions[n,1] + offset) * inv_hy
+        px = (positions[n, 0] + offset) * inv_hx
+        py = (positions[n, 1] + offset) * inv_hy
         if threeD:
-            pz = (positions[n,2] + offset) * inv_hz
+            pz = (positions[n, 2] + offset) * inv_hz
 
         # round to nearest cell center
         ix = itype(round(px))
@@ -405,68 +427,68 @@ def _tsc_scatter(positions, density, boxsize, weights=None, offset=0.):
 
         # find the tsc weights for each dimension
         wx = P75 - dx**2
-        wxm1 = HALF*(HALF + dx)**2
-        wxp1 = HALF*(HALF - dx)**2
+        wxm1 = HALF * (HALF + dx) ** 2
+        wxp1 = HALF * (HALF - dx) ** 2
         wy = P75 - dy**2
-        wym1 = HALF*(HALF + dy)**2
-        wyp1 = HALF*(HALF - dy)**2
+        wym1 = HALF * (HALF + dy) ** 2
+        wyp1 = HALF * (HALF - dy) ** 2
         if threeD:
             wz = P75 - dz**2
-            wzm1 = HALF*(HALF + dz)**2
-            wzp1 = HALF*(HALF - dz)**2
+            wzm1 = HALF * (HALF + dz) ** 2
+            wzp1 = HALF * (HALF - dz) ** 2
         else:
-            wz = ftype(1.)
+            wz = ftype(1.0)
 
         # find the wrapped x,y,z grid locations of the points we need to change
         # negative indices will be automatically wrapped
         ixm1 = _rightwrap(ix - itype(1), gx)
-        ixw  = _rightwrap(ix, gx)
+        ixw = _rightwrap(ix, gx)
         ixp1 = _rightwrap(ix + itype(1), gx)
         iym1 = _rightwrap(iy - itype(1), gy)
-        iyw  = _rightwrap(iy, gy)
+        iyw = _rightwrap(iy, gy)
         iyp1 = _rightwrap(iy + itype(1), gy)
         if threeD:
             izm1 = _rightwrap(iz - itype(1), gz)
-            izw  = _rightwrap(iz, gz)
+            izw = _rightwrap(iz, gz)
             izp1 = _rightwrap(iz + itype(1), gz)
         else:
             izw = itype(0)
 
         # change the 9 or 27 cells that the cloud touches
-        density[ixm1, iym1, izw ] += wxm1*wym1*wz  *W
-        density[ixm1, iyw , izw ] += wxm1*wy  *wz  *W
-        density[ixm1, iyp1, izw ] += wxm1*wyp1*wz  *W
-        density[ixw , iym1, izw ] += wx  *wym1*wz  *W
-        density[ixw , iyw , izw ] += wx  *wy  *wz  *W
-        density[ixw , iyp1, izw ] += wx  *wyp1*wz  *W
-        density[ixp1, iym1, izw ] += wxp1*wym1*wz  *W
-        density[ixp1, iyw , izw ] += wxp1*wy  *wz  *W
-        density[ixp1, iyp1, izw ] += wxp1*wyp1*wz  *W
+        density[ixm1, iym1, izw] += wxm1 * wym1 * wz * W
+        density[ixm1, iyw, izw] += wxm1 * wy * wz * W
+        density[ixm1, iyp1, izw] += wxm1 * wyp1 * wz * W
+        density[ixw, iym1, izw] += wx * wym1 * wz * W
+        density[ixw, iyw, izw] += wx * wy * wz * W
+        density[ixw, iyp1, izw] += wx * wyp1 * wz * W
+        density[ixp1, iym1, izw] += wxp1 * wym1 * wz * W
+        density[ixp1, iyw, izw] += wxp1 * wy * wz * W
+        density[ixp1, iyp1, izw] += wxp1 * wyp1 * wz * W
 
         if threeD:
-            density[ixm1, iym1, izm1] += wxm1*wym1*wzm1*W
-            density[ixm1, iym1, izp1] += wxm1*wym1*wzp1*W
+            density[ixm1, iym1, izm1] += wxm1 * wym1 * wzm1 * W
+            density[ixm1, iym1, izp1] += wxm1 * wym1 * wzp1 * W
 
-            density[ixm1, iyw , izm1] += wxm1*wy  *wzm1*W
-            density[ixm1, iyw , izp1] += wxm1*wy  *wzp1*W
+            density[ixm1, iyw, izm1] += wxm1 * wy * wzm1 * W
+            density[ixm1, iyw, izp1] += wxm1 * wy * wzp1 * W
 
-            density[ixm1, iyp1, izm1] += wxm1*wyp1*wzm1*W
-            density[ixm1, iyp1, izp1] += wxm1*wyp1*wzp1*W
+            density[ixm1, iyp1, izm1] += wxm1 * wyp1 * wzm1 * W
+            density[ixm1, iyp1, izp1] += wxm1 * wyp1 * wzp1 * W
 
-            density[ixw , iym1, izm1] += wx  *wym1*wzm1*W
-            density[ixw , iym1, izp1] += wx  *wym1*wzp1*W
+            density[ixw, iym1, izm1] += wx * wym1 * wzm1 * W
+            density[ixw, iym1, izp1] += wx * wym1 * wzp1 * W
 
-            density[ixw , iyw , izm1] += wx  *wy  *wzm1*W
-            density[ixw , iyw , izp1] += wx  *wy  *wzp1*W
+            density[ixw, iyw, izm1] += wx * wy * wzm1 * W
+            density[ixw, iyw, izp1] += wx * wy * wzp1 * W
 
-            density[ixw , iyp1, izm1] += wx  *wyp1*wzm1*W
-            density[ixw , iyp1, izp1] += wx  *wyp1*wzp1*W
+            density[ixw, iyp1, izm1] += wx * wyp1 * wzm1 * W
+            density[ixw, iyp1, izp1] += wx * wyp1 * wzp1 * W
 
-            density[ixp1, iym1, izm1] += wxp1*wym1*wzm1*W
-            density[ixp1, iym1, izp1] += wxp1*wym1*wzp1*W
+            density[ixp1, iym1, izm1] += wxp1 * wym1 * wzm1 * W
+            density[ixp1, iym1, izp1] += wxp1 * wym1 * wzp1 * W
 
-            density[ixp1, iyw , izm1] += wxp1*wy  *wzm1*W
-            density[ixp1, iyw , izp1] += wxp1*wy  *wzp1*W
+            density[ixp1, iyw, izm1] += wxp1 * wy * wzm1 * W
+            density[ixp1, iyw, izp1] += wxp1 * wy * wzp1 * W
 
-            density[ixp1, iyp1, izm1] += wxp1*wyp1*wzm1*W
-            density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
+            density[ixp1, iyp1, izm1] += wxp1 * wyp1 * wzm1 * W
+            density[ixp1, iyp1, izp1] += wxp1 * wyp1 * wzp1 * W

@@ -20,19 +20,27 @@ def main(**kwargs):
 
     N = 10**7
 
-    cat = UniformCatalog(N, BoxSize=1., dtype='f4')
+    cat = UniformCatalog(N, BoxSize=1.0, dtype='f4')
 
-    mesh = cat.to_mesh(Nmesh=ngrid, resampler='tsc', compensated=False,
-        interlaced=False, dtype='f4',
+    mesh = cat.to_mesh(
+        Nmesh=ngrid,
+        resampler='tsc',
+        compensated=False,
+        interlaced=False,
+        dtype='f4',
     ).compute()
-    FFTPower(mesh, mode='1d', dk=np.pi*ngrid/100, kmin=0., kmax=np.pi*ngrid)
+    FFTPower(mesh, mode='1d', dk=np.pi * ngrid / 100, kmin=0.0, kmax=np.pi * ngrid)
 
     t = -timeit.default_timer()
     for _ in range(nrep):
-        mesh = cat.to_mesh(Nmesh=ngrid, resampler='tsc', compensated=False,
-            interlaced=False, dtype='f4',
+        mesh = cat.to_mesh(
+            Nmesh=ngrid,
+            resampler='tsc',
+            compensated=False,
+            interlaced=False,
+            dtype='f4',
         ).compute()
-        FFTPower(mesh, mode='1d', dk=np.pi*ngrid/100, kmin=0., kmax=np.pi*ngrid)
+        FFTPower(mesh, mode='1d', dk=np.pi * ngrid / 100, kmin=0.0, kmax=np.pi * ngrid)
     t += timeit.default_timer()
 
     if comm.rank == 0:

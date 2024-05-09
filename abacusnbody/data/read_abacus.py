@@ -1,4 +1,4 @@
-'''
+"""
 This is an interface to read various Abacus file formats,
 like ASDF, pack9, and RVint.
 
@@ -11,7 +11,7 @@ The decoding of the binary formats is generally contained
 in other modules (e.g. bitpacked); this interface mainly
 deals with the container formats and high-level logic of
 file names, Astropy tables, etc.
-'''
+"""
 
 # TODO: generator to iterate over files
 # TODO: load multiple files into concatenated table
@@ -30,8 +30,9 @@ __all__ = ['read_asdf']
 ASDF_DATA_KEY = 'data'
 ASDF_HEADER_KEY = 'header'
 
+
 def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwargs):
-    '''
+    """
     Read an Abacus ASDF file.  The result will be returned in an Astropy table.
 
     Parameters
@@ -68,7 +69,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         A table whose columns contain the particle
         data from the ASDF file.  The ``meta`` field
         of the table contains the header.
-    '''
+    """
 
     import asdf
 
@@ -80,9 +81,11 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     try:
         asdf_compression.validate('blsc')
     except Exception as e:
-        raise Exception("Abacus ASDF extension not properly loaded! \
+        raise Exception(
+            "Abacus ASDF extension not properly loaded! \
                         Try reinstalling abacusutils: `pip install 'abacusutils>=1'`, \
-                        or updating ASDF: `pip install 'asdf>=2.8'`") from e
+                        or updating ASDF: `pip install 'asdf>=2.8'`"
+        ) from e
 
     data_key = kwargs.get('data_key', ASDF_DATA_KEY)
     header_key = kwargs.get('header_key', ASDF_HEADER_KEY)
@@ -93,10 +96,14 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
             for cn in _colnames:
                 if cn in af.tree[data_key]:
                     if colname is not None:
-                        raise ValueError(f"More than one key of {_colnames} found in asdf file {fn}. Need to specify colname!")
+                        raise ValueError(
+                            f'More than one key of {_colnames} found in asdf file {fn}. Need to specify colname!'
+                        )
                     colname = cn
             if colname is None:
-                raise ValueError(f"Could not find any of {_colnames} in asdf file {fn}. Need to specify colname!")
+                raise ValueError(
+                    f'Could not find any of {_colnames} in asdf file {fn}. Need to specify colname!'
+                )
 
         # determine what fields to unpack
         load = _resolve_columns(colname, load, kwargs)
@@ -110,16 +117,20 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         OutputType = header.get('OutputType', None)
         if OutputType == 'LightCone':
             if header['SimSet'] == 'AbacusSummit':
-                SubsampleFraction = header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+                SubsampleFraction = (
+                    header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+                )
                 header['SubsampleFraction'] = SubsampleFraction
                 if verbose:
-                    print(f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction*100):d}% total)')
+                    print(
+                        f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction*100):d}% total)'
+                    )
 
         table = Table(meta=header)
         if 'pos' in load:
-            table.add_column(np.empty((Nmax,3), dtype=dtype), copy=False, name='pos')
+            table.add_column(np.empty((Nmax, 3), dtype=dtype), copy=False, name='pos')
         if 'vel' in load:
-            table.add_column(np.empty((Nmax,3), dtype=dtype), copy=False, name='vel')
+            table.add_column(np.empty((Nmax, 3), dtype=dtype), copy=False, name='vel')
         if 'aux' in load:
             table.add_column(data, copy=False, name='aux')  # 'aux' is the raw aux field
         # For the PID columns, we'll let `unpack_pids` build those for us
@@ -128,18 +139,36 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         if colname == 'rvint':
             _posout = table['pos'] if 'pos' in load else False
             _velout = table['vel'] if 'vel' in load else False
-            npos,nvel = unpack_rvint(data, header['BoxSize'], float_dtype=dtype, posout=_posout, velout=_velout)
-            nread = max(npos,nvel)
+            npos, nvel = unpack_rvint(
+                data,
+                header['BoxSize'],
+                float_dtype=dtype,
+                posout=_posout,
+                velout=_velout,
+            )
+            nread = max(npos, nvel)
         elif colname == 'pack9':
             _posout = table['pos'] if 'pos' in load else False
             _velout = table['vel'] if 'vel' in load else False
-            npos,nvel = unpack_pack9(data, header['BoxSize'], header['VelZSpace_to_kms'], float_dtype=dtype, posout=_posout, velout=_velout)
-            nread = max(npos,nvel)
+            npos, nvel = unpack_pack9(
+                data,
+                header['BoxSize'],
+                header['VelZSpace_to_kms'],
+                float_dtype=dtype,
+                posout=_posout,
+                velout=_velout,
+            )
+            nread = max(npos, nvel)
         elif 'pid' in colname:
             ppd = kwargs.get('ppd', int(round(header['ppd'])))
-            pid_kwargs = {k:(k in load) for k in ('pid','lagr_pos','tagged','density','lagr_idx')}
-            cols = unpack_pids(data, box=header['BoxSize'], ppd=ppd, float_dtype=dtype, **pid_kwargs)
-            for n,col in cols.items():
+            pid_kwargs = {
+                k: (k in load)
+                for k in ('pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx')
+            }
+            cols = unpack_pids(
+                data, box=header['BoxSize'], ppd=ppd, float_dtype=dtype, **pid_kwargs
+            )
+            for n, col in cols.items():
                 table.add_column(col, name=n, copy=False)
             nread = len(data)
 
@@ -150,27 +179,32 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
 
 def _resolve_columns(colname, load, kwargs):
-    '''Figure out what columns to read. `colname` is the data column in the file,
-    `load` is the tuple of strings, `kwargs` might have deprecated load_pos/vel'''
+    """Figure out what columns to read. `colname` is the data column in the file,
+    `load` is the tuple of strings, `kwargs` might have deprecated load_pos/vel"""
 
     load_pos = kwargs.pop('load_pos', None)
     load_vel = kwargs.pop('load_vel', None)
     if load_pos is not None or load_vel is not None:
         if load is None:
-            warnings.warn('`load_pos` and `load_vel` are deprecated; use '
-                          '`load=("pos","vel")` instead.', FutureWarning)
+            warnings.warn(
+                '`load_pos` and `load_vel` are deprecated; use '
+                '`load=("pos","vel")` instead.',
+                FutureWarning,
+            )
             load = []
             if load_pos or (load_pos is None and load_vel is False):
                 load += ['pos']
             if load_vel or (load_vel is None and load_pos is False):
                 load += ['vel']
         else:
-            warnings.warn('`load` and deprecated `load_pos` or `load_vel` specified. '
-                          'Ignoring deprecated parameters.')
+            warnings.warn(
+                '`load` and deprecated `load_pos` or `load_vel` specified. '
+                'Ignoring deprecated parameters.'
+            )
 
     if load is None:
         load = []
-        if colname in ('pack9','rvint'):
+        if colname in ('pack9', 'rvint'):
             load += ['pos']
             load += ['vel']
         if 'pid' in colname:
