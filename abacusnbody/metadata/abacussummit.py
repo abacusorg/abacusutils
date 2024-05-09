@@ -3,7 +3,12 @@ Retrieve the cosmology and other code parameters associated with the
 AbacusSummit simulations.
 """
 
-import importlib.resources
+try:
+    # Python 3.9 and later
+    import importlib.resources as resources
+except ImportError:
+    # Python 3.8 and earlier
+    import importlib_resources as resources
 
 import asdf
 import msgpack
@@ -39,7 +44,7 @@ def get_meta(simname, redshift=None):
     if metadata is None:
         metadata = {}
         for metadata_fn in metadata_fns:
-            with importlib.resources.files('abacusnbody.metadata').joinpath(
+            with resources.files('abacusnbody.metadata').joinpath(
                 metadata_fn
             ) as fp, asdf.open(fp) as af:
                 af_tree = dict(af.tree)
