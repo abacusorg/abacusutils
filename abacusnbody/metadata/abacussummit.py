@@ -1,7 +1,7 @@
-'''
+"""
 Retrieve the cosmology and other code parameters associated with the
 AbacusSummit simulations.
-'''
+"""
 
 import importlib.resources
 
@@ -9,10 +9,14 @@ import asdf
 import msgpack
 
 metadata = None
-metadata_fns = ['abacussummit_headers_compressed.asdf', 'abacusdesi2_headers_compressed.asdf']
+metadata_fns = [
+    'abacussummit_headers_compressed.asdf',
+    'abacusdesi2_headers_compressed.asdf',
+]
+
 
 def get_meta(simname, redshift=None):
-    '''
+    """
     Get the metadata associated with the given simulation.
 
     Parameters
@@ -29,24 +33,33 @@ def get_meta(simname, redshift=None):
     meta : dict
         The time-independent parameters and, if `redshift` is given,
         the time-dependent state values.
-    '''
+    """
 
     global metadata
     if metadata is None:
         metadata = {}
         for metadata_fn in metadata_fns:
-            with importlib.resources.open_binary('abacusnbody.metadata', metadata_fn) as fp, asdf.open(fp) as af:
+            with importlib.resources.open_binary(
+                'abacusnbody.metadata', metadata_fn
+            ) as fp, asdf.open(fp) as af:
                 af_tree = dict(af.tree)
                 del af_tree['asdf_library'], af_tree['history']
                 for sim in af_tree:
                     metadata[sim] = {}
-                    metadata[sim]['param'] = msgpack.loads(af_tree[sim]['param'].data, strict_map_key=False)
-                    metadata[sim]['state'] = msgpack.loads(af_tree[sim]['state'].data, strict_map_key=False)
+                    metadata[sim]['param'] = msgpack.loads(
+                        af_tree[sim]['param'].data, strict_map_key=False
+                    )
+                    metadata[sim]['state'] = msgpack.loads(
+                        af_tree[sim]['state'].data, strict_map_key=False
+                    )
                     if 'CLASS_power_spectrum' in af_tree[sim]:
-                        metadata[sim]['CLASS_power_spectrum'] = af_tree[sim]['CLASS_power_spectrum']
+                        metadata[sim]['CLASS_power_spectrum'] = af_tree[sim][
+                            'CLASS_power_spectrum'
+                        ]
     if simname not in metadata:
-        raise ValueError(f'Simulation "{simname}" is not in metadata files "{metadata_fns}"')
-
+        raise ValueError(
+            f'Simulation "{simname}" is not in metadata files "{metadata_fns}"'
+        )
 
     res = dict(metadata[simname]['param'])
     if 'CLASS_power_spectrum' in metadata[simname]:
@@ -58,7 +71,9 @@ def get_meta(simname, redshift=None):
         if not redshift.startswith('z'):
             redshift = 'z' + redshift
         if redshift not in metadata[simname]['state']:
-            raise ValueError(f'Redshift {redshift} metadata not present for "{simname}" in metadata files "{metadata_fns}')
+            raise ValueError(
+                f'Redshift {redshift} metadata not present for "{simname}" in metadata files "{metadata_fns}'
+            )
         res.update(metadata[simname]['state'][redshift])
 
     return res

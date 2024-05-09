@@ -16,12 +16,16 @@ def main(**kwargs):
     N = 10**7
     ngrid = 256
 
-    cat = UniformCatalog(N, BoxSize=1., dtype='f4')
+    cat = UniformCatalog(N, BoxSize=1.0, dtype='f4')
 
     t = -timeit.default_timer()
     for _ in range(nrep):
-        cat.to_mesh(Nmesh=ngrid, resampler='tsc', compensated=False,
-            interlaced=False, dtype='f4',
+        cat.to_mesh(
+            Nmesh=ngrid,
+            resampler='tsc',
+            compensated=False,
+            interlaced=False,
+            dtype='f4',
         ).compute()
     t += timeit.default_timer()
 

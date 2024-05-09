@@ -1,4 +1,3 @@
-
 import numpy as np
 
 
@@ -6,6 +5,7 @@ class PowerData(object):
     """
     Dummy object for calculating a likelihood
     """
+
     def __init__(self, data_params):
         """
         Constructor of the power spectrum data
@@ -23,18 +23,17 @@ class PowerData(object):
             icov[key] = np.linalg.inv(cov)
         self.icov = icov
 
-
     def compute_likelihood(self, theory):
         """
         Computes the likelihood using information from the context
         """
         # Calculate a likelihood up to normalization
-        lnprob = 0.
+        lnprob = 0.0
         for key in self.power.keys():
             delta = (self.power[key] - theory[key]).flatten()
-            lnprob += np.einsum('i,ij,j',delta, self.icov[key], delta)
+            lnprob += np.einsum('i,ij,j', delta, self.icov[key], delta)
         lnprob *= -0.5
 
         # Return the likelihood
-        print(" <><> Likelihood evaluated, lnprob = ",lnprob)
+        print(' <><> Likelihood evaluated, lnprob = ', lnprob)
         return lnprob

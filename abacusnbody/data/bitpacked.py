@@ -1,11 +1,11 @@
-'''
+"""
 A collection of routines related to various Abacus bitpacked
 formats, like RVint and encoding of information in the PIDs.
 
 Most users will not use this module directly, but will instead use
 :mod:`abacusnbody.data.compaso_halo_catalog` or
 :func:`abacusnbody.data.read_abacus.read_asdf`.
-'''
+"""
 
 import numba as nb
 import numpy as np
@@ -13,21 +13,21 @@ import numpy as np
 __all__ = ['unpack_rvint', 'unpack_pids']
 
 # Constants
-AUXDENS = 0x07fe000000000000
-ZERODEN = 49 #The density bits are 49-58.
+AUXDENS = 0x07FE000000000000
+ZERODEN = 49  # The density bits are 49-58.
 
-AUXXPID = 0x7fff #bits 0-14
-AUXYPID = 0x7fff0000 #bits 16-30
-AUXZPID = 0x7fff00000000 #bits 32-46
-AUXPID = AUXXPID | AUXYPID | AUXZPID # all of the above bits
-AUXTAGGED = 48 # tagged bit is 48
+AUXXPID = 0x7FFF  # bits 0-14
+AUXYPID = 0x7FFF0000  # bits 16-30
+AUXZPID = 0x7FFF00000000  # bits 32-46
+AUXPID = AUXXPID | AUXYPID | AUXZPID  # all of the above bits
+AUXTAGGED = 48  # tagged bit is 48
 
 # The names of the bit-packed PID fields that the user can request
-PID_FIELDS=['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx']
+PID_FIELDS = ['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx']
 
 
 def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=None):
-    '''
+    """
     Unpack rvint data into pos and vel.
 
     Parameters
@@ -54,9 +54,9 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
         or the number of unpacked particles if an output array
         was given.
 
-    '''
+    """
     intdata = intdata.reshape(-1)
-    assert(intdata.dtype == np.int32)
+    assert intdata.dtype == np.int32
     N = len(intdata)
 
     if posout is None:
@@ -79,45 +79,54 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
 
     ret = []
     if posout is None:
-        ret += [_posout.reshape(N//3,3)]
+        ret += [_posout.reshape(N // 3, 3)]
     elif posout is False:
         ret += [0]
     else:
-        ret += [N//3]
+        ret += [N // 3]
 
     if velout is None:
-        ret += [_velout.reshape(N//3,3)]
+        ret += [_velout.reshape(N // 3, 3)]
     elif velout is False:
         ret += [0]
     else:
-        ret += [N//3]
+        ret += [N // 3]
 
     return tuple(ret)
 
 
 @nb.njit
 def _unpack_rvint(intdata, boxsize, posout, velout):
-    '''Helper for unpack_rvint
-    '''
+    """Helper for unpack_rvint"""
 
     N = len(intdata)
-    posscale = boxsize*(2.**-12.)/1e6
-    velscale = 6000./2048
-    pmask = np.int32(0xfffff000)
-    vmask = np.int32(0xfff)
+    posscale = boxsize * (2.0**-12.0) / 1e6
+    velscale = 6000.0 / 2048
+    pmask = np.int32(0xFFFFF000)
+    vmask = np.int32(0xFFF)
 
     lenp = len(posout)
     lenv = len(velout)
 
     for i in range(N):
         if lenp > 0:
-            posout[i] = (intdata[i]&pmask)*posscale
+            posout[i] = (intdata[i] & pmask) * posscale
         if lenv > 0:
-            velout[i] = ((intdata[i]&vmask) - 2048)*velscale
+            velout[i] = ((intdata[i] & vmask) - 2048) * velscale
 
 
-def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=False, density=False, lagr_idx=False, float_dtype=np.float32):
-    '''
+def unpack_pids(
+    packed,
+    box=None,
+    ppd=None,
+    pid=False,
+    lagr_pos=False,
+    tagged=False,
+    density=False,
+    lagr_idx=False,
+    float_dtype=np.float32,
+):
+    """
     Extract fields from bit-packed PIDs.  The PID (really, the 64-bit aux field)
     enocdes the particle ID, the Lagrangian index (and therefore position), the
     density, and the L2 tagged field.
@@ -171,7 +180,7 @@ def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=Fa
     -------
     unpacked_arrays: dict of ndarray
         A dictionary of all fields that were unpacked
-    '''
+    """
     packed = np.asanyarray(packed, dtype=np.uint64)
 
     if lagr_pos is not False:
@@ -189,9 +198,9 @@ def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=Fa
     if pid is True:
         arr['pid'] = np.empty(N, dtype=np.int64)
     if lagr_pos is True:
-        arr['lagr_pos'] = np.empty((N,3), dtype=float_dtype)
+        arr['lagr_pos'] = np.empty((N, 3), dtype=float_dtype)
     if lagr_idx is True:
-        arr['lagr_idx'] = np.empty((N,3), dtype=np.int16)
+        arr['lagr_idx'] = np.empty((N, 3), dtype=np.int16)
     if tagged is True:
         arr['tagged'] = np.empty(N, dtype=np.bool8)
     if density is True:
@@ -203,32 +212,44 @@ def unpack_pids(packed, box=None, ppd=None, pid=False, lagr_pos=False, tagged=Fa
 
 
 @nb.njit
-def _unpack_pids(packed, box, ppd, pid=None, lagr_pos=None, tagged=None, density=None, lagr_idx=None, float_dtype=np.float32):
-    '''Helper to extract the Lagrangian position, tagged info, and
+def _unpack_pids(
+    packed,
+    box,
+    ppd,
+    pid=None,
+    lagr_pos=None,
+    tagged=None,
+    density=None,
+    lagr_idx=None,
+    float_dtype=np.float32,
+):
+    """Helper to extract the Lagrangian position, tagged info, and
     density from the ids of the particles
-    '''
+    """
 
     N = len(packed)
     box = np.float64(box)
-    inv_ppd = float_dtype(box/ppd)
-    half = float_dtype(box/2)
+    inv_ppd = float_dtype(box / ppd)
+    half = float_dtype(box / 2)
 
     for i in range(N):
         if lagr_idx is not None:
-            lagr_idx[i,0] =  packed[i] & AUXXPID
-            lagr_idx[i,1] = (packed[i] & AUXYPID) >> 16
-            lagr_idx[i,2] = (packed[i] & AUXZPID) >> 32
+            lagr_idx[i, 0] = packed[i] & AUXXPID
+            lagr_idx[i, 1] = (packed[i] & AUXYPID) >> 16
+            lagr_idx[i, 2] = (packed[i] & AUXZPID) >> 32
 
         if lagr_pos is not None:
-            lagr_pos[i,0] = (packed[i] & AUXXPID)*inv_ppd - half
-            lagr_pos[i,1] = ((packed[i] & AUXYPID) >> 16)*inv_ppd - half
-            lagr_pos[i,2] = ((packed[i] & AUXZPID) >> 32)*inv_ppd - half
+            lagr_pos[i, 0] = (packed[i] & AUXXPID) * inv_ppd - half
+            lagr_pos[i, 1] = ((packed[i] & AUXYPID) >> 16) * inv_ppd - half
+            lagr_pos[i, 2] = ((packed[i] & AUXZPID) >> 32) * inv_ppd - half
 
         if tagged is not None:
             tagged[i] = (packed[i] >> AUXTAGGED) & 1
 
         if density is not None:
-            density[i] = ((packed[i] & AUXDENS) >> ZERODEN)**2  # max is 2**10, squaring gets to 2**20
+            density[i] = (
+                (packed[i] & AUXDENS) >> ZERODEN
+            ) ** 2  # max is 2**10, squaring gets to 2**20
 
         if pid is not None:
             pid[i] = packed[i] & AUXPID

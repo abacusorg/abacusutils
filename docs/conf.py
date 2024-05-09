@@ -10,9 +10,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-#import os
-#import sys
-#sys.path.insert(0, os.path.abspath('..'))
+# import os
+# import sys
+# sys.path.insert(0, os.path.abspath('..'))
 
 
 # -- Project information -----------------------------------------------------
@@ -26,15 +26,16 @@ copyright = '2023, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksim
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.napoleon',
-              'sphinx.ext.intersphinx',
-              'sphinx.ext.autosectionlabel',
-              'sphinx.ext.linkcode',
-              'myst_nb',
-            ]
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.linkcode',
+    'myst_nb',
+]
 
-myst_enable_extensions = ["dollarmath"]
+myst_enable_extensions = ['dollarmath']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -44,7 +45,7 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build']
 
-root_doc = "index"
+root_doc = 'index'
 source_suffix = {
     '.rst': 'restructuredtext',
     '.ipynb': 'myst-nb',
@@ -56,8 +57,8 @@ source_suffix = {
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-#html_theme = 'alabaster'
-#html_theme = 'default'
+# html_theme = 'alabaster'
+# html_theme = 'default'
 html_theme = 'sphinx_book_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -66,40 +67,43 @@ html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
 html_css_files = ['custom.css']
 
-html_title = "abacusutils"
-html_logo = "images/icon_red.svg"
+html_title = 'abacusutils'
+html_logo = 'images/icon_red.svg'
 html_favicon = 'images/icon_red.png'
 
 html_show_sourcelink = False
 html_theme_options = {
-    "repository_url": "https://github.com/abacusorg/abacusutils",
-    "repository_branch": "main",
+    'repository_url': 'https://github.com/abacusorg/abacusutils',
+    'repository_branch': 'main',
     # "launch_buttons": {
     #     "binderhub_url": "https://mybinder.org",
     #     "notebook_interface": "jupyterlab",
     #     "colab_url": "https://colab.research.google.com/",
     # },
-    "use_edit_page_button": True,
-    "use_issues_button": True,
-    "use_repository_button": True,
-    "use_download_button": True,
-    "use_fullscreen_button": False,
-    "path_to_docs": "docs/",
+    'use_edit_page_button': True,
+    'use_issues_button': True,
+    'use_repository_button': True,
+    'use_download_button': True,
+    'use_fullscreen_button': False,
+    'path_to_docs': 'docs/',
 }
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 
-intersphinx_mapping = {'summit': ('https://abacussummit.readthedocs.io/en/latest', None)}
+intersphinx_mapping = {
+    'summit': ('https://abacussummit.readthedocs.io/en/latest', None)
+}
 
 autosectionlabel_prefix_document = True
 
 autodoc_member_order = 'bysource'
-autodoc_mock_imports = ['Corrfunc','classy','ZeNBu']
+autodoc_mock_imports = ['Corrfunc', 'classy', 'ZeNBu']
 autodoc_warningiserror = True
 
 nb_execution_mode = 'off'
+
 
 def linkcode_resolve(domain, info):
     # TODO: how to link to current branch instead of master?
@@ -108,4 +112,4 @@ def linkcode_resolve(domain, info):
     if not info['module']:
         return None
     filename = info['module'].replace('.', '/')
-    return f"https://github.com/abacusorg/abacusutils/blob/master/{filename}.py"
+    return f'https://github.com/abacusorg/abacusutils/blob/master/{filename}.py'

@@ -15,6 +15,7 @@ from abacusnbody.hod.abacus_hod import AbacusHOD
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
+
 class SampleFileUtil(object):
     """
     Util for handling sample files.
@@ -40,12 +41,12 @@ class SampleFileUtil(object):
         """
         Writes the walker positions and the likelihood to the disk
         """
-        posFile.write("\n".join(["\t".join([str(q) for q in p]) for p in pos]))
-        posFile.write("\n")
+        posFile.write('\n'.join(['\t'.join([str(q) for q in p]) for p in pos]))
+        posFile.write('\n')
         posFile.flush()
 
-        probFile.write("\n".join([str(p) for p in prob]))
-        probFile.write("\n")
+        probFile.write('\n'.join([str(p) for p in prob]))
+        probFile.write('\n')
         probFile.flush()
 
     def close(self):
@@ -53,7 +54,8 @@ class SampleFileUtil(object):
         self.probFile.close()
 
     def __str__(self, *args, **kwargs):
-        return "SampleFileUtil"
+        return 'SampleFileUtil'
+
 
 class DumPool(object):
     def __init__(self):
@@ -65,9 +67,10 @@ class DumPool(object):
     def close(self):
         pass
 
+
 def time_lnprob(params, param_mapping, param_tracer, Data, Ball):
     print('   ==========================================')
-    print("   | Calculating likelihood evaluation time |")
+    print('   | Calculating likelihood evaluation time |')
     print('   ==========================================')
 
     # run once without timing since numba needs to compile
@@ -75,25 +78,45 @@ def time_lnprob(params, param_mapping, param_tracer, Data, Ball):
 
     timing = np.zeros(10)
     for i in range(10):
-        print('Test ',i,' of 9')
+        print('Test ', i, ' of 9')
         start = time.time()
-        if i<5:
-            lnprob(params[:, 0]+i*0.1*params[:, 3], params, param_mapping, param_tracer, Data, Ball)
+        if i < 5:
+            lnprob(
+                params[:, 0] + i * 0.1 * params[:, 3],
+                params,
+                param_mapping,
+                param_tracer,
+                Data,
+                Ball,
+            )
         else:
-            lnprob(params[:, 0]-(i-4)*0.1*params[:, 3], params, param_mapping, param_tracer, Data, Ball)
+            lnprob(
+                params[:, 0] - (i - 4) * 0.1 * params[:, 3],
+                params,
+                param_mapping,
+                param_tracer,
+                Data,
+                Ball,
+            )
         finish = time.time()
-        timing[i] = finish-start
+        timing[i] = finish - start
 
     mean = np.mean(timing)
-    print('============================================================================')
+    print(
+        '============================================================================'
+    )
     print('mean computation time: ', mean)
     stdev = np.std(timing)
     print('standard deviation : ', stdev)
-    print('============================================================================')
+    print(
+        '============================================================================'
+    )
     return
 
+
 def inrange(p, params):
-    return np.all((p<=params[:, 2]) & (p>=params[:, 1]))
+    return np.all((p <= params[:, 2]) & (p >= params[:, 1]))
+
 
 def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
     if inrange(p, params):
@@ -101,13 +124,15 @@ def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
         for key in param_mapping.keys():
             mapping_idx = param_mapping[key]
             tracer_type = param_tracer[key]
-            #tracer_type = param_tracer[params[mapping_idx, -1]]
+            # tracer_type = param_tracer[params[mapping_idx, -1]]
             Ball.tracers[tracer_type][key] = p[mapping_idx]
             print(key, Ball.tracers[tracer_type][key])
 
         # pass them to the mock dictionary
-        mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread = 64)
-        clustering = Ball.compute_xirppi(mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size, Nthread = 16)
+        mock_dict = Ball.run_hod(Ball.tracers, Ball.want_rsd, Nthread=64)
+        clustering = Ball.compute_xirppi(
+            mock_dict, Ball.rpbins, Ball.pimax, Ball.pi_bin_size, Nthread=16
+        )
         lnP = Data.compute_likelihood(clustering)
     else:
         lnP = -np.inf
@@ -115,7 +140,6 @@ def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
 
 
 def main(path2config, time_likelihood):
-
     # load the yaml parameters
     config = yaml.load(open(path2config))
     sim_params = config['sim_params']
@@ -153,12 +177,13 @@ def main(path2config, time_likelihood):
     # MPI option
     if ch_config_params['use_mpi']:
         from schwimmbad import MPIPool
+
         pool = MPIPool()
-        print("Using MPI")
+        print('Using MPI')
         pool_use = pool
     else:
         pool = DumPool()
-        print("Not using MPI")
+        print('Not using MPI')
         pool_use = None
 
     if not pool.is_master():
@@ -175,25 +200,36 @@ def main(path2config, time_likelihood):
     nsteps = ch_config_params['burninIterations'] + ch_config_params['sampleIterations']
 
     # where to record
-    prefix_chain = os.path.join(os.path.expanduser(ch_config_params['path2output']),
-                                ch_config_params['chainsPrefix'])
+    prefix_chain = os.path.join(
+        os.path.expanduser(ch_config_params['path2output']),
+        ch_config_params['chainsPrefix'],
+    )
 
     # fix initial conditions
-    found_file = os.path.isfile(prefix_chain+'.txt')
+    found_file = os.path.isfile(prefix_chain + '.txt')
     if (not found_file) or (not ch_config_params['rerun']):
-        p_initial = params[:, 0] + np.random.normal(size=(nwalkers, nparams)) * params[:, 3][None, :]
+        p_initial = (
+            params[:, 0]
+            + np.random.normal(size=(nwalkers, nparams)) * params[:, 3][None, :]
+        )
         nsteps_use = nsteps
     else:
-        print("Restarting from a previous run")
-        old_chain = np.loadtxt(prefix_chain+'.txt')
-        p_initial = old_chain[-nwalkers:,:]
-        nsteps_use = max(nsteps-len(old_chain) // nwalkers, 0)
+        print('Restarting from a previous run')
+        old_chain = np.loadtxt(prefix_chain + '.txt')
+        p_initial = old_chain[-nwalkers:, :]
+        nsteps_use = max(nsteps - len(old_chain) // nwalkers, 0)
 
     # initializing sampler
     chain_file = SampleFileUtil(prefix_chain, carry_on=ch_config_params['rerun'])
-    sampler = emcee.EnsembleSampler(nwalkers, nparams, lnprob, args=(params, param_mapping, param_tracer, newData, newBall), pool=pool_use)
+    sampler = emcee.EnsembleSampler(
+        nwalkers,
+        nparams,
+        lnprob,
+        args=(params, param_mapping, param_tracer, newData, newBall),
+        pool=pool_use,
+    )
     start = time.time()
-    print("Running %d samples" % nsteps_use)
+    print('Running %d samples' % nsteps_use)
 
     # record every iteration
     counter = 1
@@ -203,22 +239,37 @@ def main(path2config, time_likelihood):
             chain_file.persistSamplingValues(pos, prob)
 
             if counter % 10:
-                print(f"Finished sample {counter}")
+                print(f'Finished sample {counter}')
         counter += 1
 
     pool.close()
     end = time.time()
-    print("Took ",(end - start)," seconds")
+    print('Took ', (end - start), ' seconds')
 
 
-class ArgParseFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+class ArgParseFormatter(
+    argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter
+):
     pass
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=ArgParseFormatter)
-    parser.add_argument('--path2config', dest='path2config', type=str, help='Path to config file.', default=DEFAULTS['path2config'])
-    parser.add_argument('--time_likelihood', dest='time_likelihood',  help='Times the likelihood calculations', action='store_true')
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=ArgParseFormatter
+    )
+    parser.add_argument(
+        '--path2config',
+        dest='path2config',
+        type=str,
+        help='Path to config file.',
+        default=DEFAULTS['path2config'],
+    )
+    parser.add_argument(
+        '--time_likelihood',
+        dest='time_likelihood',
+        help='Times the likelihood calculations',
+        action='store_true',
+    )
 
     args = vars(parser.parse_args())
     main(**args)

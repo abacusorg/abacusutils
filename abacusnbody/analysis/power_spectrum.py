@@ -1,4 +1,3 @@
-
 r"""
 The power spectrum module contains various useful tools for computing power
 spectra (wedges, multipoles and beyond) in the cubic box.
@@ -16,22 +15,43 @@ from .tsc import tsc_parallel
 from .cic import cic_serial
 
 
-__all__ = ['calc_power',
-           'calc_pk_from_deltak',
-           'pk_to_xi',
-           'project_3d_to_poles',
-           'get_k_mu_edges',
-           ]
+__all__ = [
+    'calc_power',
+    'calc_pk_from_deltak',
+    'pk_to_xi',
+    'project_3d_to_poles',
+    'get_k_mu_edges',
+]
 
 MAX_THREADS = numba.config.NUMBA_NUM_THREADS
 
 # the first 20 factorials
-FACTORIAL_LOOKUP_TABLE = np.array([
-    1, 1, 2, 6, 24, 120, 720, 5040, 40320,
-    362880, 3628800, 39916800, 479001600,
-    6227020800, 87178291200, 1307674368000,
-    20922789888000, 355687428096000, 6402373705728000,
-    121645100408832000, 2432902008176640000], dtype=np.int64)
+FACTORIAL_LOOKUP_TABLE = np.array(
+    [
+        1,
+        1,
+        2,
+        6,
+        24,
+        120,
+        720,
+        5040,
+        40320,
+        362880,
+        3628800,
+        39916800,
+        479001600,
+        6227020800,
+        87178291200,
+        1307674368000,
+        20922789888000,
+        355687428096000,
+        6402373705728000,
+        121645100408832000,
+        2432902008176640000,
+    ],
+    dtype=np.int64,
+)
 
 
 @numba.njit
@@ -72,7 +92,7 @@ def factorial_slow(x):
         the factorial of the requested integer.
     """
     n = 1
-    for i in range(2, x+1):
+    for i in range(2, x + 1):
         n *= i
     return n
 
@@ -94,7 +114,7 @@ def n_choose_k(n, k):
     x : int
         binomial coefficient, n-choose-k.
     """
-    x = factorial(n)//(factorial(k)*factorial(n-k))
+    x = factorial(n) // (factorial(k) * factorial(n - k))
     return x
 
 
@@ -116,21 +136,29 @@ def P_n(x, n, dtype=np.float32):
     sum : float
         evaluation of the polynomial at `x`.
     """
-    sum = dtype(0.)
-    for k in range(n//2+1):
-        factor = dtype(n_choose_k(n, k) * n_choose_k(2*n - 2*k, n))
+    sum = dtype(0.0)
+    for k in range(n // 2 + 1):
+        factor = dtype(n_choose_k(n, k) * n_choose_k(2 * n - 2 * k, n))
         if k % 2 == 0:
-            sum += factor*x**(dtype(0.5*(n-2*k)))
+            sum += factor * x ** (dtype(0.5 * (n - 2 * k)))
         else:
-            sum -= factor*x**(dtype(0.5*(n-2*k)))
+            sum -= factor * x ** (dtype(0.5 * (n - 2 * k)))
     sum *= dtype(0.5**n)
     return sum
 
 
 @numba.njit(parallel=True, fastmath=True)
-def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.float32,
-            fourier=True, nthread=MAX_THREADS,
-            ):
+def bin_kmu(
+    n1d,
+    L,
+    kedges,
+    muedges,
+    weights,
+    poles=np.empty(0, 'i8'),
+    dtype=np.float32,
+    fourier=True,
+    nthread=MAX_THREADS,
+):
     r"""
     Compute mean and count modes in (k,mu) bins for a 3D rfft mesh of shape (n1d, n1d, n1d//2+1)
     or a real mesh of shape (n1d, n1d, n1d).
@@ -179,14 +207,14 @@ def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.
 
     numba.set_num_threads(nthread)
 
-    kzlen = n1d//2 + 1
+    kzlen = n1d // 2 + 1
     Nk = len(kedges) - 1
     Nmu = len(muedges) - 1
     if fourier:
-        dk = 2.*np.pi / L
+        dk = 2.0 * np.pi / L
     else:
         dk = L / n1d
-    kedges2 = ((kedges/dk)**2).astype(dtype)
+    kedges2 = ((kedges / dk) ** 2).astype(dtype)
     muedges2 = (muedges**2).astype(dtype)
 
     nthread = numba.get_num_threads()
@@ -203,17 +231,17 @@ def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.
     # Loop over all k vectors
     for i in numba.prange(n1d):
         tid = numba.get_thread_id()
-        i2 = i**2 if i < n1d//2 else (i - n1d)**2
+        i2 = i**2 if i < n1d // 2 else (i - n1d) ** 2
         for j in range(n1d):
-            bk,bmu = 0,0
-            j2 = j**2 if j < n1d//2 else (j - n1d)**2
+            bk, bmu = 0, 0
+            j2 = j**2 if j < n1d // 2 else (j - n1d) ** 2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
                 if kmag2 > 0:
                     invkmag2 = kmag2**-1
                     mu2 = dtype(k**2) * invkmag2
                 else:
-                    mu2 = dtype(0.)  # matches nbodykit
+                    mu2 = dtype(0.0)  # matches nbodykit
 
                 if kmag2 < kedges2[0]:
                     continue
@@ -221,21 +249,29 @@ def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.
                 if kmag2 >= kedges2[-1]:
                     break
 
-                while kmag2 > kedges2[bk+1]:
+                while kmag2 > kedges2[bk + 1]:
                     bk += 1
 
-                while mu2 > muedges2[bmu+1]:
+                while mu2 > muedges2[bmu + 1]:
                     bmu += 1
 
                 counts[tid, bk, bmu] += 1 if k == 0 else 2
-                weighted_counts[tid, bk, bmu] += weights[i, j, k] if k == 0 else dtype(2.)*weights[i, j, k]
-                weighted_counts_k[tid, bk, bmu] += np.sqrt(kmag2)*dk if k == 0 else dtype(2.)*np.sqrt(kmag2)*dk
+                weighted_counts[tid, bk, bmu] += (
+                    weights[i, j, k] if k == 0 else dtype(2.0) * weights[i, j, k]
+                )
+                weighted_counts_k[tid, bk, bmu] += (
+                    np.sqrt(kmag2) * dk if k == 0 else dtype(2.0) * np.sqrt(kmag2) * dk
+                )
                 if Np > 0:
                     for ip in range(len(poles)):
                         pole = poles[ip]
                         if pole != 0:
-                            pw = dtype(2*pole + 1)*P_n(mu2, pole)
-                            weighted_counts_poles[tid, ip, bk] += weights[i, j, k]*pw if k == 0 else dtype(2.)*weights[i, j, k]*pw
+                            pw = dtype(2 * pole + 1) * P_n(mu2, pole)
+                            weighted_counts_poles[tid, ip, bk] += (
+                                weights[i, j, k] * pw
+                                if k == 0
+                                else dtype(2.0) * weights[i, j, k] * pw
+                            )
 
     counts = counts.sum(axis=0)
     weighted_counts = weighted_counts.sum(axis=0)
@@ -243,7 +279,7 @@ def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.
     weighted_counts_k = weighted_counts_k.sum(axis=0)
     counts_poles = counts.sum(axis=1)
 
-    for ip,pole in enumerate(poles):
+    for ip, pole in enumerate(poles):
         if pole == 0:
             weighted_counts_poles[ip] = weighted_counts.sum(axis=1)
 
@@ -255,13 +291,27 @@ def bin_kmu(n1d, L, kedges, muedges, weights, poles=np.empty(0, 'i8'), dtype=np.
             if counts[i, j] != 0:
                 weighted_counts[i, j] /= dtype(counts[i, j])
                 weighted_counts_k[i, j] /= dtype(counts[i, j])
-    return weighted_counts, counts, weighted_counts_poles, counts_poles, weighted_counts_k
+    return (
+        weighted_counts,
+        counts,
+        weighted_counts_poles,
+        counts_poles,
+        weighted_counts_k,
+    )
 
 
 @numba.njit(parallel=True, fastmath=True)
-def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
-            fourier=True, nthread=MAX_THREADS,
-            ):
+def bin_kppi(
+    n1d,
+    L,
+    kedges,
+    pimax,
+    Npi,
+    weights,
+    dtype=np.float32,
+    fourier=True,
+    nthread=MAX_THREADS,
+):
     r"""
     Compute mean and count modes in (kp, pi) bins for a 3D rfft mesh of shape (n1d, n1d, n1d//2+1)
     or a real mesh of shape (n1d, n1d, n1d).
@@ -305,14 +355,14 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
 
     numba.set_num_threads(nthread)
 
-    kzlen = n1d//2 + 1
+    kzlen = n1d // 2 + 1
     Nk = len(kedges) - 1
     if fourier:
-        dk = 2.*np.pi / L
+        dk = 2.0 * np.pi / L
     else:
         dk = L / n1d
-    kedges2 = ((kedges/dk)**2).astype(dtype)
-    piedges2 = ((np.linspace(0., pimax, Npi+1)/dk)**2).astype(dtype)
+    kedges2 = ((kedges / dk) ** 2).astype(dtype)
+    piedges2 = ((np.linspace(0.0, pimax, Npi + 1) / dk) ** 2).astype(dtype)
 
     nthread = numba.get_num_threads()
     counts = np.zeros((nthread, Nk, Npi), dtype=np.int64)
@@ -321,10 +371,10 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
     # Loop over all k vectors
     for i in numba.prange(n1d):
         tid = numba.get_thread_id()
-        i2 = i**2 if i < n1d//2 else (i - n1d)**2
+        i2 = i**2 if i < n1d // 2 else (i - n1d) ** 2
         for j in range(n1d):
-            bk,bpi = 0,0 # kp not monotonic, but pi is monotonic
-            j2 = j**2 if j < n1d//2 else (j - n1d)**2
+            bk, bpi = 0, 0  # kp not monotonic, but pi is monotonic
+            j2 = j**2 if j < n1d // 2 else (j - n1d) ** 2
             kmag2 = dtype(i2 + j2)
 
             # skip until we reach bin of interest
@@ -335,20 +385,22 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
             if kmag2 >= kedges2[-1]:
                 break
 
-            while kmag2 > kedges2[bk+1]:
+            while kmag2 > kedges2[bk + 1]:
                 bk += 1
 
             for k in range(kzlen):
                 kz2 = k**2
 
-                while kz2 > piedges2[bpi+1]:
+                while kz2 > piedges2[bpi + 1]:
                     bpi += 1
 
                 if kz2 >= piedges2[-1]:
                     break
 
                 counts[tid, bk, bpi] += 1 if k == 0 else 2
-                weighted_counts[tid, bk, bpi] += weights[i, j, k] if k == 0 else dtype(2.)*weights[i, j, k]
+                weighted_counts[tid, bk, bpi] += (
+                    weights[i, j, k] if k == 0 else dtype(2.0) * weights[i, j, k]
+                )
 
     counts = counts.sum(axis=0)
     weighted_counts = weighted_counts.sum(axis=0)
@@ -358,6 +410,7 @@ def bin_kppi(n1d, L, kedges, pimax, Npi, weights, dtype=np.float32,
             if counts[i, j] != 0:
                 weighted_counts[i, j] /= dtype(counts[i, j])
     return weighted_counts, counts
+
 
 def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     r"""
@@ -381,12 +434,14 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     Npoles : array_like
         number of modes per k.
     """
-    assert np.max(poles) <= 10, "numba implementation works up to ell = 10"
+    assert np.max(poles) <= 10, 'numba implementation works up to ell = 10'
     nmesh = raw_p3d.shape[0]
     poles = np.asarray(poles)
     raw_p3d = np.asarray(raw_p3d)
-    muedges = np.array([0., 1.])
-    binned_p3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, muedges=muedges, weights=raw_p3d, poles=poles)
+    muedges = np.array([0.0, 1.0])
+    binned_p3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(
+        nmesh, Lbox, k_bin_edges, muedges=muedges, weights=raw_p3d, poles=poles
+    )
     binned_poles *= Lbox**3
     return binned_poles, Npoles
 
@@ -416,32 +471,36 @@ def expand_poles_to_3d(k_ell, P_ell, n1d, L, poles, dtype=np.float32):
         array of shape (n1d, n1d, n1d//2+1) containing 3D power spectrum modes.
     """
 
-    assert np.abs((k_ell[1]-k_ell[0]) - (k_ell[-1]-k_ell[-2])) < 1.e-6
-    kzlen = n1d//2 + 1
+    assert np.abs((k_ell[1] - k_ell[0]) - (k_ell[-1] - k_ell[-2])) < 1.0e-6
+    kzlen = n1d // 2 + 1
     numba.get_num_threads()
     Pk = np.zeros((n1d, n1d, kzlen), dtype=dtype)
-    dk = dtype(2. * np.pi / L)
+    dk = dtype(2.0 * np.pi / L)
     k_ell = k_ell.astype(dtype)
     P_ell = P_ell.astype(dtype)
 
     # Loop over all k vectors
     for i in numba.prange(n1d):
         numba.get_thread_id()
-        i2 = i**2 if i < n1d//2 else (i - n1d)**2
+        i2 = i**2 if i < n1d // 2 else (i - n1d) ** 2
         for j in range(n1d):
-            j2 = j**2 if j < n1d//2 else (j - n1d)**2
+            j2 = j**2 if j < n1d // 2 else (j - n1d) ** 2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
                 if kmag2 > 0:
                     invkmag2 = kmag2**-1
                     mu2 = dtype(k**2) * invkmag2
                 else:
-                    mu2 = dtype(0.) # matches nbodykit
+                    mu2 = dtype(0.0)  # matches nbodykit
                 for ip in range(len(poles)):
                     if poles[ip] == 0:
-                        Pk[i, j, k] += linear_interp(np.sqrt(kmag2)*dk, k_ell, P_ell[ip])
+                        Pk[i, j, k] += linear_interp(
+                            np.sqrt(kmag2) * dk, k_ell, P_ell[ip]
+                        )
                     else:
-                        Pk[i, j, k] += linear_interp(np.sqrt(kmag2)*dk, k_ell, P_ell[ip]) * P_n(mu2, poles[ip])
+                        Pk[i, j, k] += linear_interp(
+                            np.sqrt(kmag2) * dk, k_ell, P_ell[ip]
+                        ) * P_n(mu2, poles[ip])
     return Pk
 
 
@@ -469,10 +528,10 @@ def linear_interp(xd, x, y):
         return y[0]
     elif xd >= x[-1]:
         return y[-1]
-    dx = x[1]-x[0]
-    f = (xd-x[0])/dx
+    dx = x[1] - x[0]
+    f = (xd - x[0]) / dx
     fl = np.int64(f)
-    yd = y[fl] + (f - fl) * (y[fl+1] - y[fl])
+    yd = y[fl] + (f - fl) * (y[fl + 1] - y[fl])
     return yd
 
 
@@ -495,22 +554,22 @@ def get_smoothing(n1d, L, R, dtype=np.float32):
     Sk : array_like
         smoothing kernel of shape (n1d, n1d, n1d//2+1).
     """
-    kzlen = n1d//2 + 1
+    kzlen = n1d // 2 + 1
     numba.get_num_threads()
     Sk = np.zeros((n1d, n1d, kzlen), dtype=dtype)
-    dk = dtype(2. * np.pi / L)
+    dk = dtype(2.0 * np.pi / L)
     dk2 = dtype(dk**2)
     R2 = dtype(R**2)
 
     # Loop over all k vectors
     for i in numba.prange(n1d):
         numba.get_thread_id()
-        i2 = i**2 if i < n1d//2 else (i - n1d)**2
+        i2 = i**2 if i < n1d // 2 else (i - n1d) ** 2
         for j in range(n1d):
-            j2 = j**2 if j < n1d//2 else (j - n1d)**2
+            j2 = j**2 if j < n1d // 2 else (j - n1d) ** 2
             for k in range(kzlen):
                 kmag2 = dtype(i2 + j2 + k**2)
-                Sk[i, j, k] = np.exp(-kmag2*dk2*R2/2.)
+                Sk[i, j, k] = np.exp(-kmag2 * dk2 * R2 / 2.0)
     return Sk
 
 
@@ -536,23 +595,23 @@ def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
     delta_mu2 : array_like
         array of shape (n1d, n1d, n1d//2+1) containing delta*mu^2.
     """
-    kzlen = n1d//2 + 1
+    kzlen = n1d // 2 + 1
     numba.get_num_threads()
     delta_mu2 = np.zeros((n1d, n1d, kzlen), dtype=dtype_c)
 
     # Loop over all k vectors
     for i in numba.prange(n1d):
         numba.get_thread_id()
-        i2 = i**2 if i < n1d//2 else (i - n1d)**2
+        i2 = i**2 if i < n1d // 2 else (i - n1d) ** 2
         for j in range(n1d):
-            j2 = j**2 if j < n1d//2 else (j - n1d)**2
+            j2 = j**2 if j < n1d // 2 else (j - n1d) ** 2
             for k in range(kzlen):
                 kmag2 = dtype_f(i2 + j2 + k**2)
                 if kmag2 > 0:
                     invkmag2 = kmag2**-1
                     mu2 = dtype_f(k**2) * invkmag2
                 else:
-                    mu2 = dtype_f(0.)
+                    mu2 = dtype_f(0.0)
                 delta_mu2[i, j, k] = delta[i, j, k] * mu2
     return delta_mu2
 
@@ -583,16 +642,19 @@ def pk_to_xi(Pk, Lbox, r_bins, poles=[0, 2, 4]):
     """
     # apply fourier transform to get 3D correlation
     Xi = irfftn(Pk, workers=-1).real
-    del Pk; gc.collect() # noqa: E702
+    del Pk
+    gc.collect()
 
     # define r bins
-    r_binc = (r_bins[1:]+r_bins[:-1])*.5
+    r_binc = (r_bins[1:] + r_bins[:-1]) * 0.5
 
     # bin into xi_ell(r)
     nmesh = Xi.shape[0]
     poles = np.asarray(poles)
-    muedges = np.array([0., 1.])
-    _, _, binned_poles, Npoles, r_avg = bin_kmu(nmesh, Lbox, r_bins, muedges=muedges, weights=Xi, poles=poles, space='real')
+    muedges = np.array([0.0, 1.0])
+    _, _, binned_poles, Npoles, r_avg = bin_kmu(
+        nmesh, Lbox, r_bins, muedges=muedges, weights=Xi, poles=poles, space='real'
+    )
     binned_poles *= nmesh**3
     return r_binc, binned_poles, Npoles
 
@@ -629,16 +691,17 @@ def get_k_mu_edges(Lbox, k_max, kbins, mubins, logk):
         # define k-binning
         if logk:
             # set minimum k to make sure we cover fundamental mode
-            k_min = (1.-1.e-4)*2.*np.pi/Lbox
-            kbins = np.geomspace(k_min, k_max, kbins+1)
+            k_min = (1.0 - 1.0e-4) * 2.0 * np.pi / Lbox
+            kbins = np.geomspace(k_min, k_max, kbins + 1)
         else:
-            kbins = np.linspace(0., k_max, kbins+1)
+            kbins = np.linspace(0.0, k_max, kbins + 1)
 
     if isinstance(mubins, int):
         # define mu-binning
-        mubins = np.linspace(0., 1., mubins+1)
+        mubins = np.linspace(0.0, 1.0, mubins + 1)
 
     return kbins, mubins
+
 
 @numba.njit(parallel=True, fastmath=True)
 def get_raw_power(field_fft, field2_fft=None):
@@ -657,15 +720,22 @@ def get_raw_power(field_fft, field2_fft=None):
     """
     # calculate <deltak,deltak.conj>
     if field2_fft is not None:
-        raw_p3d = (np.conj(field_fft)*field2_fft).real
+        raw_p3d = (np.conj(field_fft) * field2_fft).real
     else:
-        raw_p3d = (np.abs(field_fft)**2)
+        raw_p3d = np.abs(field_fft) ** 2
     return raw_p3d
 
 
-def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
-                        field2_fft=None, poles=np.empty(0, 'i8'), squeeze_mu_axis=True,
-                        nthread=MAX_THREADS):
+def calc_pk_from_deltak(
+    field_fft,
+    Lbox,
+    k_bin_edges,
+    mu_bin_edges,
+    field2_fft=None,
+    poles=np.empty(0, 'i8'),
+    squeeze_mu_axis=True,
+    nthread=MAX_THREADS,
+):
     r"""
     Calculate the power spectrum of a given Fourier field, with binning in (k,mu).
     Optionally computes Legendre multipoles in k bins.
@@ -711,7 +781,9 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
 
     # power spectrum
     nmesh = raw_p3d.shape[0]
-    power, N_mode, binned_poles, N_mode_poles, k_avg = bin_kmu(nmesh, Lbox, k_bin_edges, mu_bin_edges, raw_p3d, poles, nthread=nthread)
+    power, N_mode, binned_poles, N_mode_poles, k_avg = bin_kmu(
+        nmesh, Lbox, k_bin_edges, mu_bin_edges, raw_p3d, poles, nthread=nthread
+    )
 
     # quantity above is dimensionless, multiply by box size (in Mpc/h)
     power *= Lbox**3
@@ -723,10 +795,18 @@ def calc_pk_from_deltak(field_fft, Lbox, k_bin_edges, mu_bin_edges,
         N_mode = N_mode[:, 0]
         k_avg = k_avg[:, 0]
 
-    return dict(power=power, N_mode=N_mode, binned_poles=binned_poles, N_mode_poles=N_mode_poles, k_avg=k_avg)
+    return dict(
+        power=power,
+        N_mode=N_mode,
+        binned_poles=binned_poles,
+        N_mode_poles=N_mode_poles,
+        k_avg=k_avg,
+    )
 
 
-def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS, dtype=np.float32):
+def get_field(
+    pos, Lbox, nmesh, paste, w=None, d=0.0, nthread=MAX_THREADS, dtype=np.float32
+):
     r"""
     Construct real-space 3D field given particle positions.
 
@@ -763,14 +843,18 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS, dtype=
     if paste == 'TSC':
         tsc_parallel(pos, field, Lbox, weights=w, nthread=nthread, offset=d)
     elif paste == 'CIC':
-        warnings.warn("Note that currently CIC pasting, unlike TSC, supports only a non-parallel implementation.")
-        if d != 0.:
+        warnings.warn(
+            'Note that currently CIC pasting, unlike TSC, supports only a non-parallel implementation.'
+        )
+        if d != 0.0:
             cic_serial(pos + d, field, Lbox, weights=w)
         else:
             cic_serial(pos, field, Lbox, weights=w)
     else:
-        raise ValueError(f"Unknown pasting method: {paste}")
-    if w is None: # in the zcv code the weights are already normalized, so don't normalize here
+        raise ValueError(f'Unknown pasting method: {paste}')
+    if (
+        w is None
+    ):  # in the zcv code the weights are already normalized, so don't normalize here
         # TODO assuming normalized weights is fragile
         # same as passing "Value" to nbodykit (1+delta)(x) V(x)
         # leads to -1 in the complex field
@@ -780,7 +864,7 @@ def get_field(pos, Lbox, nmesh, paste, w=None, d=0., nthread=MAX_THREADS, dtype=
 
 @numba.njit(parallel=True, fastmath=True)
 def normalize_field(field, tot_weight=None, inplace=False, nthread=MAX_THREADS):
-    '''
+    """
     Normalize a cosmological density field to the overdensity convention:
 
     ``overdens = field / field.mean() - 1``
@@ -803,7 +887,7 @@ def normalize_field(field, tot_weight=None, inplace=False, nthread=MAX_THREADS):
     -------
     overdens : np.ndarray
         The normalized overdensity field
-    '''
+    """
 
     numba.set_num_threads(nthread)
 
@@ -816,9 +900,9 @@ def normalize_field(field, tot_weight=None, inplace=False, nthread=MAX_THREADS):
     if inplace:
         flatfield = field.reshape(-1)
         for i in numba.prange(len(flatfield)):
-            flatfield[i] = flatfield[i]*norm - dtype(1.)
+            flatfield[i] = flatfield[i] * norm - dtype(1.0)
     else:
-        field = field*norm - dtype(1.)
+        field = field * norm - dtype(1.0)
     return field
 
 
@@ -848,25 +932,30 @@ def shift_field_fft(field_fft, field_shift_fft, n1d, L, d, dtype=np.float32):
     field_fft : array_like
         Modified original array.
     """
-    kzlen = n1d//2 + 1
+    kzlen = n1d // 2 + 1
     numba.get_num_threads()
-    dk = dtype(2. * np.pi / L)
+    dk = dtype(2.0 * np.pi / L)
     d = dtype(d)
-    norm = dtype(0.5/n1d**3)
+    norm = dtype(0.5 / n1d**3)
     fac = dtype(0.5 * d) * 1j
 
     # Loop over all k vectors
     for i in numba.prange(n1d):
-        #tid = numba.get_thread_id()
-        kx = dtype(i)*dk if i < n1d//2 else dtype(i - n1d)*dk
+        # tid = numba.get_thread_id()
+        kx = dtype(i) * dk if i < n1d // 2 else dtype(i - n1d) * dk
         for j in range(n1d):
-            ky = dtype(j)*dk if j < n1d//2 else dtype(j - n1d)*dk
+            ky = dtype(j) * dk if j < n1d // 2 else dtype(j - n1d) * dk
             for k in range(kzlen):
-                kz = dtype(k)*dk
-                field_fft[i, j, k] += field_shift_fft[i, j, k]*np.exp(fac * (kx + ky + kz))
+                kz = dtype(k) * dk
+                field_fft[i, j, k] += field_shift_fft[i, j, k] * np.exp(
+                    fac * (kx + ky + kz)
+                )
                 field_fft[i, j, k] *= norm
 
-def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS, verbose=False):
+
+def get_interlaced_field_fft(
+    pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS, verbose=False
+):
     r"""
     Calculate interlaced field from particle positions and return 3D Fourier field.
 
@@ -898,10 +987,10 @@ def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS, ve
     gc.collect()
 
     # offset by half a cell
-    field_shift = get_field(pos, Lbox, nmesh, paste, w, d=0.5*d)
+    field_shift = get_field(pos, Lbox, nmesh, paste, w, d=0.5 * d)
     field_shift_fft = rfftn(field_shift, workers=nthread)
     if verbose:
-        print("shift", field_shift.dtype, pos.dtype)
+        print('shift', field_shift.dtype, pos.dtype)
     del field_shift
     del pos, w
     gc.collect()
@@ -910,11 +999,23 @@ def get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=MAX_THREADS, ve
     del field_shift_fft
     gc.collect()
     if verbose:
-        print("field fft", field_fft.dtype)
+        print('field fft', field_fft.dtype)
     return field_fft
 
 
-def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthread=MAX_THREADS, verbose=False, dtype=np.float32):
+def get_field_fft(
+    pos,
+    Lbox,
+    nmesh,
+    paste,
+    w,
+    W,
+    compensated,
+    interlaced,
+    nthread=MAX_THREADS,
+    verbose=False,
+    dtype=np.float32,
+):
     r"""
     Calculate field from particle positions and return 3D Fourier field.
 
@@ -949,12 +1050,14 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthrea
 
     if interlaced:
         # get interlaced field
-        field_fft = get_interlaced_field_fft(pos, Lbox, nmesh, paste, w, nthread=nthread)
+        field_fft = get_interlaced_field_fft(
+            pos, Lbox, nmesh, paste, w, nthread=nthread
+        )
     else:
         # get field in real space
         field = get_field(pos, Lbox, nmesh, paste, w, nthread=nthread, dtype=dtype)
         if verbose:
-            print("field, pos", field.dtype, pos.dtype)
+            print('field, pos', field.dtype, pos.dtype)
 
         # get Fourier modes from skewers grid
         inv_size = dtype(1 / field.size)
@@ -964,7 +1067,11 @@ def get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthrea
     # apply compensation filter
     if compensated:
         assert W is not None
-        field_fft /= (W[:, np.newaxis, np.newaxis] * W[np.newaxis, :, np.newaxis] * W[np.newaxis, np.newaxis, :(nmesh//2+1)])
+        field_fft /= (
+            W[:, np.newaxis, np.newaxis]
+            * W[np.newaxis, :, np.newaxis]
+            * W[np.newaxis, np.newaxis, : (nmesh // 2 + 1)]
+        )
     return field_fft
 
 
@@ -1004,45 +1111,47 @@ def get_W_compensated(Lbox, nmesh, paste, interlaced):
     kN = np.pi / d
 
     # natural wavemodes
-    k = (fftfreq(nmesh, d=d) * 2. * np.pi).astype(np.float32) # h/Mpc
+    k = (fftfreq(nmesh, d=d) * 2.0 * np.pi).astype(np.float32)  # h/Mpc
 
     # apply deconvolution
     paste = paste.upper()
     if interlaced:
         if paste == 'TSC':
-            p = 3.
+            p = 3.0
         elif paste == 'CIC':
-            p = 2.
+            p = 2.0
         else:
-            raise ValueError(f"Unknown pasting method {paste}")
-        W = np.sinc(0.5*k/kN)**p # sinc def
-    else: # first order correction of interlacing (aka aliasing)
-        s = np.sin(0.5 * np.pi * k/kN)**2
+            raise ValueError(f'Unknown pasting method {paste}')
+        W = np.sinc(0.5 * k / kN) ** p  # sinc def
+    else:  # first order correction of interlacing (aka aliasing)
+        s = np.sin(0.5 * np.pi * k / kN) ** 2
         if paste == 'TSC':
-            W = (1 - s + 2./15 * s**2) ** 0.5
+            W = (1 - s + 2.0 / 15 * s**2) ** 0.5
         elif paste == 'CIC':
-            W = (1 - 2./3 * s) ** 0.5
+            W = (1 - 2.0 / 3 * s) ** 0.5
         del s
     return W
 
-def calc_power(pos,
-               Lbox,
-               kbins = None,
-               mubins = None,
-               k_max = None,
-               logk = False,
-               paste = 'TSC',
-               nmesh = 128,
-               compensated = True,
-               interlaced = True,
-               w = None,
-               pos2 = None,
-               w2 = None,
-               poles = None,
-               squeeze_mu_axis = True,
-               nthread = MAX_THREADS,
-               dtype = np.float32,
-               ):
+
+def calc_power(
+    pos,
+    Lbox,
+    kbins=None,
+    mubins=None,
+    k_max=None,
+    logk=False,
+    paste='TSC',
+    nmesh=128,
+    compensated=True,
+    interlaced=True,
+    w=None,
+    pos2=None,
+    w2=None,
+    poles=None,
+    squeeze_mu_axis=True,
+    nthread=MAX_THREADS,
+    dtype=np.float32,
+):
     r"""
     Compute the 3D power spectrum given particle positions by first painting them on a
     cubic mesh and then applying Fourier transforms and mode counting. Outputs (k,mu)
@@ -1116,19 +1225,20 @@ def calc_power(pos,
     if mubins is None:
         mubins = 1
 
-    meta = dict(Lbox=Lbox,
-                logk=logk,
-                paste=paste,
-                nmesh=nmesh,
-                compensated=compensated,
-                interlaced=interlaced,
-                poles=poles,
-                nthread=nthread,
-                N_pos=len(pos),
-                is_weighted=w is not None,
-                field_dtype=dtype,
-                squeeze_mu_axis=squeeze_mu_axis,
-                )
+    meta = dict(
+        Lbox=Lbox,
+        logk=logk,
+        paste=paste,
+        nmesh=nmesh,
+        compensated=compensated,
+        interlaced=interlaced,
+        poles=poles,
+        nthread=nthread,
+        N_pos=len(pos),
+        is_weighted=w is not None,
+        field_dtype=dtype,
+        squeeze_mu_axis=squeeze_mu_axis,
+    )
     if pos2 is not None:
         meta['N_pos2'] = len(pos2)
         meta['is_weighted2'] = w2 is not None
@@ -1140,12 +1250,34 @@ def calc_power(pos,
         W = None
 
     # convert to fourier space
-    field_fft = get_field_fft(pos, Lbox, nmesh, paste, w, W, compensated, interlaced, nthread=nthread, dtype=dtype)
+    field_fft = get_field_fft(
+        pos,
+        Lbox,
+        nmesh,
+        paste,
+        w,
+        W,
+        compensated,
+        interlaced,
+        nthread=nthread,
+        dtype=dtype,
+    )
 
     # if second field provided
     if pos2 is not None:
         # convert to fourier space
-        field2_fft = get_field_fft(pos2, Lbox, nmesh, paste, w2, W, compensated, interlaced, nthread=nthread, dtype=dtype)
+        field2_fft = get_field_fft(
+            pos2,
+            Lbox,
+            nmesh,
+            paste,
+            w2,
+            W,
+            compensated,
+            interlaced,
+            nthread=nthread,
+            dtype=dtype,
+        )
     else:
         field2_fft = None
 
@@ -1153,14 +1285,20 @@ def calc_power(pos,
 
     # calculate power spectrum
     kbins, mubins = get_k_mu_edges(Lbox, k_max, kbins, mubins, logk)
-    P = calc_pk_from_deltak(field_fft, Lbox, kbins, mubins,
-                            field2_fft=field2_fft, poles=poles, squeeze_mu_axis=squeeze_mu_axis,
-                            nthread=nthread,
-                            )
+    P = calc_pk_from_deltak(
+        field_fft,
+        Lbox,
+        kbins,
+        mubins,
+        field2_fft=field2_fft,
+        poles=poles,
+        squeeze_mu_axis=squeeze_mu_axis,
+        nthread=nthread,
+    )
 
     # define bin centers
-    k_binc = (kbins[1:] + kbins[:-1])*.5
-    mu_binc = (mubins[1:] + mubins[:-1])*.5
+    k_binc = (kbins[1:] + kbins[:-1]) * 0.5
+    mu_binc = (mubins[1:] + mubins[:-1]) * 0.5
 
     res = dict(
         k_min=kbins[:-1],
@@ -1169,18 +1307,18 @@ def calc_power(pos,
         k_avg=P['k_avg'],
         power=P['power'],
         N_mode=P['N_mode'],
-        )
+    )
     if len(poles) > 0:
         res.update(
             poles=P['binned_poles'].T,
             N_mode_poles=P['N_mode_poles'],
-            )
+        )
     if return_mubins:
         res.update(
             mu_min=np.broadcast_to(mubins[:-1], res['power'].shape),
             mu_max=np.broadcast_to(mubins[1:], res['power'].shape),
             mu_mid=np.broadcast_to(mu_binc, res['power'].shape),
-            )
+        )
     res = Table(res, meta=meta)
 
     return res
