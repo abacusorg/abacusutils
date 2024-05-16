@@ -653,7 +653,7 @@ def pk_to_xi(Pk, Lbox, r_bins, poles=[0, 2, 4]):
     poles = np.asarray(poles)
     muedges = np.array([0.0, 1.0])
     _, _, binned_poles, Npoles, r_avg = bin_kmu(
-        nmesh, Lbox, r_bins, muedges=muedges, weights=Xi, poles=poles, space='real'
+        nmesh, Lbox, r_bins, muedges=muedges, weights=Xi, poles=poles, fourier=False
     )
     binned_poles *= nmesh**3
     return r_binc, binned_poles, Npoles
