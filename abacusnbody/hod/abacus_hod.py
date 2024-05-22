@@ -258,8 +258,6 @@ class AbacusHOD:
         simname = Path(self.sim_name)
         sim_dir = Path(self.sim_dir)
         mock_dir = output_dir / simname / ('z%4.3f' % self.z_mock)
-        # create mock_dir if not created
-        mock_dir.mkdir(parents=True, exist_ok=True)
         subsample_dir = Path(self.subsample_dir) / simname / ('z%4.3f' % self.z_mock)
 
         # load header to read parameters
@@ -754,6 +752,11 @@ class AbacusHOD:
             self.logger.info(
                 f'Randoms generated in elapsed time {time.time() - start:.2f} s.'
             )
+        
+        # If write_to_disk is True, create the directory to save the mock
+        # Otherwise, there is no need to create a directory that will not be used
+        if write_to_disk:
+            self.mock_dir.mkdir(parents=True, exist_ok=True)
 
         start = time.time()
         mock_dict = gen_gal_cat(
