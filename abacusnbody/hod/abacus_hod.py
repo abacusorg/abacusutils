@@ -260,6 +260,10 @@ class AbacusHOD:
         mock_dir = output_dir / simname / ('z%4.3f' % self.z_mock)
         subsample_dir = Path(self.subsample_dir) / simname / ('z%4.3f' % self.z_mock)
         
+        # Check if the simulation directory exists
+        if not (sim_dir / simname).exists():
+            raise FileNotFoundError(f'Simulation directory {sim_dir / simname} not found.')
+        
         # Check if the subsample directory exists
         if not subsample_dir.exists():
             raise FileNotFoundError(f'Subsample directory {subsample_dir} not found.')
