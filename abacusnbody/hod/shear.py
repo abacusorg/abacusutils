@@ -16,9 +16,10 @@ from scipy.ndimage import gaussian_filter
 #         return x - L
 #     return x
 
+
 @njit
 def dist(pos1, pos2, L=None):
-    '''
+    """
     Calculate L2 norm distance between a set of points
     and either a reference point or another set of points.
     Optionally includes periodicity.
@@ -34,7 +35,7 @@ def dist(pos1, pos2, L=None):
     -------
     dist: ndarray of shape (N,)
         The distances between pos1 and pos2
-    '''
+    """
 
     # read dimension of data
     N, nd = pos1.shape
@@ -48,19 +49,20 @@ def dist(pos1, pos2, L=None):
 
     i2 = 0
     for i in range(N):
-        delta = 0.
+        delta = 0.0
         for j in range(nd):
             dx = pos1[i][j] - pos2[i2][j]
             if L is not None:
-                if dx >= L/2:
+                if dx >= L / 2:
                     dx -= L
-                elif dx < -L/2:
+                elif dx < -L / 2:
                     dx += L
-            delta += dx*dx
+            delta += dx * dx
         dist[i] = np.sqrt(delta)
         if not broadcast:
             i2 += 1
     return dist
+
 
 # @njit(nopython=True, nogil=True)
 # def numba_tsc_3D(positions, density, boxsize, weights=np.empty(0)):
@@ -163,32 +165,34 @@ def dist(pos1, pos2, L=None):
 #             density[ixp1, iyp1, izm1] += wxp1*wyp1*wzm1*W
 #             density[ixp1, iyp1, izp1] += wxp1*wyp1*wzp1*W
 
+
 def smooth_density(D, R, N_dim, Lbox):
     # cell size
-    cell = Lbox/N_dim
+    cell = Lbox / N_dim
     # smoothing scale
     R /= cell
     D_smooth = gaussian_filter(D, R)
     return D_smooth
 
+
 # tophat
 @njit(nopython=True)
 def Wth(ksq, r):
     k = np.sqrt(ksq)
-    w = 3*(np.sin(k*r)-k*r*np.cos(k*r))/(k*r)**3
+    w = 3 * (np.sin(k * r) - k * r * np.cos(k * r)) / (k * r) ** 3
     return w
+
 
 # gaussian
 @njit(nopython=True)
 def Wg(k, r):
-    return np.exp(-k*r*r/2.)
+    return np.exp(-k * r * r / 2.0)
 
 
-@njit(nopython=True, parallel = True)
+@njit(nopython=True, parallel=True)
 def get_tidal(dfour, karr, N_dim, R):
-
     # initiate array
-    tfour = np.zeros(shape=(N_dim, N_dim, N_dim, 3, 3),dtype=np.complex128)#complex)
+    tfour = np.zeros(shape=(N_dim, N_dim, N_dim, 3, 3), dtype=np.complex128)  # complex)
 
     # computing tidal tensor
     for a in prange(N_dim):
@@ -197,26 +201,27 @@ def get_tidal(dfour, karr, N_dim, R):
                 if (a, b, c) == (0, 0, 0):
                     continue
 
-                ksq = karr[a]**2 + karr[b]**2 + karr[c]**2
+                ksq = karr[a] ** 2 + karr[b] ** 2 + karr[c] ** 2
                 # smoothed density Gauss fourier
-                #dksmo[a, b, c] = Wg(ksq)*dfour[a, b, c]
+                # dksmo[a, b, c] = Wg(ksq)*dfour[a, b, c]
                 # smoothed density TH fourier
-                #dkth[a, b, c] = Wth(ksq)*dfour[a, b, c]
+                # dkth[a, b, c] = Wth(ksq)*dfour[a, b, c]
                 # all 9 components
-                tfour[a, b, c, 0, 0] = karr[a]*karr[a]*dfour[a, b, c]/ksq
-                tfour[a, b, c, 1, 1] = karr[b]*karr[b]*dfour[a, b, c]/ksq
-                tfour[a, b, c, 2, 2] = karr[c]*karr[c]*dfour[a, b, c]/ksq
-                tfour[a, b, c, 1, 0] = karr[a]*karr[b]*dfour[a, b, c]/ksq
+                tfour[a, b, c, 0, 0] = karr[a] * karr[a] * dfour[a, b, c] / ksq
+                tfour[a, b, c, 1, 1] = karr[b] * karr[b] * dfour[a, b, c] / ksq
+                tfour[a, b, c, 2, 2] = karr[c] * karr[c] * dfour[a, b, c] / ksq
+                tfour[a, b, c, 1, 0] = karr[a] * karr[b] * dfour[a, b, c] / ksq
                 tfour[a, b, c, 0, 1] = tfour[a, b, c, 1, 0]
-                tfour[a, b, c, 2, 0] = karr[a]*karr[c]*dfour[a, b, c]/ksq
+                tfour[a, b, c, 2, 0] = karr[a] * karr[c] * dfour[a, b, c] / ksq
                 tfour[a, b, c, 0, 2] = tfour[a, b, c, 2, 0]
-                tfour[a, b, c, 1, 2] = karr[b]*karr[c]*dfour[a, b, c]/ksq
+                tfour[a, b, c, 1, 2] = karr[b] * karr[c] * dfour[a, b, c] / ksq
                 tfour[a, b, c, 2, 1] = tfour[a, b, c, 1, 2]
                 if R is not None:
                     tfour[a, b, c, :, :] *= Wth(ksq, R)
     return tfour
 
-@njit(nopython=True, parallel = True)
+
+@njit(nopython=True, parallel=True)
 def get_shear_nb(tidr, N_dim):
     shear = np.zeros(shape=(N_dim, N_dim, N_dim), dtype=np.float64)
     for a in prange(N_dim):
@@ -231,26 +236,28 @@ def get_shear_nb(tidr, N_dim):
                 l1 = evals[0]
                 l2 = evals[1]
                 l3 = evals[2]
-                shear[a, b, c] = 0.5*((l2-l1)**2 + (l3-l1)**2 + (l3-l2)**2)
+                shear[a, b, c] = 0.5 * (
+                    (l2 - l1) ** 2 + (l3 - l1) ** 2 + (l3 - l2) ** 2
+                )
     return shear
 
-def get_shear(dsmo, N_dim, Lbox, R=None):
 
+def get_shear(dsmo, N_dim, Lbox, R=None):
     # fourier transform the density field
     dfour = np.fft.fftn(dsmo)
 
     # k values
-    karr = np.fft.fftfreq(N_dim, d=Lbox/(2*np.pi*N_dim))
+    karr = np.fft.fftfreq(N_dim, d=Lbox / (2 * np.pi * N_dim))
 
     # creating empty arrays for future use
     start = time.time()
     tfour = get_tidal(dfour, karr, N_dim, R)
-    tidr = np.real(np.fft.ifftn(tfour, axes = (0, 1, 2)))
-    print("finished tidal, took time", time.time() - start)
+    tidr = np.real(np.fft.ifftn(tfour, axes=(0, 1, 2)))
+    print('finished tidal, took time', time.time() - start)
 
     # compute shear
     start = time.time()
     shear = np.sqrt(get_shear_nb(tidr, N_dim))
-    print("finished shear, took time", time.time() - start)
+    print('finished shear, took time', time.time() - start)
 
     return shear
