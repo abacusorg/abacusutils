@@ -81,7 +81,7 @@ jobs:
     - name: Pre-install dependencies
       run: |
         pip install -vU pip
-        pip install -vU 'numpy<2'  # for corrfunc, classy
+        pip install -vU setuptools wheel 'numpy<2'  # for corrfunc, classy
         pip install -vU --no-build-isolation corrfunc classy
 
     - name: Install package from source
