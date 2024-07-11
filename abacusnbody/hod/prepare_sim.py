@@ -838,8 +838,12 @@ def prepare_slab(
     )  # attaching random numbers
 
     # output halo file
+<<<<<<< HEAD
     print('outputting new halo file ')
     # output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
+=======
+    print("outputting new halo file ")
+>>>>>>> ca066c9 (parallel shear)
     if os.path.exists(outfilename_halos):
         os.remove(outfilename_halos)
     newfile = h5py.File(outfilename_halos, 'w')
@@ -873,6 +877,7 @@ def prepare_slab(
         parts['halo_fenv'] = fenvh_parts[mask_parts]
         parts['halo_shear'] = shearh_parts[mask_parts]
 
+<<<<<<< HEAD
         print(
             'are there any negative particle values? ',
             np.sum(parts['downsample_halo'] < 0),
@@ -880,6 +885,11 @@ def prepare_slab(
         )
         print('outputting new particle file ')
         # output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
+=======
+        print("are there any negative particle values? ", np.sum(parts['downsample_halo'] < 0),
+            np.sum(parts['halo_mass'] < 0))
+        print("outputting new particle file ")
+>>>>>>> ca066c9 (parallel shear)
         if os.path.exists(outfilename_particles):
             os.remove(outfilename_particles)
         newfile = h5py.File(outfilename_particles, 'w')
