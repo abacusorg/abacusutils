@@ -528,7 +528,7 @@ def prepare_slab(
 
             if len(index_bounds) > 0:
                 # factor of rands to generate
-                rand = 100  # to ensure 12 times more randoms than haloes in the octant.
+                rand = 50  # to ensure 6 times more randoms than haloes in the octant.
                 rand_N = allpos.shape[0] * rand
 
                 # generate randoms in L shape
@@ -591,8 +591,14 @@ def prepare_slab(
         gc.collect()
 
         if halo_lc and len(index_bounds) > 0:
-            Menv[index_bounds] /= rand_norm
-
+            mask = rand_norm == 0.0
+            rand_norm[mask] = 1.0
+            tmp = Menv[index_bounds]
+            tmp /= rand_norm  # fixed (pull request #142)
+            tmp[mask] = 0.0
+            Menv[index_bounds] = tmp
+            del mask
+            gc.collect()
         halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, allmasses)
 
         # compute delta concentration
