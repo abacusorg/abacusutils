@@ -1096,10 +1096,8 @@ def main(
     # N_dim = config['HOD_params']['Ndim']
     nthread = config['prepare_sim'].get('Nthread_per_load', 'auto')
     if nthread == 'auto':
-        nthread = int(
-            np.floor(
-                len(os.sched_getaffinity(0)) / config['prepare_sim']['Nparallel_load']
-            )
+        nthread = (
+            len(os.sched_getaffinity(0)) // config['prepare_sim']['Nparallel_load']
         )
         print(f'prepare_sim inferred Nthread_per_load = {nthread}')
     else:
