@@ -13,7 +13,8 @@ sim_params:
     cleaned_halos: True                                                     # load cleaned halos?
 
 prepare_sim:
-    Nparallel_load: 5                                                          # number of thread for organizing simulation outputs (prepare_sim)
+    Nparallel_load: 5                                          # number of processes. peak memory usage will increase by this factor.
+    Nthread_per_load: 'auto'                                   # number of threads per process (auto uses the affinity mask)
 
 # HOD parameters
 HOD_params:
