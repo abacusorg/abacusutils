@@ -1094,9 +1094,16 @@ def main(
     else:
         shearmark = None
     # N_dim = config['HOD_params']['Ndim']
-    nthread = int(
-        np.floor(multiprocessing.cpu_count() / config['prepare_sim']['Nparallel_load'])
-    )
+    nthread = config['prepare_sim'].get('Nthread_per_load', 'auto')
+    if nthread == 'auto':
+        nthread = int(
+            np.floor(
+                len(os.sched_getaffinity(0)) / config['prepare_sim']['Nparallel_load']
+            )
+        )
+        print(f'prepare_sim inferred Nthread_per_load = {nthread}')
+    else:
+        nthread = int(nthread)
 
     p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
     p.starmap(

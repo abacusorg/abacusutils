@@ -14,6 +14,7 @@ sim_params:
 
 prepare_sim:
     Nparallel_load: 1 # not sure if this makes a difference since we have a single slab
+    Nthread_per_load: 'auto'
 
 # HOD parameters
 HOD_params:
