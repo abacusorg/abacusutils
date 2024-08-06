@@ -852,13 +852,7 @@ def get_field(
             cic_serial(pos, field, Lbox, weights=w)
     else:
         raise ValueError(f'Unknown pasting method: {paste}')
-    if (
-        w is None
-    ):  # in the zcv code the weights are already normalized, so don't normalize here
-        # TODO assuming normalized weights is fragile
-        # same as passing "Value" to nbodykit (1+delta)(x) V(x)
-        # leads to -1 in the complex field
-        normalize_field(field, inplace=True, tot_weight=len(pos), nthread=nthread)
+    normalize_field(field, inplace=True, tot_weight=len(pos), nthread=nthread)
     return field
 
 
