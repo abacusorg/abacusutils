@@ -900,11 +900,32 @@ class AbacusHOD:
                 
             elif etracer == 'CSMF':
                 newngal = AbacusHOD._compute_ngal_CSMF(
-                    self.logMbins, self.deltacbins, self.fenvbins, self.halo_mass_func,
-                    tracer_hod['Mstar_low'], tracer_hod['Mstar_up'], tracer_hod['M_1'], tracer_hod['M_0'], tracer_hod['gamma_1'], tracer_hod['gamma_2'], 
-                    tracer_hod['sigma_c'], tracer_hod['a_1'], tracer_hod['a_2'], tracer_hod['M_2'], tracer_hod['b_0'], tracer_hod['b_1'], 
-                    tracer_hod['b_2'], tracer_hod.get('delta_1', 0), tracer_hod.get('delta_2', 0), tracer_hod.get('Acent', 0),
-                    tracer_hod.get('Asat', 0), tracer_hod.get('Bcent', 0), tracer_hod.get('Bsat', 0), tracer_hod.get('ic', 1), Nthread)
+                    self.logMbins, 
+                    self.deltacbins, 
+                    self.fenvbins, 
+                    self.halo_mass_func,
+                    tracer_hod['Mstar_low'], 
+                    tracer_hod['Mstar_up'], 
+                    tracer_hod['M_1'], 
+                    tracer_hod['M_0'], 
+                    tracer_hod['gamma_1'], 
+                    tracer_hod['gamma_2'], 
+                    tracer_hod['sigma_c'], 
+                    tracer_hod['a_1'], 
+                    tracer_hod['a_2'], 
+                    tracer_hod['M_2'], 
+                    tracer_hod['b_0'], 
+                    tracer_hod['b_1'], 
+                    tracer_hod['b_2'], 
+                    tracer_hod.get('delta_1', 0), 
+                    tracer_hod.get('delta_2', 0), 
+                    tracer_hod.get('Acent', 0),
+                    tracer_hod.get('Asat', 0), 
+                    tracer_hod.get('Bcent', 0), 
+                    tracer_hod.get('Bsat', 0), 
+                    tracer_hod.get('ic', 1), 
+                    Nthread
+                )
                 ngal_dict[etracer] = newngal[0] + newngal[1]
                 fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
         return ngal_dict, fsat_dict

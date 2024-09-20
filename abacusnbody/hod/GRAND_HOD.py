@@ -19,6 +19,196 @@ int_array = types.int64[:]
 G = 4.302e-6  # in kpc/Msol (km.s)^2
 
 
+
+@njit(fastmath=True)
+def n_cen_CSMF(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c):
+    """
+    Standard Cacciato et al. (2008) centrals HOD parametrization for CSMF
+    """
+    M_c_value = M_c(M_h, M_1, M_0, gamma1, gamma2)
+    x_low = np.log10(Mstar_low/M_c_value)/(1.41421356*sigma_c)
+    x_up = np.log10(Mstar_up/M_c_value)/(1.41421356*sigma_c)
+    
+    return 0.5*(math.erf(x_up) - math.erf(x_low))
+
+@njit(fastmath=True)
+def CSMF_centrals(M_h, Mstar, M_1, M_0, gamma1, gamma2, sigma_c):
+    """
+    Eq. (34) from Cacciato et al. (2008)
+    """
+    
+    M_c_value = M_c(M_h, M_1, M_0, gamma1, gamma2)
+    
+    return 1/(1.41421356*np.sqrt(np.pi)*np.log(10)*sigma_c*Mstar)*np.exp(-(np.log10(Mstar)-np.log10(M_c_value))**2/(2*sigma_c**2))
+
+@njit(fastmath=True)
+def M_c(M_h, M_1, M_0, gamma1, gamma2):
+    """
+    Eq. (37) from Cacciato et al. (2008)
+    """
+    return M_0 * (M_h/M_1)**gamma1/(1+M_h/M_1)**(gamma1-gamma2)
+
+
+
+@njit(fastmath=True)
+def get_random_cen_stellarmass(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c):
+ 
+    nbins = 1000
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+    stellarmass_centers = stellarmass[1:]/2+stellarmass[:-1]/2
+    delta_stellar_masses = stellarmass[1:]-stellarmass[:-1]
+
+    CSMF_cen = CSMF_centrals(M_h, stellarmass_centers, M_1, M_0, gamma1, gamma2, sigma_c)
+    
+    cdf = [] 
+    cdf_current_value = 0
+    for k in range(len(delta_stellar_masses)):
+        cdf_current_value = cdf_current_value + CSMF_cen[k]*delta_stellar_masses[k]
+        cdf.append(cdf_current_value)
+    cdf=np.array(cdf) 
+    
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
+    bin_clostest = (np.abs(cdf - random_rv)).argmin()
+    
+    return np.random.uniform(stellarmass[bin_clostest],stellarmass[bin_clostest+1])
+ 
+
+
+    
+@njit(fastmath=True)
+def get_random_cen_stellarmass_linearinterpolation(M_h, Mstar_low, Mstar_up,  M_1, M_0, gamma1, gamma2, sigma_c):
+ 
+    nbins = 1000
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+
+    CSMF_cen = CSMF_centrals(M_h, stellarmass, M_1, M_0, gamma1, gamma2, sigma_c)
+    
+    delta=stellarmass[1:]-stellarmass[:-1]
+    
+    cdf = [] 
+    cdf_current_value = 0
+    for i in range(len(delta)):
+        cdf_current_value = cdf_current_value + CSMF_cen[i]*delta[i]
+        cdf.append(cdf_current_value)
+    cdf=np.array(cdf)
+        
+    cdf=cdf/cdf[-1] 
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
+    bin = np.where(cdf>random_rv)[0][0]
+      
+    m = (stellarmass[bin]-stellarmass[bin-1])/(cdf[bin]-cdf[bin-1])
+    return m * (random_rv - cdf[bin-1]) + stellarmass[bin-1]
+
+
+@njit(fastmath=True)
+def n_sat_CSMF(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c, a1, a2, M2, b0, b1, b2, delta1, delta2):
+    """
+    Standard Cacciato et al. (2008) satellite HOD parametrization for CSMF
+    """
+    nbins = 1000
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+    
+    CSMF_sat = CSMF_satelites(M_h, stellarmass, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2)    
+
+    nsat = 0
+    for i in range(nbins-1):
+        nsat += (CSMF_sat[i+1]-CSMF_sat[i])*(stellarmass[i+1]-stellarmass[i])/2 + (stellarmass[i+1]-stellarmass[i])*CSMF_sat[i]
+    
+    return nsat#*ncen
+
+
+@njit(fastmath=True)
+def CSMF_satelites(M_h, Mstar, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2):
+    """
+    Eq. (36) from Cacciato et al. (2008)
+    """
+    M_s_value = M_s(M_h, M_1, M_0, gamma1, gamma2)
+    alpha_s_value = alpha_s(M_h, a1, a2, M2)
+    phi_s_value = phi_s(M_h, b0, b1, b2)
+    
+    delta = 10 ** (delta1 + delta2 * (np.log10(M_h) - 12))
+    
+    return phi_s_value/M_s_value * (Mstar/M_s_value)**alpha_s_value * np.exp(-delta*(Mstar/M_s_value)**2)
+
+@njit(fastmath=True)
+def M_s(M_h, M_1, M_0, gamma1, gamma2):
+    """
+    Eq. (38) from Cacciato et al. (2008)
+    """
+    return 0.562 * M_c(M_h, M_1, M_0, gamma1, gamma2)
+
+@njit(fastmath=True)
+def alpha_s(M_h, a1, a2, M2):
+    """
+    Eq. (39) from Cacciato et al. (2008)
+    """
+    return -2.0 + a1 * (1-2/np.pi*np.arctan(a2*np.log10(M_h/M2)))
+
+@njit(fastmath=True)
+def phi_s(M_h, b0, b1, b2):
+    """
+    Eq. (40) from Cacciato et al. (2008)
+    """
+    M12 = M_h/1e12                     
+    log_phi_s = b0 + b1 * np.log10(M12) + b2 * np.log10(M12)**2                   
+    return 10**log_phi_s
+
+
+@njit(fastmath=True)
+def get_random_sat_stellarmass(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2):
+    
+    nbins = 1000
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+    stellarmass_centers = stellarmass[1:]/2+stellarmass[:-1]/2
+    delta_stellar_masses = stellarmass[1:]-stellarmass[:-1]
+        
+    CSMF_sat = CSMF_satelites(M_h, stellarmass_centers, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2)
+     
+    
+    cdf = [] 
+    cdf_current_value = 0
+    for k in range(len(delta_stellar_masses)):
+        cdf_current_value = cdf_current_value + CSMF_sat[k]*delta_stellar_masses[k]
+        cdf.append(cdf_current_value)
+    cdf=np.array(cdf) 
+    
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
+    bin_clostest = (np.abs(cdf - random_rv)).argmin()
+    
+    return np.random.uniform(stellarmass[bin_clostest],stellarmass[bin_clostest+1])
+    
+
+@njit(fastmath=True)
+def get_random_sat_stellarmass_linearinterpolation(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2):
+ 
+    nbins = 100
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+        
+    CSMF_sat = CSMF_satelites(M_h, stellarmass, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2)
+     
+    delta=stellarmass[1:]-stellarmass[:-1]
+    
+    cdf = [] 
+    cdf_current_value = 0
+    for i in range(len(delta)):
+        cdf_current_value = cdf_current_value + CSMF_sat[i]*delta[i]
+        cdf.append(cdf_current_value)
+    cdf=np.array(cdf)
+     
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
+    bin = np.where(cdf>random_rv)[0][0]
+       
+    m = (stellarmass[bin]-stellarmass[bin-1])/(cdf[bin]-cdf[bin-1])
+    return m * (random_rv - cdf[bin-1]) + stellarmass[bin-1]
+
+
 @njit(fastmath=True)
 def n_sat_LRG_modified(M_h, logM_cut, M_cut, M_1, sigma, alpha, kappa):
     """
@@ -150,12 +340,14 @@ def gen_cent(
     LRG_hod_dict,
     ELG_hod_dict,
     QSO_hod_dict,
+    CSMF_hod_dict,
     rsd,
     inv_velz2kms,
     lbox,
     want_LRG,
     want_ELG,
     want_QSO,
+    want_CSMF,
     Nthread,
     origin,
 ):
@@ -197,11 +389,28 @@ def gen_cent(
             QSO_hod_dict['Bcent'],
             QSO_hod_dict['ic'],
         )
+    if want_CSMF:
+        Mstar_low_C, Mstar_up_C, M_1_C, M_0_C, gamma1_C, gamma2_C, sigma_c_C = (
+            CSMF_hod_dict['Mstar_low'], 
+            CSMF_hod_dict['Mstar_up'], 
+            CSMF_hod_dict['M_1'], 
+            CSMF_hod_dict['M_0'], 
+            CSMF_hod_dict['gamma_1'], 
+            CSMF_hod_dict['gamma_2'], 
+            CSMF_hod_dict['sigma_c']
+        )
+        ic_C, alpha_c_C, Ac_C, Bc_C = (
+            CSMF_hod_dict['ic'], 
+            CSMF_hod_dict['alpha_c'], 
+            CSMF_hod_dict['Acent'], 
+            CSMF_hod_dict['Bcent']
+        )
+    
 
     H = len(mass)
 
     numba.set_num_threads(Nthread)
-    Nout = np.zeros((Nthread, 3, 8), dtype=np.int64)
+    Nout = np.zeros((Nthread, 4, 8), dtype=np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)).astype(
         np.int64
     )  # starting index of each thread
@@ -237,6 +446,14 @@ def gen_cent(
                 QSO_marker += (
                     N_cen_QSO(mass[i], logM_cut_Q_temp, sigma_Q) * ic_Q * multis[i]
                 )
+                
+            CSMF_marker = QSO_marker
+            if want_CSMF:
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * deltac[i] + Bc_C * fenv[i])
+                
+                ncen = n_cen_CSMF(mass[i], Mstar_low_C, Mstar_up_C, M_1_C_temp, M_0_C, gamma1_C, gamma2_C, sigma_c_C) 
+                
+                CSMF_marker += ncen * ic_C * multis[i]
 
             if randoms[i] <= LRG_marker:
                 Nout[tid, 0, 0] += 1  # counting
@@ -247,15 +464,19 @@ def gen_cent(
             elif randoms[i] <= QSO_marker:
                 Nout[tid, 2, 0] += 1  # counting
                 keep[i] = 3
+            elif randoms[i] <= CSMF_marker:
+                Nout[tid, 3, 0] += 1 # counting
+                keep[i] = 4
             else:
                 keep[i] = 0
 
     # compose galaxy array, first create array of galaxy starting indices for the threads
-    gstart = np.empty((Nthread + 1, 3), dtype=np.int64)
+    gstart = np.empty((Nthread + 1, 4), dtype=np.int64)
     gstart[0, :] = 0
     gstart[1:, 0] = Nout[:, 0, 0].cumsum()
     gstart[1:, 1] = Nout[:, 1, 0].cumsum()
     gstart[1:, 2] = Nout[:, 2, 0].cumsum()
+    gstart[1:, 3] = Nout[:, 3, 0].cumsum()
 
     # galaxy arrays
     N_lrg = gstart[-1, 0]
@@ -289,10 +510,22 @@ def gen_cent(
     qso_vz = np.empty(N_qso, dtype=mass.dtype)
     qso_mass = np.empty(N_qso, dtype=mass.dtype)
     qso_id = np.empty(N_qso, dtype=ids.dtype)
+    
+    # galaxy arrays
+    N_CSMF = gstart[-1, 3]
+    CSMF_x = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_y = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_z = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_vx = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_vy = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_vz = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_mass = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_stellarmass = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_id = np.empty(N_CSMF, dtype = ids.dtype)
 
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
-        j1, j2, j3 = gstart[tid]
+        j1, j2, j3, j4 = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i] == 1:
                 # loop thru three directions to assign galaxy velocities and positions
@@ -378,11 +611,44 @@ def gen_cent(
                 qso_mass[j3] = mass[i]
                 qso_id[j3] = ids[i]
                 j3 += 1
+            elif keep[i] == 4:
+                # loop thru three directions to assign galaxy velocities and positions
+                CSMF_x[j4] = pos[i,0]
+                CSMF_vx[j4] = vel[i,0] + alpha_c_C * vdev[i,0] # velocity bias
+                CSMF_y[j4] = pos[i,1]
+                CSMF_vy[j4] = vel[i,1] + alpha_c_C * vdev[i,1] # velocity bias
+                CSMF_z[j4] = pos[i,2]
+                CSMF_vz[j4] = vel[i,2] + alpha_c_C * vdev[i,2] # velocity bias
+        
+                # rsd only applies to the z direction
+                if rsd and origin is not None:
+                    nx = CSMF_x[j4] - origin[0]
+                    ny = CSMF_y[j4] - origin[1]
+                    nz = CSMF_z[j4] - origin[2]
+                    inv_norm = 1./np.sqrt(nx*nx + ny*ny + nz*nz)
+                    nx *= inv_norm
+                    ny *= inv_norm
+                    nz *= inv_norm
+                    proj = inv_velz2kms*(CSMF_vx[j4]*nx+CSMF_vy[j4]*ny+CSMF_vz[j4]*nz)
+                    CSMF_x[j4] = CSMF_x[j4]+proj*nx
+                    CSMF_y[j4] = CSMF_y[j4]+proj*ny
+                    CSMF_z[j4] = CSMF_z[j4]+proj*nz
+                elif rsd:
+                    CSMF_z[j4] = wrap(pos[i,2] + CSMF_vz[j4] * inv_velz2kms, lbox)
+                    
+                CSMF_mass[j4] = mass[i]
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * deltac[i] + Bc_C * fenv[i])
+                CSMF_stellarmass[j4] = get_random_cen_stellarmass_linearinterpolation(
+                    mass[i], Mstar_low_C, Mstar_up_C, 
+                    M_1_C_temp, M_0_C, gamma1_C, gamma2_C, sigma_c_C)
+                CSMF_id[j4] = ids[i]
+                j4 += 1
         # assert j == gstart[tid + 1]
 
     LRG_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
     ELG_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
     QSO_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
+    CSMF_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
     LRG_dict['x'] = lrg_x
     LRG_dict['y'] = lrg_y
@@ -410,7 +676,17 @@ def gen_cent(
     QSO_dict['vz'] = qso_vz
     QSO_dict['mass'] = qso_mass
     ID_dict['QSO'] = qso_id
-    return LRG_dict, ELG_dict, QSO_dict, ID_dict, keep
+    
+    CSMF_dict['x'] = CSMF_x
+    CSMF_dict['y'] = CSMF_y
+    CSMF_dict['z'] = CSMF_z
+    CSMF_dict['vx'] = CSMF_vx
+    CSMF_dict['vy'] = CSMF_vy
+    CSMF_dict['vz'] = CSMF_vz
+    CSMF_dict['mass'] = CSMF_mass
+    CSMF_dict['stellarmass'] = CSMF_stellarmass
+    ID_dict['CSMF'] = CSMF_id
+    return LRG_dict, ELG_dict, QSO_dict, CSMF_dict, ID_dict, keep
 
 
 @njit(parallel=True, fastmath=True)
@@ -534,9 +810,11 @@ def gen_sats_nfw(
     LRG_hod_dict,
     ELG_hod_dict,
     QSO_hod_dict,
+    CSMF_hod_dict,
     want_LRG,
     want_ELG,
     want_QSO,
+    want_CSMF,
     rsd,
     inv_velz2kms,
     lbox,
@@ -619,6 +897,33 @@ def gen_sats_nfw(
             QSO_hod_dict['ic'],
         )
         f_sigv_Q = QSO_hod_dict['f_sigv']
+        
+    if want_CSMF:
+        Mstar_low_C, Mstar_up_C, M_1_C, M_0_C, gamma1_C, gamma2_C, sigma_c_C, a1_C, a2_C, M2_C, b0_C, b1_C, b2_C, delta1_C, delta2_C = (
+            CSMF_hod_dict['Mstar_low'], 
+            CSMF_hod_dict['Mstar_up'], 
+            CSMF_hod_dict['M_1'], 
+            CSMF_hod_dict['M_0'], 
+            CSMF_hod_dict['gamma_1'], 
+            CSMF_hod_dict['gamma_2'], 
+            CSMF_hod_dict['sigma_c'], 
+            CSMF_hod_dict['a_1'], 
+            CSMF_hod_dict['a_2'], 
+            CSMF_hod_dict['M_2'], 
+            CSMF_hod_dict['b_0'], 
+            CSMF_hod_dict['b_1'], 
+            CSMF_hod_dict['b_2'], 
+            CSMF_hod_dict['delta_1'], 
+            CSMF_hod_dict['delta_2']
+        )
+        Ac_C, As_C, Bc_C, Bs_C, ic_C = (
+            CSMF_hod_dict['Acent'], 
+            CSMF_hod_dict['Asat'], 
+            CSMF_hod_dict['Bcent'],
+            CSMF_hod_dict['Bsat'], 
+            CSMF_hod_dict['ic']
+        )
+        f_sigv_C = CSMF_hod_dict['f_sigv']
 
     numba.set_num_threads(Nthread)
 
@@ -627,6 +932,8 @@ def gen_sats_nfw(
     num_sats_L = np.zeros(len(hid), dtype=np.int64)
     num_sats_E = np.zeros(len(hid), dtype=np.int64)
     num_sats_Q = np.zeros(len(hid), dtype=np.int64)
+    num_sats_C = np.zeros(len(hid), dtype = np.int64)
+    stellarmass_C = np.zeros(len(hid), dtype = np.int64)
     hstart = np.rint(np.linspace(0, len(hid), Nthread + 1)).astype(
         np.int64
     )  # starting index of each thread
@@ -702,11 +1009,38 @@ def gen_sats_nfw(
                     * ic_Q
                 )
                 num_sats_Q[i] = np.random.poisson(base_p_Q)
+            
+            if want_CSMF:
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
+                a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
+                base_p_C = (
+                    n_sat_CSMF(
+                        hmass[i], 
+                        Mstar_low_C, 
+                        Mstar_up_C, 
+                        M_1_C_temp, 
+                        M_0_C, 
+                        gamma1_C, 
+                        gamma2_C, 
+                        sigma_c_C, 
+                        a1_C_temp, 
+                        a2_C, 
+                        M2_C, 
+                        b0_C, 
+                        b1_C, 
+                        b2_C, 
+                        delta1_C, 
+                        delta2_C) 
+                    * ic_C
+                )
+                
+                num_sats_C[i] = np.random.poisson(base_p_C) 
 
     # generate rdpos
     rd_pos_L = getPointsOnSphere(np.sum(num_sats_L), Nthread)
     rd_pos_E = getPointsOnSphere(np.sum(num_sats_E), Nthread)
     rd_pos_Q = getPointsOnSphere(np.sum(num_sats_Q), Nthread)
+    rd_pos_C = getPointsOnSphere(np.sum(num_sats_C), Nthread)
 
     # put satellites on NFW
     h_id_L, x_sat_L, y_sat_L, z_sat_L, vx_sat_L, vy_sat_L, vz_sat_L, M_L = (
@@ -781,15 +1115,44 @@ def gen_sats_nfw(
             nfw_rescale,
         )
     )
+    
+    h_id_C, x_sat_C, y_sat_C, z_sat_C, vx_sat_C, vy_sat_C, vz_sat_C, M_C = (
+        compute_fast_NFW(
+            NFW_draw, 
+            hid, 
+            hpos[:, 0], 
+            hpos[:, 1], 
+            hpos[:, 2], 
+            hvel[:, 0], 
+            hvel[:, 1], 
+            hvel[:, 2],
+            hvrms, 
+            hc, 
+            hmass, 
+            hrvir, 
+            rd_pos_C, 
+            num_sats_C, 
+            f_sigv_C, 
+            vel_sat, 
+            Nthread,
+            exp_frac, 
+            exp_scale, 
+            nfw_rescale
+        )
+    )
+    
+    
     # do rsd
     if rsd:
         z_sat_L = (z_sat_L + vz_sat_L * inv_velz2kms) % lbox
         z_sat_E = (z_sat_E + vz_sat_E * inv_velz2kms) % lbox
         z_sat_Q = (z_sat_Q + vz_sat_Q * inv_velz2kms) % lbox
+        z_sat_C = (z_sat_C + vz_sat_C * inv_velz2kms) % lbox
 
     LRG_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
     ELG_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
     QSO_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
+    CSMF_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
     LRG_dict['x'] = x_sat_L
     LRG_dict['y'] = y_sat_L
@@ -817,8 +1180,30 @@ def gen_sats_nfw(
     QSO_dict['vz'] = vz_sat_Q
     QSO_dict['mass'] = M_Q
     ID_dict['QSO'] = h_id_Q
+    
+    CSMF_dict['x'] = x_sat_C
+    CSMF_dict['y'] = y_sat_C
+    CSMF_dict['z'] = z_sat_C
+    CSMF_dict['vx'] = vx_sat_C
+    CSMF_dict['vy'] = vy_sat_C
+    CSMF_dict['vz'] = vz_sat_C
+    CSMF_dict['mass'] = M_C
+    stellarmass_C = np.empty_like(M_C)
+    ## compute stellarmass of all the satelites
+    if want_CSMF:
+        hstart = np.rint(np.linspace(0, num_sats_C.sum(), Nthread + 1))
+        for tid in numba.prange(Nthread):
+            for i in range(int(hstart[tid]), int(hstart[tid + 1])):
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
+                a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
+                stellarmass_C[i] = get_random_sat_stellarmass_linearinterpolation(
+                    M_C[i], Mstar_low_C, Mstar_up_C, M_1_C_temp, M_0_C, gamma1_C, gamma2_C,
+                    a1_C_temp, s, a2_C, M2_C, b0_C, b1_C, b2_C, delta1_C, delta2_C)
+    
+    CSMF_dict['stellarmass'] = stellarmass_C
+    ID_dict['CSMF'] = h_id_C
 
-    return LRG_dict, ELG_dict, QSO_dict, ID_dict
+    return LRG_dict, ELG_dict, QSO_dict, CSMF_dict, ID_dict
 
 
 @njit(parallel=True, fastmath=True)
@@ -842,6 +1227,7 @@ def gen_sats(
     LRG_hod_dict,
     ELG_hod_dict,
     QSO_hod_dict,
+    CSMF_hod_dict,
     rsd,
     inv_velz2kms,
     lbox,
@@ -849,6 +1235,7 @@ def gen_sats(
     want_LRG,
     want_ELG,
     want_QSO,
+    want_CSMF,
     Nthread,
     origin,
     keep_cent,
@@ -941,11 +1328,43 @@ def gen_sats(
             QSO_hod_dict['Bsat'],
             QSO_hod_dict['ic'],
         )
+        
+    if want_CSMF:
+        Mstar_low_C, Mstar_up_C, M_1_C, M_0_C, gamma1_C, gamma2_C, sigma_c_C, a1_C, a2_C, M2_C, b0_C, b1_C, b2_C, delta1_C, delta2_C = (
+            CSMF_hod_dict['Mstar_low'], 
+            CSMF_hod_dict['Mstar_up'], 
+            CSMF_hod_dict['M_1'], 
+            CSMF_hod_dict['M_0'], 
+            CSMF_hod_dict['gamma_1'],
+            CSMF_hod_dict['gamma_2'], 
+            CSMF_hod_dict['sigma_c'], 
+            CSMF_hod_dict['a_1'], 
+            CSMF_hod_dict['a_2'], 
+            CSMF_hod_dict['M_2'],
+            CSMF_hod_dict['b_0'], 
+            CSMF_hod_dict['b_1'], 
+            CSMF_hod_dict['b_2'], 
+            CSMF_hod_dict['delta_1'], 
+            CSMF_hod_dict['delta_2']
+        )
+        
+        alpha_s_C, s_C, s_v_C, s_p_C, s_r_C, Ac_C, As_C, Bc_C, Bs_C, ic_C = (
+            CSMF_hod_dict['alpha_s'], 
+            CSMF_hod_dict['s'],
+            CSMF_hod_dict['s_v'], 
+            CSMF_hod_dict['s_p'], 
+            CSMF_hod_dict['s_r'], 
+            CSMF_hod_dict['Acent'],
+            CSMF_hod_dict['Asat'], 
+            CSMF_hod_dict['Bcent'], 
+            CSMF_hod_dict['Bsat'], 
+            CSMF_hod_dict['ic']
+        )
 
     H = len(hmass)  # num of particles
 
     numba.set_num_threads(Nthread)
-    Nout = np.zeros((Nthread, 3, 8), dtype=np.int64)
+    Nout = np.zeros((Nthread, 4, 8), dtype=np.int64)
     hstart = np.rint(np.linspace(0, H, Nthread + 1)).astype(
         np.int64
     )  # starting index of each thread
@@ -1073,6 +1492,39 @@ def gen_sats(
                 else:
                     exp_sat = base_p_Q
                 QSO_marker += exp_sat
+                
+                
+            CSMF_marker = QSO_marker
+            if want_CSMF:
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
+                a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
+                base_p_C = (
+                    n_sat_CSMF(
+                        hmass[i], 
+                        Mstar_low_C, 
+                        Mstar_up_C, 
+                        M_1_C_temp, 
+                        M_0_C, 
+                        gamma1_C, 
+                        gamma2_C, 
+                        sigma_c_C, 
+                        a1_C_temp, 
+                        a2_C, 
+                        M2_C, 
+                        b0_C, 
+                        b1_C, 
+                        b2_C, 
+                        delta1_C, 
+                        delta2_C
+                    ) 
+                    * weights[i] 
+                    * ic_C)
+                if enable_ranks:
+                    decorator_C = 1 + s_C * ranks[i] + s_v_C * ranksv[i] + s_p_C * ranksp[i] + s_r_C * ranksr[i]
+                    exp_sat = base_p_C * decorator_C
+                else:
+                    exp_sat = base_p_C
+                CSMF_marker += exp_sat
 
             if randoms[i] <= LRG_marker:
                 Nout[tid, 0, 0] += 1  # counting
@@ -1083,15 +1535,19 @@ def gen_sats(
             elif randoms[i] <= QSO_marker:
                 Nout[tid, 2, 0] += 1  # counting
                 keep[i] = 3
+            elif randoms[i] <= CSMF_marker:
+                Nout[tid, 3, 0] += 1 # counting
+                keep[i] = 4
             else:
                 keep[i] = 0
 
     # compose galaxy array, first create array of galaxy starting indices for the threads
-    gstart = np.empty((Nthread + 1, 3), dtype=np.int64)
+    gstart = np.empty((Nthread + 1, 4), dtype=np.int64)
     gstart[0, :] = 0
     gstart[1:, 0] = Nout[:, 0, 0].cumsum()
     gstart[1:, 1] = Nout[:, 1, 0].cumsum()
     gstart[1:, 2] = Nout[:, 2, 0].cumsum()
+    gstart[1:, 3] = Nout[:, 3, 0].cumsum()
 
     # galaxy arrays
     N_lrg = gstart[-1, 0]
@@ -1125,10 +1581,22 @@ def gen_sats(
     qso_vz = np.empty(N_qso, dtype=hmass.dtype)
     qso_mass = np.empty(N_qso, dtype=hmass.dtype)
     qso_id = np.empty(N_qso, dtype=hid.dtype)
+    
+    # galaxy arrays
+    N_CSMF = gstart[-1, 3]
+    CSMF_x = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_y = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_z = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_vx = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_vy = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_vz = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_mass = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_stellarmass = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_id = np.empty(N_CSMF, dtype = hid.dtype)
 
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
-        j1, j2, j3 = gstart[tid]
+        j1, j2, j3, j4 = gstart[tid]
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i] == 1:
                 lrg_x[j1] = ppos[i, 0]
@@ -1226,11 +1694,57 @@ def gen_sats(
                 qso_mass[j3] = hmass[i]
                 qso_id[j3] = hid[i]
                 j3 += 1
+            elif keep[i] == 4:
+                CSMF_x[j4] = ppos[i, 0]
+                CSMF_vx[j4] = hvel[i, 0] + alpha_s_C * (pvel[i, 0] - hvel[i, 0]) # velocity bias
+                CSMF_y[j4] = ppos[i, 1]
+                CSMF_vy[j4] = hvel[i, 1] + alpha_s_C * (pvel[i, 1] - hvel[i, 1]) # velocity bias
+                CSMF_z[j4] = ppos[i, 2]
+                CSMF_vz[j4] = hvel[i, 2] + alpha_s_C * (pvel[i, 2] - hvel[i, 2]) # velocity bias
+                if rsd and origin is not None:
+                    nx = CSMF_x[j4] - origin[0]
+                    ny = CSMF_y[j4] - origin[1]
+                    nz = CSMF_z[j4] - origin[2]
+                    inv_norm = 1./np.sqrt(nx*nx + ny*ny + nz*nz)
+                    nx *= inv_norm
+                    ny *= inv_norm
+                    nz *= inv_norm
+                    proj = inv_velz2kms*(CSMF_vx[j4]*nx+CSMF_vy[j4]*ny+CSMF_vz[j4]*nz)
+                    CSMF_x[j4] = CSMF_x[j4]+proj*nx
+                    CSMF_y[j4] = CSMF_y[j4]+proj*ny
+                    CSMF_z[j4] = CSMF_z[j4]+proj*nz
+                elif rsd:
+                     CSMF_z[j4] = wrap(CSMF_z[j4] + CSMF_vz[j4] * inv_velz2kms, lbox)
+                     
+                
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
+                a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
+                CSMF_stellarmass[j4] = get_random_sat_stellarmass(
+                    hmass[i], 
+                    Mstar_low_C, 
+                    Mstar_up_C, 
+                    M_1_C_temp, 
+                    M_0_C, 
+                    gamma1_C, 
+                    gamma2_C, 
+                    a1_C_temp, 
+                    a2_C, 
+                    M2_C, 
+                    b0_C, 
+                    b1_C, 
+                    b2_C, 
+                    delta1_C, 
+                    delta2_C
+                ) 
+                CSMF_mass[j4] = hmass[i]
+                CSMF_id[j4] = hid[i]
+                j4 += 1
         # assert j == gstart[tid + 1]
 
     LRG_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
     ELG_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
     QSO_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
+    CSMF_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
     LRG_dict['x'] = lrg_x
     LRG_dict['y'] = lrg_y
@@ -1258,7 +1772,18 @@ def gen_sats(
     QSO_dict['vz'] = qso_vz
     QSO_dict['mass'] = qso_mass
     ID_dict['QSO'] = qso_id
-    return LRG_dict, ELG_dict, QSO_dict, ID_dict
+    
+    CSMF_dict['x'] = CSMF_x
+    CSMF_dict['y'] = CSMF_y
+    CSMF_dict['z'] = CSMF_z
+    CSMF_dict['vx'] = CSMF_vx
+    CSMF_dict['vy'] = CSMF_vy
+    CSMF_dict['vz'] = CSMF_vz
+    CSMF_dict['mass'] = CSMF_mass
+    CSMF_dict['stellarmass'] = CSMF_stellarmass
+    ID_dict['CSMF'] = CSMF_id
+    
+    return LRG_dict, ELG_dict, QSO_dict, CSMF_dict, ID_dict
 
 
 @njit(parallel=True, fastmath=True)
@@ -1345,6 +1870,8 @@ def gen_gals(
             ELG_HOD = tracers[tracer]
         if tracer == 'QSO':
             QSO_HOD = tracers[tracer]
+        if tracer == 'CSMF':
+            CSMF_HOD = tracers[tracer]
 
     if 'LRG' in tracers.keys():
         want_LRG = True
@@ -1465,6 +1992,24 @@ def gen_gals(
         QSO_hod_dict = nb.typed.Dict.empty(
             key_type=nb.types.unicode_type, value_type=nb.types.float64
         )
+        
+    if 'CSMF' in tracers.keys():
+        want_CSMF = True
+
+        CSMF_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
+        for key, value in CSMF_HOD.items():
+            CSMF_hod_dict[key] = value
+
+        CSMF_hod_dict['Acent'] = CSMF_HOD.get('Acent', 0.0)
+        CSMF_hod_dict['Asat'] = CSMF_HOD.get('Asat', 0.0)
+        CSMF_hod_dict['Bcent'] = CSMF_HOD.get('Bcent', 0.0)
+        CSMF_hod_dict['Bsat'] = CSMF_HOD.get('Bsat', 0.0)
+        CSMF_hod_dict['ic'] = CSMF_HOD.get('ic', 1.0)
+        CSMF_hod_dict['f_sigv'] = CSMF_HOD.get('f_sigv', 0)
+
+    else:
+        want_CSMF = False
+        CSMF_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
 
     start = time.time()
 
@@ -1473,7 +2018,7 @@ def gen_gals(
     lbox = params['Lbox']
     origin = params['origin']
 
-    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, ID_dict_cent, keep_cent = gen_cent(
+    LRG_dict_cent, ELG_dict_cent, QSO_dict_cent, CSMF_dict_cent, ID_dict_cent, keep_cent = gen_cent(
         halos_array['hpos'],
         halos_array['hvel'],
         halos_array['hmass'],
@@ -1487,12 +2032,14 @@ def gen_gals(
         LRG_hod_dict,
         ELG_hod_dict,
         QSO_hod_dict,
+        CSMF_hod_dict,
         rsd,
         inv_velz2kms,
         lbox,
         want_LRG,
         want_ELG,
         want_QSO,
+        want_CSMF,
         Nthread,
         origin,
     )
@@ -1504,7 +2051,7 @@ def gen_gals(
         warnings.warn(
             'NFW profile is unoptimized. It has different velocity bias. It does not support lightcone.'
         )
-        LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = gen_sats_nfw(
+        LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, CSMF_dict_sat, ID_dict_sat = gen_sats_nfw(
             NFW_draw,
             halos_array['hpos'],
             halos_array['hvel'],
@@ -1519,9 +2066,11 @@ def gen_gals(
             LRG_hod_dict,
             ELG_hod_dict,
             QSO_hod_dict,
+            CSMF_hod_dict,
             want_LRG,
             want_ELG,
             want_QSO,
+            want_CSMF,
             rsd,
             inv_velz2kms,
             lbox,
@@ -1529,7 +2078,7 @@ def gen_gals(
             Nthread=Nthread,
         )
     else:
-        LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, ID_dict_sat = gen_sats(
+        LRG_dict_sat, ELG_dict_sat, QSO_dict_sat, CSMF_dict_sat, ID_dict_sat = gen_sats(
             subsample['ppos'],
             subsample['pvel'],
             subsample['phvel'],
@@ -1549,6 +2098,7 @@ def gen_gals(
             LRG_hod_dict,
             ELG_hod_dict,
             QSO_hod_dict,
+            CSMF_hod_dict,
             rsd,
             inv_velz2kms,
             lbox,
@@ -1556,6 +2106,7 @@ def gen_gals(
             want_LRG,
             want_ELG,
             want_QSO,
+            want_CSMF,
             Nthread,
             origin,
             keep_cent[subsample['pinds']],
@@ -1564,8 +2115,8 @@ def gen_gals(
         print('generating satellites took ', time.time() - start)
 
     # B.H. TODO: need a for loop above so we don't need to do this by hand
-    HOD_dict_sat = {'LRG': LRG_dict_sat, 'ELG': ELG_dict_sat, 'QSO': QSO_dict_sat}
-    HOD_dict_cent = {'LRG': LRG_dict_cent, 'ELG': ELG_dict_cent, 'QSO': QSO_dict_cent}
+    HOD_dict_sat = {'LRG': LRG_dict_sat, 'ELG': ELG_dict_sat, 'QSO': QSO_dict_sat, 'CSMF': CSMF_dict_sat}
+    HOD_dict_cent = {'LRG': LRG_dict_cent, 'ELG': ELG_dict_cent, 'QSO': QSO_dict_cent, 'CSMF': CSMF_dict_cent}
 
     # do a concatenate in numba parallel
     start = time.time()
