@@ -33,6 +33,8 @@ from .GRAND_HOD import (
     N_sat_elg,
     N_cen_QSO,
     N_sat_generic,
+    n_cen_CSMF,
+    n_sat_CSMF
 )
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
@@ -392,6 +394,7 @@ class AbacusHOD:
                 ('ELG' not in self.tracers.keys())
                 and ('QSO' not in self.tracers.keys())
                 and (not self.force_mt)
+                and ('CSMF' not in self.tracers.keys())
             ):
                 halofilename = subsample_dir / (
                     'halos_xcom_%d_seed600_abacushod_oldfenv' % eslab
