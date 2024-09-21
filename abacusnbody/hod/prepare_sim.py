@@ -1128,7 +1128,7 @@ def main(
                 halo_lc=halo_lc,
                 nthread=nthread,
                 overwrite=overwrite,
-                )
+            )
             for i in range(numslabs)
         ]
 
@@ -1137,7 +1137,9 @@ def main(
         try:
             future.result()
         except concurrent.futures.process.BrokenProcessPool as bpp:
-            raise RuntimeError('A subprocess died in prepare_sim. Did prepare_slab() run out of memory?') from bpp
+            raise RuntimeError(
+                'A subprocess died in prepare_sim. Did prepare_slab() run out of memory?'
+            ) from bpp
     # print("done, took time ", time.time() - start)
 
 
