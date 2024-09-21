@@ -1,6 +1,13 @@
 Changelog
 =========
 
+2.0.2 (upcoming)
+----------------
+
+Enhancements
+~~~~~~~~~~~~
+- ``hod.prepare_sim``: detect and report when a ``prepare_slab`` subprocess fails [#151]
+
 2.0.1 (2024-03-01)
 ------------------
 This is a bugfix release primarily to add support for ASDF 3.1.0.

@@ -7,14 +7,15 @@ $ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.
 """
 
 import argparse
+import concurrent.futures
 import gc
 import glob
 import itertools
 import multiprocessing
 import os
-from itertools import repeat
-from pathlib import Path
 import time
+from pathlib import Path
+
 import h5py
 import numba
 import numpy as np
@@ -26,7 +27,7 @@ from scipy.spatial import cKDTree
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import read_asdf
 
-from ..analysis.shear import smooth_density, get_shear
+from ..analysis.shear import get_shear, smooth_density
 from ..analysis.tsc import tsc_parallel
 
 DEFAULTS = {}
@@ -1103,32 +1104,42 @@ def main(
     else:
         nthread = int(nthread)
 
-    p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
-    p.starmap(
-        prepare_slab,
-        zip(
-            range(numslabs),
-            repeat(savedir),
-            repeat(simdir),
-            repeat(simname),
-            repeat(z_mock),
-            repeat(ztype),
-            repeat(tracer_flags),
-            repeat(MT),
-            repeat(want_ranks),
-            repeat(want_AB),
-            repeat(want_shear),
-            repeat(shearmark),
-            repeat(cleaning),
-            repeat(newseed),
-            repeat(halo_lc),
-            repeat(nthread),
-            repeat(overwrite),
-        ),
-    )
-    p.close()
-    p.join()
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=config['prepare_sim']['Nparallel_load'],
+        mp_context=multiprocessing.get_context('spawn'),
+    ) as pool:
+        futures = [
+            pool.submit(
+                prepare_slab,
+                i,
+                savedir=savedir,
+                simdir=simdir,
+                simname=simname,
+                z_mock=z_mock,
+                z_type=ztype,
+                tracer_flags=tracer_flags,
+                MT=MT,
+                want_ranks=want_ranks,
+                want_AB=want_AB,
+                want_shear=want_shear,
+                shearmark=shearmark,
+                cleaning=cleaning,
+                newseed=newseed,
+                halo_lc=halo_lc,
+                nthread=nthread,
+                overwrite=overwrite,
+            )
+            for i in range(numslabs)
+        ]
 
+    # check that all futures succeeded
+    for future in concurrent.futures.as_completed(futures):
+        try:
+            future.result()
+        except concurrent.futures.process.BrokenProcessPool as bpp:
+            raise RuntimeError(
+                'A subprocess died in prepare_sim. Did prepare_slab() run out of memory?'
+            ) from bpp
     # print("done, took time ", time.time() - start)
 
 
