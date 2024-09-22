@@ -13,14 +13,14 @@ import numpy as np
 __all__ = ['unpack_rvint', 'unpack_pids']
 
 # Constants
-AUXDENS = 0x07FE000000000000
-ZERODEN = 49  # The density bits are 49-58.
+AUXDENS = np.uint64(0x07FE000000000000)
+ZERODEN = np.uint64(49)  # The density bits are 49-58.
 
-AUXXPID = 0x7FFF  # bits 0-14
-AUXYPID = 0x7FFF0000  # bits 16-30
-AUXZPID = 0x7FFF00000000  # bits 32-46
+AUXXPID = np.uint64(0x7FFF)  # bits 0-14
+AUXYPID = np.uint64(0x7FFF0000)  # bits 16-30
+AUXZPID = np.uint64(0x7FFF00000000)  # bits 32-46
 AUXPID = AUXXPID | AUXYPID | AUXZPID  # all of the above bits
-AUXTAGGED = 48  # tagged bit is 48
+AUXTAGGED = np.uint64(48)  # tagged bit is 48
 
 # The names of the bit-packed PID fields that the user can request
 PID_FIELDS = ['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx']
@@ -100,17 +100,16 @@ def _unpack_rvint(intdata, boxsize, posout, velout):
     """Helper for unpack_rvint"""
 
     N = len(intdata)
-    posscale = boxsize * (2.0**-12.0) / 1e6
+    posscale = boxsize / 1e6
     velscale = 6000.0 / 2048
-    pmask = np.int32(0xFFFFF000)
-    vmask = np.int32(0xFFF)
+    vmask = np.uint32(0xFFF)
 
     lenp = len(posout)
     lenv = len(velout)
 
     for i in range(N):
         if lenp > 0:
-            posout[i] = (intdata[i] & pmask) * posscale
+            posout[i] = (intdata[i] >> np.uint32(12)) * posscale
         if lenv > 0:
             velout[i] = ((intdata[i] & vmask) - 2048) * velscale
 
@@ -202,7 +201,7 @@ def unpack_pids(
     if lagr_idx is True:
         arr['lagr_idx'] = np.empty((N, 3), dtype=np.int16)
     if tagged is True:
-        arr['tagged'] = np.empty(N, dtype=np.bool8)
+        arr['tagged'] = np.empty(N, dtype=np.uint8)
     if density is True:
         arr['density'] = np.empty(N, dtype=float_dtype)
 
@@ -235,16 +234,16 @@ def _unpack_pids(
     for i in range(N):
         if lagr_idx is not None:
             lagr_idx[i, 0] = packed[i] & AUXXPID
-            lagr_idx[i, 1] = (packed[i] & AUXYPID) >> 16
-            lagr_idx[i, 2] = (packed[i] & AUXZPID) >> 32
+            lagr_idx[i, 1] = (packed[i] & AUXYPID) >> np.uint64(16)
+            lagr_idx[i, 2] = (packed[i] & AUXZPID) >> np.uint64(32)
 
         if lagr_pos is not None:
             lagr_pos[i, 0] = (packed[i] & AUXXPID) * inv_ppd - half
-            lagr_pos[i, 1] = ((packed[i] & AUXYPID) >> 16) * inv_ppd - half
-            lagr_pos[i, 2] = ((packed[i] & AUXZPID) >> 32) * inv_ppd - half
+            lagr_pos[i, 1] = ((packed[i] & AUXYPID) >> np.uint64(16)) * inv_ppd - half
+            lagr_pos[i, 2] = ((packed[i] & AUXZPID) >> np.uint64(32)) * inv_ppd - half
 
         if tagged is not None:
-            tagged[i] = (packed[i] >> AUXTAGGED) & 1
+            tagged[i] = (packed[i] >> AUXTAGGED) & np.uint64(1)
 
         if density is not None:
             density[i] = (
