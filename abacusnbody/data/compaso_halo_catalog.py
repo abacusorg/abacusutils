@@ -166,17 +166,6 @@ class CompaSOHaloCatalog:
         # Internally, we will use `load_subsamples` as the name of the `subsamples` arg to distinguish it from the `self.subsamples` table
         load_subsamples = subsamples
         del subsamples
-        if 'load_subsamples' in kwargs:
-            load_subsamples = kwargs.pop('load_subsamples')
-            warnings.warn(
-                '`load_subsamples` argument is deprecated; use `subsamples`',
-                FutureWarning,
-            )
-        if 'cleaned_halos' in kwargs:
-            cleaned = kwargs.pop('cleaned_halos')
-            warnings.warn(
-                '`cleaned_halos` argument is deprecated; use `cleaned`', FutureWarning
-            )
 
         # `cleaned` and `self.cleaned` mean slightly different things.
         # `cleaned` (local var) means to load the cleaning info files,
@@ -506,40 +495,6 @@ class CompaSOHaloCatalog:
                     raise ValueError(
                         f'Unrecognized keys in `load_subsamples`: {list(load_subsamples)}'
                     )
-
-            elif isinstance(load_subsamples, str):
-                # This section is deprecated, will remove in mid-2021
-                warnings.warn(
-                    'Passing a string to `load_subsamples` is deprecated; use a dict instead, like: `load_subsamples=dict(A=True, rv=True)`',
-                    FutureWarning,
-                )
-
-                # Validate the user's `load_subsamples` option and figure out what subsamples we need to load
-                subsamp_match = re.fullmatch(
-                    r'(?P<AB>(A|B|AB))(_(?P<hf>halo|field))?_(?P<pidrv>all|pid|rv)',
-                    load_subsamples,
-                )
-                if not subsamp_match:
-                    raise ValueError(
-                        f'Value "{load_subsamples}" for argument `load_subsamples` not understood'
-                    )
-                load_AB = subsamp_match.group('AB')
-                load_halofield = subsamp_match.group('hf')
-                load_halofield = (
-                    [load_halofield] if load_halofield else ['halo', 'field']
-                )  # default is both
-                load_pidrv = subsamp_match.group('pidrv')
-                load_pidrv = subsamp_match.group('pidrv')
-                if load_pidrv == 'all':
-                    load_pidrv = ['pid', 'rv']
-                if isinstance(load_pidrv, str):
-                    # Turn this into a list so that the .remove() operation below doesn't complain
-                    load_pidrv = [load_pidrv]
-                if 'field' in load_halofield:
-                    raise ValueError(
-                        'Loading field particles through CompaSOHaloCatalog is not supported. Read the particle files directly with `abacusnbody.data.read_abacus.read_asdf()`.'
-                    )
-                unpack_subsamples = True
 
         if 'rv' in load_pidrv:
             load_pidrv.remove('rv')
