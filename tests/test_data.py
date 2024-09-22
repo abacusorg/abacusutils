@@ -38,7 +38,7 @@ def test_halos_unclean(tmp_path):
 
     halos = cat.halos
     for col in ref.colnames:
-        assert check_close(ref[col], halos[col])
+        check_close(ref[col], halos[col])
 
     assert halos.meta == ref.meta
 
@@ -60,7 +60,7 @@ def test_halos_clean(tmp_path):
 
     halos = cat.halos
     for col in ref.colnames:
-        assert check_close(ref[col], halos[col])
+        check_close(ref[col], halos[col])
 
     # all haloindex values should point to this slab
     assert np.all(
@@ -113,7 +113,7 @@ def test_subsamples_unclean(tmp_path):
 
     ss = cat.subsamples
     for col in ref.colnames:
-        assert check_close(ref[col], ss[col])
+        check_close(ref[col], ss[col])
 
     assert cat.subsamples.meta == ref.meta
 
@@ -136,7 +136,7 @@ def test_subsamples_clean(tmp_path):
 
     ss = cat.subsamples
     for col in ref.colnames:
-        assert check_close(ref[col], ss[col])
+        check_close(ref[col], ss[col])
 
     # total number of particles in ref should be equal to the sum total of npout{AB} in EXAMPLE_SIM
     assert len(ref) == np.sum(cat.halos['npoutA']) + np.sum(cat.halos['npoutB'])
@@ -295,12 +295,12 @@ def test_halo_lc():
     ref = Table.read(HALO_LC_CAT)
     halos = cat.halos
     for col in ref.colnames:
-        assert check_close(ref[col], halos[col])
+        check_close(ref[col], halos[col])
     assert halos.meta == ref.meta
 
     ref = Table.read(HALO_LC_SUBSAMPLES)
     ss = cat.subsamples
     for col in ref.colnames:
-        assert check_close(ref[col], ss[col])
+        check_close(ref[col], ss[col])
 
     assert ss.meta == ref.meta
