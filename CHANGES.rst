@@ -8,6 +8,7 @@ Enhancements
 ~~~~~~~~~~~~
 - ``hod.prepare_sim``: detect and report when a ``prepare_slab`` subprocess fails [#151]
 - ci: add python 3.12 and enhance ``NUMBA_DISABLE_JIT`` support [#153]
+- Improve CompaSO subsample loading [#154]
 
 2.0.1 (2024-03-01)
 ------------------
