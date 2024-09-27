@@ -62,7 +62,7 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
     if posout is None:
         _posout = np.empty(N, dtype=float_dtype)
     elif posout is False:
-        _posout = np.empty(0)
+        _posout = None
     else:
         _posout = posout.view()
         _posout.shape = -1  # enforces no copy
@@ -70,7 +70,7 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
     if velout is None:
         _velout = np.empty(N, dtype=float_dtype)
     elif velout is False:
-        _velout = np.empty(0)
+        _velout = None
     else:
         _velout = velout.view()
         _velout.shape = -1  # enforces no copy
@@ -104,13 +104,10 @@ def _unpack_rvint(intdata, boxsize, posout, velout):
     velscale = 6000.0 / 2048
     vmask = np.uint32(0xFFF)
 
-    lenp = len(posout)
-    lenv = len(velout)
-
     for i in range(N):
-        if lenp > 0:
+        if posout is not None:
             posout[i] = (intdata[i] >> np.uint32(12)) * posscale
-        if lenv > 0:
+        if velout is not None:
             velout[i] = ((intdata[i] & vmask) - 2048) * velscale
 
 
@@ -206,6 +203,48 @@ def unpack_pids(
         arr['density'] = np.empty(N, dtype=float_dtype)
 
     _unpack_pids(packed, box, ppd, float_dtype=float_dtype, **arr)
+
+    return arr
+
+
+def empty_bitpacked_arrays(N, unpack_bits, float_dtype=np.float32):
+    """
+    Create empty arrays for bit-packed fields.
+
+    Parameters
+    ----------
+    N: int
+        The number of particles
+
+    unpack_bits: list or bool
+        The fields to unpack. If True, all fields are unpacked. If False,
+        just the pid field is unpacked.
+
+    float_dtype: np.dtype, optional
+        The dtype in which to store float arrays. Default: ``np.float32``
+
+    Returns
+    -------
+    empty_arrays: dict of ndarray
+        A dictionary of empty arrays for all fields that can be unpacked
+    """
+
+    if unpack_bits is True:
+        unpack_bits = PID_FIELDS
+    elif unpack_bits is False:
+        unpack_bits = ['pid']
+
+    arr = {}
+    if 'pid' in unpack_bits:
+        arr['pid'] = np.empty(N, dtype=np.int64)
+    if 'lagr_pos' in unpack_bits:
+        arr['lagr_pos'] = np.empty((N, 3), dtype=float_dtype)
+    if 'lagr_idx' in unpack_bits:
+        arr['lagr_idx'] = np.empty((N, 3), dtype=np.int16)
+    if 'tagged' in unpack_bits:
+        arr['tagged'] = np.empty(N, dtype=np.uint8)
+    if 'density' in unpack_bits:
+        arr['density'] = np.empty(N, dtype=float_dtype)
 
     return arr
 
