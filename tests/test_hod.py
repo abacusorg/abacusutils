@@ -92,10 +92,8 @@ def test_hod(tmp_path, reference_mode=False):
             savedir + '/halos_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r'
         )['halos']
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
-        for i in range(len(newhalos)):
-            print(newhalos[i], temphalos[i])
-            for j in range(len(newhalos[i])):
-                check_close(newhalos[i][j], temphalos[i][j])
+        for field in newhalos.dtype.names:
+            check_close(newhalos[field], temphalos[field])
         newparticles = h5py.File(
             savedir + '/particles_xcom_2_seed600_abacushod_oldfenv_MT_new.h5', 'r'
         )['particles']

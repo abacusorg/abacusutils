@@ -17,11 +17,13 @@ HALOS_OUTPUT_UNCLEAN = refdir / 'test_halos_unclean.asdf'
 PARTICLES_OUTPUT_UNCLEAN = refdir / 'test_subsamples_unclean.asdf'
 HALOS_OUTPUT_CLEAN = refdir / 'test_halos_clean.asdf'
 PARTICLES_OUTPUT_CLEAN = refdir / 'test_subsamples_clean.asdf'
+PARTICLES_OUTPUT_CLEAN = refdir / 'test_subsamples_clean.asdf'
 PACK9_OUTPUT = refdir / 'test_pack9.asdf'
 PACK9_PID_OUTPUT = refdir / 'test_pack9_pid.asdf'
+UNPACK_BITS_OUTPUT = refdir / 'test_unpack_bits.asdf'
 
 
-def test_halos_unclean(tmp_path):
+def test_halos_unclean(tmp_path: Path):
     """Test loading a base (uncleaned) halo catalog"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -43,7 +45,7 @@ def test_halos_unclean(tmp_path):
     assert halos.meta == ref.meta
 
 
-def test_halos_clean(tmp_path):
+def test_halos_clean(tmp_path: Path):
     """Test loading a base (uncleaned) halo catalog"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -74,7 +76,7 @@ def test_halos_clean(tmp_path):
     assert halos.meta == ref.meta
 
 
-def test_subsamples_unclean(tmp_path):
+def test_subsamples_unclean(tmp_path: Path):
     """Test loading particle subsamples"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -86,7 +88,7 @@ def test_subsamples_unclean(tmp_path):
         cleaned=False,
     )
     lenA = len(cat.subsamples)
-    assert lenA == 2975
+    assert lenA == 2536
     assert cat.subsamples.colnames == ['pos', 'vel']
 
     cat = CompaSOHaloCatalog(
@@ -96,7 +98,7 @@ def test_subsamples_unclean(tmp_path):
         cleaned=False,
     )
     lenB = len(cat.subsamples)
-    assert lenB == 7082
+    assert lenB == 6128
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000', subsamples=True, fields='all', cleaned=False
@@ -106,19 +108,30 @@ def test_subsamples_unclean(tmp_path):
 
     # to regenerate reference
     # ref = cat.subsamples
-    # import asdf; asdf.compression.set_compression_options(typesize='auto')
-    # ref.write(PARTICLES_OUTPUT_UNCLEAN, format='asdf', all_array_storage='internal', all_array_compression='blsc')
+    # ref.write(PARTICLES_OUTPUT_UNCLEAN, format='asdf', all_array_storage='internal', all_array_compression='blsc', compression_kwargs={'typesize': 'auto'})
 
     ref = Table.read(PARTICLES_OUTPUT_UNCLEAN)
+    ref_halos = Table.read(HALOS_OUTPUT_UNCLEAN)
 
     ss = cat.subsamples
     for col in ref.colnames:
-        check_close(ref[col], ss[col])
+        for i in range(len(cat.halos)):
+            for AB in 'AB':
+                check_close(
+                    ref[col][
+                        ref_halos[f'npstart{AB}'][i] : ref_halos[f'npstart{AB}'][i]
+                        + ref_halos[f'npout{AB}'][i]
+                    ],
+                    ss[col][
+                        cat.halos[f'npstart{AB}'][i] : cat.halos[f'npstart{AB}'][i]
+                        + cat.halos[f'npout{AB}'][i]
+                    ],
+                )
 
     assert cat.subsamples.meta == ref.meta
 
 
-def test_subsamples_clean(tmp_path):
+def test_subsamples_clean(tmp_path: Path):
     """Test loading particle subsamples"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -198,6 +211,15 @@ def test_unpack_bits():
         EXAMPLE_SIM / 'halos' / 'z0.000', subsamples=True, unpack_bits=True, fields='N'
     )
     assert set(PID_FIELDS) <= set(cat.subsamples.colnames)  # check subset
+
+    # to regenerate reference
+    # ref = cat.subsamples
+    # ref.write(UNPACK_BITS_OUTPUT, format='asdf', all_array_storage='internal', all_array_compression='blsc', compression_kwargs={'typesize': 'auto'})
+
+    ref = Table.read(UNPACK_BITS_OUTPUT)
+
+    for col in ref.colnames:
+        check_close(ref[col], cat.subsamples[col])
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
