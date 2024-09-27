@@ -106,9 +106,13 @@ def _unpack_rvint(intdata, boxsize, posout, velout):
 
     for i in range(N):
         if posout is not None:
-            posout[i] = (intdata[i] >> np.uint32(12)) * posscale
+            posout[i, 0] = (intdata[i, 0] >> np.uint32(12)) * posscale
+            posout[i, 1] = (intdata[i, 1] >> np.uint32(12)) * posscale
+            posout[i, 2] = (intdata[i, 2] >> np.uint32(12)) * posscale
         if velout is not None:
-            velout[i] = ((intdata[i] & vmask) - 2048) * velscale
+            velout[i, 0] = ((intdata[i, 0] & vmask) - 2048) * velscale
+            velout[i, 1] = ((intdata[i, 1] & vmask) - 2048) * velscale
+            velout[i, 2] = ((intdata[i, 2] & vmask) - 2048) * velscale
 
 
 def unpack_pids(
