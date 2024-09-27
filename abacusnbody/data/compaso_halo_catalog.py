@@ -638,6 +638,7 @@ class CompaSOHaloCatalog:
                             self.header['NumTimeSliceRedshiftsPrev'],
                         ),
                     ),
+                    copy=False,
                 )
 
         # Unpack the cats into the concatenated array
@@ -1008,12 +1009,15 @@ class CompaSOHaloCatalog:
             if w in ('pos', 'vel'):
                 shape = (N_subsamp, 3)
                 dtype = np.float32
-                self.subsamples[w] = np.empty(shape, dtype=dtype)
+                self.subsamples.add_column(
+                    np.empty(shape, dtype=dtype), name=w, copy=False
+                )
 
         if 'pid' in which:
             # will always add 'pid', might add other fields as well
             self.subsamples.update(
-                bitpacked.empty_bitpacked_arrays(N_subsamp, unpack_bits)
+                bitpacked.empty_bitpacked_arrays(N_subsamp, unpack_bits),
+                copy=False,
             )
 
         which_files = []
@@ -1059,9 +1063,12 @@ class CompaSOHaloCatalog:
                     keys = [f'npstart{AB}', f'npout{AB}']
                     if cleaned:
                         keys += [f'npstart{AB}_merge', f'npout{AB}_merge']
-                    slab_halos = self.halos[keys][
-                        halo_file_offsets[i] : halo_file_offsets[i + 1]
-                    ]
+                    slab_halos = {
+                        k: self.halos[k][
+                            halo_file_offsets[i] : halo_file_offsets[i + 1]
+                        ]
+                        for k in keys
+                    }
 
                     # We grab an extra element at the end to know where the last halo ends
                     slab_write_offsets = npstartAB_new[AB][
@@ -1195,7 +1202,7 @@ class CompaSOHaloCatalog:
             wstart = slab_write_offsets[i]
             wend = slab_write_offsets[i + 1]
 
-            # TODO: can we use a heterogeneous dict here?
+            # Because these have different types and shapes, and can be None, it's hard to use a Numba dict
             halo_pidout = pid[wstart:wend] if pid is not None else None
             halo_lagr_posout = lagr_pos[wstart:wend] if lagr_pos is not None else None
             halo_taggedout = tagged[wstart:wend] if tagged is not None else None
@@ -1255,11 +1262,17 @@ class CompaSOHaloCatalog:
                 self.halos.remove_column(f'npstart{AB}_merge')
                 self.halos.remove_column(f'npout{AB}_merge')
 
-            self.halos[f'npstart{AB}'] = npstartAB_new[AB][:-1]
+            self.halos.add_column(
+                npstartAB_new[AB][:-1], name=f'npstart{AB}', copy=False
+            )
 
             # We knew the writes were contiguous, so we never computed npout{AB}_new
             # Reconstruct it here
-            self.halos[f'npout{AB}'] = np.diff(npstartAB_new[AB]).astype(np.uint32)
+            self.halos.add_column(
+                np.diff(npstartAB_new[AB]).astype(np.uint32),
+                name=f'npout{AB}',
+                copy=False,
+            )
 
         gc.collect()
 
@@ -1280,7 +1293,8 @@ class CompaSOHaloCatalog:
                     box=self.header['BoxSize'],
                     ppd=self.header['ppd'],
                     **{f: True for f in unpack_bits},
-                )
+                ),
+                copy=False,
             )
 
     def nbytes(self, halos=True, subsamples=True):
