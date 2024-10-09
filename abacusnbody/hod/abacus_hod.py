@@ -797,7 +797,7 @@ class AbacusHOD:
                 verbose=verbose,
                 fn_ext=fn_ext,
             )
-            
+
         self.logger.info(f'HOD generated in elapsed time {time.time() - start:.2f} s.')
 
         return mock_dict
