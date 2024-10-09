@@ -19,155 +19,108 @@ int_array = types.int64[:]
 G = 4.302e-6  # in kpc/Msol (km.s)^2
 
 
+
 @njit(fastmath=True)
 def n_cen_CSMF(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c):
     """
     Standard Cacciato et al. (2008) centrals HOD parametrization for CSMF
     """
     M_c_value = M_c(M_h, M_1, M_0, gamma1, gamma2)
-    x_low = np.log10(Mstar_low / M_c_value) / (1.41421356 * sigma_c)
-    x_up = np.log10(Mstar_up / M_c_value) / (1.41421356 * sigma_c)
-
-    return 0.5 * (math.erf(x_up) - math.erf(x_low))
-
+    x_low = np.log10(Mstar_low/M_c_value)/(1.41421356*sigma_c)
+    x_up = np.log10(Mstar_up/M_c_value)/(1.41421356*sigma_c)
+    
+    return 0.5*(math.erf(x_up) - math.erf(x_low))
 
 @njit(fastmath=True)
 def CSMF_centrals(M_h, Mstar, M_1, M_0, gamma1, gamma2, sigma_c):
     """
     Eq. (34) from Cacciato et al. (2008)
     """
-
+    
     M_c_value = M_c(M_h, M_1, M_0, gamma1, gamma2)
-
-    return (
-        1
-        / (1.41421356 * np.sqrt(np.pi) * np.log(10) * sigma_c * Mstar)
-        * np.exp(-((np.log10(Mstar) - np.log10(M_c_value)) ** 2) / (2 * sigma_c**2))
-    )
-
+    
+    return 1/(1.41421356*np.sqrt(np.pi)*np.log(10)*sigma_c*Mstar)*np.exp(-(np.log10(Mstar)-np.log10(M_c_value))**2/(2*sigma_c**2))
 
 @njit(fastmath=True)
 def M_c(M_h, M_1, M_0, gamma1, gamma2):
     """
     Eq. (37) from Cacciato et al. (2008)
     """
-    return M_0 * (M_h / M_1) ** gamma1 / (1 + M_h / M_1) ** (gamma1 - gamma2)
+    return M_0 * (M_h/M_1)**gamma1/(1+M_h/M_1)**(gamma1-gamma2)
+
 
 
 @njit(fastmath=True)
-def get_random_cen_stellarmass(
-    M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c
-):
+def get_random_cen_stellarmass(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c):
+ 
     nbins = 1000
-    stellarmass = np.logspace(np.log10(Mstar_low), np.log10(Mstar_up), nbins)
-    stellarmass_centers = stellarmass[1:] / 2 + stellarmass[:-1] / 2
-    delta_stellar_masses = stellarmass[1:] - stellarmass[:-1]
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+    stellarmass_centers = stellarmass[1:]/2+stellarmass[:-1]/2
+    delta_stellar_masses = stellarmass[1:]-stellarmass[:-1]
 
-    CSMF_cen = CSMF_centrals(
-        M_h, stellarmass_centers, M_1, M_0, gamma1, gamma2, sigma_c
-    )
-
-    cdf = np.cumsum(CSMF_cen * delta_stellar_masses)
-    cdf = cdf / cdf[-1]
-
-    random_rv = np.random.uniform(cdf.min(), cdf.max())
+    CSMF_cen = CSMF_centrals(M_h, stellarmass_centers, M_1, M_0, gamma1, gamma2, sigma_c)
+    
+    
+    cdf = np.cumsum(CSMF_cen*delta_stellar_masses)
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
     bin_clostest = (np.abs(cdf - random_rv)).argmin()
+    
+    return np.random.uniform(stellarmass[bin_clostest],stellarmass[bin_clostest+1])
+ 
 
-    return np.random.uniform(stellarmass[bin_clostest], stellarmass[bin_clostest + 1])
 
-
+    
 @njit(fastmath=True)
-def get_random_cen_stellarmass_linearinterpolation(
-    M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c
-):
+def get_random_cen_stellarmass_linearinterpolation(M_h, Mstar_low, Mstar_up,  M_1, M_0, gamma1, gamma2, sigma_c):
+ 
     nbins = 1000
-    stellarmass = np.logspace(np.log10(Mstar_low), np.log10(Mstar_up), nbins)
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
     # stellarmass_centers = stellarmass[1:]/2+stellarmass[:-1]/2
-    delta_stellar_masses = stellarmass[1:] - stellarmass[:-1]
-
+    delta_stellar_masses = stellarmass[1:]-stellarmass[:-1]
+        
     CSMF_cen = CSMF_centrals(M_h, stellarmass, M_1, M_0, gamma1, gamma2, sigma_c)
-
-    cdf = np.cumsum(CSMF_cen[:-1] * delta_stellar_masses)
-    cdf = cdf / cdf[-1]
-
-    random_rv = np.random.uniform(cdf.min(), cdf.max())
-    bin = np.where(cdf > random_rv)[0][0]
-
-    m = (stellarmass[bin] - stellarmass[bin - 1]) / (cdf[bin] - cdf[bin - 1])
-    return m * (random_rv - cdf[bin - 1]) + stellarmass[bin - 1]
+    
+    cdf = np.cumsum(CSMF_cen[:-1]*delta_stellar_masses)
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
+    bin = np.where(cdf>random_rv)[0][0]
+      
+    m = (stellarmass[bin]-stellarmass[bin-1])/(cdf[bin]-cdf[bin-1])
+    return m * (random_rv - cdf[bin-1]) + stellarmass[bin-1]
 
 
 @njit(fastmath=True)
-def n_sat_CSMF(
-    M_h,
-    Mstar_low,
-    Mstar_up,
-    M_1,
-    M_0,
-    gamma1,
-    gamma2,
-    sigma_c,
-    a1,
-    a2,
-    M2,
-    b0,
-    b1,
-    b2,
-    delta1,
-    delta2,
-):
+def n_sat_CSMF(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, sigma_c, a1, a2, M2, b0, b1, b2, delta1, delta2):
     """
     Standard Cacciato et al. (2008) satellite HOD parametrization for CSMF
     """
     nbins = 1000
-    stellarmass = np.logspace(np.log10(Mstar_low), np.log10(Mstar_up), nbins)
-
-    CSMF_sat = CSMF_satelites(
-        M_h,
-        stellarmass,
-        M_1,
-        M_0,
-        gamma1,
-        gamma2,
-        a1,
-        a2,
-        M2,
-        b0,
-        b1,
-        b2,
-        delta1,
-        delta2,
-    )
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+    
+    CSMF_sat = CSMF_satelites(M_h, stellarmass, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2)    
 
     nsat = 0
-    for i in range(nbins - 1):
-        nsat += (CSMF_sat[i + 1] - CSMF_sat[i]) * (
-            stellarmass[i + 1] - stellarmass[i]
-        ) / 2 + (stellarmass[i + 1] - stellarmass[i]) * CSMF_sat[i]
-
-    return nsat  # *ncen
+    for i in range(nbins-1):
+        nsat += (CSMF_sat[i+1]-CSMF_sat[i])*(stellarmass[i+1]-stellarmass[i])/2 + (stellarmass[i+1]-stellarmass[i])*CSMF_sat[i]
+    
+    return nsat#*ncen
 
 
 @njit(fastmath=True)
-def CSMF_satelites(
-    M_h, Mstar, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2
-):
+def CSMF_satelites(M_h, Mstar, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2):
     """
     Eq. (36) from Cacciato et al. (2008)
     """
     M_s_value = M_s(M_h, M_1, M_0, gamma1, gamma2)
     alpha_s_value = alpha_s(M_h, a1, a2, M2)
     phi_s_value = phi_s(M_h, b0, b1, b2)
-
+    
     delta = 10 ** (delta1 + delta2 * (np.log10(M_h) - 12))
-
-    return (
-        phi_s_value
-        / M_s_value
-        * (Mstar / M_s_value) ** alpha_s_value
-        * np.exp(-delta * (Mstar / M_s_value) ** 2)
-    )
-
+    
+    return phi_s_value/M_s_value * (Mstar/M_s_value)**alpha_s_value * np.exp(-delta*(Mstar/M_s_value)**2)
 
 @njit(fastmath=True)
 def M_s(M_h, M_1, M_0, gamma1, gamma2):
@@ -176,122 +129,60 @@ def M_s(M_h, M_1, M_0, gamma1, gamma2):
     """
     return 0.562 * M_c(M_h, M_1, M_0, gamma1, gamma2)
 
-
 @njit(fastmath=True)
 def alpha_s(M_h, a1, a2, M2):
     """
     Eq. (39) from Cacciato et al. (2008)
     """
-    return -2.0 + a1 * (1 - 2 / np.pi * np.arctan(a2 * np.log10(M_h / M2)))
-
+    return -2.0 + a1 * (1-2/np.pi*np.arctan(a2*np.log10(M_h/M2)))
 
 @njit(fastmath=True)
 def phi_s(M_h, b0, b1, b2):
     """
     Eq. (40) from Cacciato et al. (2008)
     """
-    M12 = M_h / 1e12
-    log_phi_s = b0 + b1 * np.log10(M12) + b2 * np.log10(M12) ** 2
+    M12 = M_h/1e12                     
+    log_phi_s = b0 + b1 * np.log10(M12) + b2 * np.log10(M12)**2                   
     return 10**log_phi_s
 
 
 @njit(fastmath=True)
-def get_random_sat_stellarmass(
-    M_h,
-    Mstar_low,
-    Mstar_up,
-    M_1,
-    M_0,
-    gamma1,
-    gamma2,
-    a1,
-    a2,
-    M2,
-    b0,
-    b1,
-    b2,
-    delta1,
-    delta2,
-):
+def get_random_sat_stellarmass(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2):
+    
     nbins = 1000
-    stellarmass = np.logspace(np.log10(Mstar_low), np.log10(Mstar_up), nbins)
-    stellarmass_centers = stellarmass[1:] / 2 + stellarmass[:-1] / 2
-    delta_stellar_masses = stellarmass[1:] - stellarmass[:-1]
-
-    CSMF_sat = CSMF_satelites(
-        M_h,
-        stellarmass_centers,
-        M_1,
-        M_0,
-        gamma1,
-        gamma2,
-        a1,
-        a2,
-        M2,
-        b0,
-        b1,
-        b2,
-        delta1,
-        delta2,
-    )
-
-    cdf = np.cumsum(CSMF_sat * delta_stellar_masses)
-    cdf = cdf / cdf[-1]
-
-    random_rv = np.random.uniform(cdf.min(), cdf.max())
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
+    stellarmass_centers = stellarmass[1:]/2+stellarmass[:-1]/2
+    delta_stellar_masses = stellarmass[1:]-stellarmass[:-1]
+        
+    CSMF_sat = CSMF_satelites(M_h, stellarmass_centers, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2)
+    
+    cdf = np.cumsum(CSMF_sat*delta_stellar_masses)
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
     bin_clostest = (np.abs(cdf - random_rv)).argmin()
-
-    return np.random.uniform(stellarmass[bin_clostest], stellarmass[bin_clostest + 1])
-
+    
+    return np.random.uniform(stellarmass[bin_clostest],stellarmass[bin_clostest+1])
+    
 
 @njit(fastmath=True)
-def get_random_sat_stellarmass_linearinterpolation(
-    M_h,
-    Mstar_low,
-    Mstar_up,
-    M_1,
-    M_0,
-    gamma1,
-    gamma2,
-    a1,
-    a2,
-    M2,
-    b0,
-    b1,
-    b2,
-    delta1,
-    delta2,
-):
+def get_random_sat_stellarmass_linearinterpolation(M_h, Mstar_low, Mstar_up, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2):
+ 
     nbins = 100
-    stellarmass = np.logspace(np.log10(Mstar_low), np.log10(Mstar_up), nbins)
+    stellarmass = np.logspace(np.log10(Mstar_low),np.log10(Mstar_up),nbins)
     # stellarmass_centers = stellarmass[1:]/2+stellarmass[:-1]/2
-    delta_stellar_masses = stellarmass[1:] - stellarmass[:-1]
-
-    CSMF_sat = CSMF_satelites(
-        M_h,
-        stellarmass,
-        M_1,
-        M_0,
-        gamma1,
-        gamma2,
-        a1,
-        a2,
-        M2,
-        b0,
-        b1,
-        b2,
-        delta1,
-        delta2,
-    )
-
-    cdf = np.cumsum(CSMF_sat[:-1] * delta_stellar_masses)
-    cdf = cdf / cdf[-1]
-
-    random_rv = np.random.uniform(cdf.min(), cdf.max())
-    bin = np.where(cdf > random_rv)[0][0]
-
-    m = (stellarmass[bin] - stellarmass[bin - 1]) / (cdf[bin] - cdf[bin - 1])
-    return m * (random_rv - cdf[bin - 1]) + stellarmass[bin - 1]
+    delta_stellar_masses = stellarmass[1:]-stellarmass[:-1]
+        
+    CSMF_sat = CSMF_satelites(M_h, stellarmass, M_1, M_0, gamma1, gamma2, a1, a2, M2, b0, b1, b2, delta1, delta2)
+         
+    cdf = np.cumsum(CSMF_sat[:-1]*delta_stellar_masses)
+    cdf=cdf/cdf[-1]
+    
+    random_rv = np.random.uniform(cdf.min(),cdf.max())
+    bin = np.where(cdf>random_rv)[0][0]
+       
+    m = (stellarmass[bin]-stellarmass[bin-1])/(cdf[bin]-cdf[bin-1])
+    return m * (random_rv - cdf[bin-1]) + stellarmass[bin-1]
 
 
 @njit(fastmath=True)
@@ -335,23 +226,24 @@ def gen_cent(
 ):
     """
     Generate central galaxies in place in memory with a two pass numba parallel implementation.
-    """
+    """   
     if want_CSMF:
         Mstar_low_C, Mstar_up_C, M_1_C, M_0_C, gamma1_C, gamma2_C, sigma_c_C = (
-            CSMF_hod_dict['Mstar_low'],
-            CSMF_hod_dict['Mstar_up'],
-            CSMF_hod_dict['M_1'],
-            CSMF_hod_dict['M_0'],
-            CSMF_hod_dict['gamma_1'],
-            CSMF_hod_dict['gamma_2'],
-            CSMF_hod_dict['sigma_c'],
+            CSMF_hod_dict['Mstar_low'], 
+            CSMF_hod_dict['Mstar_up'], 
+            CSMF_hod_dict['M_1'], 
+            CSMF_hod_dict['M_0'], 
+            CSMF_hod_dict['gamma_1'], 
+            CSMF_hod_dict['gamma_2'], 
+            CSMF_hod_dict['sigma_c']
         )
         ic_C, alpha_c_C, Ac_C, Bc_C = (
-            CSMF_hod_dict['ic'],
-            CSMF_hod_dict['alpha_c'],
-            CSMF_hod_dict['Acent'],
-            CSMF_hod_dict['Bcent'],
+            CSMF_hod_dict['ic'], 
+            CSMF_hod_dict['alpha_c'], 
+            CSMF_hod_dict['Acent'], 
+            CSMF_hod_dict['Bcent']
         )
+    
 
     H = len(mass)
 
@@ -369,23 +261,14 @@ def gen_cent(
             # first create the markers between 0 and 1 for different tracers
             CSMF_marker = 0
             if want_CSMF:
-                M_1_C_temp = 10 ** (np.log10(M_1_C) + Ac_C * deltac[i] + Bc_C * fenv[i])
-
-                ncen = n_cen_CSMF(
-                    mass[i],
-                    Mstar_low_C,
-                    Mstar_up_C,
-                    M_1_C_temp,
-                    M_0_C,
-                    gamma1_C,
-                    gamma2_C,
-                    sigma_c_C,
-                )
-
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * deltac[i] + Bc_C * fenv[i])
+                
+                ncen = n_cen_CSMF(mass[i], Mstar_low_C, Mstar_up_C, M_1_C_temp, M_0_C, gamma1_C, gamma2_C, sigma_c_C) 
+                
                 CSMF_marker += ncen * ic_C * multis[i]
 
             if randoms[i] <= CSMF_marker:
-                Nout[tid, 0, 0] += 1  # counting
+                Nout[tid, 0, 0] += 1 # counting
                 keep[i] = 1
             else:
                 keep[i] = 0
@@ -394,18 +277,19 @@ def gen_cent(
     gstart = np.empty((Nthread + 1, 1), dtype=np.int64)
     gstart[0, :] = 0
     gstart[1:, 0] = Nout[:, 0, 0].cumsum()
+   
 
     # galaxy arrays
     N_CSMF = gstart[-1, 0]
-    CSMF_x = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_y = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_z = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_vx = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_vy = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_vz = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_mass = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_stellarmass = np.empty(N_CSMF, dtype=mass.dtype)
-    CSMF_id = np.empty(N_CSMF, dtype=ids.dtype)
+    CSMF_x = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_y = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_z = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_vx = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_vy = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_vz = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_mass = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_stellarmass = np.empty(N_CSMF, dtype = mass.dtype)
+    CSMF_id = np.empty(N_CSMF, dtype = ids.dtype)
 
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
@@ -413,50 +297,42 @@ def gen_cent(
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i] == 1:
                 # loop thru three directions to assign galaxy velocities and positions
-                CSMF_x[j1] = pos[i, 0]
-                CSMF_vx[j1] = vel[i, 0] + alpha_c_C * vdev[i, 0]  # velocity bias
-                CSMF_y[j1] = pos[i, 1]
-                CSMF_vy[j1] = vel[i, 1] + alpha_c_C * vdev[i, 1]  # velocity bias
-                CSMF_z[j1] = pos[i, 2]
-                CSMF_vz[j1] = vel[i, 2] + alpha_c_C * vdev[i, 2]  # velocity bias
-
+                CSMF_x[j1] = pos[i,0]
+                CSMF_vx[j1] = vel[i,0] + alpha_c_C * vdev[i,0] # velocity bias
+                CSMF_y[j1] = pos[i,1]
+                CSMF_vy[j1] = vel[i,1] + alpha_c_C * vdev[i,1] # velocity bias
+                CSMF_z[j1] = pos[i,2]
+                CSMF_vz[j1] = vel[i,2] + alpha_c_C * vdev[i,2] # velocity bias
+        
                 # rsd only applies to the z direction
                 if rsd and origin is not None:
                     nx = CSMF_x[j1] - origin[0]
                     ny = CSMF_y[j1] - origin[1]
                     nz = CSMF_z[j1] - origin[2]
-                    inv_norm = 1.0 / np.sqrt(nx * nx + ny * ny + nz * nz)
+                    inv_norm = 1./np.sqrt(nx*nx + ny*ny + nz*nz)
                     nx *= inv_norm
                     ny *= inv_norm
                     nz *= inv_norm
-                    proj = inv_velz2kms * (
-                        CSMF_vx[j1] * nx + CSMF_vy[j1] * ny + CSMF_vz[j1] * nz
-                    )
-                    CSMF_x[j1] = CSMF_x[j1] + proj * nx
-                    CSMF_y[j1] = CSMF_y[j1] + proj * ny
-                    CSMF_z[j1] = CSMF_z[j1] + proj * nz
+                    proj = inv_velz2kms*(CSMF_vx[j1]*nx+CSMF_vy[j1]*ny+CSMF_vz[j1]*nz)
+                    CSMF_x[j1] = CSMF_x[j1]+proj*nx
+                    CSMF_y[j1] = CSMF_y[j1]+proj*ny
+                    CSMF_z[j1] = CSMF_z[j1]+proj*nz
                 elif rsd:
-                    CSMF_z[j1] = wrap(pos[i, 2] + CSMF_vz[j1] * inv_velz2kms, lbox)
-
+                    CSMF_z[j1] = wrap(pos[i,2] + CSMF_vz[j1] * inv_velz2kms, lbox)
+                    
                 CSMF_mass[j1] = mass[i]
-                M_1_C_temp = 10 ** (np.log10(M_1_C) + Ac_C * deltac[i] + Bc_C * fenv[i])
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * deltac[i] + Bc_C * fenv[i])
                 CSMF_stellarmass[j1] = get_random_cen_stellarmass_linearinterpolation(
-                    mass[i],
-                    Mstar_low_C,
-                    Mstar_up_C,
-                    M_1_C_temp,
-                    M_0_C,
-                    gamma1_C,
-                    gamma2_C,
-                    sigma_c_C,
-                )
+                    mass[i], Mstar_low_C, Mstar_up_C, 
+                    M_1_C_temp, M_0_C, gamma1_C, gamma2_C, sigma_c_C)
                 CSMF_id[j1] = ids[i]
                 j1 += 1
         # assert j == gstart[tid + 1]
 
-    CSMF_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
+    CSMF_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
-
+    
+    
     CSMF_dict['x'] = CSMF_x
     CSMF_dict['y'] = CSMF_y
     CSMF_dict['z'] = CSMF_z
@@ -603,45 +479,29 @@ def gen_sats_nfw(
 
     """
     if want_CSMF:
-        (
-            Mstar_low_C,
-            Mstar_up_C,
-            M_1_C,
-            M_0_C,
-            gamma1_C,
-            gamma2_C,
-            sigma_c_C,
-            a1_C,
-            a2_C,
-            M2_C,
-            b0_C,
-            b1_C,
-            b2_C,
-            delta1_C,
-            delta2_C,
-        ) = (
-            CSMF_hod_dict['Mstar_low'],
-            CSMF_hod_dict['Mstar_up'],
-            CSMF_hod_dict['M_1'],
-            CSMF_hod_dict['M_0'],
-            CSMF_hod_dict['gamma_1'],
-            CSMF_hod_dict['gamma_2'],
-            CSMF_hod_dict['sigma_c'],
-            CSMF_hod_dict['a_1'],
-            CSMF_hod_dict['a_2'],
-            CSMF_hod_dict['M_2'],
-            CSMF_hod_dict['b_0'],
-            CSMF_hod_dict['b_1'],
-            CSMF_hod_dict['b_2'],
-            CSMF_hod_dict['delta_1'],
-            CSMF_hod_dict['delta_2'],
+        Mstar_low_C, Mstar_up_C, M_1_C, M_0_C, gamma1_C, gamma2_C, sigma_c_C, a1_C, a2_C, M2_C, b0_C, b1_C, b2_C, delta1_C, delta2_C = (
+            CSMF_hod_dict['Mstar_low'], 
+            CSMF_hod_dict['Mstar_up'], 
+            CSMF_hod_dict['M_1'], 
+            CSMF_hod_dict['M_0'], 
+            CSMF_hod_dict['gamma_1'], 
+            CSMF_hod_dict['gamma_2'], 
+            CSMF_hod_dict['sigma_c'], 
+            CSMF_hod_dict['a_1'], 
+            CSMF_hod_dict['a_2'], 
+            CSMF_hod_dict['M_2'], 
+            CSMF_hod_dict['b_0'], 
+            CSMF_hod_dict['b_1'], 
+            CSMF_hod_dict['b_2'], 
+            CSMF_hod_dict['delta_1'], 
+            CSMF_hod_dict['delta_2']
         )
         Ac_C, As_C, Bc_C, Bs_C, ic_C = (
-            CSMF_hod_dict['Acent'],
-            CSMF_hod_dict['Asat'],
+            CSMF_hod_dict['Acent'], 
+            CSMF_hod_dict['Asat'], 
             CSMF_hod_dict['Bcent'],
-            CSMF_hod_dict['Bsat'],
-            CSMF_hod_dict['ic'],
+            CSMF_hod_dict['Bsat'], 
+            CSMF_hod_dict['ic']
         )
         f_sigv_C = CSMF_hod_dict['f_sigv']
 
@@ -649,40 +509,37 @@ def gen_sats_nfw(
 
     # compute nsate for each halo
     # figuring out the number of particles kept for each thread
-    num_sats_C = np.zeros(len(hid), dtype=np.int64)
-    stellarmass_C = np.zeros(len(hid), dtype=np.int64)
+    num_sats_C = np.zeros(len(hid), dtype = np.int64)
+    stellarmass_C = np.zeros(len(hid), dtype = np.int64)
     hstart = np.rint(np.linspace(0, len(hid), Nthread + 1)).astype(
         np.int64
     )  # starting index of each thread
     for tid in range(Nthread):
         for i in range(hstart[tid], hstart[tid + 1]):
             if want_CSMF:
-                M_1_C_temp = 10 ** (
-                    np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i]
-                )
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
                 a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
                 base_p_C = (
                     n_sat_CSMF(
-                        hmass[i],
-                        Mstar_low_C,
-                        Mstar_up_C,
-                        M_1_C_temp,
-                        M_0_C,
-                        gamma1_C,
-                        gamma2_C,
-                        sigma_c_C,
-                        a1_C_temp,
-                        a2_C,
-                        M2_C,
-                        b0_C,
-                        b1_C,
-                        b2_C,
-                        delta1_C,
-                        delta2_C,
-                    )
+                        hmass[i], 
+                        Mstar_low_C, 
+                        Mstar_up_C, 
+                        M_1_C_temp, 
+                        M_0_C, 
+                        gamma1_C, 
+                        gamma2_C, 
+                        sigma_c_C, 
+                        a1_C_temp, 
+                        a2_C, 
+                        M2_C, 
+                        b0_C, 
+                        b1_C, 
+                        b2_C, 
+                        delta1_C, 
+                        delta2_C) 
                     * ic_C
                 )
-                num_sats_C[i] = np.random.poisson(base_p_C)
+                num_sats_C[i] = np.random.poisson(base_p_C) 
 
     # generate rdpos
     rd_pos_C = getPointsOnSphere(np.sum(num_sats_C), Nthread)
@@ -690,33 +547,35 @@ def gen_sats_nfw(
     # put satellites on NFW
     h_id_C, x_sat_C, y_sat_C, z_sat_C, vx_sat_C, vy_sat_C, vz_sat_C, M_C = (
         compute_fast_NFW(
-            NFW_draw,
-            hid,
-            hpos[:, 0],
-            hpos[:, 1],
-            hpos[:, 2],
-            hvel[:, 0],
-            hvel[:, 1],
+            NFW_draw, 
+            hid, 
+            hpos[:, 0], 
+            hpos[:, 1], 
+            hpos[:, 2], 
+            hvel[:, 0], 
+            hvel[:, 1], 
             hvel[:, 2],
-            hvrms,
-            hc,
-            hmass,
-            hrvir,
-            rd_pos_C,
-            num_sats_C,
-            f_sigv_C,
-            vel_sat,
+            hvrms, 
+            hc, 
+            hmass, 
+            hrvir, 
+            rd_pos_C, 
+            num_sats_C, 
+            f_sigv_C, 
+            vel_sat, 
             Nthread,
         )
     )
-
+    
+    
     # do rsd
     if rsd:
         z_sat_C = (z_sat_C + vz_sat_C * inv_velz2kms) % lbox
 
-    CSMF_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
-    ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
 
+    CSMF_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
+    ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
+    
     CSMF_dict['x'] = x_sat_C
     CSMF_dict['y'] = y_sat_C
     CSMF_dict['z'] = z_sat_C
@@ -730,29 +589,12 @@ def gen_sats_nfw(
         hstart = np.rint(np.linspace(0, num_sats_C.sum(), Nthread + 1))
         for tid in numba.prange(Nthread):
             for i in range(int(hstart[tid]), int(hstart[tid + 1])):
-                M_1_C_temp = 10 ** (
-                    np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i]
-                )
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
                 a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
                 stellarmass_C[i] = get_random_sat_stellarmass_linearinterpolation(
-                    M_C[i],
-                    Mstar_low_C,
-                    Mstar_up_C,
-                    M_1_C_temp,
-                    M_0_C,
-                    gamma1_C,
-                    gamma2_C,
-                    a1_C_temp,
-                    s,
-                    a2_C,
-                    M2_C,
-                    b0_C,
-                    b1_C,
-                    b2_C,
-                    delta1_C,
-                    delta2_C,
-                )
-
+                    M_C[i], Mstar_low_C, Mstar_up_C, M_1_C_temp, M_0_C, gamma1_C, gamma2_C,
+                    a1_C_temp, a2_C, M2_C, b0_C, b1_C, b2_C, delta1_C, delta2_C)
+    
     CSMF_dict['stellarmass'] = stellarmass_C
     ID_dict['CSMF'] = h_id_C
 
@@ -791,52 +633,38 @@ def gen_sats(
     Generate satellite galaxies in place in memory with a two pass numba parallel implementation.
     """
 
+   
+        
     if want_CSMF:
-        (
-            Mstar_low_C,
-            Mstar_up_C,
-            M_1_C,
-            M_0_C,
-            gamma1_C,
-            gamma2_C,
-            sigma_c_C,
-            a1_C,
-            a2_C,
-            M2_C,
-            b0_C,
-            b1_C,
-            b2_C,
-            delta1_C,
-            delta2_C,
-        ) = (
-            CSMF_hod_dict['Mstar_low'],
-            CSMF_hod_dict['Mstar_up'],
-            CSMF_hod_dict['M_1'],
-            CSMF_hod_dict['M_0'],
+        Mstar_low_C, Mstar_up_C, M_1_C, M_0_C, gamma1_C, gamma2_C, sigma_c_C, a1_C, a2_C, M2_C, b0_C, b1_C, b2_C, delta1_C, delta2_C = (
+            CSMF_hod_dict['Mstar_low'], 
+            CSMF_hod_dict['Mstar_up'], 
+            CSMF_hod_dict['M_1'], 
+            CSMF_hod_dict['M_0'], 
             CSMF_hod_dict['gamma_1'],
-            CSMF_hod_dict['gamma_2'],
-            CSMF_hod_dict['sigma_c'],
-            CSMF_hod_dict['a_1'],
-            CSMF_hod_dict['a_2'],
+            CSMF_hod_dict['gamma_2'], 
+            CSMF_hod_dict['sigma_c'], 
+            CSMF_hod_dict['a_1'], 
+            CSMF_hod_dict['a_2'], 
             CSMF_hod_dict['M_2'],
-            CSMF_hod_dict['b_0'],
-            CSMF_hod_dict['b_1'],
-            CSMF_hod_dict['b_2'],
-            CSMF_hod_dict['delta_1'],
-            CSMF_hod_dict['delta_2'],
+            CSMF_hod_dict['b_0'], 
+            CSMF_hod_dict['b_1'], 
+            CSMF_hod_dict['b_2'], 
+            CSMF_hod_dict['delta_1'], 
+            CSMF_hod_dict['delta_2']
         )
-
+        
         alpha_s_C, s_C, s_v_C, s_p_C, s_r_C, Ac_C, As_C, Bc_C, Bs_C, ic_C = (
-            CSMF_hod_dict['alpha_s'],
+            CSMF_hod_dict['alpha_s'], 
             CSMF_hod_dict['s'],
-            CSMF_hod_dict['s_v'],
-            CSMF_hod_dict['s_p'],
-            CSMF_hod_dict['s_r'],
+            CSMF_hod_dict['s_v'], 
+            CSMF_hod_dict['s_p'], 
+            CSMF_hod_dict['s_r'], 
             CSMF_hod_dict['Acent'],
-            CSMF_hod_dict['Asat'],
-            CSMF_hod_dict['Bcent'],
-            CSMF_hod_dict['Bsat'],
-            CSMF_hod_dict['ic'],
+            CSMF_hod_dict['Asat'], 
+            CSMF_hod_dict['Bcent'], 
+            CSMF_hod_dict['Bsat'], 
+            CSMF_hod_dict['ic']
         )
 
     H = len(hmass)  # num of particles
@@ -855,47 +683,39 @@ def gen_sats(
             # print(logM1, As, hdeltac[i], Bs, hfenv[i])
             CSMF_marker = 0
             if want_CSMF:
-                M_1_C_temp = 10 ** (
-                    np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i]
-                )
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
                 a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
                 base_p_C = (
                     n_sat_CSMF(
-                        hmass[i],
-                        Mstar_low_C,
-                        Mstar_up_C,
-                        M_1_C_temp,
-                        M_0_C,
-                        gamma1_C,
-                        gamma2_C,
-                        sigma_c_C,
-                        a1_C_temp,
-                        a2_C,
-                        M2_C,
-                        b0_C,
-                        b1_C,
-                        b2_C,
-                        delta1_C,
-                        delta2_C,
-                    )
-                    * weights[i]
-                    * ic_C
-                )
+                        hmass[i], 
+                        Mstar_low_C, 
+                        Mstar_up_C, 
+                        M_1_C_temp, 
+                        M_0_C, 
+                        gamma1_C, 
+                        gamma2_C, 
+                        sigma_c_C, 
+                        a1_C_temp, 
+                        a2_C, 
+                        M2_C, 
+                        b0_C, 
+                        b1_C, 
+                        b2_C, 
+                        delta1_C, 
+                        delta2_C
+                    ) 
+                    * weights[i] 
+                    * ic_C)
                 if enable_ranks:
-                    decorator_C = (
-                        1
-                        + s_C * ranks[i]
-                        + s_v_C * ranksv[i]
-                        + s_p_C * ranksp[i]
-                        + s_r_C * ranksr[i]
-                    )
+                    decorator_C = 1 + s_C * ranks[i] + s_v_C * ranksv[i] + s_p_C * ranksp[i] + s_r_C * ranksr[i]
                     exp_sat = base_p_C * decorator_C
                 else:
                     exp_sat = base_p_C
                 CSMF_marker += exp_sat
 
+            
             if randoms[i] <= CSMF_marker:
-                Nout[tid, 0, 0] += 1  # counting
+                Nout[tid, 0, 0] += 1 # counting
                 keep[i] = 1
             else:
                 keep[i] = 0
@@ -907,15 +727,15 @@ def gen_sats(
 
     # galaxy arrays
     N_CSMF = gstart[-1, 0]
-    CSMF_x = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_y = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_z = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_vx = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_vy = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_vz = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_mass = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_stellarmass = np.empty(N_CSMF, dtype=hmass.dtype)
-    CSMF_id = np.empty(N_CSMF, dtype=hid.dtype)
+    CSMF_x = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_y = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_z = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_vx = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_vy = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_vz = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_mass = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_stellarmass = np.empty(N_CSMF, dtype = hmass.dtype)
+    CSMF_id = np.empty(N_CSMF, dtype = hid.dtype)
 
     # fill in the galaxy arrays
     for tid in numba.prange(Nthread):
@@ -923,63 +743,56 @@ def gen_sats(
         for i in range(hstart[tid], hstart[tid + 1]):
             if keep[i] == 1:
                 CSMF_x[j1] = ppos[i, 0]
-                CSMF_vx[j1] = hvel[i, 0] + alpha_s_C * (
-                    pvel[i, 0] - hvel[i, 0]
-                )  # velocity bias
+                CSMF_vx[j1] = hvel[i, 0] + alpha_s_C * (pvel[i, 0] - hvel[i, 0]) # velocity bias
                 CSMF_y[j1] = ppos[i, 1]
-                CSMF_vy[j1] = hvel[i, 1] + alpha_s_C * (
-                    pvel[i, 1] - hvel[i, 1]
-                )  # velocity bias
+                CSMF_vy[j1] = hvel[i, 1] + alpha_s_C * (pvel[i, 1] - hvel[i, 1]) # velocity bias
                 CSMF_z[j1] = ppos[i, 2]
-                CSMF_vz[j1] = hvel[i, 2] + alpha_s_C * (
-                    pvel[i, 2] - hvel[i, 2]
-                )  # velocity bias
+                CSMF_vz[j1] = hvel[i, 2] + alpha_s_C * (pvel[i, 2] - hvel[i, 2]) # velocity bias
                 if rsd and origin is not None:
                     nx = CSMF_x[j1] - origin[0]
                     ny = CSMF_y[j1] - origin[1]
                     nz = CSMF_z[j1] - origin[2]
-                    inv_norm = 1.0 / np.sqrt(nx * nx + ny * ny + nz * nz)
+                    inv_norm = 1./np.sqrt(nx*nx + ny*ny + nz*nz)
                     nx *= inv_norm
                     ny *= inv_norm
                     nz *= inv_norm
-                    proj = inv_velz2kms * (
-                        CSMF_vx[j1] * nx + CSMF_vy[j1] * ny + CSMF_vz[j1] * nz
-                    )
-                    CSMF_x[j1] = CSMF_x[j1] + proj * nx
-                    CSMF_y[j1] = CSMF_y[j1] + proj * ny
-                    CSMF_z[j1] = CSMF_z[j1] + proj * nz
+                    proj = inv_velz2kms*(CSMF_vx[j1]*nx+CSMF_vy[j1]*ny+CSMF_vz[j1]*nz)
+                    CSMF_x[j1] = CSMF_x[j1]+proj*nx
+                    CSMF_y[j1] = CSMF_y[j1]+proj*ny
+                    CSMF_z[j1] = CSMF_z[j1]+proj*nz
                 elif rsd:
-                    CSMF_z[j1] = wrap(CSMF_z[j1] + CSMF_vz[j1] * inv_velz2kms, lbox)
-
-                M_1_C_temp = 10 ** (
-                    np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i]
-                )
+                     CSMF_z[j1] = wrap(CSMF_z[j1] + CSMF_vz[j1] * inv_velz2kms, lbox)
+                     
+                
+                M_1_C_temp = 10**(np.log10(M_1_C) + Ac_C * hdeltac[i] + Bc_C * hfenv[i])
                 a1_C_temp = a1_C + As_C * hdeltac[i] + Bs_C * hfenv[i]
                 CSMF_stellarmass[j1] = get_random_sat_stellarmass(
-                    hmass[i],
-                    Mstar_low_C,
-                    Mstar_up_C,
-                    M_1_C_temp,
-                    M_0_C,
-                    gamma1_C,
-                    gamma2_C,
-                    a1_C_temp,
-                    a2_C,
-                    M2_C,
-                    b0_C,
-                    b1_C,
-                    b2_C,
-                    delta1_C,
-                    delta2_C,
-                )
+                    hmass[i], 
+                    Mstar_low_C, 
+                    Mstar_up_C, 
+                    M_1_C_temp, 
+                    M_0_C, 
+                    gamma1_C, 
+                    gamma2_C, 
+                    a1_C_temp, 
+                    a2_C, 
+                    M2_C, 
+                    b0_C, 
+                    b1_C, 
+                    b2_C, 
+                    delta1_C, 
+                    delta2_C
+                ) 
                 CSMF_mass[j1] = hmass[i]
                 CSMF_id[j1] = hid[i]
                 j1 += 1
         # assert j == gstart[tid + 1]
 
-    CSMF_dict = Dict.empty(key_type=types.unicode_type, value_type=float_array)
+
+    CSMF_dict = Dict.empty(key_type = types.unicode_type, value_type = float_array)
     ID_dict = Dict.empty(key_type=types.unicode_type, value_type=int_array)
 
+    
     CSMF_dict['x'] = CSMF_x
     CSMF_dict['y'] = CSMF_y
     CSMF_dict['z'] = CSMF_z
@@ -989,7 +802,7 @@ def gen_sats(
     CSMF_dict['mass'] = CSMF_mass
     CSMF_dict['stellarmass'] = CSMF_stellarmass
     ID_dict['CSMF'] = CSMF_id
-
+    
     return CSMF_dict, ID_dict
 
 
@@ -1074,12 +887,11 @@ def gen_gals(
         if tracer == 'CSMF':
             CSMF_HOD = tracers[tracer]
 
+        
     if 'CSMF' in tracers.keys():
         want_CSMF = True
 
-        CSMF_hod_dict = nb.typed.Dict.empty(
-            key_type=nb.types.unicode_type, value_type=nb.types.float64
-        )
+        CSMF_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
         for key, value in CSMF_HOD.items():
             CSMF_hod_dict[key] = value
 
@@ -1092,9 +904,7 @@ def gen_gals(
 
     else:
         want_CSMF = False
-        CSMF_hod_dict = nb.typed.Dict.empty(
-            key_type=nb.types.unicode_type, value_type=nb.types.float64
-        )
+        CSMF_hod_dict = nb.typed.Dict.empty(key_type=nb.types.unicode_type, value_type= nb.types.float64)
 
     start = time.time()
 

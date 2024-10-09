@@ -797,7 +797,7 @@ class AbacusHOD:
                 verbose=verbose,
                 fn_ext=fn_ext,
             )
-
+            
         self.logger.info(f'HOD generated in elapsed time {time.time() - start:.2f} s.')
 
         return mock_dict
@@ -1188,8 +1188,8 @@ class AbacusHOD:
         numba.set_num_threads(Nthread)
 
         logMs = 0.5 * (logMbins[1:] + logMbins[:-1])
-        deltacs = 0.5 * (deltacbins[1:] + deltacbins[:-1])
-        fenvs = 0.5 * (fenvbins[1:] + fenvbins[:-1])
+        # deltacs = 0.5 * (deltacbins[1:] + deltacbins[:-1])
+        # fenvs = 0.5 * (fenvbins[1:] + fenvbins[:-1])
         ngal_cent = 0
         ngal_sat = 0
 
