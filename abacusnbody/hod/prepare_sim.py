@@ -161,8 +161,17 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     origin = origins[0]
 
     # generate randoms on the unit sphere
-    costheta = np.random.rand(N_rands) * 2.0 - 1.0
-    phi = np.random.rand(N_rands) * 2.0 * np.pi
+    if (
+        origins.shape[0] > 1
+    ):  # not true of only the huge box where the origin is at the center
+        assert origins.shape[0] == 3
+        assert np.all(origins[1] + np.array([0.0, 0.0, Lbox]) == origins[0])
+        assert np.all(origins[2] + np.array([0.0, Lbox, 0.0]) == origins[0])
+        costheta = np.random.rand(N_rands)  # between zero and one
+        phi = np.random.rand(N_rands) * np.pi / 2.0
+    else:
+        costheta = np.random.rand(N_rands) * 2.0 - 1.0
+        phi = np.random.rand(N_rands) * 2.0 * np.pi
     theta = np.arccos(costheta)
     x_cart = np.sin(theta) * np.cos(phi)
     y_cart = np.sin(theta) * np.sin(phi)
