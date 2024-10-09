@@ -33,9 +33,14 @@ from .GRAND_HOD import (
     N_sat_elg,
     N_cen_QSO,
     N_sat_generic,
+)
+
+from .CSMF_HOD import (
+    gen_gal_cat_CSMF,
     n_cen_CSMF,
     n_sat_CSMF,
 )
+
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
@@ -760,21 +765,39 @@ class AbacusHOD:
             )
 
         start = time.time()
-        mock_dict = gen_gal_cat(
-            self.halo_data,
-            self.particle_data,
-            tracers,
-            self.params,
-            Nthread,
-            enable_ranks=self.want_ranks,
-            rsd=want_rsd,
-            nfw=want_nfw,
-            NFW_draw=NFW_draw,
-            write_to_disk=write_to_disk,
-            savedir=self.mock_dir,
-            verbose=verbose,
-            fn_ext=fn_ext,
-        )
+        if 'CSMF' in tracers.keys():
+            mock_dict = gen_gal_cat_CSMF(
+                self.halo_data,
+                self.particle_data,
+                tracers,
+                self.params,
+                Nthread,
+                enable_ranks=self.want_ranks,
+                rsd=want_rsd,
+                nfw=want_nfw,
+                NFW_draw=NFW_draw,
+                write_to_disk=write_to_disk,
+                savedir=self.mock_dir,
+                verbose=verbose,
+                fn_ext=fn_ext,
+            )
+        else:
+            mock_dict = gen_gal_cat(
+                self.halo_data,
+                self.particle_data,
+                tracers,
+                self.params,
+                Nthread,
+                enable_ranks=self.want_ranks,
+                rsd=want_rsd,
+                nfw=want_nfw,
+                NFW_draw=NFW_draw,
+                write_to_disk=write_to_disk,
+                savedir=self.mock_dir,
+                verbose=verbose,
+                fn_ext=fn_ext,
+            )
+            
         self.logger.info(f'HOD generated in elapsed time {time.time() - start:.2f} s.')
 
         return mock_dict
