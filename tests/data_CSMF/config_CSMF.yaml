@@ -7,31 +7,31 @@ sim_params:
     sim_dir: '/global/cfs/cdirs/desi/public/cosmosim/AbacusSummit/halo_light_cones/'  # where is the simulation
     subsample_dir: 'data_CSMF/halos_data/'
     cleaned_halos: 'data_CSMF/halos_data/'
-    
+
     # subsample_dir: '/pscratch/sd/p/pierre/AbacusSummit/subsamples/'
     # cleaned_halos: '/pscratch/sd/p/pierre/AbacusSummit/subsamples/'
-    
+
     Nthread_load: 10
-    z_mock: 0.100                                                    
+    z_mock: 0.100
     halo_lc: True
 
     # subsample_dir: ‘/pscratch/sd/b/boryanah/AbacusHOD_scratch/mocks_lc_subsample/’
 
 prepare_sim:
-    Nparallel_load: 10 # best for cori haswell node  
+    Nparallel_load: 10 # best for cori haswell node
 
 # HOD parameters
 HOD_params:
     use_particles: True
     want_ranks: True               # want to implement satellite profile flexiblities?
-    want_AB: True               # want to implement assembly bias?              
+    want_AB: True               # want to implement assembly bias?
     density_sigma: 3               # scale radius in Mpc / h for local density calculation
     tracer_flags:                  # which tracer do we want?
-        LRG: False 
+        LRG: False
         ELG: False
         QSO: False
         CSMF: True
-    want_rsd: True                 # want RSD? 
+    want_rsd: True                 # want RSD?
     write_to_disk: False
 
     CSMF_params:
@@ -75,17 +75,15 @@ fit_params:
     Bcent: [9, 'CSMF']
     Bsat: [10, 'CSMF']
 
-    
-# ===========================================================================================
-# The following dictionaries are for using the provided emcee/likelihood templates. They 
-# are not needed for using the AbacusHOD class and running HODs. 
 
-# parameters that indicate where the observed data that you would like to fit live. 
+# ===========================================================================================
+# The following dictionaries are for using the provided emcee/likelihood templates. They
+# are not needed for using the AbacusHOD class and running HODs.
+
+# parameters that indicate where the observed data that you would like to fit live.
 data_params:
-    
+
 
 
 # Configuration parameters for emcee
 ch_config_params:
-    
-
