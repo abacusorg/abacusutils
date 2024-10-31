@@ -125,7 +125,7 @@ def unpack_to_pipe(
             raise FileNotFoundError(fn)
     afs = []
     for fn in asdf_fns:
-        afs += [asdf.open(fn, mode='r', copy_arrays=True, lazy_load=True)]
+        afs += [asdf.open(fn, mode='r', memmap=False, lazy_load=True)]
     for af in afs:
         for field in fields:
             if field not in af.tree[data_key]:

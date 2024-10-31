@@ -90,7 +90,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     data_key = kwargs.get('data_key', ASDF_DATA_KEY)
     header_key = kwargs.get('header_key', ASDF_HEADER_KEY)
 
-    with asdf.open(fn, lazy_load=True, copy_arrays=True) as af:
+    with asdf.open(fn, lazy_load=True, memmap=False) as af:
         if colname is None:
             _colnames = ['rvint', 'pack9', 'packedpid', 'pid']
             for cn in _colnames:

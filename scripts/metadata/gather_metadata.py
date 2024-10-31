@@ -48,7 +48,7 @@ def main(small=False):
         for zdir in (sim / 'halos').glob('z*'):
             try:
                 afn = next(zdir.glob('*/*.asdf'))  # any asdf file
-                with asdf.open(afn, lazy_load=True, copy_arrays=True) as af:
+                with asdf.open(afn, lazy_load=True, memmap=False) as af:
                     zheader = af['header'].copy()
             except StopIteration:
                 # maybe a header?
@@ -65,7 +65,7 @@ def main(small=False):
             _icdir = icdir
 
         with asdf.open(
-            _icdir / sim.name / 'ic_dens_N576.asdf', lazy_load=True, copy_arrays=True
+            _icdir / sim.name / 'ic_dens_N576.asdf', lazy_load=True, memmap=False
         ) as af:
             icparam = af['header'].copy()
             class_pk = af['CLASS_power_spectrum'].copy()

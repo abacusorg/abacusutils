@@ -566,9 +566,9 @@ class CompaSOHaloCatalog:
 
         # Open all the files, validate them, and count the halos
         # Lazy load, but don't use mmap
-        afs = [asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in halo_fns]
+        afs = [asdf.open(hfn, lazy_load=True, memmap=False) for hfn in halo_fns]
         cleaned_afs = [
-            asdf.open(hfn, lazy_load=True, copy_arrays=True) for hfn in cleaned_fns
+            asdf.open(hfn, lazy_load=True, memmap=False) for hfn in cleaned_fns
         ]
 
         N_halo_per_file = np.array(
@@ -1038,7 +1038,7 @@ class CompaSOHaloCatalog:
                     / 'cleaned_rvpid'
                     / f'cleaned_rvpid_{i:03d}.asdf',
                     lazy_load=True,
-                    copy_arrays=True,
+                    memmap=False,
                 )
                 for i in self.superslab_inds
             ]
@@ -1052,7 +1052,7 @@ class CompaSOHaloCatalog:
                         / f'halo_{rvpid}_{AB}'
                         / f'halo_{rvpid}_{AB}_{self.superslab_inds[i]:03d}.asdf'
                     )
-                    with asdf.open(fn, lazy_load=True, copy_arrays=True) as af:
+                    with asdf.open(fn, lazy_load=True, memmap=False) as af:
                         slab_particles = af[self.data_key][colname][:]
                     if cleaned:
                         clean_af = clean_afs[i]
@@ -1282,7 +1282,7 @@ class CompaSOHaloCatalog:
 
         fn = Path(self.groupdir) / 'lc_pid_rv.asdf'
 
-        with asdf.open(fn, lazy_load=True, copy_arrays=True) as af:
+        with asdf.open(fn, lazy_load=True, memmap=False) as af:
             for w in which:
                 self.subsamples.add_column(af[self.data_key][w][:], name=w, copy=False)
 

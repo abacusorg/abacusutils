@@ -273,7 +273,7 @@ class AbacusHOD:
                     sim_dir / simname / 'halos' / ('z%4.3f' % self.z_mock) / 'halo_info'
                 ).glob('*.asdf')
             )
-        f = asdf.open(halo_info_fns[0], lazy_load=True, copy_arrays=False)
+        f = asdf.open(halo_info_fns[0], lazy_load=True, memmap=False)
         header = f['header']
 
         # constants
