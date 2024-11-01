@@ -44,9 +44,10 @@ def compress_asdf(asdf_fn, table, header):
         blosc_block_size=3 * 1024**2,
         nthreads=4,
     )
-    with asdf.AsdfFile(data_tree) as af, open(
-        asdf_fn, 'wb'
-    ) as fp:  # where data_tree is the ASDF dict tree structure
+    with (
+        asdf.AsdfFile(data_tree) as af,
+        open(asdf_fn, 'wb') as fp,
+    ):  # where data_tree is the ASDF dict tree structure
         af.write_to(
             fp, all_array_compression='blsc', compression_kwargs=compression_kwargs
         )
