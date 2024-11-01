@@ -1,14 +1,17 @@
 Changelog
 =========
 
-2.0.2 (upcoming)
+2.1.0 (upcoming)
 ----------------
+
+Supported Python versions are 3.9-3.12.
 
 Enhancements
 ~~~~~~~~~~~~
 - ``hod.prepare_sim``: detect and report when a ``prepare_slab`` subprocess fails [#151]
 - ci: add python 3.12 and enhance ``NUMBA_DISABLE_JIT`` support [#153]
 - Improve CompaSO subsample loading [#154]
+- deprecate ``asdf.open(copy_arrays=True)`` in favor of ``asdf.open(memmap=False)`` [#157]
 
 2.0.1 (2024-03-01)
 ------------------

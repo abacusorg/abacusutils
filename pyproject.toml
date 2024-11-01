@@ -22,7 +22,7 @@ dependencies = [
     'astropy>=4.0.0',
     'scipy>=1.5.0',
     'numba>=0.56',
-    'asdf>=2.8',
+    'asdf>=3.1.0',
     'h5py',
     'pyyaml',
     'msgpack>=1',
@@ -31,7 +31,7 @@ dependencies = [
     "importlib_resources; python_version<'3.9'",
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 urls = {Repository = "https://github.com/abacusorg/abacusutils"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -49,6 +49,7 @@ abacusutils = "abacusnbody.data.asdf:AbacusExtension"
 all = [
     'zenbu-fftw>=1',
     'classy',
+    'numpy<2',  # for classy
     'Corrfunc>=2',
     'emcee',
     'schwimmbad',
