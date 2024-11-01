@@ -31,7 +31,7 @@ dependencies = [
     "importlib_resources; python_version<'3.9'",
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 urls = {Repository = "https://github.com/abacusorg/abacusutils"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -49,6 +49,7 @@ abacusutils = "abacusnbody.data.asdf:AbacusExtension"
 all = [
     'zenbu-fftw>=1',
     'classy',
+    'numpy<2',  # for classy
     'Corrfunc>=2',
     'emcee',
     'schwimmbad',
