@@ -188,7 +188,7 @@ there. Here we show the scripts within ``run_hod.py`` for reference.::
     newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
 
     # first hod run, slow due to compiling jit, write to disk
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk, Nthread = 16)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk = write_to_disk, Nthread = 16)
 
     # run the 10 different HODs for timing
     for i in range(10):
@@ -207,7 +207,7 @@ redshift-space 2PCF (:math:`\xi(r_p, \pi)`): ::
     pimax = clustering_params['pimax']
     pi_bin_size = clustering_params['pi_bin_size']    # the pi binning is configrured by pi_max and bin size
 
-    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk)
+    mock_dict = newBall.run_hod(newBall.tracers, want_rsd, write_to_disk=write_to_disk)
     xirppi = newBall.compute_xirppi(mock_dict, rpbins, pimax, pi_bin_size)
 
 Light Cones
