@@ -25,6 +25,7 @@ Fixes
 - Sandydev: fixed reseeding bug [#127]
 - fix reseed bug [#128]
 - backward compatible fix for velocity bias [#121]
+- hod tutorial: fixed incorrect positional argument in ``run_hod()`` [#160]
 
 2.0.0 (2023-11-15)
 ------------------
