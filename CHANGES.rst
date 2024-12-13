@@ -12,6 +12,7 @@ Enhancements
 - ci: add python 3.12 and enhance ``NUMBA_DISABLE_JIT`` support [#153]
 - Improve CompaSO subsample loading [#154]
 - deprecate ``asdf.open(copy_arrays=True)`` in favor of ``asdf.open(memmap=False)`` [#157]
+- compaso: add passthrough support [#162]
 
 2.0.1 (2024-03-01)
 ------------------
