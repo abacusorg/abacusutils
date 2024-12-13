@@ -6,7 +6,9 @@ The reference files are stored in `tests/ref_data`.
 from pathlib import Path
 
 import numpy as np
+import numpy.testing as npt
 import pytest
+import astropy.table
 from astropy.table import Table
 from common import check_close
 
@@ -23,7 +25,7 @@ PACK9_PID_OUTPUT = refdir / 'test_pack9_pid.asdf'
 UNPACK_BITS_OUTPUT = refdir / 'test_unpack_bits.asdf'
 
 
-def test_halos_unclean(tmp_path: Path):
+def test_halos_unclean():
     """Test loading a base (uncleaned) halo catalog"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -45,8 +47,8 @@ def test_halos_unclean(tmp_path: Path):
     assert halos.meta == ref.meta
 
 
-def test_halos_clean(tmp_path: Path):
-    """Test loading a base (uncleaned) halo catalog"""
+def test_halos_clean():
+    """Test loading a cleaned halo catalog"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
@@ -76,7 +78,7 @@ def test_halos_clean(tmp_path: Path):
     assert halos.meta == ref.meta
 
 
-def test_subsamples_unclean(tmp_path: Path):
+def test_subsamples_unclean():
     """Test loading particle subsamples"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -131,7 +133,7 @@ def test_subsamples_unclean(tmp_path: Path):
     assert cat.subsamples.meta == ref.meta
 
 
-def test_subsamples_clean(tmp_path: Path):
+def test_subsamples_clean():
     """Test loading particle subsamples"""
 
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
@@ -326,3 +328,106 @@ def test_halo_lc():
         check_close(ref[col], ss[col])
 
     assert ss.meta == ref.meta
+
+
+def test_passthrough():
+    """Tests passthrough mode, where we load the raw halo info columns without unpacking"""
+
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+    from abacusnbody.util import cumsum
+
+    cat = CompaSOHaloCatalog(
+        EXAMPLE_SIM / 'halos' / 'z0.000',
+        subsamples=True,
+        fields='all',
+        cleaned=True,
+        passthrough=True,
+    )
+
+    def read_asdf(fn):
+        import asdf
+
+        with asdf.open(fn, lazy_load=False, memmap=False) as af:
+            return Table(af['data'], meta=af['header'])
+
+    raw_halo_info_fns = sorted(
+        (EXAMPLE_SIM / 'halos' / 'z0.000' / 'halo_info').glob('*.asdf')
+    )
+    _tables = [read_asdf(fn) for fn in raw_halo_info_fns]
+    raw_halo_info = astropy.table.vstack(_tables)
+    raw_halo_info.meta = _tables[0].meta
+
+    raw_cleaned_halo_info_fns = sorted(
+        (
+            EXAMPLE_SIM.parent
+            / 'cleaning'
+            / EXAMPLE_SIM.name
+            / 'z0.000'
+            / 'cleaned_halo_info'
+        ).glob('*.asdf')
+    )
+    raw_cleaned_halo_info = astropy.table.vstack(
+        [read_asdf(fn) for fn in raw_cleaned_halo_info_fns]
+    )
+
+    for AB in 'AB':
+        raw_halo_info[f'npout{AB}'] = (
+            raw_halo_info[f'npout{AB}'] + raw_cleaned_halo_info[f'npout{AB}_merge']
+        )
+        raw_halo_info[f'npout{AB}'][raw_cleaned_halo_info['N_total'] == 0] = 0
+
+    cumsum(
+        raw_halo_info['npoutA'],
+        initial=True,
+        final=False,
+        out=raw_halo_info['npstartA'],
+    )
+    cumsum(
+        raw_halo_info['npoutB'],
+        initial=True,
+        final=False,
+        offset=raw_halo_info['npstartA'][-1],
+        out=raw_halo_info['npstartB'],
+    )
+
+    # check halo info
+    for name, col in raw_halo_info.columns.items():
+        npt.assert_equal(cat.halos[name], col)
+
+    # check header
+    for k, v in raw_halo_info.meta.items():
+        assert cat.halos.meta[k] == v
+
+    # check for 'rvint'
+    assert cat.subsamples.colnames == ['rvint', 'packedpid']
+    assert cat.halos['npoutA'].sum() + cat.halos['npoutB'].sum() == len(cat.subsamples)
+
+    # It's kind of hard to check the subsamples, since they're a mix of original and cleaned
+    # and skip L0.
+    # As a basic test, though, we can unpack the rvint and packedpid and check that it matches
+    # a non-passthrough catalog.
+
+    from abacusnbody.data.bitpacked import unpack_rvint, unpack_pids
+
+    cat.subsamples['pos'], cat.subsamples['vel'] = unpack_rvint(
+        cat.subsamples['rvint'], cat.header['BoxSize']
+    )
+    cat.subsamples.update(
+        unpack_pids(cat.subsamples['packedpid'], pid=True), copy=False
+    )
+
+    regular_cat = CompaSOHaloCatalog(
+        EXAMPLE_SIM / 'halos' / 'z0.000',
+        subsamples=True,
+        fields=[],
+        cleaned=True,
+        passthrough=False,
+    )
+
+    for k in ('pos', 'vel'):
+        npt.assert_allclose(cat.subsamples[k], regular_cat.subsamples[k])
+
+    npt.assert_equal(cat.subsamples['pid'], regular_cat.subsamples['pid'])
+
+    # double-check that packedpid isn't just pid
+    assert not np.all(cat.subsamples['packedpid'] == regular_cat.subsamples['pid'])
