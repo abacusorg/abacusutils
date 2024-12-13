@@ -23,7 +23,7 @@ AUXPID = AUXXPID | AUXYPID | AUXZPID  # all of the above bits
 AUXTAGGED = np.uint64(48)  # tagged bit is 48
 
 # The names of the bit-packed PID fields that the user can request
-PID_FIELDS = ['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx']
+PID_FIELDS = ['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'packedpid']
 
 
 def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=None):
@@ -55,12 +55,12 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
         was given.
 
     """
-    intdata = intdata.reshape(-1)
+    intdata = intdata.reshape(-1, 3)
     assert intdata.dtype == np.int32
     N = len(intdata)
 
     if posout is None:
-        _posout = np.empty(N, dtype=float_dtype)
+        _posout = np.empty((N, 3), dtype=float_dtype)
     elif posout is False:
         _posout = None
     else:
@@ -68,7 +68,7 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
         _posout.shape = -1  # enforces no copy
 
     if velout is None:
-        _velout = np.empty(N, dtype=float_dtype)
+        _velout = np.empty((N, 3), dtype=float_dtype)
     elif velout is False:
         _velout = None
     else:
@@ -79,18 +79,18 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
 
     ret = []
     if posout is None:
-        ret += [_posout.reshape(N // 3, 3)]
+        ret += [_posout]
     elif posout is False:
         ret += [0]
     else:
-        ret += [N // 3]
+        ret += [N]
 
     if velout is None:
-        ret += [_velout.reshape(N // 3, 3)]
+        ret += [_velout]
     elif velout is False:
         ret += [0]
     else:
-        ret += [N // 3]
+        ret += [N]
 
     return tuple(ret)
 
@@ -190,9 +190,16 @@ def unpack_pids(
             raise ValueError('Must supply `ppd` if requesting `lagr_pos`')
 
     N = len(packed)
-    if not np.isclose(ppd, int(round(ppd))):
-        raise ValueError(f'ppd "{ppd}" not valid int?')
-    ppd = int(round(ppd))
+
+    if ppd is not None:
+        if not np.isclose(ppd, int(round(ppd))):
+            raise ValueError(f'ppd "{ppd}" not valid int?')
+        ppd = int(round(ppd))
+    else:
+        ppd = 1
+
+    if box is None:
+        box = float_dtype(1.0)
 
     arr = {}
     if pid is True:
@@ -233,6 +240,9 @@ def empty_bitpacked_arrays(N, unpack_bits, float_dtype=np.float32):
         A dictionary of empty arrays for all fields that can be unpacked
     """
 
+    if type(unpack_bits) is str:
+        unpack_bits = [unpack_bits]
+
     if unpack_bits is True:
         unpack_bits = PID_FIELDS
     elif unpack_bits is False:
@@ -249,6 +259,8 @@ def empty_bitpacked_arrays(N, unpack_bits, float_dtype=np.float32):
         arr['tagged'] = np.empty(N, dtype=np.uint8)
     if 'density' in unpack_bits:
         arr['density'] = np.empty(N, dtype=float_dtype)
+    if 'packedpid' in unpack_bits:
+        arr['packedpid'] = np.empty(N, dtype=np.uint64)
 
     return arr
 
