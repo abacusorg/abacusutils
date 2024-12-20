@@ -80,6 +80,7 @@ jobs:
 
     - name: Pre-install dependencies
       run: |
+        sudo apt install libgsl-dev
         pip install -vU pip
         pip install -vU setuptools wheel Cython 'numpy<2'  # for classy
         pip install -vU --no-build-isolation classy
