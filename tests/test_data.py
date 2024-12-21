@@ -5,6 +5,7 @@ The reference files are stored in `tests/ref_data`.
 
 from pathlib import Path
 
+import asdf
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -23,6 +24,7 @@ PARTICLES_OUTPUT_CLEAN = refdir / 'test_subsamples_clean.asdf'
 PACK9_OUTPUT = refdir / 'test_pack9.asdf'
 PACK9_PID_OUTPUT = refdir / 'test_pack9_pid.asdf'
 UNPACK_BITS_OUTPUT = refdir / 'test_unpack_bits.asdf'
+READ_ASDF_OUTPUT = refdir / 'test_read_asdf.asdf'
 
 
 def test_halos_unclean():
@@ -294,6 +296,41 @@ def test_pack9():
     assert p.colnames == ['pid']
 
 
+def test_read_asdf():
+    """Test reading rvint and pid files with read_asdf"""
+    from abacusnbody.data.read_abacus import read_asdf
+
+    halo_zdir = EXAMPLE_SIM / 'halos' / 'z0.000'
+
+    fn = halo_zdir / 'field_rv_A' / 'field_rv_A_000.asdf'
+    rv = read_asdf(fn, load=('pos', 'vel'), dtype=np.float32)
+
+    pidfn = halo_zdir / 'field_pid_A' / 'field_pid_A_000.asdf'
+    pid = read_asdf(
+        pidfn, load=('aux', 'pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx')
+    )
+
+    # with asdf.AsdfFile({'rv_data': rv, 'pid_data': pid}) as af:
+    #     af.write_to(READ_ASDF_OUTPUT, all_array_compression='blsc')
+
+    rvref = Table.read(READ_ASDF_OUTPUT, data_key='rv_data')
+    pidref = Table.read(READ_ASDF_OUTPUT, data_key='pid_data')
+
+    for k in rvref.colnames:
+        np.testing.assert_equal(rv[k], rvref[k])
+    assert rv.meta == rvref.meta
+
+    for k in pidref.colnames:
+        np.testing.assert_equal(pid[k], pidref[k])
+    assert pid.meta == pidref.meta
+
+    p = read_asdf(fn, dtype=np.float32)
+    assert sorted(p.colnames) == ['pos', 'vel']
+
+    p = read_asdf(pidfn, dtype=np.float32)
+    assert p.colnames == ['pid']
+
+
 def test_halo_lc():
     """Test loading halo light cones"""
 
@@ -345,8 +382,6 @@ def test_passthrough():
     )
 
     def read_asdf(fn):
-        import asdf
-
         with asdf.open(fn, lazy_load=False, memmap=False) as af:
             return Table(af['data'], meta=af['header'])
 
