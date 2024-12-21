@@ -64,8 +64,10 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
     elif posout is False:
         _posout = None
     else:
+        # In NumPy >= 2.1, we can use arr.reshape(..., copy=False).
+        # This is a workaround for earlier NumPy.
         _posout = posout.view()
-        _posout.shape = -1  # enforces no copy
+        _posout.shape = (-1, 3)
 
     if velout is None:
         _velout = np.empty((N, 3), dtype=float_dtype)
@@ -73,7 +75,7 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
         _velout = None
     else:
         _velout = velout.view()
-        _velout.shape = -1  # enforces no copy
+        _velout.shape = (-1, 3)
 
     _unpack_rvint(intdata, boxsize, _posout, _velout)
 
