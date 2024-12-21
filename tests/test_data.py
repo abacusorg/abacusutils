@@ -11,7 +11,7 @@ import numpy.testing as npt
 import pytest
 import astropy.table
 from astropy.table import Table
-from common import check_close
+from common import assert_close
 
 curdir = Path(__file__).parent
 refdir = curdir / 'ref_data'
@@ -19,7 +19,6 @@ EXAMPLE_SIM = curdir / 'Mini_N64_L32'
 HALOS_OUTPUT_UNCLEAN = refdir / 'test_halos_unclean.asdf'
 PARTICLES_OUTPUT_UNCLEAN = refdir / 'test_subsamples_unclean.asdf'
 HALOS_OUTPUT_CLEAN = refdir / 'test_halos_clean.asdf'
-PARTICLES_OUTPUT_CLEAN = refdir / 'test_subsamples_clean.asdf'
 PARTICLES_OUTPUT_CLEAN = refdir / 'test_subsamples_clean.asdf'
 PACK9_OUTPUT = refdir / 'test_pack9.asdf'
 PACK9_PID_OUTPUT = refdir / 'test_pack9_pid.asdf'
@@ -44,7 +43,7 @@ def test_halos_unclean():
 
     halos = cat.halos
     for col in ref.colnames:
-        check_close(ref[col], halos[col])
+        assert_close(ref[col], halos[col])
 
     assert halos.meta == ref.meta
 
@@ -66,16 +65,16 @@ def test_halos_clean():
 
     halos = cat.halos
     for col in ref.colnames:
-        check_close(ref[col], halos[col])
+        assert_close(ref[col], halos[col])
 
     # all haloindex values should point to this slab
-    assert np.all(
-        (halos['haloindex'] / 1e12).astype(int) == cat.header['FullStepNumber']
+    npt.assert_equal(
+        (halos['haloindex'] / 1e12).astype(int), cat.header['FullStepNumber']
     )
     # ensure that all deleted halos in ref are marked as merged in EXAMPLE_SIM
     assert np.all(halos['is_merged_to'][ref['N'] == 0] != -1)
     # no deleted halos in ref should have merged particles in EXAMPLE_SIM
-    assert np.all(halos['N_merge'][ref['N'] == 0] == 0)
+    npt.assert_equal(halos['N_merge'][ref['N'] == 0], 0)
 
     assert halos.meta == ref.meta
 
@@ -121,7 +120,7 @@ def test_subsamples_unclean():
     for col in ref.colnames:
         for i in range(len(cat.halos)):
             for AB in 'AB':
-                check_close(
+                assert_close(
                     ref[col][
                         ref_halos[f'npstart{AB}'][i] : ref_halos[f'npstart{AB}'][i]
                         + ref_halos[f'npout{AB}'][i]
@@ -153,7 +152,7 @@ def test_subsamples_clean():
 
     ss = cat.subsamples
     for col in ref.colnames:
-        check_close(ref[col], ss[col])
+        assert_close(ref[col], ss[col])
 
     # total number of particles in ref should be equal to the sum total of npout{AB} in EXAMPLE_SIM
     assert len(ref) == np.sum(cat.halos['npoutA']) + np.sum(cat.halos['npoutB'])
@@ -223,7 +222,7 @@ def test_unpack_bits():
     ref = Table.read(UNPACK_BITS_OUTPUT)
 
     for col in ref.colnames:
-        check_close(ref[col], cat.subsamples[col])
+        assert_close(ref[col], cat.subsamples[col])
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
@@ -271,7 +270,7 @@ def test_pack9():
     ref = Table.read(PACK9_OUTPUT)
 
     for k in ref.colnames:
-        assert np.all(p[k] == ref[k])
+        npt.assert_equal(p[k], ref[k])
     assert p.meta == ref.meta
 
     p = read_asdf(fn, dtype=np.float32)
@@ -289,7 +288,7 @@ def test_pack9():
     ref = Table.read(PACK9_PID_OUTPUT)
 
     for k in ref.colnames:
-        assert np.all(p[k] == ref[k])
+        npt.assert_equal(p[k], ref[k])
     assert p.meta == ref.meta
 
     p = read_asdf(pidfn, dtype=np.float32)
@@ -356,13 +355,13 @@ def test_halo_lc():
     ref = Table.read(HALO_LC_CAT)
     halos = cat.halos
     for col in ref.colnames:
-        check_close(ref[col], halos[col])
+        assert_close(ref[col], halos[col])
     assert halos.meta == ref.meta
 
     ref = Table.read(HALO_LC_SUBSAMPLES)
     ss = cat.subsamples
     for col in ref.colnames:
-        check_close(ref[col], ss[col])
+        assert_close(ref[col], ss[col])
 
     assert ss.meta == ref.meta
 
