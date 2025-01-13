@@ -465,3 +465,26 @@ def test_passthrough():
 
     # double-check that packedpid isn't just pid
     assert not np.all(cat.subsamples['packedpid'] == regular_cat.subsamples['pid'])
+
+
+@pytest.mark.parametrize(
+    'layout_dir',
+    [
+        '1/Mini_N64_L32/halos/z0.000',
+        '2/subsuite/Mini_N64_L32/halos/z0.000',
+        '3/Mini_N64_L32/halos/z0.000',
+        '4/Mini_N64_L32/halos/z0.000',
+    ],
+    ids=['1', '2', '3', '4'],
+)
+def test_cleaning_layouts(layout_dir):
+    full_groupdir = curdir / 'cleaning_layouts' / layout_dir
+
+    from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
+
+    CompaSOHaloCatalog(
+        full_groupdir,
+        subsamples=True,
+        fields='N',
+        cleaned=True,
+    )
