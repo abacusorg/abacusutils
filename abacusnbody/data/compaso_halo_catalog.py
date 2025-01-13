@@ -10,14 +10,10 @@
 
 import gc
 import os
-import os.path
 import re
 import warnings
 from collections import defaultdict
-from glob import glob
-from os.path import abspath, basename, dirname, isdir, isfile, samefile
-from os.path import join as pjoin
-from pathlib import PurePath, Path
+from pathlib import Path, PurePath
 
 import asdf
 import astropy.table
@@ -30,9 +26,9 @@ try:
 except ImportError:
     import asdf.compression as asdf_compression
 
+from .. import util
 from . import asdf as _asdf
 from . import bitpacked
-from .. import util
 
 try:
     asdf_compression.validate('blsc')
@@ -181,7 +177,9 @@ class CompaSOHaloCatalog:
         self.cleaned = cleaned
 
         if halo_lc is None:
-            halo_lc = self._is_path_halo_lc(path)
+            halo_lc = self._is_path_halo_lc(
+                path[0] if not isinstance(path, (PurePath, str)) else path
+            )
             if verbose and halo_lc:
                 print('Detected halo light cone catalog.')
         self.halo_lc = halo_lc
@@ -205,7 +203,8 @@ class CompaSOHaloCatalog:
         # Parse `path` to determine what files to read
         (
             self.groupdir,
-            self.cleandir,
+            self.clean_halo_info_dir,
+            self.clean_rvpid_dir,
             self.superslab_inds,
             self.halo_fns,
             self.cleaned_halo_fns,
@@ -311,15 +310,14 @@ class CompaSOHaloCatalog:
     def _setup_file_paths(self, path, cleaned=True, cleandir=None, halo_lc=False):
         """Figure out what files the user is asking for"""
 
-        # For the moment, coerce pathlib to str
-        if isinstance(path, PurePath):
-            path = str(path)
-        if isinstance(path, str):
-            path = [path]  # dir or file
+        if isinstance(path, (PurePath, str)):
+            path = [Path(path)]  # dir or file
         else:
+            path = [Path(p) for p in path]
+
             # if list, must be all files
             for p in path:
-                if os.path.exists(p) and not isfile(p):
+                if p.exists() and not p.is_file():
                     raise ValueError(
                         f'If passing a list of paths, all paths must be files, not dirs. Path "{p}" is not a file.'
                     )
@@ -328,86 +326,95 @@ class CompaSOHaloCatalog:
             if not os.path.exists(p):
                 raise FileNotFoundError(f'Path "{p}" does not exist!')
 
-        path = [abspath(p) for p in path]
+        path = [p.absolute() for p in path]
 
-        # Allow users to pass halo_info dirs, even though redshift dirs remain canoncial
+        # Allow users to pass halo_info dirs, even though redshift dirs remain canonical
         for i, p in enumerate(path):
-            if basename(p) == 'halo_info':
-                path[i] = abspath(pjoin(p, os.pardir))
+            if p.name == 'halo_info':
+                path[i] = p.parent
 
         # Can't mix files from different catalogs!
-        if isfile(path[0]):
-            groupdir = dirname(dirname(path[0]))
+        if path[0].is_file():
+            groupdir = path[0].parents[1]
             if halo_lc:
-                groupdir = dirname(path[0])
+                groupdir = path[0].parent
             for p in path:
-                if not samefile(groupdir, dirname(dirname(p))) and not halo_lc:
+                if not groupdir == p.parents[1] and not halo_lc:
                     raise ValueError("Can't mix files from different catalogs!")
                 halo_fns = path  # path is list of one or more files
 
             for i, p in enumerate(path):
                 for j, q in enumerate(path[i + 1 :]):
-                    if samefile(p, q):
+                    if p == q:
                         raise ValueError(
-                            f'Cannot pass duplicate halo_info files! Found duplicate "{p}" and at indices {i} and {i+j+1}'
+                            f'Cannot pass duplicate halo_info files! Found duplicate "{p}" and at indices {i} and {i + j + 1}'
                         )
-
         else:
             groupdir = path[0]  # path is a singlet of one dir
             if halo_lc:  # naming convention differs for the light cone catalogs
-                globpat = pjoin(groupdir, 'lc_halo_info*.asdf')
+                globpat = 'lc_halo_info*.asdf'
             else:
-                globpat = pjoin(groupdir, 'halo_info', 'halo_info_*')
-            halo_fns = sorted(glob(globpat))
+                globpat = 'halo_info/halo_info_*.asdf'
+            halo_fns = sorted(groupdir.glob(globpat))
             if len(halo_fns) == 0:
                 raise FileNotFoundError(
-                    f'No halo_info files found! Search pattern was: "{globpat}"'
+                    f'No halo_info files found! Search pattern was: "{groupdir / globpat}"'
                 )
 
-        if (
-            halo_lc
-        ):  # halo light cones files aggregate all superslabs into a single file
+        if halo_lc:
+            # halo light cones files aggregate all superslabs into a single file
             superslab_inds = np.array([0])
         else:
             superslab_inds = np.array(
-                [int(hfn.split('_')[-1].strip('.asdf')) for hfn in halo_fns]
+                [int(hfn.stem.split('_')[-1]) for hfn in halo_fns]
             )
 
         if cleaned:
-            pathsplit = groupdir.split(os.path.sep)
-            del pathsplit[-2]  # remove halos/, leaving .../SimName/z0.000
-            s = -2
             if not cleandir:
-                cleandir = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
-                if not isdir(cleandir) and 'small' in pathsplit[-2]:
-                    s = -3
-                    cleandir_small = os.path.sep + pjoin(*pathsplit[:s], 'cleaning')
-                    if not isdir(cleandir_small):
-                        raise FileNotFoundError(
-                            f'Could not find cleaning info dir. Tried:\n"{cleandir}"\n"{cleandir_small}"\nTo load the uncleaned catalog, use `cleaned=False`.'
-                        )
-                    cleandir = cleandir_small
+                for p in groupdir.parents:
+                    if (cleandir := (p / 'cleaning')).is_dir():
+                        break
+                else:
+                    raise FileNotFoundError(
+                        f'Could not find cleaning info dir, searching upwards from {groupdir}. To load the uncleaned catalog, use `cleaned=False`.'
+                    )
 
-            cleandir = pjoin(cleandir, *pathsplit[s:])  # TODO ugly
+            # Check for structures like:
+            # cleaning/SimName/z0.000/cleaned_halo_info/cleaned_halo_info_000.asdf
+            # cleaning/small/SmallSimName/z0.000/cleaned_halo_info/cleaned_halo_info_000.asdf
+            # SimName/cleaning/z0.000/cleaned_halo_info/cleaned_halo_info_000.asdf
+            # SimName/cleaning/z0.000/cleaned_halo_info_000.asdf
+            relpath = (groupdir.parents[1] / groupdir.name).relative_to(cleandir.parent)
+            if (cleandir / relpath / 'cleaned_halo_info').is_dir():
+                clean_halo_info_dir = cleandir / relpath / 'cleaned_halo_info'
+                clean_rvpid_dir = cleandir / relpath / 'cleaned_rvpid'
+            else:
+                clean_halo_info_dir = cleandir / relpath
+                clean_rvpid_dir = cleandir / relpath
 
             cleaned_halo_fns = [
-                pjoin(
-                    cleandir, 'cleaned_halo_info', 'cleaned_halo_info_%03d.asdf' % (ext)
-                )
-                for ext in superslab_inds
+                clean_halo_info_dir / f'cleaned_halo_info_{i:03d}.asdf'
+                for i in superslab_inds
             ]
 
             for fn in cleaned_halo_fns:
-                if not isfile(fn):
+                if not fn.is_file():
                     raise FileNotFoundError(
                         f'Cleaning info not found. File path was: "{fn}". To load the uncleaned catalog, use `cleaned=False`.'
                     )
-
         else:
-            cleandir = None
-            cleaned_halo_fns = []
+            clean_halo_info_dir = None
+            clean_rvpid_dir = None
+            cleaned_halo_fns: list[Path] = []
 
-        return groupdir, cleandir, superslab_inds, halo_fns, cleaned_halo_fns
+        return (
+            groupdir,
+            clean_halo_info_dir,
+            clean_rvpid_dir,
+            superslab_inds,
+            halo_fns,
+            cleaned_halo_fns,
+        )
 
     def _setup_unpack_bits(self, unpack_bits):
         # validate unpack_bits
@@ -1115,9 +1122,7 @@ class CompaSOHaloCatalog:
             # these will be reused
             clean_afs = [
                 asdf.open(
-                    Path(self.cleandir)
-                    / 'cleaned_rvpid'
-                    / f'cleaned_rvpid_{i:03d}.asdf',
+                    self.clean_rvpid_dir / f'cleaned_rvpid_{i:03d}.asdf',
                     lazy_load=True,
                     memmap=False,
                 )
@@ -1404,8 +1409,8 @@ class CompaSOHaloCatalog:
 
     @staticmethod
     def _is_path_halo_lc(path):
-        path = str(path)
-        return 'halo_light_cones' in path or bool(glob(pjoin(path, 'lc_*.asdf')))
+        path = Path(path)
+        return 'halo_light_cones' in str(path) or any(path.glob('lc_*.asdf'))
 
     def __repr__(self):
         # TODO: there's probably some more helpful info we could put in here
@@ -1419,8 +1424,8 @@ class CompaSOHaloCatalog:
         n_subsamp_field = len(self.subsamples.columns)
         lines += [
             '-' * len(lines[-1]),
-            f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field != 1 else "field "}, {self.nbytes(halos=True,subsamples=False)/1e9:7.3g} GB',
-            f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field != 1 else "field "}, {self.nbytes(halos=False,subsamples=True)/1e9:7.3g} GB',
+            f'     Halos: {len(self.halos):8.3g} halos,     {n_halo_field:3d} {"fields" if n_halo_field != 1 else "field "}, {self.nbytes(halos=True, subsamples=False) / 1e9:7.3g} GB',
+            f'Subsamples: {len(self.subsamples):8.3g} particles, {n_subsamp_field:3d} {"fields" if n_subsamp_field != 1 else "field "}, {self.nbytes(halos=False, subsamples=True) / 1e9:7.3g} GB',
             f'Cleaned halos: {self.cleaned}',
             f'Halo light cone: {self.halo_lc}',
         ]
