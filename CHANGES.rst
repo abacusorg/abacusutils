@@ -13,6 +13,7 @@ Enhancements
 - Improve CompaSO subsample loading [#154]
 - deprecate ``asdf.open(copy_arrays=True)`` in favor of ``asdf.open(memmap=False)`` [#157]
 - compaso: add passthrough support [#162]
+- compaso: more flexible search for cleaning info [#167]
 
 2.0.1 (2024-03-01)
 ------------------
