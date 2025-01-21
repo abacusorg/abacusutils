@@ -4,7 +4,7 @@ Changelog
 2.1.0 (upcoming)
 ----------------
 
-Supported Python versions are 3.9-3.12.
+Supported Python versions are 3.9-3.13.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -14,6 +14,7 @@ Enhancements
 - deprecate ``asdf.open(copy_arrays=True)`` in favor of ``asdf.open(memmap=False)`` [#157]
 - compaso: add passthrough support [#162]
 - compaso: more flexible search for cleaning info [#167]
+- ci: add python 3.13 [#168]
 
 2.0.1 (2024-03-01)
 ------------------
