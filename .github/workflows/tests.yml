@@ -80,10 +80,8 @@ jobs:
 
     - name: Pre-install dependencies
       run: |
-        sudo apt install libgsl-dev
+        sudo apt-get install libgsl-dev
         pip install -vU pip
-        pip install -vU setuptools wheel Cython 'numpy<2'  # for classy
-        pip install -vU --no-build-isolation classy
 
     - name: Install package from source
       if: ${{ env.PUBLISH != 'true' }}
