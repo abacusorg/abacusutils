@@ -48,7 +48,6 @@ abacusutils = "abacusnbody.data.asdf:AbacusExtension"
 all = [
     'zenbu-fftw>=1',
     'classy',
-    'numpy<2',  # for classy
     'Corrfunc>=2',
     'emcee',
     'schwimmbad',
