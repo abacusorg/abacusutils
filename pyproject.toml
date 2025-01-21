@@ -27,8 +27,7 @@ dependencies = [
     'pyyaml',
     'msgpack>=1',
     'parallel_numpy_rng>=0.1.2',
-    "asdf-astropy>=0.3; python_version>='3.8'",
-    "importlib_resources; python_version<'3.9'",
+    'asdf-astropy>=0.3',
 ]
 readme = "README.md"
 requires-python = ">=3.9"
