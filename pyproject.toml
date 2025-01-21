@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "setuptools>=61",
-    "setuptools_scm>=6.2",
+    "setuptools_scm>=8",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -75,8 +75,8 @@ include-package-data = true
 include = ["abacusnbody*"]
 
 [tool.setuptools_scm]
-write_to = "abacusnbody/version.py"
-write_to_template = '__version__ = "{version}"'
+version_file = "abacusnbody/version.py"
+version_file_template = '__version__ = "{version}"'
 
 [tool.ruff.format]
 quote-style = "single"
