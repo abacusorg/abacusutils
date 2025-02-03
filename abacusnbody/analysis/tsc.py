@@ -130,7 +130,7 @@ def tsc_parallel(
     if npartition > n1d // 3 and npartition != n1d // 2 and nthread > 1:
         raise ValueError(
             f'npartition {npartition} must be less than'
-            f' ngrid//3 = {n1d//3} or equal to ngrid//2 = {n1d//2}'
+            f' ngrid//3 = {n1d // 3} or equal to ngrid//2 = {n1d // 2}'
         )
     if npartition > 1 and npartition % 2 != 0 and nthread > 1:
         raise ValueError(f'npartition {npartition} not divisible by 2')

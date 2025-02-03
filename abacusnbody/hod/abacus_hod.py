@@ -185,9 +185,9 @@ class AbacusHOD:
         # setting up chunking
         self.chunk = chunk
         self.n_chunks = n_chunks
-        assert (
-            self.chunk < self.n_chunks
-        ), 'Total number of chunks needs to be larger than current chunk index'
+        assert self.chunk < self.n_chunks, (
+            'Total number of chunks needs to be larger than current chunk index'
+        )
 
         if not skip_staging:
             # load the subsample particles
@@ -1400,28 +1400,26 @@ class AbacusHOD:
 
         # compute real space and redshift space
         # assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
-        assert (
-            len(mock_dict.keys()) == 1
-        ), (
+        assert len(mock_dict.keys()) == 1, (
             'Currently implemented only a single tracer'
         )  # should make a dict of dicts, but need cross
-        assert (
-            len(config['power_params']['poles']) <= 3
-        ), 'Currently implemented only multipoles 0, 2, 4; need to change ZeNBu'
-        assert (
-            config['power_params']['nbins_mu'] == 1
-        ), 'Currently wedges are not implemented; need to change ZeNBu'
+        assert len(config['power_params']['poles']) <= 3, (
+            'Currently implemented only multipoles 0, 2, 4; need to change ZeNBu'
+        )
+        assert config['power_params']['nbins_mu'] == 1, (
+            'Currently wedges are not implemented; need to change ZeNBu'
+        )
         if 'nmesh' not in config['power_params'].keys():
             config['power_params']['nmesh'] = config['zcv_params']['nmesh']
-        assert (
-            config['zcv_params']['nmesh'] == config['power_params']['nmesh']
-        ), '`nmesh` in `power_params` and `zcv_params` should match.'
+        assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], (
+            '`nmesh` in `power_params` and `zcv_params` should match.'
+        )
 
         # create save directory
         save_dir = (
             Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
         )
-        save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
+        save_z_dir = save_dir / f'z{config["sim_params"]["z_mock"]:.3f}'
         rsd_str = '_rsd' if config['HOD_params']['want_rsd'] else ''
 
         # define bins
@@ -1444,34 +1442,34 @@ class AbacusHOD:
         if config['power_params']['nbins_k'] == config['zcv_params']['nmesh'] // 2:
             power_rsd_tr_fn = (
                 save_z_dir
-                / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}.asdf"
+                / f'power{rsd_str}_tr_nmesh{config["zcv_params"]["nmesh"]}.asdf'
             )
             power_rsd_ij_fn = (
                 save_z_dir
-                / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}.asdf"
+                / f'power{rsd_str}_ij_nmesh{config["zcv_params"]["nmesh"]}.asdf'
             )
             power_tr_fn = (
-                save_z_dir / f"power_tr_nmesh{config['zcv_params']['nmesh']}.asdf"
+                save_z_dir / f'power_tr_nmesh{config["zcv_params"]["nmesh"]}.asdf'
             )
             power_ij_fn = (
-                save_z_dir / f"power_ij_nmesh{config['zcv_params']['nmesh']}.asdf"
+                save_z_dir / f'power_ij_nmesh{config["zcv_params"]["nmesh"]}.asdf'
             )
         else:
             power_rsd_tr_fn = (
                 save_z_dir
-                / f"power{rsd_str}_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+                / f'power{rsd_str}_tr_nmesh{config["zcv_params"]["nmesh"]}_dk{dk:.3f}.asdf'
             )
             power_rsd_ij_fn = (
                 save_z_dir
-                / f"power{rsd_str}_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+                / f'power{rsd_str}_ij_nmesh{config["zcv_params"]["nmesh"]}_dk{dk:.3f}.asdf'
             )
             power_tr_fn = (
                 save_z_dir
-                / f"power_tr_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+                / f'power_tr_nmesh{config["zcv_params"]["nmesh"]}_dk{dk:.3f}.asdf'
             )
             power_ij_fn = (
                 save_z_dir
-                / f"power_ij_nmesh{config['zcv_params']['nmesh']}_dk{dk:.3f}.asdf"
+                / f'power_ij_nmesh{config["zcv_params"]["nmesh"]}_dk{dk:.3f}.asdf'
             )
         pk_fns = [power_rsd_tr_fn, power_rsd_ij_fn, power_tr_fn, power_ij_fn]
         for fn in pk_fns:
@@ -1485,33 +1483,33 @@ class AbacusHOD:
         if load_presaved:
             pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
             pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
-            assert np.allclose(
-                k_binc, pk_rsd_tr_dict['k_binc']
-            ), f'Mismatching file: {str(power_rsd_tr_fn)}'
-            assert np.allclose(
-                k_binc, pk_rsd_ij_dict['k_binc']
-            ), f'Mismatching file: {str(power_rsd_ij_fn)}'
-            assert np.allclose(
-                mu_binc, pk_rsd_tr_dict['mu_binc']
-            ), f'Mismatching file: {str(power_rsd_tr_fn)}'
-            assert np.allclose(
-                mu_binc, pk_rsd_ij_dict['mu_binc']
-            ), f'Mismatching file: {str(power_rsd_ij_fn)}'
+            assert np.allclose(k_binc, pk_rsd_tr_dict['k_binc']), (
+                f'Mismatching file: {str(power_rsd_tr_fn)}'
+            )
+            assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
+                f'Mismatching file: {str(power_rsd_ij_fn)}'
+            )
+            assert np.allclose(mu_binc, pk_rsd_tr_dict['mu_binc']), (
+                f'Mismatching file: {str(power_rsd_tr_fn)}'
+            )
+            assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
+                f'Mismatching file: {str(power_rsd_ij_fn)}'
+            )
             if config['HOD_params']['want_rsd']:
                 pk_tr_dict = asdf.open(power_tr_fn)['data']
                 pk_ij_dict = asdf.open(power_ij_fn)['data']
-                assert np.allclose(
-                    k_binc, pk_tr_dict['k_binc']
-                ), f'Mismatching file: {str(power_tr_fn)}'
-                assert np.allclose(
-                    k_binc, pk_ij_dict['k_binc']
-                ), f'Mismatching file: {str(power_ij_fn)}'
-                assert np.allclose(
-                    mu_binc, pk_tr_dict['mu_binc']
-                ), f'Mismatching file: {str(power_tr_fn)}'
-                assert np.allclose(
-                    mu_binc, pk_ij_dict['mu_binc']
-                ), f'Mismatching file: {str(power_ij_fn)}'
+                assert np.allclose(k_binc, pk_tr_dict['k_binc']), (
+                    f'Mismatching file: {str(power_tr_fn)}'
+                )
+                assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
+                    f'Mismatching file: {str(power_ij_fn)}'
+                )
+                assert np.allclose(mu_binc, pk_tr_dict['mu_binc']), (
+                    f'Mismatching file: {str(power_tr_fn)}'
+                )
+                assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
+                    f'Mismatching file: {str(power_ij_fn)}'
+                )
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
@@ -1532,12 +1530,12 @@ class AbacusHOD:
                     tracer_pos, config['HOD_params']['want_rsd'], config
                 )
                 pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
-                assert np.allclose(
-                    k_binc, pk_rsd_ij_dict['k_binc']
-                ), f'Mismatching file: {str(power_rsd_ij_fn)}'
-                assert np.allclose(
-                    mu_binc, pk_rsd_ij_dict['mu_binc']
-                ), f'Mismatching file: {str(power_rsd_ij_fn)}'
+                assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
+                    f'Mismatching file: {str(power_rsd_ij_fn)}'
+                )
+                assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
+                    f'Mismatching file: {str(power_rsd_ij_fn)}'
+                )
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
                 mock_dict = self.run_hod(
@@ -1564,12 +1562,12 @@ class AbacusHOD:
                         tracer_pos, want_rsd=False, config=config
                     )
                     pk_ij_dict = asdf.open(power_ij_fn)['data']
-                    assert np.allclose(
-                        k_binc, pk_ij_dict['k_binc']
-                    ), f'Mismatching file: {str(power_ij_fn)}'
-                    assert np.allclose(
-                        mu_binc, pk_ij_dict['mu_binc']
-                    ), f'Mismatching file: {str(power_ij_fn)}'
+                    assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
+                        f'Mismatching file: {str(power_ij_fn)}'
+                    )
+                    assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
+                        f'Mismatching file: {str(power_ij_fn)}'
+                    )
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
@@ -1590,31 +1588,29 @@ class AbacusHOD:
         from ..analysis.power_spectrum import pk_to_xi
 
         # compute real space and redshift space
-        assert config['HOD_params'][
-            'want_rsd'
-        ], 'Currently want_rsd=False not implemented'
-        assert (
-            len(mock_dict.keys()) == 1
-        ), (
+        assert config['HOD_params']['want_rsd'], (
+            'Currently want_rsd=False not implemented'
+        )
+        assert len(mock_dict.keys()) == 1, (
             'Currently implemented only a single tracer'
         )  # should make a dict of dicts, but need cross
-        assert (
-            len(config['power_params']['poles']) <= 3
-        ), 'Currently implemented only multipoles 0, 2, 4; need to change ZeNBu'
-        assert (
-            config['power_params']['nbins_mu'] == 1
-        ), 'Currently wedges are not implemented; need to change ZeNBu'
+        assert len(config['power_params']['poles']) <= 3, (
+            'Currently implemented only multipoles 0, 2, 4; need to change ZeNBu'
+        )
+        assert config['power_params']['nbins_mu'] == 1, (
+            'Currently wedges are not implemented; need to change ZeNBu'
+        )
         if 'nmesh' not in config['power_params'].keys():
             config['power_params']['nmesh'] = config['zcv_params']['nmesh']
-        assert (
-            config['zcv_params']['nmesh'] == config['power_params']['nmesh']
-        ), '`nmesh` in `power_params` and `zcv_params` should match.'
+        assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], (
+            '`nmesh` in `power_params` and `zcv_params` should match.'
+        )
 
         # create save directory
         save_dir = (
             Path(config['zcv_params']['zcv_dir']) / config['sim_params']['sim_name']
         )
-        save_z_dir = save_dir / f"z{config['sim_params']['z_mock']:.3f}"
+        save_z_dir = save_dir / f'z{config["sim_params"]["z_mock"]:.3f}'
         rsd_str = '_rsd' if config['HOD_params']['want_rsd'] else ''
 
         # construct names of files based on fields
@@ -1627,30 +1623,30 @@ class AbacusHOD:
         pk_ij_fns = []
         pk_rsd_tr_fns.append(
             save_z_dir
-            / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+            / f'power{rsd_str}_tr_tr_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
         )
         pk_tr_fns.append(
-            save_z_dir / f"power_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+            save_z_dir / f'power_tr_tr_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
         )
         for i in range(len(keynames)):
             pk_rsd_tr_fns.append(
                 save_z_dir
-                / f"power{rsd_str}_{keynames[i]}_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+                / f'power{rsd_str}_{keynames[i]}_tr_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
             )
             pk_tr_fns.append(
                 save_z_dir
-                / f"power_{keynames[i]}_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+                / f'power_{keynames[i]}_tr_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
             )
             for j in range(len(keynames)):
                 if i < j:
                     continue
                 pk_rsd_ij_fns.append(
                     save_z_dir
-                    / f"power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+                    / f'power{rsd_str}_{keynames[i]}_{keynames[j]}_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
                 )
                 pk_ij_fns.append(
                     save_z_dir
-                    / f"power_{keynames[i]}_{keynames[j]}_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+                    / f'power_{keynames[i]}_{keynames[j]}_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
                 )
 
         if not load_presaved:
@@ -1719,11 +1715,11 @@ class AbacusHOD:
         r_bins = np.linspace(0.0, 200.0, 201)
         pk_rsd_tr_fns = [
             save_z_dir
-            / f"power{rsd_str}_tr_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+            / f'power{rsd_str}_tr_tr_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
         ]  # TODO: same as other (could check that we have this if presaved)
         power_cv_tr_fn = (
             save_z_dir
-            / f"power{rsd_str}_ZCV_tr_nmesh{config['zcv_params']['nmesh']:d}.asdf"
+            / f'power{rsd_str}_ZCV_tr_nmesh{config["zcv_params"]["nmesh"]:d}.asdf'
         )  # TODO: should be an output (could check that we have this if presaved; run_zcv too)
         r_binc, binned_poles_zcv, Npoles = pk_to_xi(
             asdf.open(power_cv_tr_fn)['data']['P_k3D_tr_tr_zcv'],

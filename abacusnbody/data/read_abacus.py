@@ -123,7 +123,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
                 header['SubsampleFraction'] = SubsampleFraction
                 if verbose:
                     print(
-                        f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction*100):d}% total)'
+                        f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction * 100):d}% total)'
                     )
 
         table = Table(meta=header)

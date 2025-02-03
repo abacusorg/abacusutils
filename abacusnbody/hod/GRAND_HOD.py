@@ -1713,7 +1713,7 @@ def gen_gal_cat(
             else:
                 ascii.write(
                     table,
-                    outdir / (f"{tracer}s_chunk{params['chunk']:d}.dat"),
+                    outdir / (f'{tracer}s_chunk{params["chunk"]:d}.dat'),
                     overwrite=True,
                     format='ecsv',
                 )
