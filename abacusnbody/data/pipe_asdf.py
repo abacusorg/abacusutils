@@ -155,11 +155,11 @@ def unpack_to_pipe(
     tot_time = timer() - start_time
     if verbose:
         print(
-            f'[pipe_asdf.py] Read + decompressed {nbytes_tot/1e6:.3g} MB in {read_time:.3g} s at {nbytes_tot/1e6/read_time:.3g} MB/s',
+            f'[pipe_asdf.py] Read + decompressed {nbytes_tot / 1e6:.3g} MB in {read_time:.3g} s at {nbytes_tot / 1e6 / read_time:.3g} MB/s',
             file=sys.stderr,
         )
         print(
-            f'[pipe_asdf.py] Processed {nbytes_tot/1e6:.3g} MB in {tot_time:.3g} s at {nbytes_tot/1e6/tot_time:.3g} MB/s',
+            f'[pipe_asdf.py] Processed {nbytes_tot / 1e6:.3g} MB in {tot_time:.3g} s at {nbytes_tot / 1e6 / tot_time:.3g} MB/s',
             file=sys.stderr,
         )
 

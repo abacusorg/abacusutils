@@ -38,7 +38,7 @@ def prepare_cat(halo_cat_path, ndens):
         fields=('N', 'x_L2com'),
         cleaned=False,  # TODO
     )
-    log(f'Loading cat used {cat.nbytes()/1e9:.3g} GB')
+    log(f'Loading cat used {cat.nbytes() / 1e9:.3g} GB')
     # Determine number of objects
     box = cat.header['BoxSize']
     N_select = int(box**3 * ndens)

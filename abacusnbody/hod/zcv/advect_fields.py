@@ -183,27 +183,27 @@ def main(
             f = asdf.open(fields_fft_fn[i])
             fields_fft.append(f['data'])
             header = f['header']
-            assert (
-                header['sim_name'] == sim_name
-            ), f'Mismatch in the files: {str(fields_fft_fn[i])}'
-            assert np.isclose(
-                header['Lbox'], Lbox
-            ), f'Mismatch in the file: {str(fields_fft_fn[i])}'
-            assert (
-                header['nmesh'] == nmesh
-            ), f'Mismatch in the file: {str(fields_fft_fn[i])}'
-            assert np.isclose(
-                header['kcut'], kcut
-            ), f'Mismatch in the file: {str(fields_fft_fn[i])}'
-            assert (
-                header['compensated'] == compensated
-            ), f'Mismatch in the file: {str(fields_fft_fn[i])}'
-            assert (
-                header['interlaced'] == interlaced
-            ), f'Mismatch in the file: {str(fields_fft_fn[i])}'
-            assert (
-                header['paste'] == paste
-            ), f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            assert header['sim_name'] == sim_name, (
+                f'Mismatch in the files: {str(fields_fft_fn[i])}'
+            )
+            assert np.isclose(header['Lbox'], Lbox), (
+                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            )
+            assert header['nmesh'] == nmesh, (
+                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            )
+            assert np.isclose(header['kcut'], kcut), (
+                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            )
+            assert header['compensated'] == compensated, (
+                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            )
+            assert header['interlaced'] == interlaced, (
+                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            )
+            assert header['paste'] == paste, (
+                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+            )
     else:
         # load density field and displacements
         f = asdf.open(ic_fn)
@@ -249,12 +249,12 @@ def main(
             else:
                 f = asdf.open(fields_fn)
                 header = f['header']
-                assert (
-                    header['nmesh'] == nmesh
-                ), 'Mismatch in the file: {str(fields_fn)}'
-                assert np.isclose(
-                    header['kcut'], kcut
-                ), 'Mismatch in the file: {str(fields_fn)}'
+                assert header['nmesh'] == nmesh, (
+                    'Mismatch in the file: {str(fields_fn)}'
+                )
+                assert np.isclose(header['kcut'], kcut), (
+                    'Mismatch in the file: {str(fields_fn)}'
+                )
                 w = f['data'][keynames[i]][:, :, :].flatten()
                 f.close()
             field_fft = get_field_fft(
