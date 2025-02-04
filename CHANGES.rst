@@ -1,8 +1,11 @@
 Changelog
 =========
 
-2.1.0 (upcoming)
-----------------
+2.1.0 (2025-02-04)
+------------------
+This is a small release with a few quality-of-life changes, notably to reduce memory usage
+in the CompaSO module and improve error reporting in the HOD module. It also adds asdf 4
+support, which is important because 2.0.1 does not include an asdf version upper bound.
 
 Supported Python versions are 3.9-3.13.
 
@@ -15,6 +18,14 @@ Enhancements
 - compaso: add passthrough support [#162]
 - compaso: more flexible search for cleaning info [#167]
 - ci: add python 3.13 [#168]
+- Add ``prepare_sim.Nthread_per_load`` parameter [#145]
+- Implement logger for AbacusHOD [#134]
+- power spectrum: don't assume normalized weights [#146]
+
+Fixes
+~~~~~
+- Fixes to halo light cone randoms [#142]
+- Fix read_asdf on rv data [#165]
 
 2.0.1 (2024-03-01)
 ------------------
