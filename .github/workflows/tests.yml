@@ -84,6 +84,7 @@ jobs:
       run: |
         sudo apt-get install libgsl-dev
         pip install -vU pip
+        pip install -vU Cython numpy setuptools wheel
 
     - name: Install package from source
       if: ${{ env.PUBLISH != 'true' }}
