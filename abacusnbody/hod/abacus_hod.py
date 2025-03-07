@@ -687,8 +687,10 @@ class AbacusHOD:
         """
         if tracers is None:
             tracers = self.tracers
-        if self.z_type == 'secondary':
-            assert want_nfw
+        if self.z_type == 'secondary' and not want_nfw:
+            raise RuntimeError(
+                'Secondary redshifts do not have particle pos/vel outputs and so only NFW profiles are supported'
+            )
         if reseed:
             start = time.time()
             # np.random.seed(reseed)
