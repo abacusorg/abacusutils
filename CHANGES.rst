@@ -1,6 +1,13 @@
 Changelog
 =========
 
+2.1.1 (upcoming)
+----------------
+
+Fixes
+~~~~~
+- hod: reduce menv memory usage in prepare_sim [#172]
+
 2.1.0 (2025-02-04)
 ------------------
 This is a small release with a few quality-of-life changes, notably to reduce memory usage
