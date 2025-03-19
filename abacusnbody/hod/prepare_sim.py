@@ -10,7 +10,6 @@ import argparse
 import concurrent.futures
 import gc
 import glob
-import itertools
 import multiprocessing
 import os
 import time
@@ -29,6 +28,7 @@ from abacusnbody.data.read_abacus import read_asdf
 
 from ..analysis.shear import get_shear, smooth_density
 from ..analysis.tsc import tsc_parallel
+from .menv import do_Menv_from_tree
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -234,37 +234,6 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     return rands_pos, rands_chis
 
 
-def concat_to_arr(lists, dtype=np.int64):
-    """Concatenate an iterable of lists to a flat Numpy array.
-    Returns the concatenated array and the index where each list starts.
-    """
-    starts = np.empty(len(lists) + 1, dtype=np.int64)
-    starts[0] = 0
-    starts[1:] = np.cumsum(
-        np.fromiter((len(ell) for ell in lists), count=len(lists), dtype=np.int64)
-    )
-    N = starts[-1]
-    res = np.fromiter(itertools.chain.from_iterable(lists), count=N, dtype=dtype)
-    return res, starts
-
-
-@njit(parallel=True)
-def calc_Menv(masses, inner_arr, inner_starts, outer_arr, outer_starts):
-    N = len(inner_starts) - 1
-    Menv = np.zeros(N, dtype=np.float32)
-    for p in numba.prange(N):
-        j = inner_starts[p]
-        k = inner_starts[p + 1]
-        inner_mass = np.sum(masses[inner_arr[j:k]])
-
-        j = outer_starts[p]
-        k = outer_starts[p + 1]
-        outer_mass = np.sum(masses[outer_arr[j:k]])
-
-        Menv[p] = outer_mass - inner_mass
-    return Menv
-
-
 @njit(parallel=True)
 def calc_fenv_opt(Menv, mbins, halosM):
     fenv_rank = np.zeros(len(Menv))
@@ -277,53 +246,6 @@ def calc_fenv_opt(Menv, mbins, halosM):
                 new_fenv_rank / (Nmask - 1) - 0.5
             )  # max rank is always Nmask - 1
     return fenv_rank
-
-
-def do_Menv_from_tree(
-    allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread, mcut=1e11
-):
-    """Calculate a local mass environment by taking the difference in
-    total neighbor halo mass at two apertures
-    """
-
-    if halo_lc:
-        querypos = allpos
-        treebox = None  # periodicity not needed for halo light cones
-    else:
-        # note that periodicity exists only in y and z directions
-        querypos = (
-            allpos + Lbox / 2.0
-        ) % Lbox  # needs to be within 0 and Lbox for periodicity
-        treebox = Lbox
-
-    mmask = allmasses > mcut
-    pos_cut = querypos[mmask]
-
-    print('Building and querying trees for mass env calculation')
-    querypos_tree = cKDTree(querypos, boxsize=treebox)
-    if isinstance(r_inner, (list, tuple, np.ndarray)):
-        r_inner = np.array(r_inner)[mmask]
-    allinds_inner = querypos_tree.query_ball_point(pos_cut, r=r_inner, workers=nthread)
-    inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
-    del allinds_inner
-    gc.collect()
-
-    if isinstance(r_outer, (list, tuple, np.ndarray)):
-        r_outer = np.array(r_outer)[mmask]
-    allinds_outer = querypos_tree.query_ball_point(pos_cut, r=r_outer, workers=nthread)
-    del querypos, querypos_tree
-    gc.collect()
-
-    outer_arr, outer_starts = concat_to_arr(allinds_outer)
-    del allinds_outer
-    gc.collect()
-
-    print('starting Menv')
-    numba.set_num_threads(nthread)
-
-    Menv = np.zeros(len(allmasses))
-    Menv[mmask] = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
-    return Menv
 
 
 def prepare_slab(
