@@ -480,19 +480,19 @@ def prepare_slab(
                 rand_N = int(allpos.shape[0] * rand)
 
                 # this is the number density (note that it depends on how the randoms are generated)
-                if (origins.shape[0] == 1):
+                if origins.shape[0] == 1:
                     rand_n = rand_N / (4.0 / 3.0 * np.pi * (r_max**3 - r_min**3))
                 else:
                     rand_n = rand_N / (4.0 / 3.0 / 8.0 * np.pi * (r_max**3 - r_min**3))
-                
+
                 # aim to have rand_final times more randoms than halos at the edges at the end
                 rand_final = 10
                 count = 0
                 repeats = 0
                 rand_norm = np.zeros(len(index_bounds))
-                
+
                 # repeat until condition satisfied
-                while count < len(index_bounds)*rand_final:
+                while count < len(index_bounds) * rand_final:
                     # generate randoms in L shape
                     randpos, randdist = gen_rand(
                         allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins
@@ -536,7 +536,7 @@ def prepare_slab(
 
                 # every iteration, you generate rand_n density of halos, so need to account for it
                 rand_n *= repeats
-                
+
                 # number of randoms divided by expected number of
                 # randoms (should be ~1 away from boundaries and < 1 near them)
                 rand_norm /= (
