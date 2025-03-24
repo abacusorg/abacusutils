@@ -94,16 +94,12 @@ def test_hod(tmp_path, reference_mode=False):
             savedir + '/halos_xcom_0_seed600_abacushod_oldfenv_MT_new.h5', 'r'
         )['halos']
         temphalos = h5py.File(EXAMPLE_SUBSAMPLE_HALOS, 'r')['halos']
-        for i in range(len(newhalos)):
-            for j in range(len(newhalos[i])):
-                assert_close(newhalos[i][j], temphalos[i][j])
+        assert_close(newhalos, temphalos)
         newparticles = h5py.File(
             savedir + '/particles_xcom_0_seed600_abacushod_oldfenv_MT_new.h5', 'r'
         )['particles']
         tempparticles = h5py.File(EXAMPLE_SUBSAMPLE_PARTS, 'r')['particles']
-        for i in range(len(newparticles)):
-            for j in range(len(newparticles[i])):
-                assert_close(newparticles[i][j], tempparticles[i][j])
+        assert_close(newparticles, tempparticles)
 
         # additional parameter choices
         want_rsd = HOD_params['want_rsd']
@@ -128,8 +124,7 @@ def test_hod(tmp_path, reference_mode=False):
         )
         data = ascii.read(EXAMPLE_LRGS)
         data1 = ascii.read(savedir_gal)
-        for ekey in data.keys():
-            assert_close(data[ekey], data1[ekey])
+        assert_close(data, data1)
 
         savedir_gal = (
             config['sim_params']['output_dir']
@@ -141,8 +136,7 @@ def test_hod(tmp_path, reference_mode=False):
         )
         data = ascii.read(EXAMPLE_ELGS)
         data1 = ascii.read(savedir_gal)
-        for ekey in data.keys():
-            assert_close(data[ekey], data1[ekey])
+        assert_close(data, data1)
 
 
 if __name__ == '__main__':

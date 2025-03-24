@@ -64,8 +64,7 @@ def test_halos_clean():
     ref = Table.read(HALOS_OUTPUT_CLEAN)
 
     halos = cat.halos
-    for col in ref.colnames:
-        assert_close(ref[col], halos[col])
+    assert_close(ref, halos)
 
     # all haloindex values should point to this slab
     npt.assert_equal(
@@ -117,19 +116,18 @@ def test_subsamples_unclean():
     ref_halos = Table.read(HALOS_OUTPUT_UNCLEAN)
 
     ss = cat.subsamples
-    for col in ref.colnames:
-        for i in range(len(cat.halos)):
-            for AB in 'AB':
-                assert_close(
-                    ref[col][
-                        ref_halos[f'npstart{AB}'][i] : ref_halos[f'npstart{AB}'][i]
-                        + ref_halos[f'npout{AB}'][i]
-                    ],
-                    ss[col][
-                        cat.halos[f'npstart{AB}'][i] : cat.halos[f'npstart{AB}'][i]
-                        + cat.halos[f'npout{AB}'][i]
-                    ],
-                )
+    for i in range(len(cat.halos)):
+        for AB in 'AB':
+            assert_close(
+                ref[
+                    ref_halos[f'npstart{AB}'][i] : ref_halos[f'npstart{AB}'][i]
+                    + ref_halos[f'npout{AB}'][i]
+                ],
+                ss[
+                    cat.halos[f'npstart{AB}'][i] : cat.halos[f'npstart{AB}'][i]
+                    + cat.halos[f'npout{AB}'][i]
+                ],
+            )
 
     assert cat.subsamples.meta == ref.meta
 
@@ -151,8 +149,7 @@ def test_subsamples_clean():
     ref = Table.read(PARTICLES_OUTPUT_CLEAN)
 
     ss = cat.subsamples
-    for col in ref.colnames:
-        assert_close(ref[col], ss[col])
+    assert_close(ref, ss)
 
     # total number of particles in ref should be equal to the sum total of npout{AB} in EXAMPLE_SIM
     assert len(ref) == np.sum(cat.halos['npoutA']) + np.sum(cat.halos['npoutB'])
@@ -221,8 +218,7 @@ def test_unpack_bits():
 
     ref = Table.read(UNPACK_BITS_OUTPUT)
 
-    for col in ref.colnames:
-        assert_close(ref[col], cat.subsamples[col])
+    assert_close(ref, cat.subsamples)
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
@@ -354,14 +350,12 @@ def test_halo_lc():
 
     ref = Table.read(HALO_LC_CAT)
     halos = cat.halos
-    for col in ref.colnames:
-        assert_close(ref[col], halos[col])
+    assert_close(ref, halos)
     assert halos.meta == ref.meta
 
     ref = Table.read(HALO_LC_SUBSAMPLES)
     ss = cat.subsamples
-    for col in ref.colnames:
-        assert_close(ref[col], ss[col])
+    assert_close(ref, ss)
 
     assert ss.meta == ref.meta
 
