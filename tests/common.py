@@ -10,7 +10,8 @@ import numpy.testing as npt
 def assert_close(arr1, arr2):
     """Checks exact equality for int arrays, and np.isclose for floats"""
     if arr1.dtype.names is not None:
-        assert set(arr1.dtype.names) == set(arr2.dtype.names)
+        notinboth = set(arr1.dtype.names) ^ set(arr2.dtype.names)
+        assert not notinboth, f"Field names don't match: {notinboth=}"
         # if the arrays are structured, check each field
         for name in arr1.dtype.names:
             try:
