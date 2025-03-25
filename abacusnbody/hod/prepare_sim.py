@@ -294,7 +294,9 @@ def prepare_slab(
     outfilename_particles += '_new.h5'
     outfilename_halos += '_new.h5'
 
-    np.random.seed(newseed + i)
+    seeder = np.random.default_rng(newseed + i)
+    np.random.seed(seeder.integers(0, 2**32 - 1))
+    halo_lc_randoms_seed = seeder.integers(0, 2**32 - 1)
     # if file already exists, just skip
     overwrite = int(overwrite)
     if (
@@ -490,7 +492,7 @@ def prepare_slab(
                 count = 0
                 repeats = 0
                 rand_norm = np.zeros(len(index_bounds))
-                rng = np.random.default_rng(newseed)
+                rng = np.random.default_rng(halo_lc_randoms_seed)
 
                 # repeat until condition satisfied
                 while count < len(index_bounds) * rand_final:
