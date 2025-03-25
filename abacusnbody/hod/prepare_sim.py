@@ -153,7 +153,7 @@ def is_in_cube(x_pos, y_pos, z_pos, verts):
     return mask
 
 
-def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
+def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins, rng):
     # number of randoms to generate
     N_rands = fac * N
 
@@ -167,16 +167,16 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
         assert origins.shape[0] == 3
         assert np.all(origins[1] + np.array([0.0, 0.0, Lbox]) == origins[0])
         assert np.all(origins[2] + np.array([0.0, Lbox, 0.0]) == origins[0])
-        costheta = np.random.rand(N_rands)  # between zero and one
-        phi = np.random.rand(N_rands) * np.pi / 2.0
+        costheta = rng.random(N_rands)  # between zero and one
+        phi = rng.random(N_rands) * np.pi / 2.0
     else:
-        costheta = np.random.rand(N_rands) * 2.0 - 1.0
-        phi = np.random.rand(N_rands) * 2.0 * np.pi
+        costheta = rng.random(N_rands) * 2.0 - 1.0
+        phi = rng.random(N_rands) * 2.0 * np.pi
     theta = np.arccos(costheta)
     x_cart = np.sin(theta) * np.cos(phi)
     y_cart = np.sin(theta) * np.sin(phi)
     z_cart = np.cos(theta)
-    rands_chis = np.random.rand(N_rands) * (chi_max - chi_min) + chi_min
+    rands_chis = rng.random(N_rands) * (chi_max - chi_min) + chi_min
 
     # multiply the unit vectors by that
     x_cart *= rands_chis
@@ -490,12 +490,13 @@ def prepare_slab(
                 count = 0
                 repeats = 0
                 rand_norm = np.zeros(len(index_bounds))
+                rng = np.random.default_rng(newseed)
 
                 # repeat until condition satisfied
                 while count < len(index_bounds) * rand_final:
                     # generate randoms in L shape
                     randpos, randdist = gen_rand(
-                        allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins
+                        allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins, rng
                     )
 
                     # boundaries of the random particles for cutting
@@ -525,7 +526,7 @@ def prepare_slab(
                             allpos[index_bounds], r=rad_outer, workers=nthread
                         )
                         # this is the true number of randoms
-                        for ind in np.arange(len(index_bounds)):
+                        for ind in range(len(index_bounds)):
                             rand_norm[ind] += len(randinds_outer[ind]) - len(
                                 randinds_inner[ind]
                             )
@@ -641,7 +642,7 @@ def prepare_slab(
 
         print('compiling particle subsamples')
         start_tracker = 0
-        for j in np.arange(len(halos)):
+        for j in range(len(halos)):
             if j % 10000 == 0:
                 print('halo id', j, end='\r')
             if mask_halos[j] and halos['npoutA'][j] > 0:
