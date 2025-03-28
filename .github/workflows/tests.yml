@@ -86,6 +86,12 @@ jobs:
         pip install -vU pip
         pip install -vU Cython numpy setuptools wheel
 
+    - name: "Python 3.13: pre-install dependencies"
+      # waiting for 3.13 wheels and/or release to fix cmake build issue
+      if: matrix.python-version == '3.13'
+      run: |
+        pip install -v git+https://github.com/Blosc/python-blosc.git@e9094341a845b3a9da49c3b7b39a02ee157a0dba
+
     - name: Install package from source
       if: ${{ env.PUBLISH != 'true' }}
       run: |
