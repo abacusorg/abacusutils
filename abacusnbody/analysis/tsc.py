@@ -42,6 +42,13 @@ def tsc_parallel(
     even more favorable ordering, but the current implementation of sorting is
     slow enough that it's usually not worth it.
 
+    To process particles in batches, you can allocate a grid ahead of time and
+    pass it in as ``densgrid``.  The grid will *not* be zeroed before the TSC,
+    so you can accumulate results incrementally.
+
+    Likewise, this routine applies no normalization to the results beyond the
+    particle weights, so accumulating results in batches is straightforward.
+
     Parameters
     ----------
     pos : ndarray of shape (n,3)

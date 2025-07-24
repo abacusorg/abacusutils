@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'abacusutils'
-copyright = '2023, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
+copyright = '2025, Daniel Eisenstein, Philip Pinto, Lehman Garrison, Nina Maksimova, Sownak Bose, Boryana Hadzhiyska, Sihan (Sandy) Yuan'
 
 
 # -- General configuration ---------------------------------------------------
@@ -112,4 +112,4 @@ def linkcode_resolve(domain, info):
     if not info['module']:
         return None
     filename = info['module'].replace('.', '/')
-    return f'https://github.com/abacusorg/abacusutils/blob/master/{filename}.py'
+    return f'https://github.com/abacusorg/abacusutils/blob/main/{filename}.py'
