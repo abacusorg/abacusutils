@@ -79,3 +79,6 @@ version_file_template = '__version__ = "{version}"'
 [tool.ruff.format]
 quote-style = "single"
 docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
