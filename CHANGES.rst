@@ -4,15 +4,25 @@ Changelog
 2.1.1 (2025-07-25)
 ------------------
 
-This is a patch release, primarily to publish the memory-usage reduction in the HOD module.
+This is a patch release, primarily to publish the reduction in memory usage in the HOD
+module.
 
-Changes
-~~~~~~~
+There is a small change to ``tsc_parallel()`` that may be breaking: when passing in a
+pre-allocated ndarray, that ndarray is no longer returned to make it clear that the array
+is being modified in-place.
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
 - tsc: return None from tsc_parallel when the user passes a pre-allocated ndarray [#180]
 
 Fixes
 ~~~~~
 - hod: reduce menv memory usage in prepare_sim [#172]
+
+Documentation
+~~~~~~~~~~~~~
+- Added a subsample particle tracking [tutorial](https://abacusutils.readthedocs.io/en/latest/tutorials/compaso/tracking_subsample_particles.html)
+- Other documentation tweaks and improvements
 
 2.1.0 (2025-02-04)
 ------------------
