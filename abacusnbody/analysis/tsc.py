@@ -59,6 +59,7 @@ def tsc_parallel(
         indicating the shape of the array to allocate. Can be 2D or 3D; ints
         are interpreted as 3D cubic grids. Anisotropic grids are also supported
         (nx != ny != nz).
+        If densgrid is an ndarray, the return value will be None.
 
     box : float
         The domain size. Positions are expected in domain [0,box) (but may be
@@ -102,9 +103,9 @@ def tsc_parallel(
 
     Returns
     -------
-    dens : ndarray
-        The density grid, which may be newly allocated, or the same as the
-        input ``densgrid`` argument if that argument was an ndarray.
+    ndarray or None
+        If ``densgrid`` is an ndarray, returns None. Otherwise, returns the newly
+        allocated density grid.
     """
 
     if nthread < 0:
@@ -117,6 +118,9 @@ def tsc_parallel(
         densgrid = (densgrid, densgrid, densgrid)
     if isinstance(densgrid, tuple):
         densgrid = _zeros_parallel(densgrid)
+        user_supplied_grid = False
+    else:
+        user_supplied_grid = True
     n1d = densgrid.shape[coord]
 
     if not npartition:
@@ -197,6 +201,8 @@ def tsc_parallel(
     if verbose:
         print(f'TSC time: {tsctime:.4g} sec')
 
+    if user_supplied_grid:
+        return None
     return densgrid
 
 

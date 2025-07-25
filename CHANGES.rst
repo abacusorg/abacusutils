@@ -1,8 +1,14 @@
 Changelog
 =========
 
-2.1.1 (upcoming)
-----------------
+2.1.1 (2025-07-25)
+------------------
+
+This is a patch release, primarily to publish the memory-usage reduction in the HOD module.
+
+Changes
+~~~~~~~
+- tsc: return None from tsc_parallel when the user passes a pre-allocated ndarray [#180]
 
 Fixes
 ~~~~~
