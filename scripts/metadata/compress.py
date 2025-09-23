@@ -20,7 +20,7 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
     """Compress metadata file FN"""
     fn = Path(fn)
 
-    with asdf.open(fn, copy_arrays=True, lazy_load=False) as af:
+    with asdf.open(fn, memmap=False, lazy_load=False) as af:
         meta = dict(af.tree)
 
     del meta['history'], meta['asdf_library']

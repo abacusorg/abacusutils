@@ -1,6 +1,55 @@
 Changelog
 =========
 
+2.1.1 (2025-07-25)
+------------------
+
+This is a patch release, primarily to publish the reduction in memory usage in the HOD
+module.
+
+There is a small change to ``tsc_parallel()`` that may be breaking: when passing in a
+pre-allocated ndarray, that ndarray is no longer returned to make it clear that the array
+is being modified in-place.
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- tsc: return None from tsc_parallel when the user passes a pre-allocated ndarray [#180]
+
+Fixes
+~~~~~
+- hod: reduce menv memory usage in prepare_sim [#172]
+
+Documentation
+~~~~~~~~~~~~~
+- Added a subsample particle tracking [tutorial](https://abacusutils.readthedocs.io/en/latest/tutorials/compaso/tracking_subsample_particles.html)
+- Other documentation tweaks and improvements
+
+2.1.0 (2025-02-04)
+------------------
+This is a small release with a few quality-of-life changes, notably to reduce memory usage
+in the CompaSO module and improve error reporting in the HOD module. It also adds asdf 4
+support, which is important because 2.0.1 does not include an asdf version upper bound.
+
+Supported Python versions are 3.9-3.13.
+
+Enhancements
+~~~~~~~~~~~~
+- ``hod.prepare_sim``: detect and report when a ``prepare_slab`` subprocess fails [#151]
+- ci: add python 3.12 and enhance ``NUMBA_DISABLE_JIT`` support [#153]
+- Improve CompaSO subsample loading [#154]
+- deprecate ``asdf.open(copy_arrays=True)`` in favor of ``asdf.open(memmap=False)`` [#157]
+- compaso: add passthrough support [#162]
+- compaso: more flexible search for cleaning info [#167]
+- ci: add python 3.13 [#168]
+- Add ``prepare_sim.Nthread_per_load`` parameter [#145]
+- Implement logger for AbacusHOD [#134]
+- power spectrum: don't assume normalized weights [#146]
+
+Fixes
+~~~~~
+- Fixes to halo light cone randoms [#142]
+- Fix read_asdf on rv data [#165]
+
 2.0.1 (2024-03-01)
 ------------------
 This is a bugfix release primarily to add support for ASDF 3.1.0.
@@ -13,6 +62,7 @@ Fixes
 - Sandydev: fixed reseeding bug [#127]
 - fix reseed bug [#128]
 - backward compatible fix for velocity bias [#121]
+- hod tutorial: fixed incorrect positional argument in ``run_hod()`` [#160]
 
 2.0.0 (2023-11-15)
 ------------------

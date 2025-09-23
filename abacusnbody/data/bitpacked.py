@@ -13,17 +13,17 @@ import numpy as np
 __all__ = ['unpack_rvint', 'unpack_pids']
 
 # Constants
-AUXDENS = 0x07FE000000000000
-ZERODEN = 49  # The density bits are 49-58.
+AUXDENS = np.uint64(0x07FE000000000000)
+ZERODEN = np.uint64(49)  # The density bits are 49-58.
 
-AUXXPID = 0x7FFF  # bits 0-14
-AUXYPID = 0x7FFF0000  # bits 16-30
-AUXZPID = 0x7FFF00000000  # bits 32-46
+AUXXPID = np.uint64(0x7FFF)  # bits 0-14
+AUXYPID = np.uint64(0x7FFF0000)  # bits 16-30
+AUXZPID = np.uint64(0x7FFF00000000)  # bits 32-46
 AUXPID = AUXXPID | AUXYPID | AUXZPID  # all of the above bits
-AUXTAGGED = 48  # tagged bit is 48
+AUXTAGGED = np.uint64(48)  # tagged bit is 48
 
 # The names of the bit-packed PID fields that the user can request
-PID_FIELDS = ['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx']
+PID_FIELDS = ['pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'packedpid']
 
 
 def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=None):
@@ -55,42 +55,44 @@ def unpack_rvint(intdata, boxsize, float_dtype=np.float32, posout=None, velout=N
         was given.
 
     """
-    intdata = intdata.reshape(-1)
+    intdata = intdata.reshape(-1, 3)
     assert intdata.dtype == np.int32
     N = len(intdata)
 
     if posout is None:
-        _posout = np.empty(N, dtype=float_dtype)
+        _posout = np.empty((N, 3), dtype=float_dtype)
     elif posout is False:
-        _posout = np.empty(0)
+        _posout = None
     else:
+        # In NumPy >= 2.1, we can use arr.reshape(..., copy=False).
+        # This is a workaround for earlier NumPy.
         _posout = posout.view()
-        _posout.shape = -1  # enforces no copy
+        _posout.shape = (-1, 3)
 
     if velout is None:
-        _velout = np.empty(N, dtype=float_dtype)
+        _velout = np.empty((N, 3), dtype=float_dtype)
     elif velout is False:
-        _velout = np.empty(0)
+        _velout = None
     else:
         _velout = velout.view()
-        _velout.shape = -1  # enforces no copy
+        _velout.shape = (-1, 3)
 
     _unpack_rvint(intdata, boxsize, _posout, _velout)
 
     ret = []
     if posout is None:
-        ret += [_posout.reshape(N // 3, 3)]
+        ret += [_posout]
     elif posout is False:
         ret += [0]
     else:
-        ret += [N // 3]
+        ret += [N]
 
     if velout is None:
-        ret += [_velout.reshape(N // 3, 3)]
+        ret += [_velout]
     elif velout is False:
         ret += [0]
     else:
-        ret += [N // 3]
+        ret += [N]
 
     return tuple(ret)
 
@@ -100,19 +102,19 @@ def _unpack_rvint(intdata, boxsize, posout, velout):
     """Helper for unpack_rvint"""
 
     N = len(intdata)
-    posscale = boxsize * (2.0**-12.0) / 1e6
+    posscale = boxsize / 1e6
     velscale = 6000.0 / 2048
-    pmask = np.int32(0xFFFFF000)
-    vmask = np.int32(0xFFF)
-
-    lenp = len(posout)
-    lenv = len(velout)
+    vmask = np.uint32(0xFFF)
 
     for i in range(N):
-        if lenp > 0:
-            posout[i] = (intdata[i] & pmask) * posscale
-        if lenv > 0:
-            velout[i] = ((intdata[i] & vmask) - 2048) * velscale
+        if posout is not None:
+            posout[i, 0] = (intdata[i, 0] >> np.uint32(12)) * posscale
+            posout[i, 1] = (intdata[i, 1] >> np.uint32(12)) * posscale
+            posout[i, 2] = (intdata[i, 2] >> np.uint32(12)) * posscale
+        if velout is not None:
+            velout[i, 0] = ((intdata[i, 0] & vmask) - 2048) * velscale
+            velout[i, 1] = ((intdata[i, 1] & vmask) - 2048) * velscale
+            velout[i, 2] = ((intdata[i, 2] & vmask) - 2048) * velscale
 
 
 def unpack_pids(
@@ -190,9 +192,16 @@ def unpack_pids(
             raise ValueError('Must supply `ppd` if requesting `lagr_pos`')
 
     N = len(packed)
-    if not np.isclose(ppd, int(round(ppd))):
-        raise ValueError(f'ppd "{ppd}" not valid int?')
-    ppd = int(round(ppd))
+
+    if ppd is not None:
+        if not np.isclose(ppd, int(round(ppd))):
+            raise ValueError(f'ppd "{ppd}" not valid int?')
+        ppd = int(round(ppd))
+    else:
+        ppd = 1
+
+    if box is None:
+        box = float_dtype(1.0)
 
     arr = {}
     if pid is True:
@@ -202,11 +211,58 @@ def unpack_pids(
     if lagr_idx is True:
         arr['lagr_idx'] = np.empty((N, 3), dtype=np.int16)
     if tagged is True:
-        arr['tagged'] = np.empty(N, dtype=np.bool8)
+        arr['tagged'] = np.empty(N, dtype=np.uint8)
     if density is True:
         arr['density'] = np.empty(N, dtype=float_dtype)
 
     _unpack_pids(packed, box, ppd, float_dtype=float_dtype, **arr)
+
+    return arr
+
+
+def empty_bitpacked_arrays(N, unpack_bits, float_dtype=np.float32):
+    """
+    Create empty arrays for bit-packed fields.
+
+    Parameters
+    ----------
+    N: int
+        The number of particles
+
+    unpack_bits: list or bool
+        The fields to unpack. If True, all fields are unpacked. If False,
+        just the pid field is unpacked.
+
+    float_dtype: np.dtype, optional
+        The dtype in which to store float arrays. Default: ``np.float32``
+
+    Returns
+    -------
+    empty_arrays: dict of ndarray
+        A dictionary of empty arrays for all fields that can be unpacked
+    """
+
+    if type(unpack_bits) is str:
+        unpack_bits = [unpack_bits]
+
+    if unpack_bits is True:
+        unpack_bits = PID_FIELDS
+    elif unpack_bits is False:
+        unpack_bits = ['pid']
+
+    arr = {}
+    if 'pid' in unpack_bits:
+        arr['pid'] = np.empty(N, dtype=np.int64)
+    if 'lagr_pos' in unpack_bits:
+        arr['lagr_pos'] = np.empty((N, 3), dtype=float_dtype)
+    if 'lagr_idx' in unpack_bits:
+        arr['lagr_idx'] = np.empty((N, 3), dtype=np.int16)
+    if 'tagged' in unpack_bits:
+        arr['tagged'] = np.empty(N, dtype=np.uint8)
+    if 'density' in unpack_bits:
+        arr['density'] = np.empty(N, dtype=float_dtype)
+    if 'packedpid' in unpack_bits:
+        arr['packedpid'] = np.empty(N, dtype=np.uint64)
 
     return arr
 
@@ -235,16 +291,16 @@ def _unpack_pids(
     for i in range(N):
         if lagr_idx is not None:
             lagr_idx[i, 0] = packed[i] & AUXXPID
-            lagr_idx[i, 1] = (packed[i] & AUXYPID) >> 16
-            lagr_idx[i, 2] = (packed[i] & AUXZPID) >> 32
+            lagr_idx[i, 1] = (packed[i] & AUXYPID) >> np.uint64(16)
+            lagr_idx[i, 2] = (packed[i] & AUXZPID) >> np.uint64(32)
 
         if lagr_pos is not None:
             lagr_pos[i, 0] = (packed[i] & AUXXPID) * inv_ppd - half
-            lagr_pos[i, 1] = ((packed[i] & AUXYPID) >> 16) * inv_ppd - half
-            lagr_pos[i, 2] = ((packed[i] & AUXZPID) >> 32) * inv_ppd - half
+            lagr_pos[i, 1] = ((packed[i] & AUXYPID) >> np.uint64(16)) * inv_ppd - half
+            lagr_pos[i, 2] = ((packed[i] & AUXZPID) >> np.uint64(32)) * inv_ppd - half
 
         if tagged is not None:
-            tagged[i] = (packed[i] >> AUXTAGGED) & 1
+            tagged[i] = (packed[i] >> AUXTAGGED) & np.uint64(1)
 
         if density is not None:
             density[i] = (

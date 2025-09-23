@@ -4,13 +4,24 @@ Common resources for the tests.
 
 import numbers
 
-import numpy as np
+import numpy.testing as npt
 
 
-def check_close(arr1, arr2):
+def assert_close(arr1, arr2):
     """Checks exact equality for int arrays, and np.isclose for floats"""
+    if arr1.dtype.names is not None:
+        notinboth = set(arr1.dtype.names) ^ set(arr2.dtype.names)
+        assert not notinboth, f"Field names don't match: {notinboth=}"
+        # if the arrays are structured, check each field
+        for name in arr1.dtype.names:
+            try:
+                assert_close(arr1[name], arr2[name])
+            except AssertionError as e:
+                raise AssertionError(f'Field "{name}" does not match') from e
+        return
+
     if issubclass(arr1.dtype.type, numbers.Integral):
         assert issubclass(arr2.dtype.type, numbers.Integral)
-        return np.all(arr1 == arr2)
+        npt.assert_array_equal(arr1, arr2)
     else:
-        return np.allclose(arr1, arr2)
+        npt.assert_allclose(arr1, arr2)

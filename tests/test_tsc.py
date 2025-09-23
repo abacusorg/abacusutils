@@ -6,6 +6,7 @@ from pathlib import Path
 
 import asdf
 import numpy as np
+import numpy.testing as npt
 import pytest
 
 testdir = Path(__file__).parent
@@ -205,3 +206,25 @@ def test_partition(seed, dtype, npartition, nthread):
                 weights[np_starts[i] : np_starts[i + 1]],
             )
         )
+
+
+def test_returns(seed=123):
+    """Test that tsc_parallel returns the allocated ndarray if a grid shape is given,
+    or None if an ndarray is given."""
+
+    from abacusnbody.analysis.tsc import tsc_parallel
+
+    rng = np.random.default_rng(seed)
+    box = 123.0
+    ngrid = 10
+    pos = rng.random((100, 3), dtype='f4') * box
+
+    # Test with grid shape
+    dens = tsc_parallel(pos, ngrid, box)
+    assert dens.shape == (ngrid, ngrid, ngrid)
+
+    # Test with pre-allocated ndarray
+    dens_allocated = np.zeros((ngrid, ngrid, ngrid), dtype=np.float32)
+    dens_returned = tsc_parallel(pos, dens_allocated, box)
+    assert dens_returned is None
+    npt.assert_allclose(dens_allocated, dens)

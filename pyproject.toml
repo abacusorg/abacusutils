@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "setuptools>=61",
-    "setuptools_scm>=6.2",
+    "setuptools_scm>=8",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -22,16 +22,15 @@ dependencies = [
     'astropy>=4.0.0',
     'scipy>=1.5.0',
     'numba>=0.56',
-    'asdf>=2.8',
+    'asdf>=3.1.0',
     'h5py',
     'pyyaml',
     'msgpack>=1',
     'parallel_numpy_rng>=0.1.2',
-    "asdf-astropy>=0.3; python_version>='3.8'",
-    "importlib_resources; python_version<'3.9'",
+    'asdf-astropy>=0.3',
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 urls = {Repository = "https://github.com/abacusorg/abacusutils"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -74,9 +73,12 @@ include-package-data = true
 include = ["abacusnbody*"]
 
 [tool.setuptools_scm]
-write_to = "abacusnbody/version.py"
-write_to_template = '__version__ = "{version}"'
+version_file = "abacusnbody/version.py"
+version_file_template = '__version__ = "{version}"'
 
 [tool.ruff.format]
 quote-style = "single"
 docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

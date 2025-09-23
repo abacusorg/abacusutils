@@ -546,12 +546,12 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = '_rsd' if want_rsd else ''
     fields = np.array(['1cb', 'delta', 'delta2', 'tidal2', 'nabla2'])
-    assert (
-        fields[: len(keynames)] == keynames
-    ).all(), 'Requested keynames should follow the standard order'
-    assert (
-        nmesh == config['power_params']['nmesh']
-    ), 'nmesh from power_params need to match nmesh from zcv_params'
+    assert (fields[: len(keynames)] == keynames).all(), (
+        'Requested keynames should follow the standard order'
+    )
+    assert nmesh == config['power_params']['nmesh'], (
+        'nmesh from power_params need to match nmesh from zcv_params'
+    )
 
     # smoothing parameters
     sg_window = config['zcv_params'].get('sg_window', 21)
@@ -642,9 +642,9 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     window = data['window']
     keff = data['keff']
     assert len(keff) == len(k_binc), f'Mismatching file: {str(window_fn)}'
-    assert (
-        np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1
-    ), f'Mismatching file: {str(window_fn)}'
+    assert np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1, (
+        f'Mismatching file: {str(window_fn)}'
+    )
 
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
@@ -741,12 +741,12 @@ def run_zcv_field(
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = '_rsd' if want_rsd else ''
     fields = np.array(['1cb', 'delta', 'delta2', 'tidal2', 'nabla2'])
-    assert (
-        fields[: len(keynames)] == keynames
-    ).all(), 'Requested keynames should follow the standard order'
-    assert (
-        nmesh == config['power_params']['nmesh']
-    ), 'nmesh from power_params need to match nmesh from zcv_params'
+    assert (fields[: len(keynames)] == keynames).all(), (
+        'Requested keynames should follow the standard order'
+    )
+    assert nmesh == config['power_params']['nmesh'], (
+        'nmesh from power_params need to match nmesh from zcv_params'
+    )
 
     # create save directory
     save_dir = Path(zcv_dir) / sim_name
@@ -866,9 +866,9 @@ def run_zcv_field(
     )
 
     # expand zenbu to 3D power spectrum
-    assert np.isclose(
-        np.min(np.diff(k_binc)), np.max(np.diff(k_binc))
-    ), 'For custom interpolation, need equidistant k-values'
+    assert np.isclose(np.min(np.diff(k_binc)), np.max(np.diff(k_binc))), (
+        'For custom interpolation, need equidistant k-values'
+    )
     pk_zz[:, :, :] -= expand_poles_to_3d(
         k_binc, pk_zenbu, nmesh, Lbox, np.asarray(poles)
     ) / np.float32(Lbox**3)
@@ -958,9 +958,9 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     kcut = config['lcv_params']['kcut']
     kmax = config['lcv_params'].get('kmax_fit', 0.08)
     want_rsd = config['HOD_params']['want_rsd']
-    assert (
-        nmesh == config['power_params']['nmesh']
-    ), 'nmesh from power_params need to match nmesh from lcv_params'
+    assert nmesh == config['power_params']['nmesh'], (
+        'nmesh from power_params need to match nmesh from lcv_params'
+    )
 
     # smoothing parameters
     sg_window = config['lcv_params'].get('sg_window', 21)
@@ -1037,14 +1037,14 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     k_binc = (k_bins[1:] + k_bins[:-1]) * 0.5
     if not logk:
         dk = k_bins[1] - k_bins[0]
-        assert np.isclose(
-            dk, k_bins[-1] - k_bins[-2]
-        ), 'Spacing between k_bins is uneven'
+        assert np.isclose(dk, k_bins[-1] - k_bins[-2]), (
+            'Spacing between k_bins is uneven'
+        )
     else:
         dk = np.log(k_bins[1] / k_bins[0])
-        assert np.isclose(
-            dk, np.log(k_bins[-1] / k_bins[-2])
-        ), 'Spacing between k_bins is uneven'
+        assert np.isclose(dk, np.log(k_bins[-1] / k_bins[-2])), (
+            'Spacing between k_bins is uneven'
+        )
 
     # name of files to read from
     if n_k_bins == nmesh // 2:
@@ -1100,9 +1100,9 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     window = data['window']
     keff = data['keff']
     assert len(keff) == len(k_binc), f'Mismatching file: {str(window_fn)}'
-    assert (
-        np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1
-    ), f'Mismatching file: {str(window_fn)}'
+    assert np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1, (
+        f'Mismatching file: {str(window_fn)}'
+    )
 
     # stochasticity and model error
     shotnoise = (pk_tt_input - 2.0 * pk_tl_input + pk_ll_input)[0]
@@ -1186,9 +1186,9 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     want_rsd = config['HOD_params']['want_rsd']
     rsd_str = '_rsd' if want_rsd else ''
     keynames = ['delta', 'deltamu2']
-    assert (
-        nmesh == config['power_params']['nmesh']
-    ), 'nmesh from power_params need to match nmesh from lcv_params'
+    assert nmesh == config['power_params']['nmesh'], (
+        'nmesh from power_params need to match nmesh from lcv_params'
+    )
 
     # smoothing parameters
     sg_window = config['lcv_params'].get('sg_window', 21)
@@ -1370,9 +1370,9 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     )
 
     # expand multipole to 3D power spectra (this is the C-mu_C part)
-    assert np.isclose(
-        np.min(np.diff(kth)), np.max(np.diff(kth))
-    ), 'For custom interpolation, need equidistant k-values'
+    assert np.isclose(np.min(np.diff(kth)), np.max(np.diff(kth))), (
+        'For custom interpolation, need equidistant k-values'
+    )
     pk_ll[:, :, :] -= expand_poles_to_3d(
         kth, p_m_lin_poles, nmesh, Lbox, np.asarray(poles)
     ) / np.float32(Lbox**3)

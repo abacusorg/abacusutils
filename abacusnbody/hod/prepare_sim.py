@@ -7,14 +7,14 @@ $ python -m abacusnbody.hod.AbacusHOD.prepare_sim --path2config /path/to/config.
 """
 
 import argparse
+import concurrent.futures
 import gc
 import glob
-import itertools
 import multiprocessing
 import os
-from itertools import repeat
-from pathlib import Path
 import time
+from pathlib import Path
+
 import h5py
 import numba
 import numpy as np
@@ -26,8 +26,9 @@ from scipy.spatial import cKDTree
 from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 from abacusnbody.data.read_abacus import read_asdf
 
-from ..analysis.shear import smooth_density, get_shear
+from ..analysis.shear import get_shear, smooth_density
 from ..analysis.tsc import tsc_parallel
+from .menv import do_Menv_from_tree
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
@@ -152,7 +153,7 @@ def is_in_cube(x_pos, y_pos, z_pos, verts):
     return mask
 
 
-def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
+def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins, rng):
     # number of randoms to generate
     N_rands = fac * N
 
@@ -160,13 +161,22 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     origin = origins[0]
 
     # generate randoms on the unit sphere
-    costheta = np.random.rand(N_rands) * 2.0 - 1.0
-    phi = np.random.rand(N_rands) * 2.0 * np.pi
+    if (
+        origins.shape[0] > 1
+    ):  # not true of only the huge box where the origin is at the center
+        assert origins.shape[0] == 3
+        assert np.all(origins[1] + np.array([0.0, 0.0, Lbox]) == origins[0])
+        assert np.all(origins[2] + np.array([0.0, Lbox, 0.0]) == origins[0])
+        costheta = rng.random(N_rands)  # between zero and one
+        phi = rng.random(N_rands) * np.pi / 2.0
+    else:
+        costheta = rng.random(N_rands) * 2.0 - 1.0
+        phi = rng.random(N_rands) * 2.0 * np.pi
     theta = np.arccos(costheta)
     x_cart = np.sin(theta) * np.cos(phi)
     y_cart = np.sin(theta) * np.sin(phi)
     z_cart = np.cos(theta)
-    rands_chis = np.random.rand(N_rands) * (chi_max - chi_min) + chi_min
+    rands_chis = rng.random(N_rands) * (chi_max - chi_min) + chi_min
 
     # multiply the unit vectors by that
     x_cart *= rands_chis
@@ -224,37 +234,6 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins):
     return rands_pos, rands_chis
 
 
-def concat_to_arr(lists, dtype=np.int64):
-    """Concatenate an iterable of lists to a flat Numpy array.
-    Returns the concatenated array and the index where each list starts.
-    """
-    starts = np.empty(len(lists) + 1, dtype=np.int64)
-    starts[0] = 0
-    starts[1:] = np.cumsum(
-        np.fromiter((len(ell) for ell in lists), count=len(lists), dtype=np.int64)
-    )
-    N = starts[-1]
-    res = np.fromiter(itertools.chain.from_iterable(lists), count=N, dtype=dtype)
-    return res, starts
-
-
-@njit(parallel=True)
-def calc_Menv(masses, inner_arr, inner_starts, outer_arr, outer_starts):
-    N = len(inner_starts) - 1
-    Menv = np.zeros(N, dtype=np.float32)
-    for p in numba.prange(N):
-        j = inner_starts[p]
-        k = inner_starts[p + 1]
-        inner_mass = np.sum(masses[inner_arr[j:k]])
-
-        j = outer_starts[p]
-        k = outer_starts[p + 1]
-        outer_mass = np.sum(masses[outer_arr[j:k]])
-
-        Menv[p] = outer_mass - inner_mass
-    return Menv
-
-
 @njit(parallel=True)
 def calc_fenv_opt(Menv, mbins, halosM):
     fenv_rank = np.zeros(len(Menv))
@@ -267,53 +246,6 @@ def calc_fenv_opt(Menv, mbins, halosM):
                 new_fenv_rank / (Nmask - 1) - 0.5
             )  # max rank is always Nmask - 1
     return fenv_rank
-
-
-def do_Menv_from_tree(
-    allpos, allmasses, r_inner, r_outer, halo_lc, Lbox, nthread, mcut=1e11
-):
-    """Calculate a local mass environment by taking the difference in
-    total neighbor halo mass at two apertures
-    """
-
-    if halo_lc:
-        querypos = allpos
-        treebox = None  # periodicity not needed for halo light cones
-    else:
-        # note that periodicity exists only in y and z directions
-        querypos = (
-            allpos + Lbox / 2.0
-        ) % Lbox  # needs to be within 0 and Lbox for periodicity
-        treebox = Lbox
-
-    mmask = allmasses > mcut
-    pos_cut = querypos[mmask]
-
-    print('Building and querying trees for mass env calculation')
-    querypos_tree = cKDTree(querypos, boxsize=treebox)
-    if isinstance(r_inner, (list, tuple, np.ndarray)):
-        r_inner = np.array(r_inner)[mmask]
-    allinds_inner = querypos_tree.query_ball_point(pos_cut, r=r_inner, workers=nthread)
-    inner_arr, inner_starts = concat_to_arr(allinds_inner)  # 7 sec
-    del allinds_inner
-    gc.collect()
-
-    if isinstance(r_outer, (list, tuple, np.ndarray)):
-        r_outer = np.array(r_outer)[mmask]
-    allinds_outer = querypos_tree.query_ball_point(pos_cut, r=r_outer, workers=nthread)
-    del querypos, querypos_tree
-    gc.collect()
-
-    outer_arr, outer_starts = concat_to_arr(allinds_outer)
-    del allinds_outer
-    gc.collect()
-
-    print('starting Menv')
-    numba.set_num_threads(nthread)
-
-    Menv = np.zeros(len(allmasses))
-    Menv[mmask] = calc_Menv(allmasses, inner_arr, inner_starts, outer_arr, outer_starts)
-    return Menv
 
 
 def prepare_slab(
@@ -362,7 +294,9 @@ def prepare_slab(
     outfilename_particles += '_new.h5'
     outfilename_halos += '_new.h5'
 
-    np.random.seed(newseed + i)
+    seeder = np.random.default_rng(newseed + i)
+    np.random.seed(seeder.integers(0, 2**32 - 1))
+    halo_lc_randoms_seed = seeder.integers(0, 2**32 - 1)
     # if file already exists, just skip
     overwrite = int(overwrite)
     if (
@@ -527,56 +461,94 @@ def prepare_slab(
             del bounds_edge, alldist
 
             if len(index_bounds) > 0:
-                # factor of rands to generate
-                rand = 10
-                rand_N = allpos.shape[0] * rand
-
-                # generate randoms in L shape
-                randpos, randdist = gen_rand(
-                    allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins
-                )
-                rand_n = rand_N / (4.0 / 3.0 * np.pi * (r_max**3 - r_min**3))
-
-                # boundaries of the random particles for cutting
-                randbounds_edge = (
-                    (x_min_edge <= randpos[:, 0])
-                    & (x_max_edge >= randpos[:, 0])
-                    & (y_min_edge <= randpos[:, 1])
-                    & (y_max_edge >= randpos[:, 1])
-                    & (z_min_edge <= randpos[:, 2])
-                    & (z_max_edge >= randpos[:, 2])
-                    & (r_min_edge <= randdist)
-                    & (r_max_edge >= randdist)
-                )
-                randpos = randpos[~randbounds_edge]
-                del randbounds_edge, randdist
-
-                if randpos.shape[0] > 0:
-                    # random points on the edges
-                    rand_N = randpos.shape[0]
-                    randpos_tree = cKDTree(randpos)
-                    randinds_inner = randpos_tree.query_ball_point(
-                        allpos[index_bounds],
-                        r=halos['r98_L2com'][index_bounds],
-                        workers=nthread,
-                    )
-                    randinds_outer = randpos_tree.query_ball_point(
-                        allpos[index_bounds], r=rad_outer, workers=nthread
-                    )
-                    rand_norm = np.zeros(len(index_bounds))
-                    for ind in np.arange(len(index_bounds)):
-                        rand_norm[ind] = len(randinds_outer[ind]) - len(
-                            randinds_inner[ind]
-                        )
-                    rand_norm /= (
-                        (rad_outer**3.0 - halos['r98_L2com'][index_bounds] ** 3.0)
-                        * 4.0
-                        / 3.0
-                        * np.pi
-                        * rand_n
-                    )  # expected number
+                # the randoms should be within 2 times rad_outer so as to match the true halo distn
+                x_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
+                y_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
+                z_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
+                x_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
+                r_min_edge = r_min + 2.0 * rad_outer
+                r_max_edge = r_max - 2.0 * rad_outer
+                if (
+                    origins.shape[0] == 1
+                ):  # true only of the huge box where the origin is at the center
+                    y_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
+                    z_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 else:
-                    rand_norm = np.ones(len(index_bounds))
+                    y_max_edge = 3.0 / 2 * Lbox - 2.0 * rad_outer
+                    z_max_edge = 3.0 / 2 * Lbox - 2.0 * rad_outer
+
+                # factor of rands over all halos to generate in each iteration (can be less than 1)
+                rand = 1
+                rand_N = int(allpos.shape[0] * rand)
+
+                # this is the number density (note that it depends on how the randoms are generated)
+                if origins.shape[0] == 1:
+                    rand_n = rand_N / (4.0 / 3.0 * np.pi * (r_max**3 - r_min**3))
+                else:
+                    rand_n = rand_N / (4.0 / 3.0 / 8.0 * np.pi * (r_max**3 - r_min**3))
+
+                # aim to have rand_final times more randoms than halos at the edges at the end
+                rand_final = 10
+                count = 0
+                repeats = 0
+                rand_norm = np.zeros(len(index_bounds))
+                rng = np.random.default_rng(halo_lc_randoms_seed)
+
+                # repeat until condition satisfied
+                while count < len(index_bounds) * rand_final:
+                    # generate randoms in L shape
+                    randpos, randdist = gen_rand(
+                        allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins, rng
+                    )
+
+                    # boundaries of the random particles for cutting
+                    randbounds_edge = (
+                        (x_min_edge <= randpos[:, 0])
+                        & (x_max_edge >= randpos[:, 0])
+                        & (y_min_edge <= randpos[:, 1])
+                        & (y_max_edge >= randpos[:, 1])
+                        & (z_min_edge <= randpos[:, 2])
+                        & (z_max_edge >= randpos[:, 2])
+                        & (r_min_edge <= randdist)
+                        & (r_max_edge >= randdist)
+                    )
+                    randpos = randpos[~randbounds_edge]
+                    del randbounds_edge, randdist
+
+                    if randpos.shape[0] > 0:
+                        # random points on the edges
+                        rand_N = randpos.shape[0]
+                        randpos_tree = cKDTree(randpos)
+                        randinds_inner = randpos_tree.query_ball_point(
+                            allpos[index_bounds],
+                            r=halos['r98_L2com'][index_bounds],
+                            workers=nthread,
+                        )
+                        randinds_outer = randpos_tree.query_ball_point(
+                            allpos[index_bounds], r=rad_outer, workers=nthread
+                        )
+                        # this is the true number of randoms
+                        for ind in range(len(index_bounds)):
+                            rand_norm[ind] += len(randinds_outer[ind]) - len(
+                                randinds_inner[ind]
+                            )
+                    repeats += 1
+                    count += randpos.shape[0]
+                    del randpos
+                    gc.collect()
+
+                # every iteration, you generate rand_n density of halos, so need to account for it
+                rand_n *= repeats
+
+                # number of randoms divided by expected number of
+                # randoms (should be ~1 away from boundaries and < 1 near them)
+                rand_norm /= (
+                    (rad_outer**3.0 - halos['r98_L2com'][index_bounds] ** 3.0)
+                    * 4.0
+                    / 3.0
+                    * np.pi
+                    * rand_n
+                )
 
         Menv = do_Menv_from_tree(
             allpos,
@@ -591,8 +563,14 @@ def prepare_slab(
         gc.collect()
 
         if halo_lc and len(index_bounds) > 0:
-            Menv[index_bounds] *= rand_norm
-
+            mask = rand_norm == 0.0
+            rand_norm[mask] = 1.0
+            tmp = Menv[index_bounds]
+            tmp /= rand_norm  # fixed (pull request #142)
+            tmp[mask] = 0.0
+            Menv[index_bounds] = tmp
+            del mask
+            gc.collect()
         halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, allmasses)
 
         # compute delta concentration
@@ -666,7 +644,7 @@ def prepare_slab(
 
         print('compiling particle subsamples')
         start_tracker = 0
-        for j in np.arange(len(halos)):
+        for j in range(len(halos)):
             if j % 10000 == 0:
                 print('halo id', j, end='\r')
             if mask_halos[j] and halos['npoutA'][j] > 0:
@@ -1088,36 +1066,51 @@ def main(
     else:
         shearmark = None
     # N_dim = config['HOD_params']['Ndim']
-    nthread = int(
-        np.floor(multiprocessing.cpu_count() / config['prepare_sim']['Nparallel_load'])
-    )
+    nthread = config['prepare_sim'].get('Nthread_per_load', 'auto')
+    if nthread == 'auto':
+        nthread = (
+            len(os.sched_getaffinity(0)) // config['prepare_sim']['Nparallel_load']
+        )
+        print(f'prepare_sim inferred Nthread_per_load = {nthread}')
+    else:
+        nthread = int(nthread)
 
-    p = multiprocessing.Pool(config['prepare_sim']['Nparallel_load'])
-    p.starmap(
-        prepare_slab,
-        zip(
-            range(numslabs),
-            repeat(savedir),
-            repeat(simdir),
-            repeat(simname),
-            repeat(z_mock),
-            repeat(ztype),
-            repeat(tracer_flags),
-            repeat(MT),
-            repeat(want_ranks),
-            repeat(want_AB),
-            repeat(want_shear),
-            repeat(shearmark),
-            repeat(cleaning),
-            repeat(newseed),
-            repeat(halo_lc),
-            repeat(nthread),
-            repeat(overwrite),
-        ),
-    )
-    p.close()
-    p.join()
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=config['prepare_sim']['Nparallel_load'],
+        mp_context=multiprocessing.get_context('spawn'),
+    ) as pool:
+        futures = [
+            pool.submit(
+                prepare_slab,
+                i,
+                savedir=savedir,
+                simdir=simdir,
+                simname=simname,
+                z_mock=z_mock,
+                z_type=ztype,
+                tracer_flags=tracer_flags,
+                MT=MT,
+                want_ranks=want_ranks,
+                want_AB=want_AB,
+                want_shear=want_shear,
+                shearmark=shearmark,
+                cleaning=cleaning,
+                newseed=newseed,
+                halo_lc=halo_lc,
+                nthread=nthread,
+                overwrite=overwrite,
+            )
+            for i in range(numslabs)
+        ]
 
+    # check that all futures succeeded
+    for future in concurrent.futures.as_completed(futures):
+        try:
+            future.result()
+        except concurrent.futures.process.BrokenProcessPool as bpp:
+            raise RuntimeError(
+                'A subprocess died in prepare_sim. Did prepare_slab() run out of memory?'
+            ) from bpp
     # print("done, took time ", time.time() - start)
 
 

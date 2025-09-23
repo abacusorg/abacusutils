@@ -421,7 +421,8 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     k_bin_edges : array_like
         edges of the k wavenumbers.
     raw_p3d : array_like
-        array containing the power spectrum modes.
+        array containing the power spectrum modes, shape (N, N, N // 2 + 1);
+        i.e. the rfftn convention.
     Lbox : float
         box size of the simulation.
     poles : array_like
@@ -623,7 +624,7 @@ def pk_to_xi(Pk, Lbox, r_bins, poles=[0, 2, 4]):
     Parameters
     ----------
     Pk : array_like
-        3D power spectrum.
+        3D power spectrum of shape (N, N, N // 2 + 1); i.e. the rfftn convention.
     Lbox : float
         box size of the simulation.
     r_bins : array_like
@@ -743,7 +744,7 @@ def calc_pk_from_deltak(
     Parameters
     ----------
     field_fft : array_like
-        Fourier 3D field.
+        Fourier 3D field, shape (N, N, N // 2 + 1); i.e. the rfftn convention.
     Lbox : float
         box size of the simulation.
     k_bin_edges : array_like
@@ -852,13 +853,7 @@ def get_field(
             cic_serial(pos, field, Lbox, weights=w)
     else:
         raise ValueError(f'Unknown pasting method: {paste}')
-    if (
-        w is None
-    ):  # in the zcv code the weights are already normalized, so don't normalize here
-        # TODO assuming normalized weights is fragile
-        # same as passing "Value" to nbodykit (1+delta)(x) V(x)
-        # leads to -1 in the complex field
-        normalize_field(field, inplace=True, tot_weight=len(pos), nthread=nthread)
+    normalize_field(field, inplace=True, tot_weight=len(pos), nthread=nthread)
     return field
 
 

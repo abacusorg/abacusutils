@@ -41,7 +41,7 @@ def main(path2config):
 
     # throw away run for jit to compile, write to disk
     mock_dict = newBall.run_hod(
-        newBall.tracers, want_rsd, write_to_disk=False, Nthread=16
+        newBall.tracers, want_rsd, write_to_disk=write_to_disk, Nthread=16
     )
     # mock_dict = newBall.gal_reader()
     start = time.time()
@@ -61,7 +61,7 @@ def main(path2config):
         # print("alpha = ",newBall.tracers['LRG']['alpha'])
         start = time.time()
         mock_dict = newBall.run_hod(
-            newBall.tracers, want_rsd, write_to_disk, Nthread=64
+            newBall.tracers, want_rsd, write_to_disk=False, Nthread=64
         )
         print('Done hod, took time ', time.time() - start)
         start = time.time()

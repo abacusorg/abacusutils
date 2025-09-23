@@ -44,8 +44,8 @@ def main(**kwargs):
     t += timeit.default_timer()
 
     if comm.rank == 0:
-        print(f'Time: {t/nrep:.4g} sec x {nrep} rep')
-        print(f'Rate: {N/(t/nrep)/1e6:.4g} M part/sec')
+        print(f'Time: {t / nrep:.4g} sec x {nrep} rep')
+        print(f'Rate: {N / (t / nrep) / 1e6:.4g} M part/sec')
 
 
 if __name__ == '__main__':

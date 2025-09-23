@@ -9,7 +9,8 @@
 # - {name: vz, datatype: float64}
 # - {name: mass, datatype: float64}
 # - {name: id, datatype: int64}
-# meta: {Acent: 0, Asat: 0, Bcent: 0, Bsat: 0, Gal_type: LRG, Ncent: 0, alpha: 1.0, alpha_c: 0, alpha_s: 1, ic: 0.97, kappa: 0.4, logM1: 14.3,
+# meta: {Acent: 0, Asat: 0, Bcent: 0, Bsat: 0, Gal_type: LRG, Ncent: 1, alpha: 1.0, alpha_c: 0, alpha_s: 1, ic: 0.97, kappa: 0.4, logM1: 14.3,
 #   logM_cut: 13.3, s: 0, s_p: 0, s_r: 0, s_v: 0, sigma: 0.3}
 # schema: astropy-2.0
 x y z vx vy vz mass id
+-989.7694508005402 2662.3515153869225 338.0961635199707 -196.25576782226562 -490.5894775390625 192.04434204101562 9446576130109.27 1370826

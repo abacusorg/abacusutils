@@ -42,6 +42,13 @@ def tsc_parallel(
     even more favorable ordering, but the current implementation of sorting is
     slow enough that it's usually not worth it.
 
+    To process particles in batches, you can allocate a grid ahead of time and
+    pass it in as ``densgrid``.  The grid will *not* be zeroed before the TSC,
+    so you can accumulate results incrementally.
+
+    Likewise, this routine applies no normalization to the results beyond the
+    particle weights, so accumulating results in batches is straightforward.
+
     Parameters
     ----------
     pos : ndarray of shape (n,3)
@@ -52,6 +59,7 @@ def tsc_parallel(
         indicating the shape of the array to allocate. Can be 2D or 3D; ints
         are interpreted as 3D cubic grids. Anisotropic grids are also supported
         (nx != ny != nz).
+        If densgrid is an ndarray, the return value will be None.
 
     box : float
         The domain size. Positions are expected in domain [0,box) (but may be
@@ -95,9 +103,9 @@ def tsc_parallel(
 
     Returns
     -------
-    dens : ndarray
-        The density grid, which may be newly allocated, or the same as the
-        input ``densgrid`` argument if that argument was an ndarray.
+    ndarray or None
+        If ``densgrid`` is an ndarray, returns None. Otherwise, returns the newly
+        allocated density grid.
     """
 
     if nthread < 0:
@@ -110,6 +118,9 @@ def tsc_parallel(
         densgrid = (densgrid, densgrid, densgrid)
     if isinstance(densgrid, tuple):
         densgrid = _zeros_parallel(densgrid)
+        user_supplied_grid = False
+    else:
+        user_supplied_grid = True
     n1d = densgrid.shape[coord]
 
     if not npartition:
@@ -130,7 +141,7 @@ def tsc_parallel(
     if npartition > n1d // 3 and npartition != n1d // 2 and nthread > 1:
         raise ValueError(
             f'npartition {npartition} must be less than'
-            f' ngrid//3 = {n1d//3} or equal to ngrid//2 = {n1d//2}'
+            f' ngrid//3 = {n1d // 3} or equal to ngrid//2 = {n1d // 2}'
         )
     if npartition > 1 and npartition % 2 != 0 and nthread > 1:
         raise ValueError(f'npartition {npartition} not divisible by 2')
@@ -190,6 +201,8 @@ def tsc_parallel(
     if verbose:
         print(f'TSC time: {tsctime:.4g} sec')
 
+    if user_supplied_grid:
+        return None
     return densgrid
 
 
