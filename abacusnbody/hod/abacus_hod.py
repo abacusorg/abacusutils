@@ -259,15 +259,17 @@ class AbacusHOD:
         sim_dir = Path(self.sim_dir)
         mock_dir = output_dir / simname / ('z%4.3f' % self.z_mock)
         subsample_dir = Path(self.subsample_dir) / simname / ('z%4.3f' % self.z_mock)
-        
+
         # Check if the simulation directory exists
         if not (sim_dir / simname).exists():
-            raise FileNotFoundError(f'Simulation directory {sim_dir / simname} not found.')
-        
+            raise FileNotFoundError(
+                f'Simulation directory {sim_dir / simname} not found.'
+            )
+
         # Check if the subsample directory exists
         if not subsample_dir.exists():
             raise FileNotFoundError(f'Subsample directory {subsample_dir} not found.')
-        
+
         # load header to read parameters
         if self.halo_lc:
             halo_info_fns = [
@@ -762,7 +764,7 @@ class AbacusHOD:
             self.logger.info(
                 f'Randoms generated in elapsed time {time.time() - start:.2f} s.'
             )
-        
+
         # If write_to_disk is True, create the directory to save the mock
         # Otherwise, there is no need to create a directory that will not be used
         if write_to_disk:
