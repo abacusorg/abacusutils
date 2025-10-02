@@ -765,11 +765,6 @@ class AbacusHOD:
                 f'Randoms generated in elapsed time {time.time() - start:.2f} s.'
             )
 
-        # If write_to_disk is True, create the directory to save the mock
-        # Otherwise, there is no need to create a directory that will not be used
-        if write_to_disk:
-            self.mock_dir.mkdir(parents=True, exist_ok=True)
-
         start = time.time()
         mock_dict = gen_gal_cat(
             self.halo_data,
