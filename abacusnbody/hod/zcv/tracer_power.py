@@ -12,6 +12,7 @@ from abacusnbody.analysis.power_spectrum import (
     get_k_mu_edges,
     get_delta_mu2,
     get_W_compensated,
+    calc_power
 )
 from abacusnbody.metadata import get_meta
 
@@ -25,8 +26,9 @@ except ImportError as e:
         '"pip install abacusutils[all]" to install zcv dependencies.'
     ) from e
 
-
-def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power=False):
+#AB: The name of this function is now a bit misleading because it is also computing matter power and cross-power,
+# but I wanted to keep everything within this function for ease of implementing
+def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power=False, cross=False, matter_pos=None):
     """
     Compute the auto- and cross-correlation between a galaxy catalog (`tracer_pos`)
     and the advected Zel'dovich fields.
@@ -42,12 +44,16 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     save_3D_power : bool, optional
         save the 3D power spectra in individual ASDF files.
         Default is False.
+    cross: bool
+        flag indicating whether to compute cross-spectra
+    matter_pos: array_like
+        matter positions with shape (N, 3)
 
     Returns
     -------
-    pk_tr_dict : dict
-        dictionary containing the auto- and cross-power spectra of
-        the tracer with the 5 fields.
+    pk_tr_dict, pk_m_dict : dicts
+        dictionaries containing the auto- and cross-power spectra of
+        the tracer and matter, respectively, with the 5 fields.
     """
     # read zcv parameters
     advected_dir = config['zcv_params']['zcv_dir']  # input of advected fields
@@ -74,6 +80,7 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     # get a few parameters for the simulation
     meta = get_meta(sim_name, redshift=z_this)
     Lbox = meta['BoxSize']
+    print(Lbox)
     z_ic = meta['InitialRedshift']
     # k_Ny = np.pi*nmesh/Lbox
 
@@ -88,6 +95,11 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     pk_tr_dict = {}
     pk_tr_dict['k_binc'] = k_binc
     pk_tr_dict['mu_binc'] = mu_binc
+
+    if cross: #AB
+        pk_m_dict = {}
+        pk_m_dict['k_binc'] = k_binc
+        pk_m_dict['mu_binc'] = mu_binc
 
     # create save directory
     save_dir = Path(tracer_dir) / sim_name
@@ -160,7 +172,16 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     tr_field_fft = get_field_fft(
         tracer_pos, Lbox, nmesh, paste, w, W, compensated, interlaced
     )
-    del tracer_pos
+    # del tracer_pos
+
+    if cross: #AB
+        matter_pos += Lbox / 2.0  # I think necessary for cross correlations
+        matter_pos %= Lbox
+        print('min/max matter pos', matter_pos.min(), matter_pos.max(), matter_pos.shape)
+        m_field_fft = get_field_fft(
+            matter_pos, Lbox, nmesh, paste, w, W, compensated, interlaced
+        )
+
     gc.collect()
 
     if want_save:
@@ -218,6 +239,31 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
         pk_tr_dict['P_ell_tr_tr'] = P['binned_poles']
         pk_tr_dict['N_ell_tr_tr'] = P['N_mode_poles']
 
+        if cross: #AB
+            #AB: try using calc_power instead 
+            P_matter = calc_pk_from_deltak(
+            m_field_fft,
+            Lbox,
+            k_bin_edges,
+            mu_bin_edges,
+            field2_fft=None,
+            poles=np.asarray(poles),
+            )
+
+            P_cross = calc_pk_from_deltak(
+            tr_field_fft,
+            Lbox,
+            k_bin_edges,
+            mu_bin_edges,
+            field2_fft=m_field_fft,
+            poles=np.asarray(poles),
+            )
+
+            pk_tr_dict['P_kmu_tr_m'] = P_cross['power']
+            # pk_tr_dict['P_ell_tr_m'] = P_cross['poles']
+            pk_m_dict['P_kmu_m_m'] = P_matter['power']
+            # pk_m_dict['P_ell_m_m'] = P_matter['poles']
+
     # loop over fields
     for i in range(len(keynames)):
         print('Computing cross-correlation of tracer and ', keynames[i])
@@ -236,6 +282,12 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
             pk3d *= field_D[i]
             # pk3d *= Lbox**3
 
+            if cross:
+                pk3d_m = np.array(
+                (field_fft_i * np.conj(m_field_fft)).real, dtype=np.float32
+                )
+                pk3d_m *= field_D[i]
+
             # record
             pk_tr_dict = {}
             pk_tr_dict[f'P_k3D_{keynames[i]}_tr'] = pk3d
@@ -250,6 +302,18 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
             )
             power_tr_fns.append(power_tr_fn)
             compress_asdf(str(power_tr_fn), pk_tr_dict, header)
+
+            if cross: #AB
+                pk_m_dict = {}
+                pk_m_dict[f'P_k3D_{keynames[i]}_m'] = pk3d_m
+
+                power_m_fn = (
+                Path(save_z_dir)
+                / f'power{rsd_str}_{keynames[i]}_m_nmesh{nmesh:d}.asdf'
+                )
+
+                compress_asdf(str(power_m_fn), pk_m_dict, header)
+
             del field_fft_i
             gc.collect()
 
@@ -264,16 +328,38 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
                 field2_fft=tr_field_fft,
                 poles=np.asarray(poles),
             )
+
+            if cross: #AB
+                P_matter = calc_pk_from_deltak(
+                field_fft_i[f'{keynames[i]}_Re']
+                + 1j * field_fft_i[f'{keynames[i]}_Im'],
+                Lbox,
+                k_bin_edges,
+                mu_bin_edges,
+                field2_fft=m_field_fft,
+                poles=np.asarray(poles),
+                )
+
             P['power'] *= field_D[i]
             P['binned_poles'] *= field_D[i]
             pk_tr_dict[f'P_kmu_{keynames[i]}_tr'] = P['power']
             pk_tr_dict[f'N_kmu_{keynames[i]}_tr'] = P['N_mode']
             pk_tr_dict[f'P_ell_{keynames[i]}_tr'] = P['binned_poles']
             pk_tr_dict[f'N_ell_{keynames[i]}_tr'] = P['N_mode_poles']
+
+            if cross: #AB
+                P_matter['power'] *= field_D[i]
+                P_matter['binned_poles'] *= field_D[i]
+
+                pk_m_dict[f'P_kmu_{keynames[i]}_m'] = P_matter['power']
+                pk_m_dict[f'N_kmu_{keynames[i]}_m'] = P_matter['N_mode']
+                pk_m_dict[f'P_ell_{keynames[i]}_m'] = P_matter['binned_poles']
+                pk_m_dict[f'N_ell_{keynames[i]}_m'] = P_matter['N_mode_poles']
+
             del field_fft_i
             gc.collect()
 
-    if save_3D_power:
+    if save_3D_power: #AB: The below line should probably be updated
         return power_tr_fns
 
     header = {}
@@ -283,7 +369,12 @@ def get_tracer_power(tracer_pos, want_rsd, config, want_save=True, save_3D_power
     header['kcut'] = kcut
     if want_save:
         compress_asdf(str(power_tr_fn), pk_tr_dict, header)
-    return pk_tr_dict
+        # if cross: #AB
+        #     compress_asdf(str(power_m_fn), pk_m_dict, header)
+    if cross:
+        return pk_tr_dict, pk_m_dict
+    else:
+        return pk_tr_dict
 
 
 def get_recon_power(

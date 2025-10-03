@@ -258,17 +258,9 @@ class AbacusHOD:
         simname = Path(self.sim_name)
         sim_dir = Path(self.sim_dir)
         mock_dir = output_dir / simname / ('z%4.3f' % self.z_mock)
+        # create mock_dir if not created
+        mock_dir.mkdir(parents=True, exist_ok=True)
         subsample_dir = Path(self.subsample_dir) / simname / ('z%4.3f' % self.z_mock)
-
-        # Check if the simulation directory exists
-        if not (sim_dir / simname).exists():
-            raise FileNotFoundError(
-                f'Simulation directory {sim_dir / simname} not found.'
-            )
-
-        # Check if the subsample directory exists
-        if not subsample_dir.exists():
-            raise FileNotFoundError(f'Subsample directory {subsample_dir} not found.')
 
         # load header to read parameters
         if self.halo_lc:
@@ -1398,7 +1390,8 @@ class AbacusHOD:
         clustering['mu_binc'] = power['mu_mid'][0]
         return clustering
 
-    def apply_zcv(self, mock_dict, config, load_presaved=False):
+# AB: adding 'cross' flag
+    def apply_zcv(self, mock_dict, config, load_presaved=False, cross=False):
         """
         Apply control variates reduction of the variance to a power spectrum observable.
         """
@@ -1410,9 +1403,9 @@ class AbacusHOD:
 
         # compute real space and redshift space
         # assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
-        assert len(mock_dict.keys()) == 1, (
-            'Currently implemented only a single tracer'
-        )  # should make a dict of dicts, but need cross
+        # assert len(mock_dict.keys()) == 1, (
+        #     'Currently implemented only a single tracer'
+        # )  # should make a dict of dicts, but need cross
         assert len(config['power_params']['poles']) <= 3, (
             'Currently implemented only multipoles 0, 2, 4; need to change ZeNBu'
         )
@@ -1527,25 +1520,38 @@ class AbacusHOD:
             # run version with rsd or without rsd
             for tr in mock_dict.keys():
                 # obtain the positions
-                tracer_pos = (
-                    np.vstack(
-                        (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
-                    ).T
-                ).astype(np.float32)
-                del mock_dict
+                if tr=='matter': #AB
+                    matter_pos = (
+                        np.vstack(
+                            (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
+                        ).T
+                    ).astype(np.float32)
+                else:
+                    tracer_pos = (
+                        np.vstack(
+                            (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
+                        ).T
+                    ).astype(np.float32)
+                # del mock_dict
                 gc.collect()
 
                 # get power spectra for this tracer
+            if cross: #AB
+                pk_rsd_tr_dict, pk_rsd_m_dict = get_tracer_power(
+                    tracer_pos, config['HOD_params']['want_rsd'], config, cross=True, matter_pos=matter_pos
+                )
+            else: 
                 pk_rsd_tr_dict = get_tracer_power(
                     tracer_pos, config['HOD_params']['want_rsd'], config
                 )
-                pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
-                assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
-                    f'Mismatching file: {str(power_rsd_ij_fn)}'
-                )
-                assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_rsd_ij_fn)}'
-                )
+
+            pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
+            assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
+                f'Mismatching file: {str(power_rsd_ij_fn)}'
+            )
+            assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
+                f'Mismatching file: {str(power_rsd_ij_fn)}'
+            )
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
                 mock_dict = self.run_hod(
@@ -1559,31 +1565,51 @@ class AbacusHOD:
                 )
                 for tr in mock_dict.keys():
                     # obtain the positions
-                    tracer_pos = (
-                        np.vstack(
+                    if tr=='matter': #AB
+                        matter_pos = (
+                            np.vstack(
                             (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
-                        ).T
-                    ).astype(np.float32)
-                    del mock_dict
+                            ).T
+                        ).astype(np.float32)
+                    else:
+                        tracer_pos = (
+                            np.vstack(
+                            (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
+                            ).T
+                        ).astype(np.float32)
+                    # del mock_dict
                     gc.collect()
 
-                    # get power spectra for this tracer
+                # get power spectra for this tracer
+                if cross: #AB
+                    pk_tr_dict, pk_m_dict = get_tracer_power(
+                        tracer_pos, want_rsd=False, config=config, cross=True, matter_pos=matter_pos
+                    )
+                else:
                     pk_tr_dict = get_tracer_power(
                         tracer_pos, want_rsd=False, config=config
                     )
-                    pk_ij_dict = asdf.open(power_ij_fn)['data']
-                    assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
-                        f'Mismatching file: {str(power_ij_fn)}'
-                    )
-                    assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
-                        f'Mismatching file: {str(power_ij_fn)}'
-                    )
+                    
+                pk_ij_dict = asdf.open(power_ij_fn)['data']
+                assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
+                    f'Mismatching file: {str(power_ij_fn)}'
+                )
+                assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
+                    f'Mismatching file: {str(power_ij_fn)}'
+                )
             else:
-                pk_tr_dict, pk_ij_dict = None, None
+                pk_tr_dict, pk_m_dict, pk_ij_dict = None, None, None
 
         # run the final part and save
         zcv_dict = run_zcv(
-            pk_rsd_tr_dict, pk_rsd_ij_dict, pk_tr_dict, pk_ij_dict, config
+            pk_rsd_tr_dict, 
+            pk_rsd_m_dict, #AB
+            pk_rsd_ij_dict,
+            pk_tr_dict,
+            pk_m_dict,
+            pk_ij_dict,
+            config,
+            cross
         )
         return zcv_dict
 
