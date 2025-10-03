@@ -1,5 +1,6 @@
 import math
 import os
+from pathlib import Path
 import time
 import warnings
 
@@ -1671,6 +1672,21 @@ def gen_gal_cat(
         NFW_draw,
     )
 
+    if write_to_disk and tracers:
+        if rsd:
+            rsd_string = '_rsd'
+        else:
+            rsd_string = ''
+
+        savedir = Path(savedir)
+        if fn_ext is None:
+            outdir = (savedir) / ('galaxies' + rsd_string)
+        else:
+            outdir = (savedir) / ('galaxies' + rsd_string + fn_ext)
+
+        # create directories if not existing
+        os.makedirs(outdir, exist_ok=True)
+
     # how many galaxies were generated and write them to disk
     for tracer in tracers.keys():
         Ncent = HOD_dict[tracer]['Ncent']
@@ -1685,19 +1701,6 @@ def gen_gal_cat(
         if write_to_disk:
             if verbose:
                 print('outputting galaxies to disk')
-
-            if rsd:
-                rsd_string = '_rsd'
-            else:
-                rsd_string = ''
-
-            if fn_ext is None:
-                outdir = (savedir) / ('galaxies' + rsd_string)
-            else:
-                outdir = (savedir) / ('galaxies' + rsd_string + fn_ext)
-
-            # create directories if not existing
-            os.makedirs(outdir, exist_ok=True)
 
             # save to file
             # outdict =

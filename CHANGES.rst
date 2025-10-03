@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Upcoming
+--------
+
+Improvements
+~~~~~~~~~~~~
+- AbacusHOD: avoid unnecessary mock dir creation [#187]
+
 2.1.1 (2025-07-25)
 ------------------
 
