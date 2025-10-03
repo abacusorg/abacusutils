@@ -1671,7 +1671,7 @@ def gen_gal_cat(
         NFW_draw,
     )
 
-    if write_to_disk:
+    if write_to_disk and tracers:
         if rsd:
             rsd_string = '_rsd'
         else:
