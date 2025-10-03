@@ -1390,7 +1390,7 @@ class AbacusHOD:
         clustering['mu_binc'] = power['mu_mid'][0]
         return clustering
 
-# AB: adding 'cross' flag
+    # AB: adding 'cross' flag
     def apply_zcv(self, mock_dict, config, load_presaved=False, cross=False):
         """
         Apply control variates reduction of the variance to a power spectrum observable.
@@ -1520,7 +1520,7 @@ class AbacusHOD:
             # run version with rsd or without rsd
             for tr in mock_dict.keys():
                 # obtain the positions
-                if tr=='matter': #AB
+                if tr == 'matter':  # AB
                     matter_pos = (
                         np.vstack(
                             (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
@@ -1536,11 +1536,15 @@ class AbacusHOD:
                 gc.collect()
 
                 # get power spectra for this tracer
-            if cross: #AB
+            if cross:  # AB
                 pk_rsd_tr_dict, pk_rsd_m_dict = get_tracer_power(
-                    tracer_pos, config['HOD_params']['want_rsd'], config, cross=True, matter_pos=matter_pos
+                    tracer_pos,
+                    config['HOD_params']['want_rsd'],
+                    config,
+                    cross=True,
+                    matter_pos=matter_pos,
                 )
-            else: 
+            else:
                 pk_rsd_tr_dict = get_tracer_power(
                     tracer_pos, config['HOD_params']['want_rsd'], config
                 )
@@ -1565,31 +1569,43 @@ class AbacusHOD:
                 )
                 for tr in mock_dict.keys():
                     # obtain the positions
-                    if tr=='matter': #AB
+                    if tr == 'matter':  # AB
                         matter_pos = (
                             np.vstack(
-                            (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
+                                (
+                                    mock_dict[tr]['x'],
+                                    mock_dict[tr]['y'],
+                                    mock_dict[tr]['z'],
+                                )
                             ).T
                         ).astype(np.float32)
                     else:
                         tracer_pos = (
                             np.vstack(
-                            (mock_dict[tr]['x'], mock_dict[tr]['y'], mock_dict[tr]['z'])
+                                (
+                                    mock_dict[tr]['x'],
+                                    mock_dict[tr]['y'],
+                                    mock_dict[tr]['z'],
+                                )
                             ).T
                         ).astype(np.float32)
                     # del mock_dict
                     gc.collect()
 
                 # get power spectra for this tracer
-                if cross: #AB
+                if cross:  # AB
                     pk_tr_dict, pk_m_dict = get_tracer_power(
-                        tracer_pos, want_rsd=False, config=config, cross=True, matter_pos=matter_pos
+                        tracer_pos,
+                        want_rsd=False,
+                        config=config,
+                        cross=True,
+                        matter_pos=matter_pos,
                     )
                 else:
                     pk_tr_dict = get_tracer_power(
                         tracer_pos, want_rsd=False, config=config
                     )
-                    
+
                 pk_ij_dict = asdf.open(power_ij_fn)['data']
                 assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
                     f'Mismatching file: {str(power_ij_fn)}'
@@ -1602,14 +1618,14 @@ class AbacusHOD:
 
         # run the final part and save
         zcv_dict = run_zcv(
-            pk_rsd_tr_dict, 
-            pk_rsd_m_dict, #AB
+            pk_rsd_tr_dict,
+            pk_rsd_m_dict,  # AB
             pk_rsd_ij_dict,
             pk_tr_dict,
             pk_m_dict,
             pk_ij_dict,
             config,
-            cross
+            cross,
         )
         return zcv_dict
 
