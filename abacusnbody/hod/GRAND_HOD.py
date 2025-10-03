@@ -1,5 +1,6 @@
 import math
 import os
+from pathlib import Path
 import time
 import warnings
 
@@ -1677,6 +1678,7 @@ def gen_gal_cat(
         else:
             rsd_string = ''
 
+        savedir = Path(savedir)
         if fn_ext is None:
             outdir = (savedir) / ('galaxies' + rsd_string)
         else:
