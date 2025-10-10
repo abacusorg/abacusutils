@@ -836,7 +836,7 @@ class CompaSOHaloCatalog:
                 raw[stem + '_to_sigmav3d' + m['com'] + '_i16']
                 * raw['sigmav3d' + m['com']]
                 / INT16SCALE
-                * box
+                * zspace_to_kms
             )
 
         self.halo_field_loaders[pat] = _sigmav_loader
@@ -844,7 +844,7 @@ class CompaSOHaloCatalog:
         # sigmavMid
         pat = re.compile(r'sigmavMid(?P<com>_(?:L2)?com)')
         self.halo_field_loaders[pat] = lambda m, raw, halos: np.sqrt(
-            raw['sigmav3d' + m['com']] * raw['sigmav3d' + m['com']] * box**2
+            halos['sigmav3d' + m['com']] ** 2
             - halos['sigmavMaj' + m['com']] ** 2
             - halos['sigmavMin' + m['com']] ** 2
         )
@@ -861,14 +861,14 @@ class CompaSOHaloCatalog:
         # sigman
         pat = re.compile(r'sigman(?P<com>_(?:L2)?com)')
         self.halo_field_loaders[pat] = (
-            lambda m, raw, halos: raw[m[0] + '_i16'] / INT16SCALE * box
+            lambda m, raw, halos: raw[m[0] + '_i16'] / INT16SCALE
         )
 
         # x,r100 (box-scaled fields)
         pat = re.compile(r'(x|r100)(?P<com>_(?:L2)?com)')
         self.halo_field_loaders[pat] = lambda m, raw, halos: raw[m[0]] * box
 
-        # v,sigmav,sigmav3d,meanSpeed,sigmav3d_r50,meanSpeed_r50,vcirc_max (vel-scaled fields)
+        # v,sigmav3d,meanSpeed,sigmav3d_r50,meanSpeed_r50,vcirc_max (vel-scaled fields)
         pat = re.compile(
             r'(v|sigmav3d|meanSpeed|sigmav3d_r50|meanSpeed_r50|vcirc_max)(?P<com>_(?:L2)?com)'
         )
