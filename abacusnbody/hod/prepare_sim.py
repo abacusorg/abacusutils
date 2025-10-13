@@ -1021,23 +1021,15 @@ def main(
             )
         ]
     else:
-        halo_info_fns = list(
-            sorted(
-                (
-                    Path(simdir)
-                    / Path(simname)
-                    / 'halos'
-                    / ('z%4.3f' % z_mock)
-                    / 'halo_info'
-                ).glob('*.asdf')
-            )
+        search_path = (
+            Path(simdir) / Path(simname) / 'halos' / ('z%4.3f' % z_mock) / 'halo_info'
         )
+        halo_info_fns = list(sorted(search_path.glob('*.asdf')))
+        if not halo_info_fns:
+            raise ValueError(f'no halo info files found in {search_path}')
     numslabs = len(halo_info_fns)
 
     os.makedirs(savedir, exist_ok=True)
-
-    if numslabs == 0:
-        raise ValueError('prepare_sim could not find any slabs!')
 
     tracer_flags = config['HOD_params']['tracer_flags']
     MT = False
