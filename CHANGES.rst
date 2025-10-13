@@ -1,12 +1,19 @@
 Changelog
 =========
 
-Upcoming
---------
+2.1.2 (2025-10-13)
+------------------
+
+This is a patch release, primarily to fix the units of sigman in CompaSOHaloCatalog.
+
+Fixes
+~~~~~
+- compaso: fix sigman units, change sigmav units (sigmav3d unaffected) [#191]
 
 Improvements
 ~~~~~~~~~~~~
 - AbacusHOD: avoid unnecessary mock dir creation [#187]
+- prepare_sim: show halo_info search path on error [#192]
 
 2.1.1 (2025-07-25)
 ------------------
