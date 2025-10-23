@@ -248,6 +248,7 @@ def prepare_slab(
     mcut=1e11,
     rad_outer=10,
     numslabs=None,
+    show_slab_progress=False,
 ):
     outfilename_halos = (
         savedir
@@ -760,7 +761,7 @@ def prepare_slab(
         logger.info('Compiling particle subsamples')
         start_tracker = 0
         for j in range(len(halos)):
-            if j % 10000 == 0:
+            if j % 10000 == 0 and show_slab_progress:
                 print('halo id', j, end='\r') # NOTE: left to print to monitor progress and avoid many lines of logging
             if mask_halos[j] and halos['npoutA'][j] > 0:
                 # subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j], MT)
@@ -1062,6 +1063,7 @@ def main(
     newseed=600,
     halo_lc=False,
     overwrite=1,
+    show_slab_progress=False,
 ):
     logger.info('Compiling compaso halo catalogs into subsampled catalogs')
 
@@ -1199,6 +1201,7 @@ def main(
                 nthread=nthread,
                 overwrite=overwrite,
                 numslabs=numslabs,
+                show_slab_progress=show_slab_progress,
             )
             for i in range(numslabs)
         ]
@@ -1248,6 +1251,12 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--overwrite', help='overwrite existing subsamples', default=1, type=int
+    )
+    parser.add_argument(
+        '--show_slab_progress',
+        help='Show progress of slab preparation (can be verbose)',
+        default=False,
+        action='store_true',
     )
     args = vars(parser.parse_args())
     setup_logging(filename=args.pop('path2log'))
