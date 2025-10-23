@@ -79,98 +79,29 @@ def unwrap_x_for_slab(x, i, numslabs, Lbox):
 
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD
-# standard power law satellites
+
+# NOTE : Changed subsample_halos & submask_particles to match BGS requirements in density, change proposed by Sandy Yuan.
 def subsample_halos(m, MT):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
-    if MT:
-        # for elgs
-        mask1 = x < 11.4
-        mask2 = x < 11.6
-        downfactors[mask1] = 0.2 / (1.0 + 10 * np.exp(-(x[mask1] - 11.2) * 25))
-        downfactors[mask2 & (~mask1)] = 0.4 / (
-            1.0 + 10 * np.exp(-(x[mask2 & (~mask1)] - 11.3) * 25)
-        )
-        downfactors[~mask2] = 1.0 / (1.0 + 0.1 * np.exp(-(x[~mask2] - 11.7) * 10))
+    # for bgs
+    mask1 = x < 11.0
+    mask2 = x < 11.2
+    downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
+    downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
+    return downfactors
 
-        # # for bgs
-        # mask1 = x < 11.0
-        # mask2 = x < 11.2
-        # downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
-        # downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
-        return downfactors
-    else:
-        downfactors = 1.0 / (
-            1.0 + 0.1 * np.exp(-(x - 11.8) * 10)
-        )  # LRG only, default 12.3, set to 12.0 for z = 1.1
-        downfactors[x > 13.0] = 1
-        return downfactors
-
-
-# # new version for negative alpha ELG satellites
-# def subsample_halos(m, MT):
-#     x = np.log10(m)
-#     downfactors = np.zeros(len(x))
-#     if MT:
-#         mask1 = x < 11.35
-#         mask2 = x < 11.52
-#         downfactors[mask1] = 0.5/(1.0 + 10*np.exp(-(x[mask1] - 11.1)*25))
-#         downfactors[mask2&(~mask1)] = 0.8/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.25)*25))
-#         downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.6)*10))
-#         # save all halos that could host a satellite
-#         # downfactors[x>11.2] = 1
-#         return downfactors
-#     else:
-#         downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
-#         downfactors[x > 13.0] = 1
-#         return downfactors
-
-# # standard satellites
-# def submask_particles(m_in, n_in, MT):
-#     x = np.log10(m_in)
-
-#     if MT:
-#         if m_in < 1e11:
-#             return np.zeros(n_in)
-#         else:
-#             # a target number of particles
-#             ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
-#             submask = np.zeros(n_in).astype(int)
-#             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
-#             return submask
-#     else:
-#         if 10**x < 1e12:
-#             return np.zeros(n_in) # essentially removing particles in halos below Mmin
-#         else:
-#             ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
-#             submask = np.zeros(n_in).astype(int)
-#             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
-#             return submask
-
-
-# conformity fix
 def submask_particles(m_in, n_in, MT):
     x = np.log10(m_in)
-
-    if MT:
-        if m_in < 1e11:
-            return np.zeros(n_in)
-        else:
-            # a target number of particles
-            # ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-11.8)))
-            ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 12.5)))
-            ntarget = np.minimum(ntarget, 100)
-            submask = np.zeros(n_in).astype(int)
-            submask[np.random.choice(n_in, ntarget, replace=False)] = 1
-            return submask
+    if m_in < 1e11:
+        return np.zeros(n_in)
     else:
-        if 10**x < 1e12:
-            return np.zeros(n_in)  # essentially removing particles in halos below Mmin
-        else:
-            ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 13)))
-            submask = np.zeros(n_in).astype(int)
-            submask[np.random.choice(n_in, ntarget, replace=False)] = 1
-            return submask
+        # a target number of particles
+        ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-11.8)))
+        ntarget = np.minimum(ntarget, 100)
+        submask = np.zeros(n_in).astype(int)
+        submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+        return submask
 
 
 def get_vertices_cube(units=0.5, N=3):
