@@ -26,7 +26,7 @@ dependencies = [
     'h5py',
     'pyyaml',
     'msgpack>=1',
-    'parallel_numpy_rng>=0.1.2',
+    'parallel_numpy_rng>=0.2.0',
     'asdf-astropy>=0.3',
 ]
 readme = "README.md"
@@ -64,6 +64,11 @@ docs = [
 test = [
     'abacusutils[all]',
     'pytest',
+]
+
+[dependency-groups]
+dev = [
+    "abacusutils[test]",
 ]
 
 [tool.setuptools]
