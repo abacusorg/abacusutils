@@ -64,7 +64,7 @@ def test_hod(tmp_path, reference_mode=False):
         # create a new abacushod object
         newBall = AbacusHOD(sim_params, HOD_params, clustering_params)
         mock_dict = newBall.run_hod(
-            newBall.tracers, want_rsd, write_to_disk=True, Nthread=2
+            newBall.tracers, want_rsd, write_to_disk=True, Nthread=4
         )
 
     # test mode
@@ -107,7 +107,7 @@ def test_hod(tmp_path, reference_mode=False):
 
         # throw away run for jit to compile, write to disk
         mock_dict = newBall.run_hod(
-            newBall.tracers, want_rsd, write_to_disk=True, Nthread=2
+            newBall.tracers, want_rsd, write_to_disk=True, Nthread=4
         )
         savedir_gal = (
             config['sim_params']['output_dir']
@@ -133,6 +133,15 @@ def test_hod(tmp_path, reference_mode=False):
         data1 = ascii.read(savedir_gal)
         assert_close(data, data1)
 
+        # smoke test for reseed
+        mock_dict = newBall.run_hod(
+            newBall.tracers,
+            want_rsd,
+            write_to_disk=True,
+            Nthread=4,
+            reseed=0xABCDEF,
+        )
+
         # smoke test for zcv
         config['sim_params']['sim_name'] = (
             'AbacusSummit_base_c000_ph006'  # so that meta can find it
@@ -145,7 +154,7 @@ def test_hod(tmp_path, reference_mode=False):
             newBall.tracers,
             want_rsd=config['HOD_params']['want_rsd'],
             write_to_disk=False,
-            Nthread=2,
+            Nthread=4,
         )
         del mock_dict['ELG']  # drop ELG since zcv works with a single tracer currently
         # zcv_dict =
