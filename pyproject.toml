@@ -30,7 +30,7 @@ dependencies = [
     'asdf-astropy>=0.3',
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 urls = {Repository = "https://github.com/abacusorg/abacusutils"}
 classifiers = [
     "Programming Language :: Python :: 3",
