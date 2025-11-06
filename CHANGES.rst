@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Upcoming
+--------
+
+The minimum Python version is 3.10.
+
+Fixes
+~~~~~
+- HOD: fix reseed in NumPy 2 by updating ``parallel_numpy_rng`` dependency
+
 2.1.2 (2025-10-13)
 ------------------
 
