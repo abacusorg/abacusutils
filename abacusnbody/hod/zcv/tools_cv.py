@@ -443,26 +443,45 @@ def measure_2pt_bias_lcv(
     return out
 
 
-def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
+# AB: Adding arguments "power_m_dict" and "cross"
+def read_power_dict(
+    power_tr_dict, power_m_dict, power_ij_dict, want_rsd, keynames, poles, cross
+):
     """
     ZCV: Function for reading the power spectra and saving them in the same format as Zenbu.
     """
+    if not cross:  # AB
+        pk_tm, pk_mm, pk_ij_zm = None, None, None
+
     k = power_tr_dict['k_binc'].flatten()
     mu = np.zeros((len(k), 1))
     if want_rsd:
         pk_tt = np.zeros((1, len(poles), len(k)))
         pk_ij_zz = np.zeros((15, len(poles), len(k)))
         pk_ij_zt = np.zeros((5, len(poles), len(k)))
+        if cross:  # AB
+            pk_tm = np.zeros((1, len(poles), len(k)))
+            pk_mm = np.zeros((1, len(poles), len(k)))
+            pk_ij_zm = np.zeros((5, len(poles), len(k)))
     else:
         pk_tt = np.zeros((1, len(k), 1))
         pk_ij_zz = np.zeros((15, len(k), 1))
         pk_ij_zt = np.zeros((5, len(k), 1))
-
+        if cross:  # AB
+            pk_tm = np.zeros((1, len(k), 1))
+            pk_mm = np.zeros((1, len(k), 1))
+            pk_ij_zm = np.zeros((5, len(k), 1))
     if want_rsd:
         pk_tt[0, :, :] = power_tr_dict['P_ell_tr_tr'].reshape(len(poles), len(k))
+        if cross:  # AB
+            pk_mm[0, :, :] = power_m_dict['P_ell_m_m'].reshape(len(poles), len(k))
+            pk_tm[0, :, :] = power_tr_dict['P_ell_tr_m'].reshape(len(poles), len(k))
         nmodes = power_tr_dict['N_ell_tr_tr'].flatten()
     else:
         pk_tt[0, :, :] = power_tr_dict['P_kmu_tr_tr'].reshape(len(k), 1)
+        if cross:  # AB
+            pk_mm[0, :, :] = power_m_dict['P_kmu_m_m'].reshape(len(k), 1)
+            pk_tm[0, :, :] = power_tr_dict['P_kmu_tr_m'].reshape(len(k), 1)
         nmodes = power_tr_dict['N_kmu_tr_tr'].flatten()
 
     count = 0
@@ -470,11 +489,19 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
         if want_rsd:
             pk_ij_zt[i, :, :] = power_tr_dict[f'P_ell_{keynames[i]}_tr'].reshape(
                 len(poles), len(k)
-            )
+            )  # AB
+            if cross:
+                pk_ij_zm[i, :, :] = power_tr_dict[f'P_ell_{keynames[i]}_m'].reshape(
+                    len(poles), len(k)
+                )
         else:
             pk_ij_zt[i, :, :] = power_tr_dict[f'P_kmu_{keynames[i]}_tr'].reshape(
                 len(k), 1
             )
+            if cross:
+                pk_ij_zm[i, :, :] = power_m_dict[f'P_kmu_{keynames[i]}_m'].reshape(
+                    len(k), 1
+                )
         for j in range(len(keynames)):
             if i < j:
                 continue
@@ -494,7 +521,11 @@ def read_power_dict(power_tr_dict, power_ij_dict, want_rsd, keynames, poles):
         np.sum(pk_ij_zz == 0.0),
         np.sum(pk_ij_zt == 0.0),
     )
-    return k, mu, pk_tt, pk_ij_zz, pk_ij_zt, nmodes
+
+    if cross:  # AB
+        print(np.sum(pk_tm == 0.0), np.sum(pk_mm == 0.0), np.sum(pk_ij_zm == 0.0))
+
+    return k, mu, pk_tt, pk_tm, pk_mm, pk_ij_zz, pk_ij_zt, pk_ij_zm, nmodes  # AB
 
 
 def get_cfg(sim_name, z_this, nmesh):
@@ -531,7 +562,17 @@ def get_cfg(sim_name, z_this, nmesh):
     return cfg
 
 
-def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, config):
+# AB: Adding arguments "power_rsd_m_dict", "power_m_dict", and "cross", which will need to be passed to apply_zcv in abacus_hod.py
+def run_zcv(
+    power_rsd_tr_dict,
+    power_rsd_m_dict,
+    power_rsd_ij_dict,
+    power_tr_dict,
+    power_m_dict,
+    power_ij_dict,
+    config,
+    cross,
+):
     """
     Apply Zel'dovich control variates (ZCV) reduction to some measured power spectrum.
     """
@@ -604,17 +645,49 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
         power_tr_dict, power_ij_dict = power_rsd_tr_dict, power_rsd_ij_dict
 
     # load real-space version (used for bias fitting)
-    k, mu, pk_tt_real, pk_ij_zz_real, pk_ij_zt_real, nmodes = read_power_dict(
-        power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames, poles=poles
-    )
+    # AB: changes made below entailed modifying read_power_dict function (above)
+    # pk_tm_real, pk_mm_real, pk_ij_zt_real, and pk_ij_zm_real not currently used, but the new read_power_dict
+    #  returns 9 quantities
+    (
+        k,
+        mu,
+        pk_tt_real,
+        pk_tm_real,
+        pk_mm_real,
+        pk_ij_zz_real,
+        pk_ij_zt_real,
+        pk_ij_zm_real,
+        nmodes,
+    ) = read_power_dict(
+        power_tr_dict,
+        power_m_dict,
+        power_ij_dict,
+        want_rsd=False,
+        keynames=keynames,
+        poles=poles,
+        # cross=cross
+        cross=False,
+    )  # power_tr_dict also passed as input to this function (run_zcv)
 
     # load either real or redshift
-    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles, nmodes = read_power_dict(
+    (
+        k,
+        mu,
+        pk_tt_poles,
+        pk_tm_poles,
+        pk_mm_poles,
+        pk_ij_zz_poles,
+        pk_ij_zt_poles,
+        pk_ij_zm_poles,
+        nmodes,
+    ) = read_power_dict(
         power_rsd_tr_dict,
+        power_rsd_m_dict,
         power_rsd_ij_dict,
         want_rsd=want_rsd,
         keynames=keynames,
         poles=poles,
+        cross=cross,
     )
     assert np.isclose(k, k_binc).all()
 
@@ -630,12 +703,18 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     # decide what to input depending on whether rsd requested or not
     if want_rsd:
         pk_tt_input = pk_tt_poles[0, ...]
+        pk_tm_input = pk_tm_poles[0, ...]  # AB
+        pk_mm_input = pk_mm_poles[0, ...]  # AB
         pk_ij_zz_input = pk_ij_zz_poles
         pk_ij_zt_input = pk_ij_zt_poles
+        pk_ij_zm_input = pk_ij_zm_poles  # AB
     else:
         pk_tt_input = pk_tt_poles[0, :, 0]
+        pk_tm_input = pk_tm_poles[0, :, 0]  # AB
+        pk_mm_input = pk_mm_poles[0, :, 0]  # AB
         pk_ij_zz_input = pk_ij_zz_poles[:, :, 0]
         pk_ij_zt_input = pk_ij_zt_poles[:, :, 0]
+        pk_ij_zm_input = pk_ij_zm_poles[:, :, 0]  # AB
 
     # load the presaved window function
     data = np.load(window_fn)
@@ -708,6 +787,46 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     # beta needs to be smooth for best results
     pk_nn_betasmooth = pk_tt_input - beta_smooth * (pk_zz - pk_zenbu)
 
+    # AB: doing everything done above but for cross
+    if cross:
+        idx_cross = [0, 1, 3, 6, 10]
+
+        pk_zz_cross = combine_cross_spectra(
+            k_binc, pk_ij_zz_input[idx_cross, :], bias_vec[1:], rsd=want_rsd
+        )
+        pk_zenbu_cross = combine_cross_spectra(
+            k_binc, pk_ij_zenbu[idx_cross, :], bias_vec[1:], rsd=want_rsd
+        )
+        pk_nz_gm = pk_ij_zt_input[0, :]
+        pk_zn_gm = combine_cross_spectra(
+            k_binc, pk_ij_zm_input, bias_vec[1:], rsd=want_rsd
+        )
+        pk_nz_mm = pk_ij_zm_input[0, :]
+
+        cov_zn_cross = pk_zn * pk_nz_mm + pk_nz_gm * pk_zn_gm
+        var_z_cross = pk_zz * pk_ij_zz_input[0] + pk_zz_cross**2
+        var_n_cross = pk_tt_input * pk_mm_input + pk_tm_input**2
+
+        beta_cross = cov_zn_cross / np.sqrt(var_z_cross * var_n_cross)
+        beta_damp_cross = 0.5 * (1 - np.tanh((k_binc - k0) / dk_cv)) * beta_cross
+        beta_damp_cross = np.atleast_2d(beta_damp_cross)
+        beta_damp_cross[beta_damp_cross != beta_damp_cross] = 0
+        beta_damp_cross[:, : k_binc.searchsorted(beta1_k)] = 1
+        beta_smooth_cross = np.zeros_like(beta_damp_cross)
+        for i in range(beta_smooth.shape[0]):
+            try:
+                beta_smooth_cross[i, :] = savgol_filter(
+                    beta_damp_cross.T[:, i], sg_window, 3
+                )
+            except ValueError:
+                warnings.warn(
+                    'This message should only appear when doing a smoke test.'
+                )
+
+        pk_nn_betasmooth_cross = pk_tm_input - beta_smooth_cross * (
+            pk_zz_cross - pk_zenbu_cross
+        )
+
     # save results to a dictionary
     zcv_dict = {}
     zcv_dict['k_binc'] = k_binc
@@ -721,6 +840,13 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     zcv_dict['Pk_tr_tr_ell_zcv'] = pk_nn_betasmooth
     zcv_dict['Pk_ZD_ZD_ell_ZeNBu'] = pk_zenbu
     zcv_dict['bias'] = bias_vec[1:]
+    if cross:  # AB
+        zcv_dict['Pk_ZD_ZD_m'] = pk_ij_zz_input[0]
+        zcv_dict['Pk_m_m_ell'] = pk_mm_input
+        zcv_dict['Pk_tr_m_ell'] = pk_tm_input
+        zcv_dict['Pk_tr_m_ell_zcv'] = pk_nn_betasmooth_cross
+        zcv_dict['Pk_ZD_ZD_cross_ell'] = pk_zz_cross
+        zcv_dict['Pk_ZD_ZD_cross_ell_ZeNBu'] = pk_zenbu_cross
     return zcv_dict
 
 
