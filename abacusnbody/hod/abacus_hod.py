@@ -35,6 +35,13 @@ from .GRAND_HOD import (
     N_sat_generic,
 )
 
+from .CSMF_HOD import (
+    gen_gal_cat_CSMF,
+    n_cen_CSMF,
+    n_sat_CSMF,
+)
+
+
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
 
 
@@ -311,7 +318,7 @@ class AbacusHOD:
         params['numslabs'] = end - start
         self.lbox = header['BoxSize']
 
-        # count ther number of halos and particles
+        # count the number of halos and particles
         Nhalos = np.zeros(params['numslabs'])
         Nparts = np.zeros(params['numslabs'])
         for eslab in range(start, end):
@@ -319,6 +326,7 @@ class AbacusHOD:
                 ('ELG' not in self.tracers.keys())
                 and ('QSO' not in self.tracers.keys())
                 and (not self.force_mt)
+                and ('CSMF' not in self.tracers.keys())
             ):
                 halofilename = subsample_dir / (
                     'halos_xcom_%d_seed600_abacushod_oldfenv' % eslab
@@ -399,6 +407,7 @@ class AbacusHOD:
                 ('ELG' not in self.tracers.keys())
                 and ('QSO' not in self.tracers.keys())
                 and (not self.force_mt)
+                and ('CSMF' not in self.tracers.keys())
             ):
                 halofilename = subsample_dir / (
                     'halos_xcom_%d_seed600_abacushod_oldfenv' % eslab
@@ -766,21 +775,39 @@ class AbacusHOD:
             )
 
         start = time.time()
-        mock_dict = gen_gal_cat(
-            self.halo_data,
-            self.particle_data,
-            tracers,
-            self.params,
-            Nthread,
-            enable_ranks=self.want_ranks,
-            rsd=want_rsd,
-            nfw=want_nfw,
-            NFW_draw=NFW_draw,
-            write_to_disk=write_to_disk,
-            savedir=self.mock_dir,
-            verbose=verbose,
-            fn_ext=fn_ext,
-        )
+        if 'CSMF' in tracers.keys():
+            mock_dict = gen_gal_cat_CSMF(
+                self.halo_data,
+                self.particle_data,
+                tracers,
+                self.params,
+                Nthread,
+                enable_ranks=self.want_ranks,
+                rsd=want_rsd,
+                nfw=want_nfw,
+                NFW_draw=NFW_draw,
+                write_to_disk=write_to_disk,
+                savedir=self.mock_dir,
+                verbose=verbose,
+                fn_ext=fn_ext,
+            )
+        else:
+            mock_dict = gen_gal_cat(
+                self.halo_data,
+                self.particle_data,
+                tracers,
+                self.params,
+                Nthread,
+                enable_ranks=self.want_ranks,
+                rsd=want_rsd,
+                nfw=want_nfw,
+                NFW_draw=NFW_draw,
+                write_to_disk=write_to_disk,
+                savedir=self.mock_dir,
+                verbose=verbose,
+                fn_ext=fn_ext,
+            )
+
         self.logger.info(f'HOD generated in elapsed time {time.time() - start:.2f} s.')
 
         return mock_dict
@@ -898,6 +925,37 @@ class AbacusHOD:
                     tracer_hod.get('Bsat', 0),
                     tracer_hod.get('ic', 1),
                     Delta_a,
+                    Nthread,
+                )
+                ngal_dict[etracer] = newngal[0] + newngal[1]
+                fsat_dict[etracer] = newngal[1] / (newngal[0] + newngal[1])
+
+            elif etracer == 'CSMF':
+                newngal = AbacusHOD._compute_ngal_CSMF(
+                    self.logMbins,
+                    self.deltacbins,
+                    self.fenvbins,
+                    self.halo_mass_func,
+                    tracer_hod['Mstar_low'],
+                    tracer_hod['Mstar_up'],
+                    tracer_hod['M_1'],
+                    tracer_hod['M_0'],
+                    tracer_hod['gamma_1'],
+                    tracer_hod['gamma_2'],
+                    tracer_hod['sigma_c'],
+                    tracer_hod['a_1'],
+                    tracer_hod['a_2'],
+                    tracer_hod['M_2'],
+                    tracer_hod['b_0'],
+                    tracer_hod['b_1'],
+                    tracer_hod['b_2'],
+                    tracer_hod.get('delta_1', 0),
+                    tracer_hod.get('delta_2', 0),
+                    tracer_hod.get('Acent', 0),
+                    tracer_hod.get('Asat', 0),
+                    tracer_hod.get('Bcent', 0),
+                    tracer_hod.get('Bsat', 0),
+                    tracer_hod.get('ic', 1),
                     Nthread,
                 )
                 ngal_dict[etracer] = newngal[0] + newngal[1]
@@ -1103,6 +1161,90 @@ class AbacusHOD:
                     )
                     ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
                     ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
+        return ngal_cent, ngal_sat
+
+    @staticmethod
+    @njit(fastmath=True, parallel=True)
+    def _compute_ngal_CSMF(
+        logMbins,
+        deltacbins,
+        fenvbins,
+        halo_mass_func,
+        Mstar_low,
+        Mstar_up,
+        M_1,
+        M_0,
+        gamma1,
+        gamma2,
+        sigma_c,
+        a1,
+        a2,
+        M2,
+        b0,
+        b1,
+        b2,
+        delta1,
+        delta2,
+        Acent,
+        Asat,
+        Bcent,
+        Bsat,
+        ic,
+        Nthread,
+    ):
+        """
+        internal helper to compute number of CSMFs
+        """
+        numba.set_num_threads(Nthread)
+
+        logMs = 0.5 * (logMbins[1:] + logMbins[:-1])
+        # deltacs = 0.5 * (deltacbins[1:] + deltacbins[:-1])
+        # fenvs = 0.5 * (fenvbins[1:] + fenvbins[:-1])
+        ngal_cent = 0
+        ngal_sat = 0
+
+        for i in numba.prange(len(logMbins) - 1):
+            for j in range(len(deltacbins) - 1):
+                for k in range(len(fenvbins) - 1):
+                    Mh_temp = 10 ** logMs[i]
+                    M_1_temp = 10 ** (
+                        np.log10(M_1)
+                    )  # + Acent * deltacs[j] + Bcent * fenvs[k])
+                    M2_temp = 10 ** (
+                        np.log10(M2)
+                    )  # + Asat * deltacs[j] + Bsat * fenvs[k])
+
+                    ncent_temp = n_cen_CSMF(
+                        Mh_temp,
+                        Mstar_low,
+                        Mstar_up,
+                        M_1_temp,
+                        M_0,
+                        gamma1,
+                        gamma2,
+                        sigma_c,
+                    )
+                    nsat_temp = n_sat_CSMF(
+                        Mh_temp,
+                        Mstar_low,
+                        Mstar_up,
+                        M_1_temp,
+                        M_0,
+                        gamma1,
+                        gamma2,
+                        sigma_c,
+                        a1,
+                        a2,
+                        M2_temp,
+                        b0,
+                        b1,
+                        b2,
+                        delta1,
+                        delta2,
+                    )
+                    ngal_cent += halo_mass_func[i, j, k] * ncent_temp * ic
+                    ngal_sat += halo_mass_func[i, j, k] * nsat_temp * ic
+
         return ngal_cent, ngal_sat
 
     def compute_clustering(self, mock_dict, *args, **kwargs):
