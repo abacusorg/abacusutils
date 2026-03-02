@@ -820,11 +820,8 @@ class CompaSOHaloCatalog:
 
         # r10,r25,r33,r50,r67,r75,r90,r95,r98
         pat = re.compile(r'(?:r\d{1,2}|rvcirc_max)(?P<com>_(?:L2)?com)')
-        self.halo_field_loaders[pat] = (
-            lambda m, raw, halos: raw[m[0] + '_i16']
-            * raw['r100' + m['com']]
-            / INT16SCALE
-            * box
+        self.halo_field_loaders[pat] = lambda m, raw, halos: (
+            raw[m[0] + '_i16'] * raw['r100' + m['com']] / INT16SCALE * box
         )
 
         # sigmavMin, sigmavMaj, sigmavrad, sigmavtan
@@ -851,8 +848,8 @@ class CompaSOHaloCatalog:
 
         # sigmar
         pat = re.compile(r'sigmar(?P<com>_(?:L2)?com)')
-        self.halo_field_loaders[pat] = (
-            lambda m, raw, halos: raw[m[0] + '_i16']
+        self.halo_field_loaders[pat] = lambda m, raw, halos: (
+            raw[m[0] + '_i16']
             * raw['r100' + m['com']].reshape(-1, 1)
             / INT16SCALE
             * box
@@ -860,8 +857,8 @@ class CompaSOHaloCatalog:
 
         # sigman
         pat = re.compile(r'sigman(?P<com>_(?:L2)?com)')
-        self.halo_field_loaders[pat] = (
-            lambda m, raw, halos: raw[m[0] + '_i16'] / INT16SCALE
+        self.halo_field_loaders[pat] = lambda m, raw, halos: (
+            raw[m[0] + '_i16'] / INT16SCALE
         )
 
         # x,r100 (box-scaled fields)
