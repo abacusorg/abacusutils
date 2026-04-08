@@ -32,21 +32,27 @@ from .menv import do_Menv_from_tree
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
+
+
 # ------------------------------------------------------------
 # local env fix
 # ------------------------------------------------------------
 def wrap_to_box(x, Lbox):
     return ((x + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
 
+
 def periodic_dx(x, x0, Lbox):
     return ((x - x0 + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
 
+
 def make_edge_pad_filter(xedge, rad_outer, Lbox):
     def _filter(h):
-        x = h["x_L2com"][:, 0]
+        x = h['x_L2com'][:, 0]
         dx = periodic_dx(x, xedge, Lbox)
         return np.abs(dx) <= rad_outer
+
     return _filter
+
 
 def load_env_halos(slabname, cleaning, filter_func=None):
     """
@@ -54,23 +60,27 @@ def load_env_halos(slabname, cleaning, filter_func=None):
     """
     cat = CompaSOHaloCatalog(
         slabname,
-        fields=["N", "x_L2com", "r98_L2com", "id"],
+        fields=['N', 'x_L2com', 'r98_L2com', 'id'],
         cleaned=cleaning,
         filter_func=filter_func,
     )
     halos = cat.halos
     if cleaning:
-        halos = halos[halos["N"] > 0]
+        halos = halos[halos['N'] > 0]
     return halos
+
 
 def unwrap_x_for_slab(x, i, numslabs, Lbox):
     dx_slab = Lbox / numslabs
     x_center = -0.5 * Lbox + (i + 0.5) * dx_slab
     dx = ((x - x_center + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
     return x_center + dx
+
+
 # ------------------------------------------------------------
 # end local env fix
 # ------------------------------------------------------------
+
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD
 # standard power law satellites
@@ -325,11 +335,7 @@ def prepare_slab(
         + '_abacushod_oldfenv'
     )
     outfilename_env = (
-        savedir
-        + '/env_xcom_'
-        + str(i)
-        + '_abacushod_localenv'
-        + '_new.h5'
+        savedir + '/env_xcom_' + str(i) + '_abacushod_localenv' + '_new.h5'
     )
     print('processing slab ', i)
     if MT:
@@ -448,13 +454,12 @@ def prepare_slab(
 
     halos['mask_subsample'] = mask_halos
     halos['multi_halos'] = 1.0 / p_halos
-    
+
     nbins = 100
     mbins = np.logspace(np.log10(mcut), 15.5, nbins + 1)
     allmasses = halos['N'] * Mpart
     # only generate fenv ranks and c ranks if the user wants to enable secondary biases
     if want_AB:
-
         if halo_lc:
             allpos = halos['x_L2com']
 
@@ -547,7 +552,9 @@ def prepare_slab(
                             allpos[index_bounds], r=rad_outer, workers=nthread
                         )
                         for ind in range(len(index_bounds)):
-                            rand_norm[ind] += len(randinds_outer[ind]) - len(randinds_inner[ind])
+                            rand_norm[ind] += len(randinds_outer[ind]) - len(
+                                randinds_inner[ind]
+                            )
 
                     repeats += 1
                     count += randpos.shape[0]
@@ -557,7 +564,10 @@ def prepare_slab(
                 rand_n *= repeats
                 rand_norm /= (
                     (rad_outer**3.0 - halos['r98_L2com'][index_bounds] ** 3.0)
-                    * 4.0 / 3.0 * np.pi * rand_n
+                    * 4.0
+                    / 3.0
+                    * np.pi
+                    * rand_n
                 )
 
             Menv = do_Menv_from_tree(
@@ -600,7 +610,9 @@ def prepare_slab(
             xcen_max = x_unwrap.max()
 
             if numslabs is None:
-                raise ValueError("prepare_slab needs numslabs for the padded env calculation.")
+                raise ValueError(
+                    'prepare_slab needs numslabs for the padded env calculation.'
+                )
             dx_slab = Lbox / numslabs
             n_pad_slabs = max(1, int(math.ceil(rad_outer / dx_slab)))
 
@@ -636,8 +648,12 @@ def prepare_slab(
                     + '.asdf'
                 )
 
-                left_halos = load_env_halos(left_slabname, cleaning, filter_func=left_filter)
-                right_halos = load_env_halos(right_slabname, cleaning, filter_func=right_filter)
+                left_halos = load_env_halos(
+                    left_slabname, cleaning, filter_func=left_filter
+                )
+                right_halos = load_env_halos(
+                    right_slabname, cleaning, filter_func=right_filter
+                )
 
                 if len(left_halos) > 0:
                     env_pos.append(left_halos['x_L2com'])
@@ -652,14 +668,14 @@ def prepare_slab(
             env_pos = np.concatenate(env_pos, axis=0)
             env_mass = np.concatenate(env_mass)
             env_rvir = np.concatenate(env_rvir)
-            
+
             nbr_count = len(env_mass) - Ncentral
             print(
-                f"[slab {i}] env centers = {Ncentral:,}, "
-                f"neighbor halos = {nbr_count:,}, "
-                f"total env halos = {len(env_mass):,}, "
-                f"x-range = [{xcen_min:.3f}, {xcen_max:.3f}], "
-                f"rad_outer = {rad_outer:.3f}, n_pad_slabs = {n_pad_slabs}"
+                f'[slab {i}] env centers = {Ncentral:,}, '
+                f'neighbor halos = {nbr_count:,}, '
+                f'total env halos = {len(env_mass):,}, '
+                f'x-range = [{xcen_min:.3f}, {xcen_max:.3f}], '
+                f'rad_outer = {rad_outer:.3f}, n_pad_slabs = {n_pad_slabs}'
             )
 
             Menv_all = do_Menv_from_tree(
@@ -677,10 +693,10 @@ def prepare_slab(
             Menv_central = Menv_all[:Ncentral]
             n_nonzero = np.count_nonzero(Menv_central)
             print(
-                f"[slab {i}] computed padded Menv for {Ncentral:,} central halos; "
-                f"nonzero Menv count = {n_nonzero:,}"
+                f'[slab {i}] computed padded Menv for {Ncentral:,} central halos; '
+                f'nonzero Menv count = {n_nonzero:,}'
             )
-            
+
             if os.path.exists(outfilename_env):
                 os.remove(outfilename_env)
             envfile = h5py.File(outfilename_env, 'w')
@@ -708,7 +724,7 @@ def prepare_slab(
     else:
         halos['fenv_rank'] = np.zeros(len(halos))
         halos['deltac_rank'] = np.zeros(len(halos))
-        
+
     if want_shear:
         assert len(np.unique(shearmark.shape)) == 1
         N_dim = len(shearmark)
@@ -1208,7 +1224,7 @@ def main(
                 halo_lc=halo_lc,
                 nthread=nthread,
                 overwrite=overwrite,
-                numslabs=numslabs
+                numslabs=numslabs,
             )
             for i in range(numslabs)
         ]
