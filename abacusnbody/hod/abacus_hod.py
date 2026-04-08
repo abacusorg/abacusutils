@@ -108,6 +108,7 @@ class AbacusHOD:
         self.output_dir = sim_params.get('output_dir', './')
         self.halo_lc = sim_params.get('halo_lc', False)
         self.force_mt = sim_params.get('force_mt', False)  # use MT subsamples for LRG?
+        self.local_env = sim_params.get('local_env',{})
 
         ztype = None
         if self.halo_lc:
@@ -574,6 +575,8 @@ class AbacusHOD:
             hrandoms = hrandoms[sortind]
             hveldev = hveldev[sortind]
             hsigma3d = hsigma3d[sortind]
+            hc = hc[sortind]
+            hrvir = hrvir[sortind]
             if self.want_AB:
                 hdeltac = hdeltac[sortind]
                 hfenv = hfenv[sortind]
@@ -581,6 +584,73 @@ class AbacusHOD:
                 hshear = hshear[sortind]
         assert np.all(hid[:-1] <= hid[1:])
 
+
+        pweights = 1 / pNp / psubsampling
+        pinds = _searchsorted_parallel(hid, phid)
+
+        # ------------------------------------------------------------
+        # local env fix:
+        # load raw Menv for all halos, rank globally,
+        # then map onto the staged halo subset and particles
+        # ------------------------------------------------------------
+        if self.want_AB and (not self.halo_lc):
+            mcut_env = self.local_env.get("mcut", 1e11)
+            nbins_env = self.local_env.get("nbins", 100)
+
+            self.logger.info(
+                f"Loading global env sidecars and computing hfenv "
+                f"(mcut={mcut_env}, nbins={nbins_env})"
+            )
+
+            # always rank globally
+            numslabs_all = len(halo_info_fns)
+
+            Nenv = 0
+            for eslab in range(numslabs_all):
+                envfilename = subsample_dir / f"env_xcom_{eslab}_abacushod_localenv_new.h5"
+                if not envfilename.exists():
+                    raise FileNotFoundError(f"Missing env sidecar: {envfilename}")
+                with h5py.File(envfilename, "r") as fenv:
+                    Nenv += len(fenv["id"])
+
+            env_id = np.empty(Nenv, dtype=np.int64)
+            env_mass = np.empty(Nenv, dtype=np.float64)
+            env_Menv = np.empty(Nenv, dtype=np.float64)
+
+            ticker = 0
+            for eslab in range(numslabs_all):
+                envfilename = subsample_dir / f"env_xcom_{eslab}_abacushod_localenv_new.h5"
+                with h5py.File(envfilename, "r") as fenv:
+                    n = len(fenv["id"])
+                    env_id[ticker:ticker+n] = fenv["id"][:].astype(np.int64)
+                    env_mass[ticker:ticker+n] = fenv["mass"][:]
+                    env_Menv[ticker:ticker+n] = fenv["Menv"][:]
+                    ticker += n
+
+            mbins_env = np.logspace(np.log10(mcut_env), 15.5, nbins_env + 1)
+            hfenv_full = calc_fenv_opt(env_Menv, mbins_env, env_mass)
+
+            env_sort = np.argsort(env_id)
+            env_id = env_id[env_sort]
+            hfenv_full = hfenv_full[env_sort]
+
+            hmatch = _searchsorted_parallel(env_id, hid)
+            if not np.all(env_id[hmatch] == hid):
+                raise RuntimeError(
+                    "Failed to map global env sidecars onto staged halos by halo ID."
+                )
+
+            hfenv = hfenv_full[hmatch]
+
+            if not np.all(hid[pinds] == phid):
+                raise RuntimeError("Particle-to-halo mapping pinds is inconsistent with phid.")
+            pfenv = hfenv[pinds]
+
+            self.logger.info(
+                f"Mapped global hfenv onto staged halos ({len(hfenv):,}) "
+                f"and particles ({len(pfenv):,})."
+            )
+        
         halo_data = {
             'hpos': hpos,
             'hvel': hvel,
@@ -593,9 +663,7 @@ class AbacusHOD:
             'hc': hc,
             'hrvir': hrvir,
         }
-
-        pweights = 1 / pNp / psubsampling
-        pinds = _searchsorted_parallel(hid, phid)
+        
         particle_data = {
             'ppos': ppos,
             'pvel': pvel,
@@ -1883,3 +1951,14 @@ def _searchsorted_parallel(a, b):
     for i in numba.prange(len(b)):
         res[i] = np.searchsorted(a, b[i])
     return res
+
+@njit(parallel=True)
+def calc_fenv_opt(Menv, mbins, halosM):
+    fenv_rank = np.zeros(len(Menv))
+    for ibin in numba.prange(len(mbins) - 1):
+        mmask = (halosM > mbins[ibin]) & (halosM < mbins[ibin + 1])
+        Nmask = np.sum(mmask)
+        if Nmask > 1:
+            new_fenv_rank = Menv[mmask].argsort().argsort()
+            fenv_rank[mmask] = new_fenv_rank / (Nmask - 1) - 0.5
+    return fenv_rank

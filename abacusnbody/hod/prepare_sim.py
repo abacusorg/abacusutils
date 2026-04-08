@@ -14,7 +14,7 @@ import multiprocessing
 import os
 import time
 from pathlib import Path
-
+import math
 import h5py
 import numba
 import numpy as np
@@ -32,7 +32,45 @@ from .menv import do_Menv_from_tree
 
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
+# ------------------------------------------------------------
+# local env fix
+# ------------------------------------------------------------
+def wrap_to_box(x, Lbox):
+    return ((x + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
 
+def periodic_dx(x, x0, Lbox):
+    return ((x - x0 + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
+
+def make_edge_pad_filter(xedge, rad_outer, Lbox):
+    def _filter(h):
+        x = h["x_L2com"][:, 0]
+        dx = periodic_dx(x, xedge, Lbox)
+        return np.abs(dx) <= rad_outer
+    return _filter
+
+def load_env_halos(slabname, cleaning, filter_func=None):
+    """
+    Load only the minimal halo fields needed for raw Menv calculation.
+    """
+    cat = CompaSOHaloCatalog(
+        slabname,
+        fields=["N", "x_L2com", "r98_L2com", "id"],
+        cleaned=cleaning,
+        filter_func=filter_func,
+    )
+    halos = cat.halos
+    if cleaning:
+        halos = halos[halos["N"] > 0]
+    return halos
+
+def unwrap_x_for_slab(x, i, numslabs, Lbox):
+    dx_slab = Lbox / numslabs
+    x_center = -0.5 * Lbox + (i + 0.5) * dx_slab
+    dx = ((x - x_center + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
+    return x_center + dx
+# ------------------------------------------------------------
+# end local env fix
+# ------------------------------------------------------------
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD
 # standard power law satellites
@@ -268,6 +306,7 @@ def prepare_slab(
     overwrite=1,
     mcut=1e11,
     rad_outer=10,
+    numslabs=None,
 ):
     outfilename_halos = (
         savedir
@@ -285,6 +324,13 @@ def prepare_slab(
         + str(newseed)
         + '_abacushod_oldfenv'
     )
+    outfilename_env = (
+        savedir
+        + '/env_xcom_'
+        + str(i)
+        + '_abacushod_localenv'
+        + '_new.h5'
+    )
     print('processing slab ', i)
     if MT:
         outfilename_halos += '_MT'
@@ -298,11 +344,13 @@ def prepare_slab(
     np.random.seed(seeder.integers(0, 2**32 - 1))
     halo_lc_randoms_seed = seeder.integers(0, 2**32 - 1)
     # if file already exists, just skip
+    need_env_file = want_AB and (not halo_lc)
     overwrite = int(overwrite)
     if (
         (not overwrite)
         and (os.path.exists(outfilename_halos))
         and (os.path.exists(outfilename_particles))
+        and ((not need_env_file) or os.path.exists(outfilename_env))
     ):
         print('files exists, skipping ', i)
         return 0
@@ -400,35 +448,19 @@ def prepare_slab(
 
     halos['mask_subsample'] = mask_halos
     halos['multi_halos'] = 1.0 / p_halos
-
+    
+    nbins = 100
+    mbins = np.logspace(np.log10(mcut), 15.5, nbins + 1)
+    allmasses = halos['N'] * Mpart
     # only generate fenv ranks and c ranks if the user wants to enable secondary biases
     if want_AB:
-        nbins = 100
-        mbins = np.logspace(np.log10(mcut), 15.5, nbins + 1)
-
-        # # grid based environment calculation
-        # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
-        # ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
-        # halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
-        # fenv_rank = np.zeros(len(halos))
-        # for ibin in range(nbins):
-        #     mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
-        #     if np.sum(mmask) > 0:
-        #         if np.sum(mmask) == 1:
-        #             fenv_rank[mmask] = 0
-        #         else:
-        #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
-        #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
-        # halos['fenv_rank'] = fenv_rank
-
-        allpos = halos['x_L2com']
-        allmasses = halos['N'] * Mpart
 
         if halo_lc:
-            # origin dependent and simulation dependent
+            allpos = halos['x_L2com']
+
             origins = np.array(header['LightConeOrigins']).reshape(-1, 3)
             alldist = np.sqrt(np.sum((allpos - origins[0]) ** 2.0, axis=1))
-            offset = 10.0  # offset intrinsic to light cones catalogs (removing edges +/- 10 Mpc/h from the sides of the box)
+            offset = 10.0
 
             r_min = alldist.min()
             r_max = alldist.max()
@@ -438,9 +470,7 @@ def prepare_slab(
             x_max_edge = Lbox / 2.0 - offset - rad_outer
             r_min_edge = alldist.min() + rad_outer
             r_max_edge = alldist.max() - rad_outer
-            if (
-                origins.shape[0] == 1
-            ):  # true only of the huge box where the origin is at the center
+            if origins.shape[0] == 1:
                 y_max_edge = Lbox / 2.0 - offset - rad_outer
                 z_max_edge = Lbox / 2.0 - offset - rad_outer
             else:
@@ -461,47 +491,38 @@ def prepare_slab(
             del bounds_edge, alldist
 
             if len(index_bounds) > 0:
-                # the randoms should be within 2 times rad_outer so as to match the true halo distn
                 x_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
                 y_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
                 z_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
                 x_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 r_min_edge = r_min + 2.0 * rad_outer
                 r_max_edge = r_max - 2.0 * rad_outer
-                if (
-                    origins.shape[0] == 1
-                ):  # true only of the huge box where the origin is at the center
+                if origins.shape[0] == 1:
                     y_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                     z_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 else:
                     y_max_edge = 3.0 / 2 * Lbox - 2.0 * rad_outer
                     z_max_edge = 3.0 / 2 * Lbox - 2.0 * rad_outer
 
-                # factor of rands over all halos to generate in each iteration (can be less than 1)
                 rand = 1
                 rand_N = int(allpos.shape[0] * rand)
 
-                # this is the number density (note that it depends on how the randoms are generated)
                 if origins.shape[0] == 1:
                     rand_n = rand_N / (4.0 / 3.0 * np.pi * (r_max**3 - r_min**3))
                 else:
                     rand_n = rand_N / (4.0 / 3.0 / 8.0 * np.pi * (r_max**3 - r_min**3))
 
-                # aim to have rand_final times more randoms than halos at the edges at the end
                 rand_final = 10
                 count = 0
                 repeats = 0
                 rand_norm = np.zeros(len(index_bounds))
                 rng = np.random.default_rng(halo_lc_randoms_seed)
 
-                # repeat until condition satisfied
                 while count < len(index_bounds) * rand_final:
-                    # generate randoms in L shape
                     randpos, randdist = gen_rand(
                         allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins, rng
                     )
 
-                    # boundaries of the random particles for cutting
                     randbounds_edge = (
                         (x_min_edge <= randpos[:, 0])
                         & (x_max_edge >= randpos[:, 0])
@@ -516,8 +537,6 @@ def prepare_slab(
                     del randbounds_edge, randdist
 
                     if randpos.shape[0] > 0:
-                        # random points on the edges
-                        rand_N = randpos.shape[0]
                         randpos_tree = cKDTree(randpos)
                         randinds_inner = randpos_tree.query_ball_point(
                             allpos[index_bounds],
@@ -527,53 +546,152 @@ def prepare_slab(
                         randinds_outer = randpos_tree.query_ball_point(
                             allpos[index_bounds], r=rad_outer, workers=nthread
                         )
-                        # this is the true number of randoms
                         for ind in range(len(index_bounds)):
-                            rand_norm[ind] += len(randinds_outer[ind]) - len(
-                                randinds_inner[ind]
-                            )
+                            rand_norm[ind] += len(randinds_outer[ind]) - len(randinds_inner[ind])
+
                     repeats += 1
                     count += randpos.shape[0]
                     del randpos
                     gc.collect()
 
-                # every iteration, you generate rand_n density of halos, so need to account for it
                 rand_n *= repeats
-
-                # number of randoms divided by expected number of
-                # randoms (should be ~1 away from boundaries and < 1 near them)
                 rand_norm /= (
                     (rad_outer**3.0 - halos['r98_L2com'][index_bounds] ** 3.0)
-                    * 4.0
-                    / 3.0
-                    * np.pi
-                    * rand_n
+                    * 4.0 / 3.0 * np.pi * rand_n
                 )
 
-        Menv = do_Menv_from_tree(
-            allpos,
-            allmasses,
-            r_inner=halos['r98_L2com'],
-            r_outer=rad_outer,
-            halo_lc=halo_lc,
-            Lbox=Lbox,
-            nthread=nthread,
-            mcut=mcut,
-        )
-        gc.collect()
-
-        if halo_lc and len(index_bounds) > 0:
-            mask = rand_norm == 0.0
-            rand_norm[mask] = 1.0
-            tmp = Menv[index_bounds]
-            tmp /= rand_norm  # fixed (pull request #142)
-            tmp[mask] = 0.0
-            Menv[index_bounds] = tmp
-            del mask
+            Menv = do_Menv_from_tree(
+                halos['x_L2com'],
+                allmasses,
+                r_inner=halos['r98_L2com'],
+                r_outer=rad_outer,
+                halo_lc=halo_lc,
+                Lbox=Lbox,
+                nthread=nthread,
+                mcut=mcut,
+            )
             gc.collect()
-        halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, allmasses)
 
-        # compute delta concentration
+            if len(index_bounds) > 0:
+                mask = rand_norm == 0.0
+                rand_norm[mask] = 1.0
+                tmp = Menv[index_bounds]
+                tmp /= rand_norm
+                tmp[mask] = 0.0
+                Menv[index_bounds] = tmp
+                del mask
+                gc.collect()
+
+            halos['fenv_rank'] = calc_fenv_opt(Menv, mbins, allmasses)
+
+        else:
+            # ------------------------------------------------------------
+            # periodic box case:
+            # compute raw Menv for the full central slab using padded neighbors
+            # ------------------------------------------------------------
+            central_pos = halos['x_L2com']
+            central_mass = halos['N'] * Mpart
+            central_rvir = halos['r98_L2com']
+            central_id = halos['id'].astype(np.int64)
+            Ncentral = len(halos)
+
+            x_unwrap = unwrap_x_for_slab(central_pos[:, 0], i, numslabs, Lbox)
+            xcen_min = x_unwrap.min()
+            xcen_max = x_unwrap.max()
+
+            if numslabs is None:
+                raise ValueError("prepare_slab needs numslabs for the padded env calculation.")
+            dx_slab = Lbox / numslabs
+            n_pad_slabs = max(1, int(math.ceil(rad_outer / dx_slab)))
+
+            env_pos = [central_pos]
+            env_mass = [central_mass]
+            env_rvir = [central_rvir]
+
+            left_filter = make_edge_pad_filter(xcen_min, rad_outer, Lbox)
+            right_filter = make_edge_pad_filter(xcen_max, rad_outer, Lbox)
+
+            for d in range(1, n_pad_slabs + 1):
+                ileft = (i - d) % numslabs
+                iright = (i + d) % numslabs
+
+                left_slabname = (
+                    simdir
+                    + '/'
+                    + simname
+                    + '/halos/z'
+                    + str(z_mock).ljust(5, '0')
+                    + '/halo_info/halo_info_'
+                    + str(ileft).zfill(3)
+                    + '.asdf'
+                )
+                right_slabname = (
+                    simdir
+                    + '/'
+                    + simname
+                    + '/halos/z'
+                    + str(z_mock).ljust(5, '0')
+                    + '/halo_info/halo_info_'
+                    + str(iright).zfill(3)
+                    + '.asdf'
+                )
+
+                left_halos = load_env_halos(left_slabname, cleaning, filter_func=left_filter)
+                right_halos = load_env_halos(right_slabname, cleaning, filter_func=right_filter)
+
+                if len(left_halos) > 0:
+                    env_pos.append(left_halos['x_L2com'])
+                    env_mass.append(left_halos['N'] * Mpart)
+                    env_rvir.append(left_halos['r98_L2com'])
+
+                if len(right_halos) > 0:
+                    env_pos.append(right_halos['x_L2com'])
+                    env_mass.append(right_halos['N'] * Mpart)
+                    env_rvir.append(right_halos['r98_L2com'])
+
+            env_pos = np.concatenate(env_pos, axis=0)
+            env_mass = np.concatenate(env_mass)
+            env_rvir = np.concatenate(env_rvir)
+            
+            nbr_count = len(env_mass) - Ncentral
+            print(
+                f"[slab {i}] env centers = {Ncentral:,}, "
+                f"neighbor halos = {nbr_count:,}, "
+                f"total env halos = {len(env_mass):,}, "
+                f"x-range = [{xcen_min:.3f}, {xcen_max:.3f}], "
+                f"rad_outer = {rad_outer:.3f}, n_pad_slabs = {n_pad_slabs}"
+            )
+
+            Menv_all = do_Menv_from_tree(
+                env_pos,
+                env_mass,
+                r_inner=env_rvir,
+                r_outer=rad_outer,
+                halo_lc=False,
+                Lbox=Lbox,
+                nthread=nthread,
+                mcut=mcut,
+            )
+            gc.collect()
+
+            Menv_central = Menv_all[:Ncentral]
+            n_nonzero = np.count_nonzero(Menv_central)
+            print(
+                f"[slab {i}] computed padded Menv for {Ncentral:,} central halos; "
+                f"nonzero Menv count = {n_nonzero:,}"
+            )
+            
+            if os.path.exists(outfilename_env):
+                os.remove(outfilename_env)
+            envfile = h5py.File(outfilename_env, 'w')
+            envfile.create_dataset('id', data=central_id)
+            envfile.create_dataset('mass', data=central_mass)
+            envfile.create_dataset('Menv', data=Menv_central)
+            envfile.close()
+
+            # fenv will be computed later globally inside abacushod.py
+            halos['fenv_rank'] = np.zeros(len(halos))
+
         print('computing c rank')
         halos_c = halos['r98_L2com'] / halos['r25_L2com']
         deltac_rank = np.zeros(len(halos))
@@ -587,11 +705,10 @@ def prepare_slab(
                     new_deltac_rank = new_deltac.argsort().argsort()
                     deltac_rank[mmask] = new_deltac_rank / np.max(new_deltac_rank) - 0.5
         halos['deltac_rank'] = deltac_rank
-
     else:
         halos['fenv_rank'] = np.zeros(len(halos))
         halos['deltac_rank'] = np.zeros(len(halos))
-
+        
     if want_shear:
         assert len(np.unique(shearmark.shape)) == 1
         N_dim = len(shearmark)
@@ -1091,6 +1208,7 @@ def main(
                 halo_lc=halo_lc,
                 nthread=nthread,
                 overwrite=overwrite,
+                numslabs=numslabs
             )
             for i in range(numslabs)
         ]
