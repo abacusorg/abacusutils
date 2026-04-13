@@ -37,10 +37,6 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 # ------------------------------------------------------------
 # local env fix
 # ------------------------------------------------------------
-def wrap_to_box(x, Lbox):
-    return ((x + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
-
-
 def periodic_dx(x, x0, Lbox):
     return ((x - x0 + 0.5 * Lbox) % Lbox) - 0.5 * Lbox
 
