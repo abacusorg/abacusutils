@@ -634,6 +634,10 @@ def prepare_slab(
             central_mass = halos['N'] * Mpart
             central_rvir = halos['r98_L2com']
             central_id = halos['id'].astype(np.int64)
+
+            if len(np.unique(central_id)) != len(central_id):
+                raise RuntimeError(f"Duplicate halo IDs found inside central slab {i}.")
+            
             Ncentral = len(halos)
 
             x_unwrap = unwrap_x_for_slab(central_pos[:, 0], i, numslabs, Lbox)
@@ -650,6 +654,7 @@ def prepare_slab(
             env_pos = [central_pos]
             env_mass = [central_mass]
             env_rvir = [central_rvir]
+            env_id = [central_id]
 
             left_filter = make_edge_pad_filter(xcen_min, rad_outer, Lbox)
             right_filter = make_edge_pad_filter(xcen_max, rad_outer, Lbox)
@@ -690,15 +695,26 @@ def prepare_slab(
                     env_pos.append(left_halos['x_L2com'])
                     env_mass.append(left_halos['N'] * Mpart)
                     env_rvir.append(left_halos['r98_L2com'])
+                    env_id.append(left_halos['id'].astype(np.int64))
 
                 if len(right_halos) > 0:
                     env_pos.append(right_halos['x_L2com'])
                     env_mass.append(right_halos['N'] * Mpart)
                     env_rvir.append(right_halos['r98_L2com'])
+                    env_id.append(right_halos['id'].astype(np.int64))
 
             env_pos = np.concatenate(env_pos, axis=0)
             env_mass = np.concatenate(env_mass)
             env_rvir = np.concatenate(env_rvir)
+            env_id = np.concatenate(env_id)
+
+            _, uniq_idx = np.unique(env_id, return_index=True)
+            uniq_idx = np.sort(uniq_idx)
+            
+            env_pos = env_pos[uniq_idx]
+            env_mass = env_mass[uniq_idx]
+            env_rvir = env_rvir[uniq_idx]
+            env_id = env_id[uniq_idx]
 
             nbr_count = len(env_mass) - Ncentral
             print(
