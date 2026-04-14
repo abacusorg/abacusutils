@@ -636,8 +636,8 @@ def prepare_slab(
             central_id = halos['id'].astype(np.int64)
 
             if len(np.unique(central_id)) != len(central_id):
-                raise RuntimeError(f"Duplicate halo IDs found inside central slab {i}.")
-            
+                raise RuntimeError(f'Duplicate halo IDs found inside central slab {i}.')
+
             Ncentral = len(halos)
 
             x_unwrap = unwrap_x_for_slab(central_pos[:, 0], i, numslabs, Lbox)
@@ -710,7 +710,7 @@ def prepare_slab(
 
             _, uniq_idx = np.unique(env_id, return_index=True)
             uniq_idx = np.sort(uniq_idx)
-            
+
             env_pos = env_pos[uniq_idx]
             env_mass = env_mass[uniq_idx]
             env_rvir = env_rvir[uniq_idx]
