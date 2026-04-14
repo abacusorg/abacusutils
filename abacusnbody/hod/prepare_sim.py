@@ -456,12 +456,29 @@ def prepare_slab(
     allmasses = halos['N'] * Mpart
     # only generate fenv ranks and c ranks if the user wants to enable secondary biases
     if want_AB:
+
+        # # grid based environment calculation
+        # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
+        # ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
+        # halos_overdens = dens_grid[ixs[:, 0], ixs[:, 1], ixs[:, 2]]
+        # fenv_rank = np.zeros(len(halos))
+        # for ibin in range(nbins):
+        #     mmask = (halos['N']*Mpart > mbins[ibin]) & (halos['N']*Mpart < mbins[ibin + 1])
+        #     if np.sum(mmask) > 0:
+        #         if np.sum(mmask) == 1:
+        #             fenv_rank[mmask] = 0
+        #         else:
+        #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
+        #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
+        # halos['fenv_rank'] = fenv_rank
+        
         if halo_lc:
+            # origin dependent and simulation dependent
             allpos = halos['x_L2com']
 
             origins = np.array(header['LightConeOrigins']).reshape(-1, 3)
             alldist = np.sqrt(np.sum((allpos - origins[0]) ** 2.0, axis=1))
-            offset = 10.0
+            offset = 10.0 # offset intrinsic to light cones catalogs (removing edges +/- 10 Mpc/h from the sides of the box)
 
             r_min = alldist.min()
             r_max = alldist.max()
@@ -471,7 +488,7 @@ def prepare_slab(
             x_max_edge = Lbox / 2.0 - offset - rad_outer
             r_min_edge = alldist.min() + rad_outer
             r_max_edge = alldist.max() - rad_outer
-            if origins.shape[0] == 1:
+            if origins.shape[0] == 1:  # true only of the huge box where the origin is at the center
                 y_max_edge = Lbox / 2.0 - offset - rad_outer
                 z_max_edge = Lbox / 2.0 - offset - rad_outer
             else:
@@ -492,38 +509,45 @@ def prepare_slab(
             del bounds_edge, alldist
 
             if len(index_bounds) > 0:
+                # the randoms should be within 2 times rad_outer so as to match the true halo distn
                 x_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
                 y_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
                 z_min_edge = -(Lbox / 2.0 - offset - 2.0 * rad_outer)
                 x_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 r_min_edge = r_min + 2.0 * rad_outer
                 r_max_edge = r_max - 2.0 * rad_outer
-                if origins.shape[0] == 1:
+                if origins.shape[0] == 1: # true only of the huge box where the origin is at the center
                     y_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                     z_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 else:
                     y_max_edge = 3.0 / 2 * Lbox - 2.0 * rad_outer
                     z_max_edge = 3.0 / 2 * Lbox - 2.0 * rad_outer
 
+                # factor of rands over all halos to generate in each iteration (can be less than 1)
                 rand = 1
                 rand_N = int(allpos.shape[0] * rand)
 
+                # this is the number density (note that it depends on how the randoms are generated)
                 if origins.shape[0] == 1:
                     rand_n = rand_N / (4.0 / 3.0 * np.pi * (r_max**3 - r_min**3))
                 else:
                     rand_n = rand_N / (4.0 / 3.0 / 8.0 * np.pi * (r_max**3 - r_min**3))
 
+                # aim to have rand_final times more randoms than halos at the edges at the end
                 rand_final = 10
                 count = 0
                 repeats = 0
                 rand_norm = np.zeros(len(index_bounds))
                 rng = np.random.default_rng(halo_lc_randoms_seed)
 
+                # repeat until condition satisfied
                 while count < len(index_bounds) * rand_final:
+                    # generate randoms in L shape
                     randpos, randdist = gen_rand(
                         allpos.shape[0], r_min, r_max, rand, Lbox, offset, origins, rng
                     )
 
+                    # boundaries of the random particles for cutting
                     randbounds_edge = (
                         (x_min_edge <= randpos[:, 0])
                         & (x_max_edge >= randpos[:, 0])
@@ -538,6 +562,8 @@ def prepare_slab(
                     del randbounds_edge, randdist
 
                     if randpos.shape[0] > 0:
+                        # random points on the edges
+                        rand_N = randpos.shape[0]
                         randpos_tree = cKDTree(randpos)
                         randinds_inner = randpos_tree.query_ball_point(
                             allpos[index_bounds],
@@ -547,6 +573,7 @@ def prepare_slab(
                         randinds_outer = randpos_tree.query_ball_point(
                             allpos[index_bounds], r=rad_outer, workers=nthread
                         )
+                        # this is the true number of randoms
                         for ind in range(len(index_bounds)):
                             rand_norm[ind] += len(randinds_outer[ind]) - len(
                                 randinds_inner[ind]
@@ -557,7 +584,11 @@ def prepare_slab(
                     del randpos
                     gc.collect()
 
+                # every iteration, you generate rand_n density of halos, so need to account for it
                 rand_n *= repeats
+
+                # number of randoms divided by expected number of
+                # randoms (should be ~1 away from boundaries and < 1 near them)
                 rand_norm /= (
                     (rad_outer**3.0 - halos['r98_L2com'][index_bounds] ** 3.0)
                     * 4.0
@@ -578,6 +609,7 @@ def prepare_slab(
             )
             gc.collect()
 
+            # compute delta concentration
             if len(index_bounds) > 0:
                 mask = rand_norm == 0.0
                 rand_norm[mask] = 1.0
