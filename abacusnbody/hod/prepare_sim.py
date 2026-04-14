@@ -456,7 +456,6 @@ def prepare_slab(
     allmasses = halos['N'] * Mpart
     # only generate fenv ranks and c ranks if the user wants to enable secondary biases
     if want_AB:
-
         # # grid based environment calculation
         # dens_grid = np.array(h5py.File(savedir+"/density_field.h5", 'r')['dens'])
         # ixs = np.floor((np.array(halos['x_L2com']) + Lbox/2) / (Lbox/N_dim)).astype(np.int) % N_dim
@@ -471,14 +470,14 @@ def prepare_slab(
         #             new_fenv_rank = halos_overdens[mmask].argsort().argsort()
         #             fenv_rank[mmask] = new_fenv_rank / np.max(new_fenv_rank) - 0.5
         # halos['fenv_rank'] = fenv_rank
-        
+
         if halo_lc:
             # origin dependent and simulation dependent
             allpos = halos['x_L2com']
 
             origins = np.array(header['LightConeOrigins']).reshape(-1, 3)
             alldist = np.sqrt(np.sum((allpos - origins[0]) ** 2.0, axis=1))
-            offset = 10.0 # offset intrinsic to light cones catalogs (removing edges +/- 10 Mpc/h from the sides of the box)
+            offset = 10.0  # offset intrinsic to light cones catalogs (removing edges +/- 10 Mpc/h from the sides of the box)
 
             r_min = alldist.min()
             r_max = alldist.max()
@@ -488,7 +487,9 @@ def prepare_slab(
             x_max_edge = Lbox / 2.0 - offset - rad_outer
             r_min_edge = alldist.min() + rad_outer
             r_max_edge = alldist.max() - rad_outer
-            if origins.shape[0] == 1:  # true only of the huge box where the origin is at the center
+            if (
+                origins.shape[0] == 1
+            ):  # true only of the huge box where the origin is at the center
                 y_max_edge = Lbox / 2.0 - offset - rad_outer
                 z_max_edge = Lbox / 2.0 - offset - rad_outer
             else:
@@ -516,7 +517,9 @@ def prepare_slab(
                 x_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 r_min_edge = r_min + 2.0 * rad_outer
                 r_max_edge = r_max - 2.0 * rad_outer
-                if origins.shape[0] == 1: # true only of the huge box where the origin is at the center
+                if (
+                    origins.shape[0] == 1
+                ):  # true only of the huge box where the origin is at the center
                     y_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                     z_max_edge = Lbox / 2.0 - offset - 2.0 * rad_outer
                 else:
