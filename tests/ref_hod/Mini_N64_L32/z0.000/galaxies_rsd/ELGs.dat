@@ -9,8 +9,29 @@
 # - {name: vz, datatype: float64}
 # - {name: mass, datatype: float64}
 # - {name: id, datatype: int64}
-# meta: {A_s: 1.0, Acent: 0, Asat: 0, Bcent: 0, Bsat: 0, Gal_type: ELG, Ncent: 84, Q: 100.0, alpha: 1.0, alpha_c: 0, alpha_s: 1, gamma: 4.12,
-#   ic: 1.0, kappa: 1.0, logM1: 13.53, logM_cut: 11.75, p_max: 0.33, s: 0, s_p: 0, s_r: 0, s_v: 0, sigma: 0.58}
+# meta: !!omap
+# - {Ncent: 84}
+# - {Gal_type: ELG}
+# - {p_max: 0.33}
+# - {Q: 100.0}
+# - {logM_cut: 11.75}
+# - {kappa: 1.0}
+# - {sigma: 0.58}
+# - {logM1: 13.53}
+# - {alpha: 1.0}
+# - {gamma: 4.12}
+# - {A_s: 1.0}
+# - {alpha_c: 0}
+# - {alpha_s: 1}
+# - {s: 0}
+# - {s_v: 0}
+# - {s_p: 0}
+# - {s_r: 0}
+# - {Acent: 0}
+# - {Asat: 0}
+# - {Bcent: 0}
+# - {Bsat: 0}
+# - {ic: 1.0}
 # schema: astropy-2.0
 x y z vx vy vz mass id
 -13.910989761352539 -13.54725170135498 -2.9011668586730956 291.32806396484375 -89.44953155517578 169.86566162109375 968533367710.0 10005000000
