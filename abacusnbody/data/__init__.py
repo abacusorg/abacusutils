@@ -1,3 +1,7 @@
+__all__ = ['read_asdf']
+
+from .read_abacus import read_asdf
+
 # Stop astropy from trying to download time data; nodes on some clusters are not allowed to access the internet directly
 from astropy.utils import iers
 

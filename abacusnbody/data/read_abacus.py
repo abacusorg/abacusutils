@@ -11,6 +11,10 @@ The decoding of the binary formats is generally contained
 in other modules (e.g. bitpacked); this interface mainly
 deals with the container formats and high-level logic of
 file names, Astropy tables, etc.
+
+Per-format unpacking is routed through a small registry
+(``_HANDLERS``) so adding a new format means writing one new
+unpack module and adding one entry here.
 """
 
 # TODO: generator to iterate over files
@@ -23,12 +27,23 @@ import numpy as np
 from astropy.table import Table
 
 from .bitpacked import unpack_pids, unpack_rvint
+from .output_particle import unpack_output_particle
 from .pack9 import unpack_pack9
 
 __all__ = ['read_asdf']
 
 ASDF_DATA_KEY = 'data'
 ASDF_HEADER_KEY = 'header'
+
+
+_DEFAULT_LOAD = {
+    'rvint': ('pos', 'vel'),
+    'pack9': ('pos', 'vel'),
+    'pid': ('pid',),
+    'packedpid': ('pid',),
+    'output_particle': ('pos', 'vel', 'is_map', 'mult'),
+    'lightcone_particle': ('pos', 'vel', 'is_map', 'mult'),
+}
 
 
 def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwargs):
@@ -45,16 +60,19 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         what's in the file. If the file contains positions and velocities, those will
         be loaded; if it contains PIDs, those will be loaded.
 
-        The list of fields that can be specified is: \
-        ``'pos', 'vel', 'pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'aux'``
+        For AbacusSummit formats (``rvint``, ``pack9``, ``pid``, ``packedpid``), the
+        valid load keys are: ``'pos', 'vel', 'pid', 'lagr_pos', 'tagged', 'density',
+        'lagr_idx', 'aux'``.
 
-        All except ``pos`` & ``vel`` are PID-derived fields (see
-        :func:`abacusnbody.data.bitpacked.unpack_pids`)
+        For Aurora ``output_particle`` / ``lightcone_particle``, the valid load keys
+        are: ``'pos', 'vel', 'pid', 'density', 'vel_disp', 'is_map', 'mult',
+        'rel_vel'``.
 
     colname: str or None, optional
         The internal column name in the ASDF file to load.  Probably one of ``'rvint'``,
-        ``'packedpid'``, ``'pid'``, or ``'pack9'``.  In most cases, the name can be
-        automatically detected, which is the default behavior (``None``).
+        ``'packedpid'``, ``'pid'``, ``'pack9'``, ``'output_particle'``, or
+        ``'lightcone_particle'``.  In most cases, the name can be automatically
+        detected, which is the default behavior (``None``).
 
     dtype: np.dtype, optional
         The precision in which to unpack any floating
@@ -68,7 +86,13 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     table: astropy.Table
         A table whose columns contain the particle
         data from the ASDF file.  The ``meta`` field
-        of the table contains the header.
+        of the table contains the header.  For files
+        with a single top-level ``header`` section
+        (AbacusSummit), ``meta`` is that section
+        flattened. For files with multiple ``header*``
+        sections (Aurora), ``meta`` is a dict-of-dicts
+        keyed by section name (e.g. ``'header_read'``,
+        ``'header_write'``).
     """
 
     import asdf
@@ -88,11 +112,12 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         ) from e
 
     data_key = kwargs.get('data_key', ASDF_DATA_KEY)
-    header_key = kwargs.get('header_key', ASDF_HEADER_KEY)
+    # `header_key` is honored explicitly for back-compat; otherwise we scan for `header*`
+    header_key = kwargs.pop('header_key', None)
 
     with asdf.open(fn, lazy_load=True, memmap=False) as af:
         if colname is None:
-            _colnames = ['rvint', 'pack9', 'packedpid', 'pid']
+            _colnames = list(_DEFAULT_LOAD.keys())
             for cn in _colnames:
                 if cn in af.tree[data_key]:
                     if colname is not None:
@@ -108,74 +133,126 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         # determine what fields to unpack
         load = _resolve_columns(colname, load, kwargs)
 
-        header = af.tree[header_key]
+        if header_key is not None:
+            meta = af.tree[header_key]
+            header = meta
+        else:
+            meta, header = _gather_headers(af.tree)
+
         data = af.tree[data_key][colname]
 
-        Nmax = len(data)  # will shrink later
-
-        # determine subsample fraction and add to header
+        # determine subsample fraction and add to header (Summit-only)
         OutputType = header.get('OutputType', None)
-        if OutputType == 'LightCone':
-            if header['SimSet'] == 'AbacusSummit':
-                SubsampleFraction = (
-                    header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+        if OutputType == 'LightCone' and header.get('SimSet') == 'AbacusSummit':
+            SubsampleFraction = (
+                header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+            )
+            header['SubsampleFraction'] = SubsampleFraction
+            if verbose:
+                print(
+                    f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction * 100):d}% total)'
                 )
-                header['SubsampleFraction'] = SubsampleFraction
-                if verbose:
-                    print(
-                        f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction * 100):d}% total)'
-                    )
 
-        table = Table(meta=header)
-        if 'pos' in load:
-            table.add_column(np.empty((Nmax, 3), dtype=dtype), copy=False, name='pos')
-        if 'vel' in load:
-            table.add_column(np.empty((Nmax, 3), dtype=dtype), copy=False, name='vel')
-        if 'aux' in load:
-            table.add_column(data, copy=False, name='aux')  # 'aux' is the raw aux field
-        # For the PID columns, we'll let `unpack_pids` build those for us
-        # Eventually, we'll need to be able to pass output arrays
+        handler = _HANDLERS[colname]
+        handler_kwargs = {k: kwargs[k] for k in ('ppd',) if k in kwargs}
+        cols, nread = handler(data, header, load, dtype, **handler_kwargs)
 
-        if colname == 'rvint':
-            _posout = table['pos'] if 'pos' in load else False
-            _velout = table['vel'] if 'vel' in load else False
-            npos, nvel = unpack_rvint(
-                data,
-                header['BoxSize'],
-                float_dtype=dtype,
-                posout=_posout,
-                velout=_velout,
-            )
-            nread = max(npos, nvel)
-        elif colname == 'pack9':
-            _posout = table['pos'] if 'pos' in load else False
-            _velout = table['vel'] if 'vel' in load else False
-            npos, nvel = unpack_pack9(
-                data,
-                header['BoxSize'],
-                header['VelZSpace_to_kms'],
-                float_dtype=dtype,
-                posout=_posout,
-                velout=_velout,
-            )
-            nread = max(npos, nvel)
-        elif 'pid' in colname:
-            ppd = kwargs.get('ppd', int(round(header['ppd'])))
-            pid_kwargs = {
-                k: (k in load)
-                for k in ('pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx')
-            }
-            cols = unpack_pids(
-                data, box=header['BoxSize'], ppd=ppd, float_dtype=dtype, **pid_kwargs
-            )
-            for n, col in cols.items():
-                table.add_column(col, name=n, copy=False)
-            nread = len(data)
+        table = Table(meta=meta)
+        for name, col in cols.items():
+            table.add_column(col, name=name, copy=False)
 
     table = table[:nread]  # truncate to amount actually read
     # TODO: could drop some memory here
 
     return table
+
+
+def _gather_headers(tree):
+    """
+    Collect top-level ``header*`` sections from an ASDF tree.
+
+    Returns
+    -------
+    meta : dict
+        Value to use as ``table.meta``. Exactly one section → that section's dict
+        (flat, matching the legacy single-``header`` behavior). Multiple sections
+        → a dict mapping section name to section (nested).
+    header : dict
+        Flat dict for field lookup by handlers. Same object as ``meta`` when there
+        is a single section (so mutations propagate). For multiple sections this
+        is a fresh union of the sections, first-match-wins on conflict.
+    """
+    sections = {k: v for k, v in tree.items() if k.startswith('header')}
+    if len(sections) == 1:
+        section = next(iter(sections.values()))
+        return section, section
+    union = {}
+    for section in sections.values():
+        for k, v in section.items():
+            union.setdefault(k, v)
+    return sections, union
+
+
+def _handle_rvint(data, header, load, dtype, **_unused):
+    cols = {}
+    if 'pos' in load:
+        cols['pos'] = np.empty((len(data), 3), dtype=dtype)
+    if 'vel' in load:
+        cols['vel'] = np.empty((len(data), 3), dtype=dtype)
+    posout = cols.get('pos', False)
+    velout = cols.get('vel', False)
+    npos, nvel = unpack_rvint(
+        data, header['BoxSize'], float_dtype=dtype, posout=posout, velout=velout
+    )
+    return cols, max(npos, nvel)
+
+
+def _handle_pack9(data, header, load, dtype, **_unused):
+    cols = {}
+    if 'pos' in load:
+        cols['pos'] = np.empty((len(data), 3), dtype=dtype)
+    if 'vel' in load:
+        cols['vel'] = np.empty((len(data), 3), dtype=dtype)
+    posout = cols.get('pos', False)
+    velout = cols.get('vel', False)
+    npos, nvel = unpack_pack9(
+        data,
+        header['BoxSize'],
+        header['VelZSpace_to_kms'],
+        float_dtype=dtype,
+        posout=posout,
+        velout=velout,
+    )
+    return cols, max(npos, nvel)
+
+
+def _handle_pid(data, header, load, dtype, *, ppd=None, **_unused):
+    if ppd is None:
+        ppd = int(round(header['ppd']))
+    pid_kwargs = {
+        k: (k in load) for k in ('pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx')
+    }
+    cols = unpack_pids(
+        data, box=header['BoxSize'], ppd=ppd, float_dtype=dtype, **pid_kwargs
+    )
+    if 'aux' in load:
+        cols['aux'] = data
+    return cols, len(data)
+
+
+def _handle_output_particle(data, header, load, dtype, **_unused):
+    cols = unpack_output_particle(data, fields=load, float_dtype=dtype)
+    return cols, len(data)
+
+
+_HANDLERS = {
+    'rvint': _handle_rvint,
+    'pack9': _handle_pack9,
+    'pid': _handle_pid,
+    'packedpid': _handle_pid,
+    'output_particle': _handle_output_particle,
+    'lightcone_particle': _handle_output_particle,
+}
 
 
 def _resolve_columns(colname, load, kwargs):
@@ -203,10 +280,5 @@ def _resolve_columns(colname, load, kwargs):
             )
 
     if load is None:
-        load = []
-        if colname in ('pack9', 'rvint'):
-            load += ['pos']
-            load += ['vel']
-        if 'pid' in colname:
-            load += ['pid']
+        load = _DEFAULT_LOAD[colname]
     return tuple(load)
