@@ -1,9 +1,9 @@
 """
 This module contains the ASDF extensions that allow the asdf Python package
-to read Abacus ASDF files that use Blosc compression internally.
+to read Abacus ASDF files that use Blosc and Blosc2 compression internally.
 
 There are two classes here: an Extension subclass, and a Compressor subclass.
-The Extension is registered with ASDF via a setuptools "entry point" in setup.py.
+The Extension is registered with ASDF via a setuptools "entry point" in pyproject.toml.
 It contains the reference to the Compressor subclass that knows how to
 handle Blosc compression.
 """
@@ -12,6 +12,7 @@ import struct
 import time
 
 import blosc
+import blosc2  # TODO: blosc2 should be able to read blosc1 files
 import numpy as np
 from asdf.extension import Compressor, Extension
 
@@ -183,10 +184,42 @@ class BloscCompressor(Compressor):
         return bytesout
 
 
+class Blosc2Compressor(Compressor):
+    @property
+    def label(self):
+        """
+        The string labels in the binary block headers
+        that indicate Blosc2 compression
+        """
+        return b'bsc2'
+
+    def compress(self, data, **kwargs):
+        raise NotImplementedError(
+            'Blosc 2 compression not implemented yet, only decompression'
+        )
+
+    def decompress(self, blocks, out, **kwargs) -> int:
+        block_list = list(blocks)
+        cframe = bytearray(sum(len(b) for b in block_list))
+        offset = 0
+        for b in block_list:
+            n = len(b)
+            cframe[offset : offset + n] = b
+            offset += n
+        schunk = blosc2.schunk_from_cframe(cframe, copy=False)
+        offset = 0
+        for i in range(schunk.nchunks):
+            chunk = schunk.decompress_chunk(i)
+            n = len(chunk)
+            out[offset : offset + n] = chunk
+            offset += n
+        return offset
+
+
 class AbacusExtension(Extension):
     """
     An ASDF Extension that deals with Abacus types and formats.
-    Currently only implements Blosc compression.
+    Currently implements Blosc compression, and Blosc and Blosc2 decompression.
     """
 
     @property
@@ -200,11 +233,11 @@ class AbacusExtension(Extension):
         -------
         str
         """
-        return 'asdf://abacusnbody.org/extensions/abacus-0.0.1'
+        return 'asdf://abacusnbody.org/extensions/abacus-0.2.0'
 
     @property
     def compressors(self):
         """
         Return the Compressors implemented in this extension
         """
-        return [BloscCompressor()]
+        return [BloscCompressor(), Blosc2Compressor()]
