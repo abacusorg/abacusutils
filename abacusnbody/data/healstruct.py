@@ -26,6 +26,7 @@ import numpy as np
 
 __all__ = [
     'unpack_healstruct',
+    'LAYOUT',
     'PIXEL_BITS',
     'DIST_BITS',
     'COUNT_BITS',
@@ -39,6 +40,11 @@ __all__ = [
     'COUNT_MASK',
     'VOXEL_ID_MASK',
 ]
+
+# The HealStructLayout string stored in file headers under that key. This
+# module only supports this exact layout; readers should validate before
+# unpacking.
+LAYOUT = 'pixel36_dist9_count19'
 
 # Bit widths
 PIXEL_BITS = 36

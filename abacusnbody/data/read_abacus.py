@@ -27,7 +27,7 @@ import numpy as np
 from astropy.table import Table
 
 from .bitpacked import unpack_pids, unpack_rvint
-from .healstruct import unpack_healstruct
+from .healstruct import LAYOUT as _HEALSTRUCT_LAYOUT, unpack_healstruct
 from .output_particle import unpack_output_particle
 from .pack9 import unpack_pack9
 
@@ -251,6 +251,12 @@ def _handle_output_particle(data, header, load, dtype, **_unused):
 
 
 def _handle_healstruct(data, header, load, dtype, **_unused):
+    layout = header.get('HealStructLayout')
+    if layout is not None and layout != _HEALSTRUCT_LAYOUT:
+        raise ValueError(
+            f'HealStructLayout {layout!r} in file does not match the only '
+            f'layout this reader supports ({_HEALSTRUCT_LAYOUT!r})'
+        )
     cols = unpack_healstruct(data, fields=load)
     return cols, len(data)
 
