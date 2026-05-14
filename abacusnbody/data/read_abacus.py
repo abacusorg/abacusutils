@@ -28,6 +28,7 @@ from astropy.table import Table
 
 from .bitpacked import unpack_pids, unpack_rvint
 from .healstruct import LAYOUT as _HEALSTRUCT_LAYOUT, unpack_healstruct
+from .maplog import unpack_maplog
 from .output_particle import unpack_output_particle
 from .pack9 import unpack_pack9
 
@@ -45,6 +46,7 @@ _DEFAULT_LOAD = {
     'output_particle': ('pos', 'vel', 'is_map', 'mult'),
     'lightcone_particle': ('pos', 'vel', 'is_map', 'mult'),
     'lightcone_healpix': ('pixel', 'count'),
+    'maplogs': ('pos', 'vel', 'mult', 'control'),
 }
 
 
@@ -73,11 +75,16 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
         For Aurora ``lightcone_healpix``, the valid load keys are:
         ``'pixel', 'dist_bin', 'count', 'healstruct', 'voxel_id'``.
 
+        For Aurora ``maplogs``, the valid load keys are: ``'pos', 'vel',
+        'mult', 'control', 'node_type', 'timestep', 'mult_sec', 'pid',
+        'density', 'vel_disp', 'length', 'vel_rel', 'lc_label'``.
+
     colname: str or None, optional
         The internal column name in the ASDF file to load.  Probably one of ``'rvint'``,
         ``'packedpid'``, ``'pid'``, ``'pack9'``, ``'output_particle'``,
-        ``'lightcone_particle'``, or ``'lightcone_healpix'``.  In most cases, the
-        name can be automatically detected, which is the default behavior (``None``).
+        ``'lightcone_particle'``, ``'lightcone_healpix'``, or ``'maplogs'``.
+        In most cases, the name can be automatically detected, which is the default
+        behavior (``None``).
 
     dtype: np.dtype, optional
         The precision in which to unpack any floating
@@ -261,6 +268,11 @@ def _handle_healstruct(data, header, load, dtype, **_unused):
     return cols, len(data)
 
 
+def _handle_maplog(data, header, load, dtype, **_unused):
+    cols = unpack_maplog(data, fields=load, float_dtype=dtype)
+    return cols, len(data)
+
+
 _HANDLERS = {
     'rvint': _handle_rvint,
     'pack9': _handle_pack9,
@@ -269,6 +281,7 @@ _HANDLERS = {
     'output_particle': _handle_output_particle,
     'lightcone_particle': _handle_output_particle,
     'lightcone_healpix': _handle_healstruct,
+    'maplogs': _handle_maplog,
 }
 
 
