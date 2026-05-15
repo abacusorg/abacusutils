@@ -22,7 +22,12 @@ import numpy as np
 
 from ._aurora_encodings import _unpack_ufloat8_35, _unpack_ufloat8_44, _unpack_vect32
 
-__all__ = ['unpack_output_particle']
+__all__ = ['unpack_output_particle', 'LAYOUT']
+
+# The LightconeParticleLayout / TimesliceSubsampleLayout string stored in file
+# headers under those keys. This module only supports this exact layout;
+# readers should validate before unpacking.
+LAYOUT = 'output_particle_24'
 
 _ALL_FIELDS = (
     'pos',

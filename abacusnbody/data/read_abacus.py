@@ -29,7 +29,7 @@ from astropy.table import Table
 from .bitpacked import unpack_pids, unpack_rvint
 from .healstruct import LAYOUT as _HEALSTRUCT_LAYOUT, unpack_healstruct
 from .maplog import unpack_maplog
-from .output_particle import unpack_output_particle
+from .output_particle import LAYOUT as _OUTPUT_PARTICLE_LAYOUT, unpack_output_particle
 from .pack9 import unpack_pack9
 
 __all__ = ['read_asdf']
@@ -167,7 +167,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
         handler = _HANDLERS[colname]
         handler_kwargs = {k: kwargs[k] for k in ('ppd',) if k in kwargs}
-        cols, nread = handler(data, header, load, dtype, **handler_kwargs)
+        cols, nread = handler(data, header, load, dtype, colname=colname, **handler_kwargs)
 
         table = Table(meta=meta)
         for name, col in cols.items():
@@ -252,7 +252,20 @@ def _handle_pid(data, header, load, dtype, *, ppd=None, **_unused):
     return cols, len(data)
 
 
-def _handle_output_particle(data, header, load, dtype, **_unused):
+_OUTPUT_PARTICLE_LAYOUT_KEYS = {
+    'lightcone_particle': 'LightconeParticleLayout',
+    'timeslice_subsample': 'TimesliceSubsampleLayout',
+}
+
+
+def _handle_output_particle(data, header, load, dtype, *, colname, **_unused):
+    layout_key = _OUTPUT_PARTICLE_LAYOUT_KEYS[colname]
+    layout = header.get(layout_key)
+    if layout is not None and layout != _OUTPUT_PARTICLE_LAYOUT:
+        raise ValueError(
+            f'{layout_key} {layout!r} in file does not match the only '
+            f'layout this reader supports ({_OUTPUT_PARTICLE_LAYOUT!r})'
+        )
     cols = unpack_output_particle(data, fields=load, float_dtype=dtype)
     return cols, len(data)
 
