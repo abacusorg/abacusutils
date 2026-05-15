@@ -43,8 +43,8 @@ _DEFAULT_LOAD = {
     'pack9': ('pos', 'vel'),
     'pid': ('pid',),
     'packedpid': ('pid',),
-    'output_particle': ('pos', 'vel', 'is_map', 'mult'),
     'lightcone_particle': ('pos', 'vel', 'is_map', 'mult'),
+    'timeslice_subsample': ('pos', 'vel', 'is_map', 'mult'),
     'lightcone_healpix': ('pixel', 'count'),
     'maplogs': ('pos', 'vel', 'mult', 'control'),
 }
@@ -278,8 +278,8 @@ _HANDLERS = {
     'pack9': _handle_pack9,
     'pid': _handle_pid,
     'packedpid': _handle_pid,
-    'output_particle': _handle_output_particle,
     'lightcone_particle': _handle_output_particle,
+    'timeslice_subsample': _handle_output_particle,
     'lightcone_healpix': _handle_healstruct,
     'maplogs': _handle_maplog,
 }
