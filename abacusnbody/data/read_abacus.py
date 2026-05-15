@@ -59,10 +59,11 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     fn: str
         The filename of the ASDF file to load
 
-    load: list of str or None, optional
+    load: str, list of str, or None, optional
         A list of columns to load. The default (``None``) is to load columns based on
         what's in the file. If the file contains positions and velocities, those will
         be loaded; if it contains PIDs, those will be loaded.
+        The special value ``'all'`` loads every field supported by this file's format.
 
         For AbacusSummit formats (``rvint``, ``pack9``, ``pid``, ``packedpid``), the
         valid load keys are: ``'pos', 'vel', 'pid', 'lagr_pos', 'tagged', 'density',
@@ -206,6 +207,8 @@ def _gather_headers(tree):
 
 
 def _handle_rvint(data, header, load, dtype, **_unused):
+    if load == 'all':
+        load = ('pos', 'vel')
     cols = {}
     if 'pos' in load:
         cols['pos'] = np.empty((len(data), 3), dtype=dtype)
@@ -220,6 +223,8 @@ def _handle_rvint(data, header, load, dtype, **_unused):
 
 
 def _handle_pack9(data, header, load, dtype, **_unused):
+    if load == 'all':
+        load = ('pos', 'vel')
     cols = {}
     if 'pos' in load:
         cols['pos'] = np.empty((len(data), 3), dtype=dtype)
@@ -239,6 +244,8 @@ def _handle_pack9(data, header, load, dtype, **_unused):
 
 
 def _handle_pid(data, header, load, dtype, *, ppd=None, **_unused):
+    if load == 'all':
+        load = ('pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx', 'aux')
     if ppd is None:
         ppd = int(round(header['ppd']))
     pid_kwargs = {
@@ -266,7 +273,8 @@ def _handle_output_particle(data, header, load, dtype, *, colname, **_unused):
             f'{layout_key} {layout!r} in file does not match the only '
             f'layout this reader supports ({_OUTPUT_PARTICLE_LAYOUT!r})'
         )
-    cols = unpack_output_particle(data, fields=load, float_dtype=dtype)
+    fields = None if load == 'all' else load
+    cols = unpack_output_particle(data, fields=fields, float_dtype=dtype)
     return cols, len(data)
 
 
@@ -277,12 +285,14 @@ def _handle_healstruct(data, header, load, dtype, **_unused):
             f'HealStructLayout {layout!r} in file does not match the only '
             f'layout this reader supports ({_HEALSTRUCT_LAYOUT!r})'
         )
-    cols = unpack_healstruct(data, fields=load)
+    fields = None if load == 'all' else load
+    cols = unpack_healstruct(data, fields=fields)
     return cols, len(data)
 
 
 def _handle_maplog(data, header, load, dtype, **_unused):
-    cols = unpack_maplog(data, fields=load, float_dtype=dtype)
+    fields = None if load == 'all' else load
+    cols = unpack_maplog(data, fields=fields, float_dtype=dtype)
     return cols, len(data)
 
 
@@ -301,6 +311,9 @@ _HANDLERS = {
 def _resolve_columns(colname, load, kwargs):
     """Figure out what columns to read. `colname` is the data column in the file,
     `load` is the tuple of strings, `kwargs` might have deprecated load_pos/vel"""
+
+    if type(load) is str:
+        load = (load,)
 
     load_pos = kwargs.pop('load_pos', None)
     load_vel = kwargs.pop('load_vel', None)
@@ -324,4 +337,7 @@ def _resolve_columns(colname, load, kwargs):
 
     if load is None:
         load = _DEFAULT_LOAD[colname]
-    return tuple(load)
+    load = tuple(load)
+    if 'all' in load:
+        return 'all'
+    return load
