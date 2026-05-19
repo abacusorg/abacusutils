@@ -11,8 +11,8 @@ that aren't meaningful for a row's modality are zeroed (matching the
 reference unpacker's pattern for ``mult_sec`` and ``pid``) so columns are
 safe to read without filtering. Use ``node_type`` as the discriminator.
 
-Position is returned in Mpc/h (5 kpc/h quantum, fixed); velocity in km/s
-(via the vect32 encoding shared with ``output_particle``).
+Position is returned in Mpc/h (1/128 Mpc/h ≈ 7.8 kpc/h quantum, fixed);
+velocity in km/s (via the vect32 encoding shared with ``output_particle``).
 
 The C++ source-of-truth is ``maplog.cc`` / ``vect32.cc`` in the Abacus
 codebase. The reference Python unpacker is
@@ -44,9 +44,10 @@ NODE_LIGHTCONE = 2
 NODE_TIMESLICE = 3
 NODE_CONTROL_MASK = 0x3
 
-# Position encoding: 21 bits per axis, centered at 2^20, 5 kpc/h quantum.
+# Position encoding: 21 bits per axis, centered at 2^20, 1/128 Mpc/h
+# (~7.8 kpc/h) quantum.  Range is ±8192 Mpc/h.
 _POS_OFFSET = 1 << 20  # 1048576
-_POS_SCALE = 200.0  # quanta per Mpc/h (1 / 0.005)
+_POS_SCALE = 128.0  # quanta per Mpc/h
 _POS_MASK = (1 << 21) - 1  # 0x1FFFFF
 
 
