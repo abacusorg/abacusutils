@@ -45,16 +45,20 @@ def _unpack_vect32(packed):
 
 
 def _unpack_ufloat8_44(values):
-    """ufloat8_44: 4-bit exponent, 4-bit mantissa. Encoded as the bottom 8 bits
-    of a float32 with implicit scale 2^-130; decode by view-as-float32 then
-    multiply by 2^130."""
-    u = values.astype(np.uint32) << 15  # shift into float32 mantissa position
+    """ufloat8_44: 4-bit exponent, 4-bit mantissa. Decode by left-shifting the
+    stored byte by 19 so its 4-bit exponent lands at float32 bits 23-26 and
+    its 4-bit mantissa at bits 19-22, view-as-float32, then multiply by 2^130.
+    Mirrors ufloat8_44::as_double() in abacus/src/include/ufloat8.cc."""
+    u = values.astype(np.uint32) << 19
     f = u.view(np.float32)
     return (f.astype(np.float64) * np.float64(2.0**130)).astype(np.float32)
 
 
 def _unpack_ufloat8_35(values):
-    """ufloat8_35: 3-bit exponent, 5-bit mantissa. Implicit scale 2^-131."""
-    u = values.astype(np.uint32) << 15
+    """ufloat8_35: 3-bit exponent, 5-bit mantissa. Same scheme as
+    _unpack_ufloat8_44 but the byte's 3-bit exponent must land at float32
+    bits 23-25, so we shift by 18 and rescale by 2^131. Mirrors
+    ufloat8_35::as_double() in abacus/src/include/ufloat8.cc."""
+    u = values.astype(np.uint32) << 18
     f = u.view(np.float32)
     return (f.astype(np.float64) * np.float64(2.0**131)).astype(np.float32)
