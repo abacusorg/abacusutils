@@ -45,20 +45,43 @@ def _unpack_vect32(packed):
 
 
 def _unpack_ufloat8_44(values):
-    """ufloat8_44: 4-bit exponent, 4-bit mantissa. Decode by left-shifting the
-    stored byte by 19 so its 4-bit exponent lands at float32 bits 23-26 and
-    its 4-bit mantissa at bits 19-22, view-as-float32, then multiply by 2^130.
-    Mirrors ufloat8_44::as_double() in abacus/src/include/ufloat8.cc."""
-    u = values.astype(np.uint32) << 19
-    f = u.view(np.float32)
-    return (f.astype(np.float64) * np.float64(2.0**130)).astype(np.float32)
+    """ufloat8_44: 4-bit exponent, 4-bit mantissa.  Decoded value for stored
+    byte V:
+
+    - ``V <  16``: subnormal range; decoded value is ``V`` (so 0, 1, ..., 15).
+    - ``V >= 16``: normal range; ``(16 + M) << (E - 1)`` with ``E = V >> 4``
+      and ``M = V & 0xF``.  Max is ``(16 + 15) << 14 = 507904`` for ``V == 255``.
+
+    Mirrors ``ufloat8_44::as_double()`` in ``abacus/src/include/ufloat8.cc``.
+    Computed in integer arithmetic — no subnormal float is materialised — so
+    the result is correct even when NumPy is running under an MXCSR with FTZ
+    set (which can flush a subnormal float32 read to zero during the
+    ``.astype(np.float64)`` cast used by the naive bit-cast implementation).
+    """
+    v = np.asarray(values, dtype=np.uint32)
+    E = v >> 4
+    M = v & 0xF
+    # In the subnormal branch (v < 16) E is 0, so E - 1 would underflow as
+    # uint; we cast to int32 and clamp.  The shifted value is masked out by
+    # np.where anyway, so any extra computation there is harmless.
+    shifted = (16 + M) << np.maximum(E.astype(np.int32) - 1, 0)
+    return np.where(v < 16, v, shifted).astype(np.float32)
 
 
 def _unpack_ufloat8_35(values):
-    """ufloat8_35: 3-bit exponent, 5-bit mantissa. Same scheme as
-    _unpack_ufloat8_44 but the byte's 3-bit exponent must land at float32
-    bits 23-25, so we shift by 18 and rescale by 2^131. Mirrors
-    ufloat8_35::as_double() in abacus/src/include/ufloat8.cc."""
-    u = values.astype(np.uint32) << 18
-    f = u.view(np.float32)
-    return (f.astype(np.float64) * np.float64(2.0**131)).astype(np.float32)
+    """ufloat8_35: 3-bit exponent, 5-bit mantissa.  Decoded value for stored
+    byte V:
+
+    - ``V <  32``: subnormal range; decoded value is ``V`` (so 0, 1, ..., 31).
+    - ``V >= 32``: normal range; ``(32 + M) << (E - 1)`` with ``E = V >> 5``
+      and ``M = V & 0x1F``.  Max is ``(32 + 31) << 6 = 4032`` for ``V == 255``.
+
+    Mirrors ``ufloat8_35::as_double()`` in ``abacus/src/include/ufloat8.cc``.
+    See :func:`_unpack_ufloat8_44` for why the implementation avoids any
+    subnormal float intermediate.
+    """
+    v = np.asarray(values, dtype=np.uint32)
+    E = v >> 5
+    M = v & 0x1F
+    shifted = (32 + M) << np.maximum(E.astype(np.int32) - 1, 0)
+    return np.where(v < 32, v, shifted).astype(np.float32)
