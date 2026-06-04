@@ -36,7 +36,7 @@ from .utils import setup_logging
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
-logger = logging.getLogger('prepare_sim.py')
+logger = logging.getLogger(__file__)
 
 # ------------------------------------------------------------
 # local env fix
@@ -83,29 +83,95 @@ def unwrap_x_for_slab(x, i, numslabs, Lbox):
 
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD
-
-# NOTE : Changed subsample_halos & submask_particles to match BGS requirements in density, change proposed by Sandy Yuan.
-def subsample_halos(m, MT):
+# standard power law satellites
+def subsample_halos(m, MT: bool, is_bgs: bool = False):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
-    # for bgs
-    mask1 = x < 11.0
-    mask2 = x < 11.2
-    downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
-    downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
+    if MT: # for elgs
+        mask1 = x < 11.4
+        mask2 = x < 11.6
+        downfactors[mask1] = 0.2 / (1.0 + 10 * np.exp(-(x[mask1] - 11.2) * 25))
+        downfactors[mask2 & (~mask1)] = 0.4 / (
+            1.0 + 10 * np.exp(-(x[mask2 & (~mask1)] - 11.3) * 25)
+        )
+        downfactors[~mask2] = 1.0 / (1.0 + 0.1 * np.exp(-(x[~mask2] - 11.7) * 10))
+    elif is_bgs: # for bgs
+        mask1 = x < 11.0
+        mask2 = x < 11.2
+        downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
+        downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
+    else:
+        downfactors = 1.0 / (
+            1.0 + 0.1 * np.exp(-(x - 11.8) * 10)
+        )  # LRG only, default 12.3, set to 12.0 for z = 1.1
+        downfactors[x > 13.0] = 1
     return downfactors
 
-def submask_particles(m_in, n_in, MT):
+
+# # new version for negative alpha ELG satellites
+# def subsample_halos(m, MT):
+#     x = np.log10(m)
+#     downfactors = np.zeros(len(x))
+#     if MT:
+#         mask1 = x < 11.35
+#         mask2 = x < 11.52
+#         downfactors[mask1] = 0.5/(1.0 + 10*np.exp(-(x[mask1] - 11.1)*25))
+#         downfactors[mask2&(~mask1)] = 0.8/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 11.25)*25))
+#         downfactors[~mask2] = 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.6)*10))
+#         # save all halos that could host a satellite
+#         # downfactors[x>11.2] = 1
+#         return downfactors
+#     else:
+#         downfactors = 1.0/(1.0 + 0.1*np.exp(-(x - 12.0)*10)) # LRG only, might be able to step back to 12.5 depending on bestfit
+#         downfactors[x > 13.0] = 1
+#         return downfactors
+
+# # standard satellites
+# def submask_particles(m_in, n_in, MT):
+#     x = np.log10(m_in)
+
+#     if MT:
+#         if m_in < 1e11:
+#             return np.zeros(n_in)
+#         else:
+#             # a target number of particles
+#             ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
+#             submask = np.zeros(n_in).astype(int)
+#             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+#             return submask
+#     else:
+#         if 10**x < 1e12:
+#             return np.zeros(n_in) # essentially removing particles in halos below Mmin
+#         else:
+#             ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-13)))
+#             submask = np.zeros(n_in).astype(int)
+#             submask[np.random.choice(n_in, ntarget, replace = False)] = 1
+#             return submask
+
+
+# conformity fix
+def submask_particles(m_in, n_in, MT: bool, is_bgs: bool = False):
     x = np.log10(m_in)
-    if m_in < 1e11:
-        return np.zeros(n_in)
-    else:
-        # a target number of particles
-        ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-11.8)))
+    
+    M_min = 1e11 if (MT or is_bgs) else 1e12
+    
+    # Edge cases
+    if m_in < M_min:
+        return np.zeros(n_in) # essentially removing particles in halos below Mmin
+
+    # a target number of particles
+    if MT:
+        ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 12.5)))
         ntarget = np.minimum(ntarget, 100)
-        submask = np.zeros(n_in).astype(int)
-        submask[np.random.choice(n_in, ntarget, replace = False)] = 1
-        return submask
+    elif is_bgs:
+        ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 11.8)))
+        ntarget = np.minimum(ntarget, 100)
+    else:
+        ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 13)))
+            
+    submask = np.zeros(n_in).astype(int)
+    submask[np.random.choice(n_in, ntarget, replace=False)] = 1
+    return submask
 
 
 def get_vertices_cube(units=0.5, N=3):
@@ -248,6 +314,7 @@ def prepare_slab(
     mcut=1e11,
     rad_outer=10,
     numslabs=None,
+    is_bgs=False,
     show_slab_progress=False,
 ):
     outfilename_halos = (
@@ -380,7 +447,7 @@ def prepare_slab(
 
     # # form a halo table of the columns i care about
     # creating a mask of which halos to keep, which halos to drop
-    p_halos = subsample_halos(halos['N'] * Mpart, MT)
+    p_halos = subsample_halos(halos['N'] * Mpart, MT, is_bgs)
     mask_halos = np.random.random(len(halos)) < p_halos
     logger.info('Total number of halos: %d, keeping %d', len(halos), np.sum(mask_halos))
 
@@ -767,7 +834,7 @@ def prepare_slab(
                 # subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j], MT)
                 # submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
                 submask = submask_particles(
-                    halos['N'][j] * Mpart, halos['npoutA'][j], MT
+                    halos['N'][j] * Mpart, halos['npoutA'][j], MT, is_bgs
                 )
 
                 # updating the particles' masks, downsample factors, halo mass
@@ -1063,6 +1130,7 @@ def main(
     newseed=600,
     halo_lc=False,
     overwrite=1,
+    is_bgs=False,
     show_slab_progress=False,
 ):
     logger.info('Compiling compaso halo catalogs into subsampled catalogs')
@@ -1201,6 +1269,7 @@ def main(
                 nthread=nthread,
                 overwrite=overwrite,
                 numslabs=numslabs,
+                is_bgs=is_bgs,
                 show_slab_progress=show_slab_progress,
             )
             for i in range(numslabs)
@@ -1251,6 +1320,12 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--overwrite', help='overwrite existing subsamples', default=1, type=int
+    )
+    parser.add_argument(
+        '--is_bgs',
+        help='Use the BGS filter instead of LRG if Multi-Tracer option is not enabled.',
+        default=False,
+        action='store_true',
     )
     parser.add_argument(
         '--show_slab_progress',
