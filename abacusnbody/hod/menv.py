@@ -9,12 +9,16 @@ import numba
 import numpy as np
 from scipy.spatial import KDTree
 
+import logging
+from .utils import setup_logging
+
 from ..util import cumsum
 
 __all__ = ['do_Menv_from_tree']
 
 DEFAULT_BATCH_SIZE = 10**5
 
+logger = logging.getLogger(__file__)
 
 def do_Menv_from_tree(
     pos,
@@ -53,7 +57,7 @@ def do_Menv_from_tree(
     if r_outer.ndim > 0:
         r_outer = r_outer[mmask]
 
-    print('Building and querying trees for mass env calculation')
+    logger.info('Building and querying trees for mass env calculation')
     tree = KDTree(pos, boxsize=treebox)
 
     # we're taking potentially large differences, use float64
