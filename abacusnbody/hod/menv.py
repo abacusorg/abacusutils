@@ -10,7 +10,6 @@ import numpy as np
 from scipy.spatial import KDTree
 
 import logging
-from .utils import setup_logging
 
 from ..util import cumsum
 
@@ -19,6 +18,7 @@ __all__ = ['do_Menv_from_tree']
 DEFAULT_BATCH_SIZE = 10**5
 
 logger = logging.getLogger(__file__)
+
 
 def do_Menv_from_tree(
     pos,

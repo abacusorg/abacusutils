@@ -38,6 +38,7 @@ DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 logger = logging.getLogger(__file__)
 
+
 # ------------------------------------------------------------
 # local env fix
 # ------------------------------------------------------------
@@ -87,7 +88,7 @@ def unwrap_x_for_slab(x, i, numslabs, Lbox):
 def subsample_halos(m, MT: bool, is_bgs: bool = False):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
-    if MT: # for elgs
+    if MT:  # for elgs
         mask1 = x < 11.4
         mask2 = x < 11.6
         downfactors[mask1] = 0.2 / (1.0 + 10 * np.exp(-(x[mask1] - 11.2) * 25))
@@ -95,11 +96,13 @@ def subsample_halos(m, MT: bool, is_bgs: bool = False):
             1.0 + 10 * np.exp(-(x[mask2 & (~mask1)] - 11.3) * 25)
         )
         downfactors[~mask2] = 1.0 / (1.0 + 0.1 * np.exp(-(x[~mask2] - 11.7) * 10))
-    elif is_bgs: # for bgs
+    elif is_bgs:  # for bgs
         mask1 = x < 11.0
         mask2 = x < 11.2
-        downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
-        downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
+        downfactors[mask2 & (~mask1)] = (
+            0.1  # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
+        )
+        downfactors[~mask2] = 1  # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
     else:
         downfactors = 1.0 / (
             1.0 + 0.1 * np.exp(-(x - 11.8) * 10)
@@ -152,12 +155,12 @@ def subsample_halos(m, MT: bool, is_bgs: bool = False):
 # conformity fix
 def submask_particles(m_in, n_in, MT: bool, is_bgs: bool = False):
     x = np.log10(m_in)
-    
+
     M_min = 1e11 if (MT or is_bgs) else 1e12
-    
+
     # Edge cases
     if m_in < M_min:
-        return np.zeros(n_in) # essentially removing particles in halos below Mmin
+        return np.zeros(n_in)  # essentially removing particles in halos below Mmin
 
     # a target number of particles
     if MT:
@@ -168,7 +171,7 @@ def submask_particles(m_in, n_in, MT: bool, is_bgs: bool = False):
         ntarget = np.minimum(ntarget, 100)
     else:
         ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 13)))
-            
+
     submask = np.zeros(n_in).astype(int)
     submask[np.random.choice(n_in, ntarget, replace=False)] = 1
     return submask
@@ -829,7 +832,9 @@ def prepare_slab(
         start_tracker = 0
         for j in range(len(halos)):
             if j % 10000 == 0 and show_slab_progress:
-                print('halo id', j, end='\r') # NOTE: left to print to monitor progress and avoid many lines of logging
+                print(
+                    'halo id', j, end='\r'
+                )  # NOTE: left to print to monitor progress and avoid many lines of logging
             if mask_halos[j] and halos['npoutA'][j] > 0:
                 # subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j], MT)
                 # submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
@@ -1031,7 +1036,7 @@ def prepare_slab(
         parts['halo_shear'] = shearh_parts[mask_parts]
 
         logger.info(
-            'There are %d negative particles in downsample_halo and %d negative particles in halo_mass', 
+            'There are %d negative particles in downsample_halo and %d negative particles in halo_mass',
             np.sum(parts['downsample_halo'] < 0),
             np.sum(parts['halo_mass'] < 0),
         )
@@ -1092,7 +1097,9 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown=100):
         ]
 
     pos_parts = np.concatenate(partpos)
-    logger.info('Compiled all particles: %d, took time: %f', len(pos_parts), time.time() - start)
+    logger.info(
+        'Compiled all particles: %d, took time: %f', len(pos_parts), time.time() - start
+    )
 
     start = time.time()
     cat = CompaSOHaloCatalog(
@@ -1300,9 +1307,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--path2config', help='Path to the config file', default=DEFAULTS['path2config']
     )
-    parser.add_argument(
-        '--path2log', help='Path to the log file', default=None
-    )
+    parser.add_argument('--path2log', help='Path to the log file', default=None)
     parser.add_argument(
         '--alt_simname',
         help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
@@ -1335,7 +1340,7 @@ if __name__ == '__main__':
     )
     args = vars(parser.parse_args())
     setup_logging(filename=args.pop('path2log'))
-    
+
     main(**args)
 
     logger.info('Done !')
