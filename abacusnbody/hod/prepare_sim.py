@@ -723,7 +723,7 @@ def prepare_slab(
             env_id = env_id[uniq_idx]
 
             nbr_count = len(env_mass) - Ncentral
-            print(
+            logger.info(
                 f'[slab {i}] env centers = {Ncentral:,}, '
                 f'neighbor halos = {nbr_count:,}, '
                 f'total env halos = {len(env_mass):,}, '
@@ -745,7 +745,7 @@ def prepare_slab(
 
             Menv_central = Menv_all[:Ncentral]
             n_nonzero = np.count_nonzero(Menv_central)
-            print(
+            logger.info(
                 f'[slab {i}] computed padded Menv for {Ncentral:,} central halos; '
                 f'nonzero Menv count = {n_nonzero:,}'
             )
