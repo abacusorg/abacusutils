@@ -25,7 +25,12 @@ Most users will access this through
 
 import numpy as np
 
-from ._aurora_encodings import _unpack_ufloat8_35, _unpack_ufloat8_44, _unpack_vect32
+from ._aurora_encodings import (
+    _check_int_range,
+    _unpack_ufloat8_35,
+    _unpack_ufloat8_44,
+    _unpack_vect32,
+)
 
 __all__ = [
     'unpack_maplog',
@@ -76,14 +81,17 @@ def _field_shape(name, N):
 def _default_dtype(name, float_dtype):
     if name in ('pos', 'vel', 'density', 'vel_disp', 'vel_rel'):
         return float_dtype
+    # Math-able fields are promoted to int32 for user safety.
+    # Bitflag/enum/identifier fields (`control`, `node_type`, `lc_label`, `pid`)
+    # keep their natural unsigned dtype.
     return {
-        'mult': np.uint32,
+        'mult': np.int32,
         'control': np.uint16,
         'node_type': np.uint8,
-        'timestep': np.uint16,
-        'mult_sec': np.uint32,
+        'timestep': np.int32,
+        'mult_sec': np.int32,
         'pid': np.uint16,
-        'length': np.uint16,
+        'length': np.int32,
         'lc_label': np.uint8,
     }[name]
 
@@ -213,6 +221,7 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
         result['vel'][...] = _unpack_vect32(data[:, 2])
 
     if 'mult' in requested_set:
+        _check_int_range(data[:, 3], result['mult'].dtype, field='mult')
         result['mult'][...] = data[:, 3]
 
     if 'control' in requested_set:
@@ -227,7 +236,9 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
     # Modality-dependent (zeroed where not applicable)
     if 'mult_sec' in requested_set:
         is_merger = node_type == NODE_MERGER
-        result['mult_sec'][...] = flex2 * is_merger
+        mult_sec_vals = flex2 * is_merger
+        _check_int_range(mult_sec_vals, result['mult_sec'].dtype, field='mult_sec')
+        result['mult_sec'][...] = mult_sec_vals
 
     if 'pid' in requested_set:
         is_formation = node_type == NODE_FORMATION

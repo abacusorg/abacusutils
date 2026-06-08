@@ -69,10 +69,12 @@ _ALL_FIELDS = ('pixel', 'dist_bin', 'count', 'healstruct', 'voxel_id')
 
 
 def _default_dtype(name):
+    # `dist_bin` and `count` are math-able (bin arithmetic, coaddition), so they
+    # are promoted to int32 for user safety.
     return {
         'pixel': np.uint64,
-        'dist_bin': np.uint16,
-        'count': np.uint32,
+        'dist_bin': np.int32,
+        'count': np.int32,
         'healstruct': np.uint64,
         'voxel_id': np.uint64,
     }[name]
@@ -107,8 +109,8 @@ def unpack_healstruct(data, out=None, fields=None):
         arrays have shape ``(N,)``. Default dtypes:
 
         - ``pixel``: ``uint64`` (36 bits, needs uint64)
-        - ``dist_bin``: ``uint16``
-        - ``count``: ``uint32`` (19 bits, does not fit in uint16)
+        - ``dist_bin``: ``int32`` (9-bit value, promoted for safe arithmetic)
+        - ``count``: ``int32`` (19-bit value, promoted for safe arithmetic)
         - ``healstruct``: ``uint64`` (the raw packed value)
         - ``voxel_id``: ``uint64`` (45 bits, the coaddition key)
     """
