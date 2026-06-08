@@ -51,7 +51,7 @@ NODE_CONTROL_MASK = 0x3
 
 # Position encoding: 21 bits per axis, centered at 2^20, 1/128 kpc/h quantum.
 _POS_OFFSET = 1 << 20  # 1048576
-_POS_SCALE = 128.0  # quanta per Mpc/h 
+_POS_SCALE = 128.0  # quanta per Mpc/h
 _POS_MASK = (1 << 21) - 1  # 0x1FFFFF
 
 
