@@ -17,7 +17,7 @@ __all__ = ['do_Menv_from_tree']
 
 DEFAULT_BATCH_SIZE = 10**5
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def do_Menv_from_tree(

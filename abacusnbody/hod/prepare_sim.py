@@ -36,7 +36,7 @@ from .utils import setup_logging
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------
