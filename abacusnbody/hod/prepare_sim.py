@@ -30,8 +30,13 @@ from ..analysis.shear import get_shear, smooth_density
 from ..analysis.tsc import tsc_parallel
 from .menv import do_Menv_from_tree
 
+import logging
+from .utils import setup_logging
+
 DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
+
+logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------
@@ -80,11 +85,10 @@ def unwrap_x_for_slab(x, i, numslabs, Lbox):
 
 # https://arxiv.org/pdf/2001.06018.pdf Figure 13 shows redshift evolution of LRG HOD
 # standard power law satellites
-def subsample_halos(m, MT):
+def subsample_halos(m, MT: bool, is_bgs: bool = False):
     x = np.log10(m)
     downfactors = np.zeros(len(x))
-    if MT:
-        # for elgs
+    if MT:  # for elgs
         mask1 = x < 11.4
         mask2 = x < 11.6
         downfactors[mask1] = 0.2 / (1.0 + 10 * np.exp(-(x[mask1] - 11.2) * 25))
@@ -92,19 +96,19 @@ def subsample_halos(m, MT):
             1.0 + 10 * np.exp(-(x[mask2 & (~mask1)] - 11.3) * 25)
         )
         downfactors[~mask2] = 1.0 / (1.0 + 0.1 * np.exp(-(x[~mask2] - 11.7) * 10))
-
-        # # for bgs
-        # mask1 = x < 11.0
-        # mask2 = x < 11.2
-        # downfactors[mask2&(~mask1)] = 0.1 # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
-        # downfactors[~mask2] = 1 # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
-        return downfactors
+    elif is_bgs:  # for bgs
+        mask1 = x < 11.0
+        mask2 = x < 11.2
+        downfactors[mask2 & (~mask1)] = (
+            0.1  # 0.4/(1.0 + 10*np.exp(-(x[mask2&(~mask1)] - 10.9)*25))
+        )
+        downfactors[~mask2] = 1  # 1.0/(1.0 + 0.1*np.exp(-(x[~mask2] - 11.3)*10))
     else:
         downfactors = 1.0 / (
             1.0 + 0.1 * np.exp(-(x - 11.8) * 10)
         )  # LRG only, default 12.3, set to 12.0 for z = 1.1
         downfactors[x > 13.0] = 1
-        return downfactors
+    return downfactors
 
 
 # # new version for negative alpha ELG satellites
@@ -149,28 +153,28 @@ def subsample_halos(m, MT):
 
 
 # conformity fix
-def submask_particles(m_in, n_in, MT):
+def submask_particles(m_in, n_in, MT: bool, is_bgs: bool = False):
     x = np.log10(m_in)
 
+    M_min = 1e11 if (MT or is_bgs) else 1e12
+
+    # Edge cases
+    if m_in < M_min:
+        return np.zeros(n_in)  # essentially removing particles in halos below Mmin
+
+    # a target number of particles
     if MT:
-        if m_in < 1e11:
-            return np.zeros(n_in)
-        else:
-            # a target number of particles
-            # ntarget = np.minimum(n_in, int(1 + 1.5*10**(x-11.8)))
-            ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 12.5)))
-            ntarget = np.minimum(ntarget, 100)
-            submask = np.zeros(n_in).astype(int)
-            submask[np.random.choice(n_in, ntarget, replace=False)] = 1
-            return submask
+        ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 12.5)))
+        ntarget = np.minimum(ntarget, 100)
+    elif is_bgs:
+        ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 11.8)))
+        ntarget = np.minimum(ntarget, 100)
     else:
-        if 10**x < 1e12:
-            return np.zeros(n_in)  # essentially removing particles in halos below Mmin
-        else:
-            ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 13)))
-            submask = np.zeros(n_in).astype(int)
-            submask[np.random.choice(n_in, ntarget, replace=False)] = 1
-            return submask
+        ntarget = np.minimum(n_in, int(1 + 1.5 * 10 ** (x - 13)))
+
+    submask = np.zeros(n_in).astype(int)
+    submask[np.random.choice(n_in, ntarget, replace=False)] = 1
+    return submask
 
 
 def get_vertices_cube(units=0.5, N=3):
@@ -269,7 +273,7 @@ def gen_rand(N, chi_min, chi_max, fac, Lbox, offset, origins, rng):
         mask = mask0 | mask1 | mask2
     else:
         mask = mask0
-    print('masked randoms = ', np.sum(mask) * 100.0 / len(mask))
+    logger.info('%f masked randoms', np.sum(mask) * 100.0 / len(mask))
 
     rands_pos = np.vstack((x_cart[mask], y_cart[mask], z_cart[mask])).T
     rands_chis = rands_chis[mask]
@@ -313,6 +317,8 @@ def prepare_slab(
     mcut=1e11,
     rad_outer=10,
     numslabs=None,
+    is_bgs=False,
+    show_slab_progress=False,
 ):
     outfilename_halos = (
         savedir
@@ -333,7 +339,7 @@ def prepare_slab(
     outfilename_env = (
         savedir + '/env_xcom_' + str(i) + '_abacushod_localenv' + '_new.h5'
     )
-    print('processing slab ', i)
+    logger.info('Processing slab %d', i)
     if MT:
         outfilename_halos += '_MT'
         outfilename_particles += '_MT'
@@ -354,11 +360,11 @@ def prepare_slab(
         and (os.path.exists(outfilename_particles))
         and ((not need_env_file) or os.path.exists(outfilename_env))
     ):
-        print('files exists, skipping ', i)
+        logger.info('Files exist, skipping slab %d', i)
         return 0
 
     # load the halo catalog slab
-    print('loading halo catalog ')
+    logger.info('Loading halo catalog ')
     if halo_lc:
         slabname = (
             simdir
@@ -444,9 +450,9 @@ def prepare_slab(
 
     # # form a halo table of the columns i care about
     # creating a mask of which halos to keep, which halos to drop
-    p_halos = subsample_halos(halos['N'] * Mpart, MT)
+    p_halos = subsample_halos(halos['N'] * Mpart, MT, is_bgs)
     mask_halos = np.random.random(len(halos)) < p_halos
-    print('total number of halos, ', len(halos), 'keeping ', np.sum(mask_halos))
+    logger.info('Total number of halos: %d, keeping %d', len(halos), np.sum(mask_halos))
 
     halos['mask_subsample'] = mask_halos
     halos['multi_halos'] = 1.0 / p_halos
@@ -717,7 +723,7 @@ def prepare_slab(
             env_id = env_id[uniq_idx]
 
             nbr_count = len(env_mass) - Ncentral
-            print(
+            logger.info(
                 f'[slab {i}] env centers = {Ncentral:,}, '
                 f'neighbor halos = {nbr_count:,}, '
                 f'total env halos = {len(env_mass):,}, '
@@ -739,7 +745,7 @@ def prepare_slab(
 
             Menv_central = Menv_all[:Ncentral]
             n_nonzero = np.count_nonzero(Menv_central)
-            print(
+            logger.info(
                 f'[slab {i}] computed padded Menv for {Ncentral:,} central halos; '
                 f'nonzero Menv count = {n_nonzero:,}'
             )
@@ -755,7 +761,7 @@ def prepare_slab(
             # fenv will be computed later globally inside abacushod.py
             halos['fenv_rank'] = np.zeros(len(halos))
 
-        print('computing c rank')
+        logger.info('Computing c rank (delta concentration)')
         halos_c = halos['r98_L2com'] / halos['r25_L2com']
         deltac_rank = np.zeros(len(halos))
         for ibin in range(nbins):
@@ -792,7 +798,7 @@ def prepare_slab(
                     new_shear_rank = halo_shears.argsort().argsort()
                     shear_rank[mmask] = new_shear_rank / np.max(new_shear_rank) - 0.5
         halos['shear_rank'] = shear_rank
-        print('finished shear compute')
+        logger.info('Finished shear compute')
     else:
         halos['shear_rank'] = np.zeros(len(halos))
 
@@ -822,16 +828,18 @@ def prepare_slab(
         fenvh_parts = np.full(len_old, -1.0)
         shearh_parts = np.full(len_old, -1.0)
 
-        print('compiling particle subsamples')
+        logger.info('Compiling particle subsamples')
         start_tracker = 0
         for j in range(len(halos)):
-            if j % 10000 == 0:
-                print('halo id', j, end='\r')
+            if j % 10000 == 0 and show_slab_progress:
+                print(
+                    'halo id', j, end='\r'
+                )  # NOTE: left to print to monitor progress and avoid many lines of logging
             if mask_halos[j] and halos['npoutA'][j] > 0:
                 # subsample_factor = subsample_particles(halos['N'][j] * Mpart, halos['npoutA'][j], MT)
                 # submask = np.random.binomial(n = 1, p = subsample_factor, size = halos_pnum[j])
                 submask = submask_particles(
-                    halos['N'][j] * Mpart, halos['npoutA'][j], MT
+                    halos['N'][j] * Mpart, halos['npoutA'][j], MT, is_bgs
                 )
 
                 # updating the particles' masks, downsample factors, halo mass
@@ -996,7 +1004,7 @@ def prepare_slab(
     )  # attaching random numbers
 
     # output halo file
-    print('outputting new halo file ')
+    logger.info('Outputting new halo file ')
     # output_dir = savedir+'/halos_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
     if os.path.exists(outfilename_halos):
         os.remove(outfilename_halos)
@@ -1006,15 +1014,11 @@ def prepare_slab(
 
     # output the new particle file
     if z_type == 'primary' or z_type == 'lightcone':
-        print('adding rank fields to particle data ')
+        logger.info('Adding rank fields to particle data ')
         mask_parts = mask_parts.astype(bool)
         parts = parts[mask_parts]
-        print(
-            'pre process particle number ',
-            len_old,
-            ' post process particle number ',
-            len(parts),
-        )
+        logger.info('Pre-process particle number: %d, ', len_old)
+        logger.info('Post-process particle number: %d', len(parts))
         if want_ranks:
             parts['ranks'] = ranks_parts[mask_parts]
             parts['ranksv'] = ranksv_parts[mask_parts]
@@ -1031,12 +1035,12 @@ def prepare_slab(
         parts['halo_fenv'] = fenvh_parts[mask_parts]
         parts['halo_shear'] = shearh_parts[mask_parts]
 
-        print(
-            'are there any negative particle values? ',
+        logger.info(
+            'There are %d negative particles in downsample_halo and %d negative particles in halo_mass',
             np.sum(parts['downsample_halo'] < 0),
             np.sum(parts['halo_mass'] < 0),
         )
-        print('outputting new particle file ')
+        logger.info('Outputting new particle file ')
         # output_dir = savedir+'/particles_xcom_'+str(i)+'_seed'+str(newseed)+'_abacushodMT_new.h5'
         if os.path.exists(outfilename_particles):
             os.remove(outfilename_particles)
@@ -1044,12 +1048,8 @@ def prepare_slab(
         newfile.create_dataset('particles', data=parts)
         newfile.close()
 
-        print(
-            'pre process particle number ',
-            len_old,
-            ' post process particle number ',
-            len(parts),
-        )
+        logger.info('Pre-process particle number: %d', len_old)
+        logger.info('Post-process particle number: %d', len(parts))
 
 
 def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown=100):
@@ -1097,7 +1097,9 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown=100):
         ]
 
     pos_parts = np.concatenate(partpos)
-    print('compiled all particles', len(pos_parts), 'took time', time.time() - start)
+    logger.info(
+        'Compiled all particles: %d, took time: %f', len(pos_parts), time.time() - start
+    )
 
     start = time.time()
     cat = CompaSOHaloCatalog(
@@ -1108,19 +1110,19 @@ def calc_shearmark(simdir, simname, z_mock, N_dim, R, fn, partdown=100):
     header = cat.header
     Lbox = header['BoxSizeHMpc']
     Lbox / N_dim
-    print('compiled all halos', 'took time', time.time() - start)
+    logger.info('Compiled all halos, took time: %f', time.time() - start)
 
     start = time.time()
     # dens = np.zeros((N_dim, N_dim, N_dim))
     # numba_tsc_3D(pos_parts, dens, Lbox)
     dens = tsc_parallel(pos_parts, N_dim, Lbox)
-    print('finished TSC, took time', time.time() - start)
+    logger.info('Finished TSC, took time: %f', time.time() - start)
     start = time.time()
     dens_smooth = smooth_density(dens, R, N_dim, Lbox)
-    print('finished smoothing, took time', time.time() - start)
+    logger.info('Finished smoothing, took time: %f', time.time() - start)
     start = time.time()
     shearmark = get_shear(dens_smooth, N_dim, Lbox)
-    print('finished shear mark, took time', time.time() - start)
+    logger.info('Finished shear mark, took time: %f', time.time() - start)
 
     # output file
     np.save(fn + '.npy', shearmark)
@@ -1135,8 +1137,10 @@ def main(
     newseed=600,
     halo_lc=False,
     overwrite=1,
+    is_bgs=False,
+    show_slab_progress=False,
 ):
-    print('compiling compaso halo catalogs into subsampled catalogs')
+    logger.info('Compiling compaso halo catalogs into subsampled catalogs')
 
     config = yaml.safe_load(open(path2config))
     # update params if needed
@@ -1231,7 +1235,7 @@ def main(
         if os.path.exists(shear_fn + '.npy'):
             shearmark = np.load(shear_fn + '.npy')
         else:
-            print('computing shear field')
+            logger.info('Computing shear field')
             shearmark = calc_shearmark(
                 simdir, simname, z_mock, Ndim, Rsm, shear_fn, partdown
             )
@@ -1243,7 +1247,7 @@ def main(
         nthread = (
             len(os.sched_getaffinity(0)) // config['prepare_sim']['Nparallel_load']
         )
-        print(f'prepare_sim inferred Nthread_per_load = {nthread}')
+        logger.info(f'prepare_sim inferred Nthread_per_load = {nthread}')
     else:
         nthread = int(nthread)
 
@@ -1272,6 +1276,8 @@ def main(
                 nthread=nthread,
                 overwrite=overwrite,
                 numslabs=numslabs,
+                is_bgs=is_bgs,
+                show_slab_progress=show_slab_progress,
             )
             for i in range(numslabs)
         ]
@@ -1284,7 +1290,7 @@ def main(
             raise RuntimeError(
                 'A subprocess died in prepare_sim. Did prepare_slab() run out of memory?'
             ) from bpp
-    # print("done, took time ", time.time() - start)
+    # logger.info("Done, took time: %f", time.time() - start)
 
 
 class ArgParseFormatter(
@@ -1301,6 +1307,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--path2config', help='Path to the config file', default=DEFAULTS['path2config']
     )
+    parser.add_argument('--path2log', help='Path to the log file', default=None)
     parser.add_argument(
         '--alt_simname',
         help='alternative simname to process, like "AbacusSummit_base_c000_ph003"',
@@ -1319,7 +1326,21 @@ if __name__ == '__main__':
     parser.add_argument(
         '--overwrite', help='overwrite existing subsamples', default=1, type=int
     )
+    parser.add_argument(
+        '--is_bgs',
+        help='Use the BGS filter instead of LRG if Multi-Tracer option is not enabled.',
+        default=False,
+        action='store_true',
+    )
+    parser.add_argument(
+        '--show_slab_progress',
+        help='Show progress of slab preparation (can be verbose)',
+        default=False,
+        action='store_true',
+    )
     args = vars(parser.parse_args())
+    setup_logging(filename=args.pop('path2log'))
+
     main(**args)
 
-    print('done')
+    logger.info('Done !')
