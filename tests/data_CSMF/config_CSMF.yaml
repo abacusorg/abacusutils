@@ -1,0 +1,89 @@
+# Comment out the probes you don't need
+# CAREFUL: yaml is super sensitive to spaces - don't use tabs
+
+# Simulation parameters
+sim_params:
+    sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation
+    sim_dir: '/global/cfs/cdirs/desi/public/cosmosim/AbacusSummit/halo_light_cones/'  # where is the simulation
+    subsample_dir: 'data_CSMF/halos_data/'
+    cleaned_halos: 'data_CSMF/halos_data/'
+
+    # subsample_dir: '/pscratch/sd/p/pierre/AbacusSummit/subsamples/'
+    # cleaned_halos: '/pscratch/sd/p/pierre/AbacusSummit/subsamples/'
+
+    Nthread_load: 10
+    z_mock: 0.100
+    halo_lc: True
+
+    # subsample_dir: ‘/pscratch/sd/b/boryanah/AbacusHOD_scratch/mocks_lc_subsample/’
+
+prepare_sim:
+    Nparallel_load: 10 # best for cori haswell node
+
+# HOD parameters
+HOD_params:
+    use_particles: True
+    want_ranks: True               # want to implement satellite profile flexiblities?
+    want_AB: True               # want to implement assembly bias?
+    density_sigma: 3               # scale radius in Mpc / h for local density calculation
+    tracer_flags:                  # which tracer do we want?
+        LRG: False
+        ELG: False
+        QSO: False
+        CSMF: True
+    want_rsd: True                 # want RSD?
+    write_to_disk: False
+
+    CSMF_params:
+        Mstar_low: 10.4
+        Mstar_up: 12.1
+        M_0: 9.935
+        M_1: 11.07
+        gamma_1: 3.273
+        gamma_2: 0.255
+        sigma_c: 0.143
+        a_1: 0.501
+        a_2: 0
+        M_2: 14.28
+        b_0: -0.766
+        b_1: 1.008
+        b_2: 0
+        delta_1: 0.0
+        delta_2: 0.0
+        alpha_c: 0.0
+        alpha_s: 0.0
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: 0
+        Asat: 0
+        Bcent: 0
+        Bsat: 0
+        ic: 1.0
+
+fit_params:
+    M_0: [0, 'CSMF']
+    M_1: [1, 'CSMF']
+    gamma_1: [2, 'CSMF']
+    gamma_2: [3,  'CSMF']
+    sigma_c: [4, 'CSMF']
+    a_1: [5, 'CSMF']
+    b_0: [6, 'CSMF']
+    b_1: [7, 'CSMF']
+    s: [8, 'CSMF']
+    Bcent: [9, 'CSMF']
+    Bsat: [10, 'CSMF']
+
+
+# ===========================================================================================
+# The following dictionaries are for using the provided emcee/likelihood templates. They
+# are not needed for using the AbacusHOD class and running HODs.
+
+# parameters that indicate where the observed data that you would like to fit live.
+data_params:
+
+
+
+# Configuration parameters for emcee
+ch_config_params:
