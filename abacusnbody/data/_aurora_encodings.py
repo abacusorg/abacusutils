@@ -12,11 +12,38 @@ Aurora formats:
 - ``_unpack_ufloat8_35``: 8-bit unsigned float with 3-bit exponent, 5-bit
   mantissa. Used for velocity-dispersion-like fields.
 
+It also provides :func:`_check_int_range`, the overflow guard used when a
+math-able integer field is promoted to a narrower signed dtype on the reader
+side (see the per-module unpackers).
+
 This module is private. Callers should be other modules within
-:mod:`abacusnbody.data` (currently :mod:`output_particle` and :mod:`maplog`).
+:mod:`abacusnbody.data` (currently :mod:`output_particle`, :mod:`maplog`, and
+:mod:`healstruct`).
 """
 
 import numpy as np
+
+
+def _check_int_range(values, dtype, *, field):
+    """Raise :class:`OverflowError` if any element of ``values`` falls outside
+    the range representable by ``dtype``.
+
+    Comparison is done in ``values``' own (wider, unsigned) domain, so it is
+    well-defined and catches the silent wraparound that NEP 50 (NumPy >= 2.0)
+    would otherwise allow when assigning an out-of-range value into a
+    narrower/signed integer array. Used by the Aurora unpackers when promoting
+    a full-width ``uint32`` field (e.g. a multiplicity) to ``int32``.
+    """
+    if values.size == 0:
+        return
+    info = np.iinfo(dtype)
+    vmax = int(values.max())
+    vmin = int(values.min())
+    if vmax > info.max or vmin < info.min:
+        raise OverflowError(
+            f'{field}: values [{vmin}, {vmax}] do not fit '
+            f'{np.dtype(dtype).name} range [{info.min}, {info.max}]'
+        )
 
 
 def _unpack_vect32(packed):

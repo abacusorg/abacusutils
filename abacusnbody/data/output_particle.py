@@ -55,7 +55,8 @@ def _default_dtype(name, float_dtype):
     if name == 'is_map':
         return np.bool_
     if name == 'mult':
-        return np.uint32
+        # int32, not uint32: this is a math-able count, use signed type for user safety
+        return np.int32
     raise KeyError(name)
 
 
@@ -96,7 +97,7 @@ def unpack_output_particle(data, out=None, fields=None, float_dtype=np.float32):
         - ``density``: ``(N,)`` float
         - ``vel_disp``: ``(N,)`` float
         - ``is_map``: ``(N,)`` ``bool`` — True for MAP rows, False for DM
-        - ``mult``: ``(N,)`` ``uint32`` — multiplicity; 0 for DM
+        - ``mult``: ``(N,)`` ``int32`` — multiplicity; 0 for DM
         - ``rel_vel``: ``(N,)`` float — relative velocity; 0 for DM
     """
     if out is not None and fields is not None:

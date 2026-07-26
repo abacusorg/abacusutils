@@ -17,7 +17,7 @@ authors = [{name = "Daniel Eisenstein"},
            ]
 description = "Python code to read halo catalogs and other Abacus N-body data products"
 dependencies = [
-    'numpy>=1.16',
+    'numpy>=2.0.0',
     'blosc>=1.9.2',
     'astropy>=4.0.0',
     'scipy>=1.5.0',
