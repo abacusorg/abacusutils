@@ -168,7 +168,9 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
         handler = _HANDLERS[colname]
         handler_kwargs = {k: kwargs[k] for k in ('ppd',) if k in kwargs}
-        cols, nread = handler(data, header, load, dtype, colname=colname, **handler_kwargs)
+        cols, nread = handler(
+            data, header, load, dtype, colname=colname, **handler_kwargs
+        )
 
         table = Table(meta=meta)
         for name, col in cols.items():
