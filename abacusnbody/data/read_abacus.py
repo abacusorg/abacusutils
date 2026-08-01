@@ -28,7 +28,7 @@ from astropy.table import Table
 
 from .bitpacked import unpack_pids, unpack_rvint
 from .healstruct import LAYOUT as _HEALSTRUCT_LAYOUT, unpack_healstruct
-from .maplog import unpack_maplog
+from .maplog import LAYOUT as _MAPLOG_LAYOUT, unpack_maplog
 from .output_particle import LAYOUT as _OUTPUT_PARTICLE_LAYOUT, unpack_output_particle
 from .pack9 import unpack_pack9
 
@@ -48,6 +48,8 @@ _DEFAULT_LOAD = {
     'lightcone_healpix': ('pixel', 'count'),
     'maplogs': ('pos', 'vel', 'mult', 'control'),
 }
+# Note: rel_vel / rel_vel_healpix are not in the defaults above. They only mean
+# anything for MAPs, and a caller who wants them will ask (or pass load='all').
 
 
 def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwargs):
@@ -71,14 +73,20 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
         For Aurora ``output_particle`` / ``lightcone_particle``, the valid load keys
         are: ``'pos', 'vel', 'pid', 'density', 'vel_disp', 'is_map', 'mult',
-        'rel_vel'``.
+        'rel_vel', 'rel_vel_healpix'``.
 
         For Aurora ``lightcone_healpix``, the valid load keys are:
         ``'pixel', 'dist_bin', 'count', 'healstruct', 'voxel_id'``.
 
         For Aurora ``maplogs``, the valid load keys are: ``'pos', 'vel',
         'mult', 'control', 'node_type', 'timestep', 'mult_sec', 'pid',
-        'density', 'vel_disp', 'length', 'vel_rel', 'lc_label'``.
+        'density', 'vel_disp', 'length', 'rel_vel', 'rel_vel_healpix',
+        'lc_label'``.
+
+        ``rel_vel`` is a magnitude; ``rel_vel_healpix`` is the matching direction as
+        an Nside=4 NEST HEALPix pixel index. The 192 unit vectors are available as
+        ``table.meta['rel_vel_healpix_lookup']`` (written into the file header) or as
+        ``abacusnbody.data.output_particle.rel_vel_healpix_lookup``.
 
     colname: str or None, optional
         The internal column name in the ASDF file to load.  Probably one of ``'rvint'``,
@@ -293,6 +301,15 @@ def _handle_healstruct(data, header, load, dtype, **_unused):
 
 
 def _handle_maplog(data, header, load, dtype, **_unused):
+    # Files written before the multiplicity word was split (count in the low 24 bits,
+    # rel_vel_healpix in the top byte) carry no MapLogLayout key at all. Those predate
+    # the split, so an absent key is accepted; a present-but-different one is not.
+    layout = header.get('MapLogLayout')
+    if layout is not None and layout != _MAPLOG_LAYOUT:
+        raise ValueError(
+            f'MapLogLayout {layout!r} in file does not match the only '
+            f'layout this reader supports ({_MAPLOG_LAYOUT!r})'
+        )
     fields = None if load == 'all' else load
     cols = unpack_maplog(data, fields=fields, float_dtype=dtype)
     return cols, len(data)
