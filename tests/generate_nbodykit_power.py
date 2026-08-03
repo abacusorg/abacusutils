@@ -3,7 +3,7 @@ from nbodykit.lab import ArrayCatalog, FFTPower
 
 
 def CompensateTSC(w, v):
-    """
+    r"""
     Return the Fourier-space kernel that accounts for the convolution of
     the gridded field with the TSC window function in configuration space
 
@@ -27,7 +27,7 @@ def CompensateTSC(w, v):
 
 
 def CompensateCIC(w, v):
-    """
+    r"""
     Return the Fourier-space kernel that accounts for the convolution of
     the gridded field with the CIC window function in configuration space
 
@@ -51,7 +51,7 @@ def CompensateCIC(w, v):
 
 
 def CompensateTSCShotnoise(w, v):
-    """
+    r"""
     Return the Fourier-space kernel that accounts for the convolution of
     the gridded field with the TSC window function in configuration space,
     as well as the approximate aliasing correction to the first order
@@ -76,7 +76,7 @@ def CompensateTSCShotnoise(w, v):
 
 
 def CompensateCICShotnoise(w, v):
-    """
+    r"""
     Return the Fourier-space kernel that accounts for the convolution of
     the gridded field with the CIC window function in configuration space,
     as well as the approximate aliasing correction to the first order

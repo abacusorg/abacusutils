@@ -980,9 +980,8 @@ class CompaSOHaloCatalog:
                             field_dependencies += [k]
                     have_match = True
                     # break  # comment out for debugging
-            else:
-                if not have_match:
-                    raise KeyError(f'Don\'t know how to load halo field "{field}"')
+            if not have_match:
+                raise KeyError(f'Don\'t know how to load halo field "{field}"')
 
         raw_dependencies = list(set(raw_dependencies))  # make unique
         # unique, preserve order, but using last occurrence
@@ -1028,9 +1027,8 @@ class CompaSOHaloCatalog:
 
                 have_match = True
                 # break  # comment out for debugging
-        else:
-            if not have_match:
-                raise KeyError(f'Don\'t know how to load halo field "{field}"')
+        if not have_match:
+            raise KeyError(f'Don\'t know how to load halo field "{field}"')
 
         astropy.table.conf.replace_warnings = _oldwarn
 

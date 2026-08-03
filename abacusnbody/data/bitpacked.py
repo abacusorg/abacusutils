@@ -10,7 +10,7 @@ Most users will not use this module directly, but will instead use
 import numba as nb
 import numpy as np
 
-__all__ = ['unpack_rvint', 'unpack_pids']
+__all__ = ['unpack_pids', 'unpack_rvint']
 
 # Constants
 AUXDENS = np.uint64(0x07FE000000000000)

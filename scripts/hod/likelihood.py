@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class PowerData(object):
+class PowerData:
     """
     Dummy object for calculating a likelihood
     """

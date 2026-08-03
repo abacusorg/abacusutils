@@ -1,8 +1,8 @@
 import math
 import os
-from pathlib import Path
 import time
 import warnings
+from pathlib import Path
 
 import numba
 import numba as nb

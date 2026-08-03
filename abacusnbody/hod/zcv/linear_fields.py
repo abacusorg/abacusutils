@@ -15,8 +15,8 @@ from scipy.fft import rfftn
 
 from abacusnbody.analysis.power_spectrum import (
     calc_pk_from_deltak,
-    get_k_mu_edges,
     get_delta_mu2,
+    get_k_mu_edges,
     get_W_compensated,
 )
 from abacusnbody.metadata import get_meta

@@ -6,21 +6,20 @@ spectra (wedges, multipoles and beyond) in the cubic box.
 import gc
 import warnings
 
-import numpy as np
 import numba
+import numpy as np
 from astropy.table import Table
-from scipy.fft import rfftn, irfftn, fftfreq
+from scipy.fft import fftfreq, irfftn, rfftn
 
-from .tsc import tsc_parallel
 from .cic import cic_serial
-
+from .tsc import tsc_parallel
 
 __all__ = [
-    'calc_power',
     'calc_pk_from_deltak',
+    'calc_power',
+    'get_k_mu_edges',
     'pk_to_xi',
     'project_3d_to_poles',
-    'get_k_mu_edges',
 ]
 
 MAX_THREADS = numba.config.NUMBA_NUM_THREADS

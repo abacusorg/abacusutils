@@ -16,7 +16,7 @@ DEFAULTS = {}
 DEFAULTS['path2config'] = 'config/abacus_hod.yaml'
 
 
-class SampleFileUtil(object):
+class SampleFileUtil:
     """
     Util for handling sample files.
     Copied from Andrina's code.
@@ -57,7 +57,7 @@ class SampleFileUtil(object):
         return 'SampleFileUtil'
 
 
-class DumPool(object):
+class DumPool:
     def __init__(self):
         pass
 
@@ -111,7 +111,6 @@ def time_lnprob(params, param_mapping, param_tracer, Data, Ball):
     print(
         '============================================================================'
     )
-    return
 
 
 def inrange(p, params):

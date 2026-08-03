@@ -7,9 +7,9 @@
 # or docs/hod.rst.
 
 import gc
+import logging
 import time
 from pathlib import Path
-import logging
 
 import asdf
 import h5py
@@ -26,13 +26,13 @@ from ..analysis.tpcf_corrfunc import (
     calc_xirppi_fast,
 )
 from .GRAND_HOD import (
+    N_cen_ELG_v1,
+    N_cen_QSO,
+    N_sat_elg,
+    N_sat_generic,
     gen_gal_cat,
     n_cen_LRG,
     n_sat_LRG_modified,
-    N_cen_ELG_v1,
-    N_sat_elg,
-    N_cen_QSO,
-    N_sat_generic,
 )
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
@@ -307,8 +307,7 @@ class AbacusHOD:
         n_jump = int(np.ceil(len(halo_info_fns) / n_chunks))
         start = (chunk) * n_jump
         end = (chunk + 1) * n_jump
-        if end > len(halo_info_fns):
-            end = len(halo_info_fns)
+        end = min(end, len(halo_info_fns))
         params['numslabs'] = end - start
         self.lbox = header['BoxSize']
 
@@ -1477,9 +1476,9 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
+        from ..analysis.power_spectrum import get_k_mu_edges
         from .zcv.tools_cv import run_zcv
         from .zcv.tracer_power import get_tracer_power
-        from ..analysis.power_spectrum import get_k_mu_edges
 
         # compute real space and redshift space
         # assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
@@ -1559,7 +1558,7 @@ class AbacusHOD:
             try:
                 assert np.isclose(
                     asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']
-                ), f'Mismatching file: {str(fn)}'
+                ), f'Mismatching file: {fn!s}'
             except FileNotFoundError:
                 pass
 
@@ -1567,31 +1566,31 @@ class AbacusHOD:
             pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
             pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
             assert np.allclose(k_binc, pk_rsd_tr_dict['k_binc']), (
-                f'Mismatching file: {str(power_rsd_tr_fn)}'
+                f'Mismatching file: {power_rsd_tr_fn!s}'
             )
             assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
-                f'Mismatching file: {str(power_rsd_ij_fn)}'
+                f'Mismatching file: {power_rsd_ij_fn!s}'
             )
             assert np.allclose(mu_binc, pk_rsd_tr_dict['mu_binc']), (
-                f'Mismatching file: {str(power_rsd_tr_fn)}'
+                f'Mismatching file: {power_rsd_tr_fn!s}'
             )
             assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
-                f'Mismatching file: {str(power_rsd_ij_fn)}'
+                f'Mismatching file: {power_rsd_ij_fn!s}'
             )
             if config['HOD_params']['want_rsd']:
                 pk_tr_dict = asdf.open(power_tr_fn)['data']
                 pk_ij_dict = asdf.open(power_ij_fn)['data']
                 assert np.allclose(k_binc, pk_tr_dict['k_binc']), (
-                    f'Mismatching file: {str(power_tr_fn)}'
+                    f'Mismatching file: {power_tr_fn!s}'
                 )
                 assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
-                    f'Mismatching file: {str(power_ij_fn)}'
+                    f'Mismatching file: {power_ij_fn!s}'
                 )
                 assert np.allclose(mu_binc, pk_tr_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_tr_fn)}'
+                    f'Mismatching file: {power_tr_fn!s}'
                 )
                 assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_ij_fn)}'
+                    f'Mismatching file: {power_ij_fn!s}'
                 )
             else:
                 pk_tr_dict, pk_ij_dict = None, None
@@ -1614,10 +1613,10 @@ class AbacusHOD:
                 )
                 pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
                 assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
-                    f'Mismatching file: {str(power_rsd_ij_fn)}'
+                    f'Mismatching file: {power_rsd_ij_fn!s}'
                 )
                 assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_rsd_ij_fn)}'
+                    f'Mismatching file: {power_rsd_ij_fn!s}'
                 )
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
@@ -1646,10 +1645,10 @@ class AbacusHOD:
                     )
                     pk_ij_dict = asdf.open(power_ij_fn)['data']
                     assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
-                        f'Mismatching file: {str(power_ij_fn)}'
+                        f'Mismatching file: {power_ij_fn!s}'
                     )
                     assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
-                        f'Mismatching file: {str(power_ij_fn)}'
+                        f'Mismatching file: {power_ij_fn!s}'
                     )
             else:
                 pk_tr_dict, pk_ij_dict = None, None
@@ -1666,9 +1665,9 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
+        from ..analysis.power_spectrum import pk_to_xi
         from .zcv.tools_cv import run_zcv_field
         from .zcv.tracer_power import get_tracer_power
-        from ..analysis.power_spectrum import pk_to_xi
 
         # compute real space and redshift space
         assert config['HOD_params']['want_rsd'], (
@@ -1789,7 +1788,7 @@ class AbacusHOD:
                 for fn in pk_fns:
                     assert np.isclose(
                         asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']
-                    ), f'Mismatching file: {str(fn)}'
+                    ), f'Mismatching file: {fn!s}'
         zcv_dict = run_zcv_field(
             pk_rsd_tr_fns, pk_rsd_ij_fns, pk_tr_fns, pk_ij_fns, config
         )

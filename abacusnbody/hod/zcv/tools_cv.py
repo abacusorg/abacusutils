@@ -3,8 +3,8 @@ Tools for applying variance reduction (ZCV and LCV) (based on scripts from Joe D
 """
 
 import gc
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import asdf
 import numpy as np
@@ -13,12 +13,13 @@ from scipy.optimize import minimize
 from scipy.signal import savgol_filter
 
 from abacusnbody.analysis.power_spectrum import (
-    get_k_mu_edges,
-    project_3d_to_poles,
     expand_poles_to_3d,
+    get_k_mu_edges,
     get_smoothing,
+    project_3d_to_poles,
 )
 from abacusnbody.metadata import get_meta
+
 from .ic_fields import compress_asdf
 
 try:
@@ -641,16 +642,16 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     data = np.load(window_fn)
     window = data['window']
     keff = data['keff']
-    assert len(keff) == len(k_binc), f'Mismatching file: {str(window_fn)}'
+    assert len(keff) == len(k_binc), f'Mismatching file: {window_fn!s}'
     assert np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1, (
-        f'Mismatching file: {str(window_fn)}'
+        f'Mismatching file: {window_fn!s}'
     )
 
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
-    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {str(zenbu_fn)}'
-    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {str(zenbu_fn)}'
+    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {zenbu_fn!s}'
+    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {zenbu_fn!s}'
 
     # combine spectra drops the bias = 1 element
     pk_zz = combine_spectra(k_binc, pk_ij_zz_input, bias_vec[1:], rsd=want_rsd)
@@ -831,8 +832,8 @@ def run_zcv_field(
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
-    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {str(zenbu_fn)}'
-    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {str(zenbu_fn)}'
+    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {zenbu_fn!s}'
+    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {zenbu_fn!s}'
 
     # combine zenbu multipoles
     pk_zenbu = combine_spectra(k_binc, pk_ij_zenbu, bias_vec[1:], rsd=want_rsd)
@@ -1099,9 +1100,9 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     data = np.load(window_fn)
     window = data['window']
     keff = data['keff']
-    assert len(keff) == len(k_binc), f'Mismatching file: {str(window_fn)}'
+    assert len(keff) == len(k_binc), f'Mismatching file: {window_fn!s}'
     assert np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1, (
-        f'Mismatching file: {str(window_fn)}'
+        f'Mismatching file: {window_fn!s}'
     )
 
     # stochasticity and model error

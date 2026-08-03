@@ -10,11 +10,13 @@ import argparse
 import concurrent.futures
 import gc
 import glob
+import logging
+import math
 import multiprocessing
 import os
 import time
 from pathlib import Path
-import math
+
 import h5py
 import numba
 import numpy as np
@@ -29,8 +31,6 @@ from abacusnbody.data.read_abacus import read_asdf
 from ..analysis.shear import get_shear, smooth_density
 from ..analysis.tsc import tsc_parallel
 from .menv import do_Menv_from_tree
-
-import logging
 from .utils import setup_logging
 
 DEFAULTS = {}
@@ -1208,7 +1208,7 @@ def main(
         search_path = (
             Path(simdir) / Path(simname) / 'halos' / ('z%4.3f' % z_mock) / 'halo_info'
         )
-        halo_info_fns = list(sorted(search_path.glob('*.asdf')))
+        halo_info_fns = sorted(search_path.glob('*.asdf'))
         if not halo_info_fns:
             raise ValueError(f'no halo info files found in {search_path}')
     numslabs = len(halo_info_fns)

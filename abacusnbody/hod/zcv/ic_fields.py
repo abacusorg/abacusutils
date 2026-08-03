@@ -1,20 +1,19 @@
 import argparse
 import gc
 import os
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import asdf
+import numba
 import numpy as np
 import yaml
-import numba
+from asdf.exceptions import AsdfWarning
 
 # from np.fft import fftfreq, fftn, ifftn
-from scipy.fft import rfftn, irfftn
+from scipy.fft import irfftn, rfftn
 
 from abacusnbody.metadata import get_meta
-
-from asdf.exceptions import AsdfWarning
 
 warnings.filterwarnings('ignore', category=AsdfWarning)
 
@@ -265,7 +264,6 @@ def add_ij(final_field, field_to_add, n1d, factor=1.0, dtype=np.float32):
         for j in range(n1d):
             for k in range(n1d):
                 final_field[i, j, k] += factor * field_to_add[i, j, k] ** 2
-    return
 
 
 def get_dk_to_s2(delta_k, nmesh, lbox):

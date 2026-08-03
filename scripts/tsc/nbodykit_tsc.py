@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import timeit
+
 import click
 import nbodykit
 from nbodykit.source.catalog import UniformCatalog
