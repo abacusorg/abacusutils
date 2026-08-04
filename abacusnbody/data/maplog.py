@@ -14,6 +14,21 @@ safe to read without filtering. Use ``node_type`` as the discriminator.
 Position is returned in Mpc/h (5 kpc/h quantum, fixed); velocity in km/s
 (via the vect32 encoding shared with ``output_particle``).
 
+For epoch nodes (LIGHTCONE / TIMESLICE), ``rel_vel`` is the *magnitude* of the
+MAP's velocity relative to the mean local dark matter and ``rel_vel_healpix`` is
+its *direction*, as an Nside=4 NEST HEALPix pixel index (0--191). The direction
+occupies the top byte of the multiplicity word, so ``mult`` is the low 24 bits of
+that word rather than all 32. Multiply the unit vector for the pixel by
+``rel_vel`` to recover the vector::
+
+    from abacusnbody.data.maplog import rel_vel_healpix_lookup
+
+    v3 = t['rel_vel'][:, None] * rel_vel_healpix_lookup[t['rel_vel_healpix']]
+
+Both are zero for FORMATION and MERGER nodes. See
+:mod:`abacusnbody.data.output_particle` for the same pair of fields on the
+particle outputs.
+
 The C++ source-of-truth is ``maplog.cc`` / ``vect32.cc`` in the Abacus
 codebase. The reference Python unpacker is
 ``scripts/aurora/dje-maplogs.py``.
@@ -31,15 +46,24 @@ from ._aurora_encodings import (
     _unpack_ufloat8_44,
     _unpack_vect32,
 )
+from ._healpix_nside4 import rel_vel_healpix_lookup
 
 __all__ = [
     'unpack_maplog',
+    'LAYOUT',
     'NODE_FORMATION',
     'NODE_MERGER',
     'NODE_LIGHTCONE',
     'NODE_TIMESLICE',
     'NODE_CONTROL_MASK',
+    'rel_vel_healpix_lookup',
 ]
+
+# The MapLogLayout string stored in the file header under that key. Earlier files
+# carry no such key at all; "b" is the first version, introduced when the
+# multiplicity word's top byte was claimed for rel_vel_healpix. A reader that took
+# the whole uint32 as the multiplicity would silently be wrong on epoch nodes.
+LAYOUT = 'mapnode_24b'
 
 # Node modality codes (low 2 bits of the `control` word). Mirrors the
 # #defines in maplog.cc.
@@ -54,6 +78,14 @@ _POS_OFFSET = 1 << 20  # 1048576
 _POS_SCALE = 128.0  # quanta per Mpc/h
 _POS_MASK = (1 << 21) - 1  # 0x1FFFFF
 
+# data[:, 3] is the multiplicity word: an 18-bit count in the low 24 bits, with the
+# epoch nodes' rel_vel_healpix pixel in the top byte. The split is that way round
+# on purpose -- blosc SHUFFLE byte-transposes these 24-byte records before
+# compressing, so keeping the count low leaves its byte 2 near-constant and confines
+# the near-random direction to a byte lane of its own.
+_MULT_MASK = 0x00FFFFFF
+_VRELDIR_SHIFT = 24
+
 
 _ALL_FIELDS = (
     'pos',
@@ -67,7 +99,8 @@ _ALL_FIELDS = (
     'density',
     'vel_disp',
     'length',
-    'vel_rel',
+    'rel_vel',
+    'rel_vel_healpix',
     'lc_label',
 )
 
@@ -79,11 +112,11 @@ def _field_shape(name, N):
 
 
 def _default_dtype(name, float_dtype):
-    if name in ('pos', 'vel', 'density', 'vel_disp', 'vel_rel'):
+    if name in ('pos', 'vel', 'density', 'vel_disp', 'rel_vel'):
         return float_dtype
     # Math-able fields are promoted to int32 for user safety.
-    # Bitflag/enum/identifier fields (`control`, `node_type`, `lc_label`, `pid`)
-    # keep their natural unsigned dtype.
+    # Bitflag/enum/identifier fields (`control`, `node_type`, `lc_label`, `pid`,
+    # `rel_vel_healpix`) keep their natural unsigned dtype.
     return {
         'mult': np.int32,
         'control': np.uint16,
@@ -92,6 +125,7 @@ def _default_dtype(name, float_dtype):
         'mult_sec': np.int32,
         'pid': np.uint16,
         'length': np.int32,
+        'rel_vel_healpix': np.uint8,
         'lc_label': np.uint8,
     }[name]
 
@@ -114,7 +148,7 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
 
     fields : tuple of str or None, optional
         Which fields to allocate and return. Used only when ``out`` is None.
-        ``None`` (the default, when ``out`` is also None) means all 13.
+        ``None`` (the default, when ``out`` is also None) means all 14.
 
     float_dtype : np.dtype, optional
         Dtype used only for newly-allocated float fields.
@@ -187,7 +221,8 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
         'density',
         'vel_disp',
         'length',
-        'vel_rel',
+        'rel_vel',
+        'rel_vel_healpix',
         'lc_label',
     }:
         control = data[:, 4] & 0xFFFF
@@ -198,13 +233,14 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
         'density',
         'vel_disp',
         'length',
-        'vel_rel',
+        'rel_vel',
+        'rel_vel_healpix',
         'lc_label',
     }:
         node_type = control & NODE_CONTROL_MASK
     if requested_set & {'pid', 'density', 'vel_disp'}:
         flex1 = (data[:, 4] >> 16) & 0xFFFF
-    if requested_set & {'mult_sec', 'pid', 'length', 'vel_rel', 'lc_label'}:
+    if requested_set & {'mult_sec', 'pid', 'length', 'rel_vel', 'lc_label'}:
         flex2 = data[:, 5]
 
     # Always-meaningful fields
@@ -221,8 +257,11 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
         result['vel'][...] = _unpack_vect32(data[:, 2])
 
     if 'mult' in requested_set:
-        _check_int_range(data[:, 3], result['mult'].dtype, field='mult')
-        result['mult'][...] = data[:, 3]
+        # Low 24 bits only; the top byte is rel_vel_healpix on epoch nodes. Masked
+        # unconditionally so every modality decodes the same way.
+        mult_vals = data[:, 3] & _MULT_MASK
+        _check_int_range(mult_vals, result['mult'].dtype, field='mult')
+        result['mult'][...] = mult_vals
 
     if 'control' in requested_set:
         result['control'][...] = control
@@ -260,10 +299,15 @@ def unpack_maplog(data, out=None, fields=None, float_dtype=np.float32):
         is_epoch = (node_type == NODE_LIGHTCONE) | (node_type == NODE_TIMESLICE)
         result['length'][...] = (flex2 & 0xFFFF) * is_epoch
 
-    if 'vel_rel' in requested_set:
+    if 'rel_vel' in requested_set:
         is_epoch = (node_type == NODE_LIGHTCONE) | (node_type == NODE_TIMESLICE)
-        vel_rel_byte = ((flex2 >> 16) & 0xFF).astype(np.uint8)
-        result['vel_rel'][...] = _unpack_ufloat8_35(vel_rel_byte) * is_epoch
+        rel_vel_byte = ((flex2 >> 16) & 0xFF).astype(np.uint8)
+        result['rel_vel'][...] = _unpack_ufloat8_35(rel_vel_byte) * is_epoch
+
+    if 'rel_vel_healpix' in requested_set:
+        # Top byte of the multiplicity word, not flex2. Zero for FORMATION/MERGER.
+        is_epoch = (node_type == NODE_LIGHTCONE) | (node_type == NODE_TIMESLICE)
+        result['rel_vel_healpix'][...] = (data[:, 3] >> _VRELDIR_SHIFT) * is_epoch
 
     if 'lc_label' in requested_set:
         is_lightcone = node_type == NODE_LIGHTCONE
