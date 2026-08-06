@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class PowerData(object):
+class PowerData:
     """
     Dummy object for calculating a likelihood
     """
@@ -12,13 +12,13 @@ class PowerData(object):
         """
         # load the power spectrum for all tracer combinations
         power = {}
-        for key in data_params['tracer_combos'].keys():
+        for key in data_params['tracer_combos']:
             power[key] = np.load(data_params['tracer_combos'][key]['path2power'])['xi']
         self.power = power
 
         # load the covariance matrix for all tracer combinations
         icov = {}
-        for key in data_params['tracer_combos'].keys():
+        for key in data_params['tracer_combos']:
             cov = np.load(data_params['tracer_combos'][key]['path2cov'])['xicov']
             icov[key] = np.linalg.inv(cov)
         self.icov = icov
@@ -29,7 +29,7 @@ class PowerData(object):
         """
         # Calculate a likelihood up to normalization
         lnprob = 0.0
-        for key in self.power.keys():
+        for key in self.power:
             delta = (self.power[key] - theory[key]).flatten()
             lnprob += np.einsum('i,ij,j', delta, self.icov[key], delta)
         lnprob *= -0.5

@@ -10,7 +10,7 @@ Most users will not use this module directly, but will instead use
 import numba as nb
 import numpy as np
 
-__all__ = ['unpack_rvint', 'unpack_pids']
+__all__ = ['unpack_pids', 'unpack_rvint']
 
 # Constants
 AUXDENS = np.uint64(0x07FE000000000000)
@@ -194,9 +194,11 @@ def unpack_pids(
     N = len(packed)
 
     if ppd is not None:
-        if not np.isclose(ppd, int(round(ppd))):
+        # via float() because round() on a numpy scalar returns a numpy float
+        ppd_int = round(float(ppd))
+        if not np.isclose(ppd, ppd_int):
             raise ValueError(f'ppd "{ppd}" not valid int?')
-        ppd = int(round(ppd))
+        ppd = ppd_int
     else:
         ppd = 1
 

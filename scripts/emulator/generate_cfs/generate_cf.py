@@ -89,7 +89,7 @@ def write_cf(cf, outdir, generate_cf_args=None):
 
     fn = outdir / f'{cf.meta["SimName"]}-{cf.meta["zname"]}-cf.asdf'
 
-    af = asdf.AsdfFile(tree=dict(data=cf, generate_cf_args=generate_cf_args))
+    af = asdf.AsdfFile(tree={'data': cf, 'generate_cf_args': generate_cf_args})
     af.write_to(fn)
 
 
@@ -106,7 +106,11 @@ def main(
     cf = generate_cf(cat, nthread)
     log(f'generate_cf() took {perf_counter() - t1:.2f} seconds')
 
-    generate_cf_args = dict(halo_cat_path=halo_cat_path, ndens=ndens, nthread=nthread)
+    generate_cf_args = {
+        'halo_cat_path': halo_cat_path,
+        'ndens': ndens,
+        'nthread': nthread,
+    }
     write_cf(cf, outdir, generate_cf_args=generate_cf_args)
 
     log(f'Total time: {perf_counter() - t0:.2f} seconds')

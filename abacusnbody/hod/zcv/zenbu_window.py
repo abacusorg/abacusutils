@@ -201,7 +201,7 @@ def zenbu_spectra(
     f = pkclass.scale_independent_growth_factor_f(z)
 
     if rsd:
-        lptobj, p0spline, p2spline, p4spline, pspline = _lpt_pk(
+        lptobj, _p0spline, _p2spline, _p4spline, pspline = _lpt_pk(
             kin,
             pin * (Dthis / Dic) ** 2,
             f,
@@ -315,7 +315,8 @@ def main(path2config, alt_simname=None, want_xi=False):
         specify simulation name if different from yaml file.
     """
     # read zcv parameters
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     zcv_dir = config['zcv_params']['zcv_dir']
     # ic_dir = config['zcv_params']['ic_dir']
     nmesh = config['zcv_params']['nmesh']
@@ -365,21 +366,20 @@ def main(path2config, alt_simname=None, want_xi=False):
     rsd_str = '_rsd' if rsd else ''
 
     # make sure that the parameters are set correctly
-    if want_xi:
-        if not (
-            np.isclose(k_hMpc_max, np.pi * nmesh / Lbox) & logk
-            == False & n_k_bins
-            == nmesh // 2 & n_mu_bins
-            == 1
-        ):
-            warnings.warn('Setting the parameters correctly for Xi computation')
-            k_hMpc_max = np.pi * nmesh / Lbox
-            logk = False
-            n_k_bins = nmesh // 2
-            n_mu_bins = 1
+    if want_xi and not (
+        np.isclose(k_hMpc_max, np.pi * nmesh / Lbox) & logk
+        == False & n_k_bins
+        == nmesh // 2 & n_mu_bins
+        == 1
+    ):
+        warnings.warn('Setting the parameters correctly for Xi computation')
+        k_hMpc_max = np.pi * nmesh / Lbox
+        logk = False
+        n_k_bins = nmesh // 2
+        n_mu_bins = 1
 
     # define k bins
-    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_bins, _mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1]) * 0.5
 
     # name of file to save to

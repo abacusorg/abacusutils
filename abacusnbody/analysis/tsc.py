@@ -4,7 +4,7 @@ import warnings
 import numba
 import numpy as np
 
-__all__ = ['tsc_parallel', 'partition_parallel']
+__all__ = ['partition_parallel', 'tsc_parallel']
 
 
 def tsc_parallel(

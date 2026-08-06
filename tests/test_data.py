@@ -6,10 +6,10 @@ The reference files are stored in `tests/ref_data`.
 from pathlib import Path
 
 import asdf
+import astropy.table
 import numpy as np
 import numpy.testing as npt
 import pytest
-import astropy.table
 from astropy.table import Table
 from common import assert_close
 
@@ -85,7 +85,7 @@ def test_subsamples_unclean():
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
-        subsamples=dict(A=True),
+        subsamples={'A': True},
         fields='all',
         cleaned=False,
     )
@@ -95,7 +95,7 @@ def test_subsamples_unclean():
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
-        subsamples=dict(B=True),
+        subsamples={'B': True},
         fields='all',
         cleaned=False,
     )
@@ -162,7 +162,7 @@ def test_field_subset_loading():
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(EXAMPLE_SIM / 'halos' / 'z0.000', fields=['N', 'x_com'])
-    assert set(cat.halos.colnames) == set(['N', 'x_com'])
+    assert set(cat.halos.colnames) == {'N', 'x_com'}
 
 
 def test_one_halo_info():
@@ -435,7 +435,7 @@ def test_passthrough():
     # As a basic test, though, we can unpack the rvint and packedpid and check that it matches
     # a non-passthrough catalog.
 
-    from abacusnbody.data.bitpacked import unpack_rvint, unpack_pids
+    from abacusnbody.data.bitpacked import unpack_pids, unpack_rvint
 
     cat.subsamples['pos'], cat.subsamples['vel'] = unpack_rvint(
         cat.subsamples['rvint'], cat.header['BoxSize']

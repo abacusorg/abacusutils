@@ -3,13 +3,12 @@ Local mass environment calculation.
 """
 
 import itertools
+import logging
 from typing import Literal
 
 import numba
 import numpy as np
 from scipy.spatial import KDTree
-
-import logging
 
 from ..util import cumsum
 

@@ -44,7 +44,8 @@ def test_hod(tmp_path, reference_mode=False):
     from abacusnbody.hod import prepare_sim
     from abacusnbody.hod.abacus_hod import AbacusHOD
 
-    config = yaml.safe_load(open(EXAMPLE_CONFIG))
+    with open(EXAMPLE_CONFIG) as fp:
+        config = yaml.safe_load(fp)
     # inform abacus_hod where the simulation files are, relative to the cwd
     config['sim_params']['sim_dir'] = TESTDIR
 

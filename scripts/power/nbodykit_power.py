@@ -3,10 +3,10 @@
 import timeit
 
 import click
-import numpy as np
 import nbodykit
-from nbodykit.source.catalog import UniformCatalog
+import numpy as np
 from nbodykit.algorithms.fftpower import FFTPower
+from nbodykit.source.catalog import UniformCatalog
 
 
 @click.command()

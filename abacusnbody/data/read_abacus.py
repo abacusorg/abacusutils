@@ -81,7 +81,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
     try:
         asdf_compression.validate('blsc')
     except Exception as e:
-        raise Exception(
+        raise RuntimeError(
             "Abacus ASDF extension not properly loaded! \
                         Try reinstalling abacusutils: `pip install 'abacusutils>=1'`, \
                         or updating ASDF: `pip install 'asdf>=2.8'`"
@@ -115,16 +115,15 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
         # determine subsample fraction and add to header
         OutputType = header.get('OutputType', None)
-        if OutputType == 'LightCone':
-            if header['SimSet'] == 'AbacusSummit':
-                SubsampleFraction = (
-                    header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+        if OutputType == 'LightCone' and header['SimSet'] == 'AbacusSummit':
+            SubsampleFraction = (
+                header['ParticleSubsampleA'] + header['ParticleSubsampleB']
+            )
+            header['SubsampleFraction'] = SubsampleFraction
+            if verbose:
+                print(
+                    f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction * 100):d}% total)'
                 )
-                header['SubsampleFraction'] = SubsampleFraction
-                if verbose:
-                    print(
-                        f'Loading "{basename(fn)}", which contains the A and B subsamples ({int(SubsampleFraction * 100):d}% total)'
-                    )
 
         table = Table(meta=header)
         if 'pos' in load:
@@ -160,7 +159,7 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
             )
             nread = max(npos, nvel)
         elif 'pid' in colname:
-            ppd = kwargs.get('ppd', int(round(header['ppd'])))
+            ppd = kwargs.get('ppd', round(float(header['ppd'])))
             pid_kwargs = {
                 k: (k in load)
                 for k in ('pid', 'lagr_pos', 'tagged', 'density', 'lagr_idx')

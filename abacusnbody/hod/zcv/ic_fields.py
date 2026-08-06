@@ -1,20 +1,19 @@
 import argparse
 import gc
 import os
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import asdf
+import numba
 import numpy as np
 import yaml
-import numba
+from asdf.exceptions import AsdfWarning
 
 # from np.fft import fftfreq, fftn, ifftn
-from scipy.fft import rfftn, irfftn
+from scipy.fft import irfftn, rfftn
 
 from abacusnbody.metadata import get_meta
-
-from asdf.exceptions import AsdfWarning
 
 warnings.filterwarnings('ignore', category=AsdfWarning)
 
@@ -27,7 +26,7 @@ def compress_asdf(asdf_fn, table, header):
     """
     # cram into a dictionary
     data_dict = {}
-    for field in table.keys():
+    for field in table:
         data_dict[field] = table[field]
 
     # create data tree structure
@@ -37,13 +36,13 @@ def compress_asdf(asdf_fn, table, header):
     }
 
     # set compression options here
-    compression_kwargs = dict(
-        typesize='auto',
-        shuffle='shuffle',
-        compression_block_size=12 * 1024**2,
-        blosc_block_size=3 * 1024**2,
-        nthreads=4,
-    )
+    compression_kwargs = {
+        'typesize': 'auto',
+        'shuffle': 'shuffle',
+        'compression_block_size': 12 * 1024**2,
+        'blosc_block_size': 3 * 1024**2,
+        'nthreads': 4,
+    }
     with (
         asdf.AsdfFile(data_tree) as af,
         open(asdf_fn, 'wb') as fp,
@@ -265,7 +264,6 @@ def add_ij(final_field, field_to_add, n1d, factor=1.0, dtype=np.float32):
         for j in range(n1d):
             for k in range(n1d):
                 final_field[i, j, k] += factor * field_to_add[i, j, k] ** 2
-    return
 
 
 def get_dk_to_s2(delta_k, nmesh, lbox):
@@ -384,7 +382,8 @@ def main(path2config, alt_simname=None, verbose=False):
     """
 
     # read zcv parameters
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     try:
         zcv_dir = config['zcv_params']['zcv_dir']
         ic_dir = config['zcv_params']['ic_dir']

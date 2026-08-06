@@ -1,9 +1,9 @@
-import time
 import gc
+import time
 
+import numba
 import numpy as np
 import numpy.linalg as la
-import numba
 from scipy.fft import irfftn, rfftn
 from scipy.ndimage import gaussian_filter
 

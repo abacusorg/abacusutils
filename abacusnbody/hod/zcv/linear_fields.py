@@ -15,8 +15,8 @@ from scipy.fft import rfftn
 
 from abacusnbody.analysis.power_spectrum import (
     calc_pk_from_deltak,
-    get_k_mu_edges,
     get_delta_mu2,
+    get_k_mu_edges,
     get_W_compensated,
 )
 from abacusnbody.metadata import get_meta
@@ -51,7 +51,8 @@ def main(path2config, alt_simname=None, save_3D_power=False):
     keynames = ['delta', 'deltamu2']
 
     # read lcv parameters
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     lcv_dir = config['lcv_params']['lcv_dir']
     config['lcv_params']['ic_dir']
     nmesh = config['lcv_params']['nmesh']

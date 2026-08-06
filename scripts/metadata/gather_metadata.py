@@ -33,11 +33,11 @@ def main(small=False):
     icdir = ABACUSSUMMIT / 'ic'
 
     if not small:
-        simnames = sorted(list(ABACUSSUMMIT.glob('AbacusSummit_*'))) + [
+        simnames = sorted(ABACUSSUMMIT.glob('AbacusSummit_*')) + [
             ABACUSSUMMIT / 'small' / 'AbacusSummit_small_c000_ph3000'
         ]
     else:
-        simnames = sorted(list((ABACUSSUMMIT / 'small').glob('AbacusSummit_*')))
+        simnames = sorted((ABACUSSUMMIT / 'small').glob('AbacusSummit_*'))
 
     headers = {}
     for i, sim in enumerate(tqdm(simnames)):
@@ -52,10 +52,13 @@ def main(small=False):
                     zheader = af['header'].copy()
             except StopIteration:
                 # maybe a header?
+                # Abacus.InputFile's failure modes aren't specified, so treat any
+                # failure as "no header here"
                 try:
                     zheader = dict(InputFile(zdir / 'header'))
-                except Exception:
-                    continue  # nothing!
+                except Exception as e:  # noqa: BLE001
+                    tqdm.write(f'skipping {zdir}: {e}')
+                    continue
 
             state[zdir.name] = {k: v for k, v in zheader.items() if k not in param}
 

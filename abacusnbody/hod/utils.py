@@ -31,8 +31,8 @@
 # taken from https://github.com/cosmodesi/desilike/blob/main/desilike/utils.py
 
 import logging
-import sys
 import os
+import sys
 import time
 import traceback
 
@@ -79,7 +79,7 @@ def setup_logging(
                 '[%09.2f] ' % (time.time() - t0)
                 + ' %(asctime)s %(name)-28s %(levelname)-8s %(message)s'
             )
-            return super(MyFormatter, self).format(record)
+            return super().format(record)
 
     fmt = MyFormatter(datefmt='%m-%d %H:%M ')
     if filename is not None:

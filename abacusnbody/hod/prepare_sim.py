@@ -10,11 +10,13 @@ import argparse
 import concurrent.futures
 import gc
 import glob
+import logging
+import math
 import multiprocessing
 import os
 import time
 from pathlib import Path
-import math
+
 import h5py
 import numba
 import numpy as np
@@ -29,8 +31,6 @@ from abacusnbody.data.read_abacus import read_asdf
 from ..analysis.shear import get_shear, smooth_density
 from ..analysis.tsc import tsc_parallel
 from .menv import do_Menv_from_tree
-
-import logging
 from .utils import setup_logging
 
 DEFAULTS = {}
@@ -397,7 +397,7 @@ def prepare_slab(
     if z_type == 'primary' or z_type == 'lightcone':
         cat = CompaSOHaloCatalog(
             slabname,
-            subsamples=dict(A=True, rv=True),
+            subsamples={'A': True, 'rv': True},
             fields=[
                 N_key,
                 pos_key,
@@ -655,7 +655,7 @@ def prepare_slab(
                     'prepare_slab needs numslabs for the padded env calculation.'
                 )
             dx_slab = Lbox / numslabs
-            n_pad_slabs = max(1, int(math.ceil(rad_outer / dx_slab)))
+            n_pad_slabs = max(1, math.ceil(rad_outer / dx_slab))
 
             env_pos = [central_pos]
             env_mass = [central_mass]
@@ -1142,7 +1142,8 @@ def main(
 ):
     logger.info('Compiling compaso halo catalogs into subsampled catalogs')
 
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     # update params if needed
     if params:
         config.update(params)
@@ -1161,7 +1162,7 @@ def main(
         + str(z_mock).ljust(5, '0')
     )
     cleaning = config['sim_params']['cleaned_halos']
-    if 'halo_lc' in config['sim_params'].keys():
+    if 'halo_lc' in config['sim_params']:
         halo_lc = config['sim_params']['halo_lc']
 
     # build in some redshift checks
@@ -1196,19 +1197,19 @@ def main(
     ]:
         ztype = 'secondary'
     else:
-        raise Exception('illegal redshift')
+        raise ValueError('illegal redshift')
 
     if halo_lc:
         halo_info_fns = [
             str(
-                Path(simdir) / Path(simname) / ('z%4.3f' % z_mock) / 'lc_halo_info.asdf'
+                Path(simdir) / Path(simname) / (f'z{z_mock:4.3f}') / 'lc_halo_info.asdf'
             )
         ]
     else:
         search_path = (
-            Path(simdir) / Path(simname) / 'halos' / ('z%4.3f' % z_mock) / 'halo_info'
+            Path(simdir) / Path(simname) / 'halos' / (f'z{z_mock:4.3f}') / 'halo_info'
         )
-        halo_info_fns = list(sorted(search_path.glob('*.asdf')))
+        halo_info_fns = sorted(search_path.glob('*.asdf'))
         if not halo_info_fns:
             raise ValueError(f'no halo info files found in {search_path}')
     numslabs = len(halo_info_fns)
@@ -1225,7 +1226,7 @@ def main(
     # if want shear, calculate shear field first
     if want_shear:
         if (not ztype == 'primary') and (not halo_lc):
-            raise Exception('redshift does not have particle data, cant compute shear')
+            raise ValueError('redshift does not have particle data, cant compute shear')
         Ndim = config['HOD_params'].get('shear_N', 1000)
         Rsm = config['HOD_params'].get('shear_R', 2)
         partdown = config['HOD_params'].get('partdown', 100)

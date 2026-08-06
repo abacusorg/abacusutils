@@ -3,12 +3,7 @@ Retrieve the cosmology and other code parameters associated with the
 AbacusSummit simulations.
 """
 
-import sys
-
-if sys.version_info >= (3, 9):
-    import importlib.resources as resources
-else:
-    import importlib_resources as resources
+from importlib import resources
 
 import asdf
 import msgpack
@@ -47,16 +42,16 @@ def get_meta(simname, redshift=None):
             with asdf.open(resources.files('abacusnbody.metadata') / metadata_fn) as af:
                 af_tree = dict(af.tree)
                 del af_tree['asdf_library'], af_tree['history']
-                for sim in af_tree:
+                for sim, simtree in af_tree.items():
                     metadata[sim] = {}
                     metadata[sim]['param'] = msgpack.loads(
-                        af_tree[sim]['param'].data, strict_map_key=False
+                        simtree['param'].data, strict_map_key=False
                     )
                     metadata[sim]['state'] = msgpack.loads(
-                        af_tree[sim]['state'].data, strict_map_key=False
+                        simtree['state'].data, strict_map_key=False
                     )
-                    if 'CLASS_power_spectrum' in af_tree[sim]:
-                        metadata[sim]['CLASS_power_spectrum'] = af_tree[sim][
+                    if 'CLASS_power_spectrum' in simtree:
+                        metadata[sim]['CLASS_power_spectrum'] = simtree[
                             'CLASS_power_spectrum'
                         ]
     if simname not in metadata:

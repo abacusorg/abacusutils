@@ -1,15 +1,12 @@
-""" """
-
-
 # The AbacusHOD module generates HOD tracers from Abacus simulations.
 # A high-level overview of this module can be found in
 # https://abacusutils.readthedocs.io/en/latest/hod.html
 # or docs/hod.rst.
 
 import gc
+import logging
 import time
 from pathlib import Path
-import logging
 
 import asdf
 import h5py
@@ -26,13 +23,13 @@ from ..analysis.tpcf_corrfunc import (
     calc_xirppi_fast,
 )
 from .GRAND_HOD import (
+    N_cen_ELG_v1,
+    N_cen_QSO,
+    N_sat_elg,
+    N_sat_generic,
     gen_gal_cat,
     n_cen_LRG,
     n_sat_LRG_modified,
-    N_cen_ELG_v1,
-    N_sat_elg,
-    N_cen_QSO,
-    N_sat_generic,
 )
 
 # TODO B.H.: staging can be shorter and prettier; perhaps asdf for h5 and ecsv?
@@ -155,13 +152,13 @@ class AbacusHOD:
         ]:
             ztype = 'secondary'
         else:
-            raise Exception('illegal redshift')
+            raise ValueError('illegal redshift')
         self.z_type = ztype
 
         # tracers
         tracer_flags = HOD_params['tracer_flags']
         tracers = {}
-        for key in tracer_flags.keys():
+        for key in tracer_flags:
             if tracer_flags[key]:
                 tracers[key] = HOD_params[key + '_params']
         self.tracers = tracers
@@ -206,7 +203,7 @@ class AbacusHOD:
             self.fenvbins = np.linspace(-0.5, 0.5, 101)
             self.shearbins = np.linspace(-0.5, 0.5, 101)
 
-            self.halo_mass_func, edges = np.histogramdd(
+            self.halo_mass_func, _edges = np.histogramdd(
                 np.vstack(
                     (
                         np.log10(self.halo_data['hmass']),
@@ -228,12 +225,12 @@ class AbacusHOD:
             self.lbox = meta['BoxSize']
 
         if self.want_AB:
-            assert 'hfenv' in self.halo_data.keys()
-            assert 'hdeltac' in self.halo_data.keys()
+            assert 'hfenv' in self.halo_data
+            assert 'hdeltac' in self.halo_data
         if self.want_shear:
-            assert 'hshear' in self.halo_data.keys()
+            assert 'hshear' in self.halo_data
 
-        self.halo_mass_func_wshear, edges = np.histogramdd(
+        self.halo_mass_func_wshear, _edges = np.histogramdd(
             np.vstack(
                 (
                     np.log10(self.halo_data['hmass']),
@@ -258,8 +255,8 @@ class AbacusHOD:
         output_dir = Path(self.output_dir)
         simname = Path(self.sim_name)
         sim_dir = Path(self.sim_dir)
-        mock_dir = output_dir / simname / ('z%4.3f' % self.z_mock)
-        subsample_dir = Path(self.subsample_dir) / simname / ('z%4.3f' % self.z_mock)
+        mock_dir = output_dir / simname / (f'z{self.z_mock:4.3f}')
+        subsample_dir = Path(self.subsample_dir) / simname / (f'z{self.z_mock:4.3f}')
 
         # Check if the simulation directory exists
         if not (sim_dir / simname).exists():
@@ -274,12 +271,12 @@ class AbacusHOD:
         # load header to read parameters
         if self.halo_lc:
             halo_info_fns = [
-                str(sim_dir / simname / ('z%4.3f' % self.z_mock) / 'lc_halo_info.asdf')
+                str(sim_dir / simname / (f'z{self.z_mock:4.3f}') / 'lc_halo_info.asdf')
             ]
         else:
             halo_info_fns = list(
                 (
-                    sim_dir / simname / 'halos' / ('z%4.3f' % self.z_mock) / 'halo_info'
+                    sim_dir / simname / 'halos' / (f'z{self.z_mock:4.3f}') / 'halo_info'
                 ).glob('*.asdf')
             )
         f = asdf.open(halo_info_fns[0], lazy_load=True)
@@ -307,8 +304,7 @@ class AbacusHOD:
         n_jump = int(np.ceil(len(halo_info_fns) / n_chunks))
         start = (chunk) * n_jump
         end = (chunk + 1) * n_jump
-        if end > len(halo_info_fns):
-            end = len(halo_info_fns)
+        end = min(end, len(halo_info_fns))
         params['numslabs'] = end - start
         self.lbox = header['BoxSize']
 
@@ -317,22 +313,22 @@ class AbacusHOD:
         Nparts = np.zeros(params['numslabs'])
         for eslab in range(start, end):
             if (
-                ('ELG' not in self.tracers.keys())
-                and ('QSO' not in self.tracers.keys())
+                ('ELG' not in self.tracers)
+                and ('QSO' not in self.tracers)
                 and (not self.force_mt)
             ):
                 halofilename = subsample_dir / (
-                    'halos_xcom_%d_seed600_abacushod_oldfenv' % eslab
+                    f'halos_xcom_{eslab:d}_seed600_abacushod_oldfenv'
                 )
                 particlefilename = subsample_dir / (
-                    'particles_xcom_%d_seed600_abacushod_oldfenv' % eslab
+                    f'particles_xcom_{eslab:d}_seed600_abacushod_oldfenv'
                 )
             else:
                 halofilename = subsample_dir / (
-                    'halos_xcom_%d_seed600_abacushod_oldfenv_MT' % eslab
+                    f'halos_xcom_{eslab:d}_seed600_abacushod_oldfenv_MT'
                 )
                 particlefilename = subsample_dir / (
-                    'particles_xcom_%d_seed600_abacushod_oldfenv_MT' % eslab
+                    f'particles_xcom_{eslab:d}_seed600_abacushod_oldfenv_MT'
                 )
 
             if self.want_ranks:
@@ -397,22 +393,22 @@ class AbacusHOD:
         for eslab in range(start, end):
             self.logger.info(f'Loading simulation slab {eslab}')
             if (
-                ('ELG' not in self.tracers.keys())
-                and ('QSO' not in self.tracers.keys())
+                ('ELG' not in self.tracers)
+                and ('QSO' not in self.tracers)
                 and (not self.force_mt)
             ):
                 halofilename = subsample_dir / (
-                    'halos_xcom_%d_seed600_abacushod_oldfenv' % eslab
+                    f'halos_xcom_{eslab:d}_seed600_abacushod_oldfenv'
                 )
                 particlefilename = subsample_dir / (
-                    'particles_xcom_%d_seed600_abacushod_oldfenv' % eslab
+                    f'particles_xcom_{eslab:d}_seed600_abacushod_oldfenv'
                 )
             else:
                 halofilename = subsample_dir / (
-                    'halos_xcom_%d_seed600_abacushod_oldfenv_MT' % eslab
+                    f'halos_xcom_{eslab:d}_seed600_abacushod_oldfenv_MT'
                 )
                 particlefilename = subsample_dir / (
-                    'particles_xcom_%d_seed600_abacushod_oldfenv_MT' % eslab
+                    f'particles_xcom_{eslab:d}_seed600_abacushod_oldfenv_MT'
                 )
 
             if self.want_ranks:
@@ -886,7 +882,7 @@ class AbacusHOD:
 
         ngal_dict = {}
         fsat_dict = {}
-        for etracer in tracers.keys():
+        for etracer in tracers:
             tracer_hod = tracers[etracer]
 
             # used in z-evolving HOD
@@ -1279,7 +1275,7 @@ class AbacusHOD:
         return clustering
 
     def compute_multipole(
-        self, mock_dict, rpbins, pimax, sbins, nbins_mu, orders=[0, 2], Nthread=8
+        self, mock_dict, rpbins, pimax, sbins, nbins_mu, orders=(0, 2), Nthread=8
     ):
         clustering = {}
         for i1, tr1 in enumerate(mock_dict.keys()):
@@ -1342,7 +1338,7 @@ class AbacusHOD:
         nbins_mu,
         k_hMpc_max,
         logk,
-        poles=[],
+        poles=(),
         paste='TSC',
         num_cells=550,
         compensated=False,
@@ -1477,9 +1473,9 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
+        from ..analysis.power_spectrum import get_k_mu_edges
         from .zcv.tools_cv import run_zcv
         from .zcv.tracer_power import get_tracer_power
-        from ..analysis.power_spectrum import get_k_mu_edges
 
         # compute real space and redshift space
         # assert config['HOD_params']['want_rsd'], "Currently want_rsd=False not implemented"
@@ -1492,7 +1488,7 @@ class AbacusHOD:
         assert config['power_params']['nbins_mu'] == 1, (
             'Currently wedges are not implemented; need to change ZeNBu'
         )
-        if 'nmesh' not in config['power_params'].keys():
+        if 'nmesh' not in config['power_params']:
             config['power_params']['nmesh'] = config['zcv_params']['nmesh']
         assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], (
             '`nmesh` in `power_params` and `zcv_params` should match.'
@@ -1559,7 +1555,7 @@ class AbacusHOD:
             try:
                 assert np.isclose(
                     asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']
-                ), f'Mismatching file: {str(fn)}'
+                ), f'Mismatching file: {fn!s}'
             except FileNotFoundError:
                 pass
 
@@ -1567,38 +1563,38 @@ class AbacusHOD:
             pk_rsd_tr_dict = asdf.open(power_rsd_tr_fn)['data']
             pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
             assert np.allclose(k_binc, pk_rsd_tr_dict['k_binc']), (
-                f'Mismatching file: {str(power_rsd_tr_fn)}'
+                f'Mismatching file: {power_rsd_tr_fn!s}'
             )
             assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
-                f'Mismatching file: {str(power_rsd_ij_fn)}'
+                f'Mismatching file: {power_rsd_ij_fn!s}'
             )
             assert np.allclose(mu_binc, pk_rsd_tr_dict['mu_binc']), (
-                f'Mismatching file: {str(power_rsd_tr_fn)}'
+                f'Mismatching file: {power_rsd_tr_fn!s}'
             )
             assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
-                f'Mismatching file: {str(power_rsd_ij_fn)}'
+                f'Mismatching file: {power_rsd_ij_fn!s}'
             )
             if config['HOD_params']['want_rsd']:
                 pk_tr_dict = asdf.open(power_tr_fn)['data']
                 pk_ij_dict = asdf.open(power_ij_fn)['data']
                 assert np.allclose(k_binc, pk_tr_dict['k_binc']), (
-                    f'Mismatching file: {str(power_tr_fn)}'
+                    f'Mismatching file: {power_tr_fn!s}'
                 )
                 assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
-                    f'Mismatching file: {str(power_ij_fn)}'
+                    f'Mismatching file: {power_ij_fn!s}'
                 )
                 assert np.allclose(mu_binc, pk_tr_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_tr_fn)}'
+                    f'Mismatching file: {power_tr_fn!s}'
                 )
                 assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_ij_fn)}'
+                    f'Mismatching file: {power_ij_fn!s}'
                 )
             else:
                 pk_tr_dict, pk_ij_dict = None, None
 
         else:
             # run version with rsd or without rsd
-            for tr in mock_dict.keys():
+            for tr in mock_dict:
                 # obtain the positions
                 tracer_pos = (
                     np.vstack(
@@ -1614,10 +1610,10 @@ class AbacusHOD:
                 )
                 pk_rsd_ij_dict = asdf.open(power_rsd_ij_fn)['data']
                 assert np.allclose(k_binc, pk_rsd_ij_dict['k_binc']), (
-                    f'Mismatching file: {str(power_rsd_ij_fn)}'
+                    f'Mismatching file: {power_rsd_ij_fn!s}'
                 )
                 assert np.allclose(mu_binc, pk_rsd_ij_dict['mu_binc']), (
-                    f'Mismatching file: {str(power_rsd_ij_fn)}'
+                    f'Mismatching file: {power_rsd_ij_fn!s}'
                 )
             # run version without rsd if rsd was requested
             if config['HOD_params']['want_rsd']:
@@ -1630,7 +1626,7 @@ class AbacusHOD:
                     verbose=False,
                     fn_ext=None,
                 )
-                for tr in mock_dict.keys():
+                for tr in mock_dict:
                     # obtain the positions
                     tracer_pos = (
                         np.vstack(
@@ -1646,10 +1642,10 @@ class AbacusHOD:
                     )
                     pk_ij_dict = asdf.open(power_ij_fn)['data']
                     assert np.allclose(k_binc, pk_ij_dict['k_binc']), (
-                        f'Mismatching file: {str(power_ij_fn)}'
+                        f'Mismatching file: {power_ij_fn!s}'
                     )
                     assert np.allclose(mu_binc, pk_ij_dict['mu_binc']), (
-                        f'Mismatching file: {str(power_ij_fn)}'
+                        f'Mismatching file: {power_ij_fn!s}'
                     )
             else:
                 pk_tr_dict, pk_ij_dict = None, None
@@ -1666,9 +1662,9 @@ class AbacusHOD:
         """
 
         # ZCV module has optional dependencies, don't import unless necessary
+        from ..analysis.power_spectrum import pk_to_xi
         from .zcv.tools_cv import run_zcv_field
         from .zcv.tracer_power import get_tracer_power
-        from ..analysis.power_spectrum import pk_to_xi
 
         # compute real space and redshift space
         assert config['HOD_params']['want_rsd'], (
@@ -1683,7 +1679,7 @@ class AbacusHOD:
         assert config['power_params']['nbins_mu'] == 1, (
             'Currently wedges are not implemented; need to change ZeNBu'
         )
-        if 'nmesh' not in config['power_params'].keys():
+        if 'nmesh' not in config['power_params']:
             config['power_params']['nmesh'] = config['zcv_params']['nmesh']
         assert config['zcv_params']['nmesh'] == config['power_params']['nmesh'], (
             '`nmesh` in `power_params` and `zcv_params` should match.'
@@ -1734,7 +1730,7 @@ class AbacusHOD:
 
         if not load_presaved:
             # run version with rsd or without rsd
-            for tr in mock_dict.keys():
+            for tr in mock_dict:
                 # obtain the positions
                 tracer_pos = (
                     np.vstack(
@@ -1764,7 +1760,7 @@ class AbacusHOD:
                     verbose=False,
                     fn_ext=None,
                 )  # TODO: reseed
-                for tr in mock_dict.keys():
+                for tr in mock_dict:
                     # obtain the positions
                     tracer_pos = (
                         np.vstack(
@@ -1789,7 +1785,7 @@ class AbacusHOD:
                 for fn in pk_fns:
                     assert np.isclose(
                         asdf.open(fn)['header']['kcut'], config['zcv_params']['kcut']
-                    ), f'Mismatching file: {str(fn)}'
+                    ), f'Mismatching file: {fn!s}'
         zcv_dict = run_zcv_field(
             pk_rsd_tr_fns, pk_rsd_ij_fns, pk_tr_fns, pk_ij_fns, config
         )

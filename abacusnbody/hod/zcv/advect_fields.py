@@ -1,8 +1,8 @@
 import argparse
 import gc
 import os
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import asdf
 import numpy as np
@@ -67,7 +67,8 @@ def main(
         dictionary containing the auto- and cross-power spectra of the 5 fields.
     """
     # read zcv parameters
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     zcv_dir = config['zcv_params']['zcv_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']
@@ -184,25 +185,25 @@ def main(
             fields_fft.append(f['data'])
             header = f['header']
             assert header['sim_name'] == sim_name, (
-                f'Mismatch in the files: {str(fields_fft_fn[i])}'
+                f'Mismatch in the files: {fields_fft_fn[i]!s}'
             )
             assert np.isclose(header['Lbox'], Lbox), (
-                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+                f'Mismatch in the file: {fields_fft_fn[i]!s}'
             )
             assert header['nmesh'] == nmesh, (
-                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+                f'Mismatch in the file: {fields_fft_fn[i]!s}'
             )
             assert np.isclose(header['kcut'], kcut), (
-                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+                f'Mismatch in the file: {fields_fft_fn[i]!s}'
             )
             assert header['compensated'] == compensated, (
-                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+                f'Mismatch in the file: {fields_fft_fn[i]!s}'
             )
             assert header['interlaced'] == interlaced, (
-                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+                f'Mismatch in the file: {fields_fft_fn[i]!s}'
             )
             assert header['paste'] == paste, (
-                f'Mismatch in the file: {str(fields_fft_fn[i])}'
+                f'Mismatch in the file: {fields_fft_fn[i]!s}'
             )
     else:
         # load density field and displacements

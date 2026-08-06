@@ -110,9 +110,9 @@ def calc_xirppi_fast(
 ):  # all r assumed to be in h-1 mpc units.
     start = time.time()
     if not isinstance(pimax, int):
-        raise ValueError('pimax needs to be an integer')
+        raise TypeError('pimax needs to be an integer')
     if not isinstance(pi_bin_size, int):
-        raise ValueError('pi_bin_size needs to be an integer')
+        raise TypeError('pi_bin_size needs to be an integer')
     if not pimax % pi_bin_size == 0:
         raise ValueError(
             'pi_bin_size needs to be an integer divisor of pimax, current values are ',
@@ -215,7 +215,7 @@ def calc_multipole_fast(
     x2=None,
     y2=None,
     z2=None,
-    orders=[0, 2],
+    orders=(0, 2),
 ):  # all r assumed to be in h-1 mpc units.
     ND1 = float(len(x1))
     if x2 is not None:
@@ -302,7 +302,7 @@ def calc_wp_fast(
     x1, y1, z1, rpbins, pimax, lbox, Nthread, num_cells=30, x2=None, y2=None, z2=None
 ):  # all r assumed to be in h-1 mpc units.
     if not isinstance(pimax, int):
-        raise ValueError('pimax needs to be an integer')
+        raise TypeError('pimax needs to be an integer')
 
     ND1 = float(len(x1))
     if x2 is not None:

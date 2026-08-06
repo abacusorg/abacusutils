@@ -3,8 +3,8 @@ Tools for applying variance reduction (ZCV and LCV) (based on scripts from Joe D
 """
 
 import gc
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import asdf
 import numpy as np
@@ -13,12 +13,13 @@ from scipy.optimize import minimize
 from scipy.signal import savgol_filter
 
 from abacusnbody.analysis.power_spectrum import (
-    get_k_mu_edges,
-    project_3d_to_poles,
     expand_poles_to_3d,
+    get_k_mu_edges,
     get_smoothing,
+    project_3d_to_poles,
 )
 from abacusnbody.metadata import get_meta
+
 from .ic_fields import compress_asdf
 
 try:
@@ -120,7 +121,7 @@ def combine_cross_spectra(k, spectra, bias_params, rsd=False):
         pkvec = np.zeros((5, spectra.shape[1], spectra.shape[2]))
         pkvec[:5, ...] = spectra[:5, ...]
         bias_params = np.hstack([bias_params, np.zeros(5 - len(bias_params))])
-        b1, b2, bs, bk, sn = bias_params
+        b1, b2, bs, bk, _sn = bias_params
         bias_monomials = np.array([1, b1, 0.5 * b2, bs, bk])
         p0 = np.sum(bias_monomials[:, np.newaxis] * pkvec[:, 0, :], axis=0)  # + sn
         p2 = np.sum(bias_monomials[:, np.newaxis] * pkvec[:, 1, :], axis=0)  # + sn2
@@ -131,7 +132,7 @@ def combine_cross_spectra(k, spectra, bias_params, rsd=False):
         pkvec = np.zeros((5, spectra.shape[1]))
         pkvec[:5, ...] = spectra[:5, ...]
         bias_params = np.hstack([bias_params, np.zeros(5 - len(bias_params))])
-        b1, b2, bs, bk, sn = bias_params
+        b1, b2, bs, bk, _sn = bias_params
         bias_monomials = np.array([1, b1, 0.5 * b2, bs, bk])
         pk = np.sum(bias_monomials[:, np.newaxis] * pkvec[:, :], axis=0)  # + sn
     return pk
@@ -226,7 +227,7 @@ def combine_kaiser_spectra(k, spectra_dict, D, bias, f_growth, rec_algo, R, rsd=
     return pk
 
 
-def get_poles(k, pk, D, bias, f_growth, poles=[0, 2, 4]):
+def get_poles(k, pk, D, bias, f_growth, poles=(0, 2, 4)):
     """
     Compute the len(poles) multipoles given the linear power spectrum, pk, the growth function,
     the growth factor and the bias.
@@ -420,7 +421,7 @@ def measure_2pt_bias_lcv(
 
     # cut the template power spectra for the same k range
     power_lin_dict = power_dict.copy()
-    for key in power_lin_dict.keys():
+    for key in power_lin_dict:
         if 'P_ell' not in key:
             continue
         power_lin_dict[key] = power_lin_dict[key][:, kidx_min:kidx_max]
@@ -582,7 +583,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     Lbox = cfg['lbox']
 
     # define k bins
-    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_bins, _mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1]) * 0.5
 
     # name of files to read from
@@ -604,12 +605,12 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
         power_tr_dict, power_ij_dict = power_rsd_tr_dict, power_rsd_ij_dict
 
     # load real-space version (used for bias fitting)
-    k, mu, pk_tt_real, pk_ij_zz_real, pk_ij_zt_real, nmodes = read_power_dict(
+    k, _mu, pk_tt_real, pk_ij_zz_real, _pk_ij_zt_real, nmodes = read_power_dict(
         power_tr_dict, power_ij_dict, want_rsd=False, keynames=keynames, poles=poles
     )
 
     # load either real or redshift
-    k, mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles, nmodes = read_power_dict(
+    k, _mu, pk_tt_poles, pk_ij_zz_poles, pk_ij_zt_poles, nmodes = read_power_dict(
         power_rsd_tr_dict,
         power_rsd_ij_dict,
         want_rsd=want_rsd,
@@ -641,16 +642,16 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
     data = np.load(window_fn)
     window = data['window']
     keff = data['keff']
-    assert len(keff) == len(k_binc), f'Mismatching file: {str(window_fn)}'
+    assert len(keff) == len(k_binc), f'Mismatching file: {window_fn!s}'
     assert np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1, (
-        f'Mismatching file: {str(window_fn)}'
+        f'Mismatching file: {window_fn!s}'
     )
 
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
-    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {str(zenbu_fn)}'
-    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {str(zenbu_fn)}'
+    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {zenbu_fn!s}'
+    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {zenbu_fn!s}'
 
     # combine spectra drops the bias = 1 element
     pk_zz = combine_spectra(k_binc, pk_ij_zz_input, bias_vec[1:], rsd=want_rsd)
@@ -684,7 +685,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
         # beta[np.isclose(var_zz, 0.)] = 0.
     beta_damp = 0.5 * (1 - np.tanh((k_binc - k0) / dk_cv)) * beta
     beta_damp = np.atleast_2d(beta_damp)
-    beta_damp[beta_damp != beta_damp] = 0
+    beta_damp[np.isnan(beta_damp)] = 0
     beta_damp[:, : k_binc.searchsorted(beta1_k)] = 1
     beta_smooth = np.zeros_like(beta_damp)
     for i in range(beta_smooth.shape[0]):
@@ -698,7 +699,7 @@ def run_zcv(power_rsd_tr_dict, power_rsd_ij_dict, power_tr_dict, power_ij_dict, 
         r_zt = cov_zn / np.sqrt(var_zz * var_nn)
         r_zt[np.isclose(r_zt, 0.0)] = 0.0
     r_zt = np.atleast_2d(r_zt)
-    r_zt[r_zt != r_zt] = 0  # takes care of NaN's
+    r_zt[np.isnan(r_zt)] = 0
 
     # apply window function if in rsd
     if want_rsd:
@@ -797,7 +798,7 @@ def run_zcv_field(
     power_cv_tr_fn = Path(save_z_dir) / f'power{rsd_str}_ZCV_tr_nmesh{nmesh:d}.asdf'
 
     # define k bins
-    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_bins, _mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = 0.5 * (k_bins[1:] + k_bins[:-1])
 
     # project 3d measurements in real space to monopole
@@ -831,8 +832,8 @@ def run_zcv_field(
     # load the presaved zenbu power spectra
     data = np.load(zenbu_fn)
     pk_ij_zenbu = data['pk_ij_zenbu']
-    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {str(zenbu_fn)}'
-    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {str(zenbu_fn)}'
+    assert np.allclose(data['k_binc'], k_binc), f'Mismatching file: {zenbu_fn!s}'
+    assert np.isclose(data['kcut'], kcut), f'Mismatching file: {zenbu_fn!s}'
 
     # combine zenbu multipoles
     pk_zenbu = combine_spectra(k_binc, pk_ij_zenbu, bias_vec[1:], rsd=want_rsd)
@@ -1033,7 +1034,7 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
         f_growth = 0.0
 
     # define k bins
-    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_bins, _mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1]) * 0.5
     if not logk:
         dk = k_bins[1] - k_bins[0]
@@ -1099,9 +1100,9 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
     data = np.load(window_fn)
     window = data['window']
     keff = data['keff']
-    assert len(keff) == len(k_binc), f'Mismatching file: {str(window_fn)}'
+    assert len(keff) == len(k_binc), f'Mismatching file: {window_fn!s}'
     assert np.abs(keff[-1] - k_binc[-1]) / k_binc[-1] < 0.1, (
-        f'Mismatching file: {str(window_fn)}'
+        f'Mismatching file: {window_fn!s}'
     )
 
     # stochasticity and model error
@@ -1126,7 +1127,7 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
         r_tl = cov_tl / np.sqrt(var_ll * var_tt)
         # r_tl[np.isclose(var_ll * var_tt, 0.)] = 0.
         r_tl = np.atleast_2d(r_tl)
-        r_tl[r_tl != r_tl] = 0  # takes care of NaN's
+        r_tl[np.isnan(r_tl)] = 0
 
     # shotnoise limit
     with np.errstate(divide='ignore'):
@@ -1139,7 +1140,7 @@ def run_lcv(power_rsd_tr_dict, power_lin_dict, config):
         # beta[np.isclose(var_ll), 0.] = 0.
     beta_damp = 0.5 * (1 - np.tanh((k_binc - k0) / dk_cv)) * beta
     beta_damp = np.atleast_2d(beta_damp)
-    beta_damp[beta_damp != beta_damp] = 0  # takes care of NaN's
+    beta_damp[np.isnan(beta_damp)] = 0
     beta_damp[:, : k_binc.searchsorted(beta1_k)] = 1
     beta_smooth = np.zeros_like(beta_damp)
     for i in range(beta_smooth.shape[0]):
@@ -1285,7 +1286,7 @@ def run_lcv_field(power_rsd_tr_fns, power_lin_fns, config):
     print('D, f = ', D, f_growth)
 
     # define k bins
-    k_bins, mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
+    k_bins, _mu_bins = get_k_mu_edges(Lbox, k_hMpc_max, n_k_bins, n_mu_bins, logk)
     k_binc = (k_bins[1:] + k_bins[:-1]) * 0.5
     if not logk:
         k_bins[1] - k_bins[0]
