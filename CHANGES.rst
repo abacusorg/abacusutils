@@ -6,9 +6,22 @@ Upcoming
 
 The minimum Python version is 3.10.
 
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Argument validation now raises ``TypeError`` rather than ``ValueError``: ``pimax`` and
+  ``pi_bin_size`` in ``analysis.tpcf_corrfunc``, and ``rsd`` in ``GRAND_HOD.gen_gal_cat``
+- Errors that were raised as bare ``Exception`` now use specific types: the "Abacus ASDF
+  extension not properly loaded" error is a ``RuntimeError``, and the redshift and shear
+  validation errors in ``AbacusHOD`` and ``prepare_sim`` are ``ValueError``
+
 Fixes
 ~~~~~
 - HOD: fix reseed in NumPy 2 by updating ``parallel_numpy_rng`` dependency
+
+Improvements
+~~~~~~~~~~~~
+- Sequence defaults like ``poles=[0, 2, 4]`` are now tuples, so they can't be mutated by
+  the caller
 
 2.1.2 (2025-10-13)
 ------------------

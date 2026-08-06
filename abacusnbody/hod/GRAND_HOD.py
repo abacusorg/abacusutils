@@ -1339,7 +1339,7 @@ def gen_gals(
     """
 
     # B.H. TODO: pass as dictionary; make what's below more succinct
-    for tracer in tracers.keys():
+    for tracer in tracers:
         if tracer == 'LRG':
             LRG_HOD = tracers[tracer]
         if tracer == 'ELG':
@@ -1347,7 +1347,7 @@ def gen_gals(
         if tracer == 'QSO':
             QSO_HOD = tracers[tracer]
 
-    if 'LRG' in tracers.keys():
+    if 'LRG' in tracers:
         want_LRG = True
 
         LRG_hod_dict = nb.typed.Dict.empty(
@@ -1384,7 +1384,7 @@ def gen_gals(
             key_type=nb.types.unicode_type, value_type=nb.types.float64
         )
 
-    if 'ELG' in tracers.keys():
+    if 'ELG' in tracers:
         # ELG design
         want_ELG = True
 
@@ -1431,7 +1431,7 @@ def gen_gals(
             key_type=nb.types.unicode_type, value_type=nb.types.float64
         )
 
-    if 'QSO' in tracers.keys():
+    if 'QSO' in tracers:
         # QSO design
         want_QSO = True
         QSO_hod_dict = nb.typed.Dict.empty(
@@ -1656,7 +1656,7 @@ def gen_gal_cat(
     """
 
     if not isinstance(rsd, bool):
-        raise ValueError('Error: rsd has to be a boolean')
+        raise TypeError('Error: rsd has to be a boolean')
 
     # find the halos, populate them with galaxies and write them to files
     HOD_dict = gen_gals(
@@ -1688,11 +1688,11 @@ def gen_gal_cat(
         os.makedirs(outdir, exist_ok=True)
 
     # how many galaxies were generated and write them to disk
-    for tracer in tracers.keys():
+    for tracer in tracers:
         Ncent = HOD_dict[tracer]['Ncent']
         if verbose:
             print(
-                'generated %ss:' % tracer,
+                f'generated {tracer}s:',
                 len(HOD_dict[tracer]['x']),
                 'satellite fraction ',
                 1 - Ncent / len(HOD_dict[tracer]['x']),

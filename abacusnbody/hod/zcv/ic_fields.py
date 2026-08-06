@@ -26,7 +26,7 @@ def compress_asdf(asdf_fn, table, header):
     """
     # cram into a dictionary
     data_dict = {}
-    for field in table.keys():
+    for field in table:
         data_dict[field] = table[field]
 
     # create data tree structure
@@ -36,13 +36,13 @@ def compress_asdf(asdf_fn, table, header):
     }
 
     # set compression options here
-    compression_kwargs = dict(
-        typesize='auto',
-        shuffle='shuffle',
-        compression_block_size=12 * 1024**2,
-        blosc_block_size=3 * 1024**2,
-        nthreads=4,
-    )
+    compression_kwargs = {
+        'typesize': 'auto',
+        'shuffle': 'shuffle',
+        'compression_block_size': 12 * 1024**2,
+        'blosc_block_size': 3 * 1024**2,
+        'nthreads': 4,
+    }
     with (
         asdf.AsdfFile(data_tree) as af,
         open(asdf_fn, 'wb') as fp,
@@ -382,7 +382,8 @@ def main(path2config, alt_simname=None, verbose=False):
     """
 
     # read zcv parameters
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     try:
         zcv_dir = config['zcv_params']['zcv_dir']
         ic_dir = config['zcv_params']['ic_dir']

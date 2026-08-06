@@ -33,7 +33,7 @@ from . import bitpacked
 try:
     asdf_compression.validate('blsc')
 except Exception as e:
-    raise Exception(
+    raise RuntimeError(
         'Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`'
     ) from e
 
@@ -421,13 +421,13 @@ class CompaSOHaloCatalog:
         if isinstance(unpack_bits, str):
             unpack_bits = [unpack_bits]
         if unpack_bits not in (True, False):
+            err = f'`unpack_bits` must be True, False, or one of: "{bitpacked.PID_FIELDS}"'
             try:
-                for _f in unpack_bits:
-                    assert _f in bitpacked.PID_FIELDS
-            except Exception:
-                raise ValueError(
-                    f'`unpack_bits` must be True, False, or one of: "{bitpacked.PID_FIELDS}"'
-                )
+                fields = list(unpack_bits)
+            except TypeError as e:
+                raise ValueError(err) from e
+            if any(f not in bitpacked.PID_FIELDS for f in fields):
+                raise ValueError(err)
         return unpack_bits
 
     def _setup_load_subsamples(self, load_subsamples, passthrough=False):
@@ -443,19 +443,25 @@ class CompaSOHaloCatalog:
             # If user has not specified which subsamples, then assume user wants to load everything
             if load_subsamples is True:
                 if passthrough:
-                    load_subsamples = dict(A=True, B=True, rvint=True, packedpid=True)
+                    load_subsamples = {
+                        'A': True,
+                        'B': True,
+                        'rvint': True,
+                        'packedpid': True,
+                    }
                 else:
-                    load_subsamples = dict(A=True, B=True, rv=True, pid=True)
+                    load_subsamples = {'A': True, 'B': True, 'rv': True, 'pid': True}
 
             if isinstance(load_subsamples, dict):
                 load_AB = [k for k in 'AB' if load_subsamples.get(k)]  # ['A', 'B']
 
                 # Check for conflicts between rv, pos, vel. Must be done before list-ifying to distinguish False and not given.
-                if 'rv' in load_subsamples:
-                    if 'pos' in load_subsamples or 'vel' in load_subsamples:
-                        raise ValueError(
-                            'Cannot pass `rv` and `pos` or `vel` in `load_subsamples`.'
-                        )
+                if 'rv' in load_subsamples and (
+                    'pos' in load_subsamples or 'vel' in load_subsamples
+                ):
+                    raise ValueError(
+                        'Cannot pass `rv` and `pos` or `vel` in `load_subsamples`.'
+                    )
 
                 load_pidrv = [
                     k
@@ -634,7 +640,7 @@ class CompaSOHaloCatalog:
         self.cleaned_fields = cleaned_fields
 
         N_halo_per_file = np.array(
-            [len(af[self.data_key][list(af[self.data_key].keys())[0]]) for af in afs]
+            [len(af[self.data_key][next(iter(af[self.data_key]))]) for af in afs]
         )
         for _N, caf in zip(N_halo_per_file, cleaned_afs):
             assert (
@@ -784,12 +790,12 @@ class CompaSOHaloCatalog:
         self.halos = self.halos[:N_written]
         if N_written < N_halos:
             # Release virtual memory if we didn't fill the whole allocation
-            for col in cols:
-                s = list(cols[col].shape)
+            for arr in cols.values():
+                s = list(arr.shape)
                 s[0] = N_written
-                oldaddr = cols[col].ctypes.data
-                cols[col].resize(s, refcheck=False)
-                if cols[col].ctypes.data != oldaddr:
+                oldaddr = arr.ctypes.data
+                arr.resize(s, refcheck=False)
+                if arr.ctypes.data != oldaddr:
                     warnings.warn('Resize resulted in copy')
         N_halos = len(self.halos)
 
@@ -1073,7 +1079,7 @@ class CompaSOHaloCatalog:
         self,
         N_halo_per_file,
         npstartAB_new,
-        which=['pos', 'vel', 'pid'],  # 'rvint'
+        which=('pos', 'vel', 'pid'),  # 'rvint'
         load_AB=None,
         cleaned=True,
         check_pids=False,
@@ -1368,7 +1374,7 @@ class CompaSOHaloCatalog:
 
         gc.collect()
 
-    def _load_halo_lc_subsamples(self, which=['pos', 'vel', 'pid'], unpack_bits=False):
+    def _load_halo_lc_subsamples(self, which=('pos', 'vel', 'pid'), unpack_bits=False):
         # Halo LC subsamples are loaded separately because the data model is different
         # and way simpler: just one file, no slab divisions, no B particles, no unpacking, no cleaning.
 

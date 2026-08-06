@@ -85,5 +85,9 @@ version_file_template = '__version__ = "{version}"'
 quote-style = "single"
 docstring-code-format = true
 
+[tool.ruff.lint.per-file-ignores]
+# `abacusnbody.hod.GRAND_HOD` is a documented import path; renaming it would break users
+"abacusnbody/hod/GRAND_HOD.py" = ["N999"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

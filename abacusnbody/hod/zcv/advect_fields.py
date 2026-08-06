@@ -67,7 +67,8 @@ def main(
         dictionary containing the auto- and cross-power spectra of the 5 fields.
     """
     # read zcv parameters
-    config = yaml.safe_load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.safe_load(fp)
     zcv_dir = config['zcv_params']['zcv_dir']
     nmesh = config['zcv_params']['nmesh']
     kcut = config['zcv_params']['kcut']

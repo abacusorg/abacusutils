@@ -194,9 +194,11 @@ def unpack_pids(
     N = len(packed)
 
     if ppd is not None:
-        if not np.isclose(ppd, int(round(ppd))):
+        # via float() because round() on a numpy scalar returns a numpy float
+        ppd_int = round(float(ppd))
+        if not np.isclose(ppd, ppd_int):
             raise ValueError(f'ppd "{ppd}" not valid int?')
-        ppd = int(round(ppd))
+        ppd = ppd_int
     else:
         ppd = 1
 

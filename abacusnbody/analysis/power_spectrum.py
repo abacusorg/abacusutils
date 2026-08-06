@@ -24,6 +24,9 @@ __all__ = [
 
 MAX_THREADS = numba.config.NUMBA_NUM_THREADS
 
+# Numba needs an array, not a sequence, to type the `poles` argument
+NO_POLES = np.empty(0, 'i8')
+
 # the first 20 factorials
 FACTORIAL_LOOKUP_TABLE = np.array(
     [
@@ -153,7 +156,7 @@ def bin_kmu(
     kedges,
     muedges,
     weights,
-    poles=np.empty(0, 'i8'),
+    poles=NO_POLES,
     dtype=np.float32,
     fourier=True,
     nthread=MAX_THREADS,
@@ -283,9 +286,8 @@ def bin_kmu(
             weighted_counts_poles[ip] = weighted_counts.sum(axis=1)
 
     for i in range(Nk):
-        if Np > 0:
-            if counts_poles[i] != 0:
-                weighted_counts_poles[:, i] /= dtype(counts_poles[i])
+        if Np > 0 and counts_poles[i] != 0:
+            weighted_counts_poles[:, i] /= dtype(counts_poles[i])
         for j in range(Nmu):
             if counts[i, j] != 0:
                 weighted_counts[i, j] /= dtype(counts[i, j])
@@ -439,7 +441,7 @@ def project_3d_to_poles(k_bin_edges, raw_p3d, Lbox, poles):
     poles = np.asarray(poles)
     raw_p3d = np.asarray(raw_p3d)
     muedges = np.array([0.0, 1.0])
-    binned_p3d, N3d, binned_poles, Npoles, k_avg = bin_kmu(
+    _binned_p3d, _N3d, binned_poles, Npoles, _k_avg = bin_kmu(
         nmesh, Lbox, k_bin_edges, muedges=muedges, weights=raw_p3d, poles=poles
     )
     binned_poles *= Lbox**3
@@ -616,7 +618,7 @@ def get_delta_mu2(delta, n1d, dtype_c=np.complex64, dtype_f=np.float32):
     return delta_mu2
 
 
-def pk_to_xi(Pk, Lbox, r_bins, poles=[0, 2, 4]):
+def pk_to_xi(Pk, Lbox, r_bins, poles=(0, 2, 4)):
     r"""
     Transform 3D power spectrum into correlation function multipoles.
 
@@ -652,7 +654,7 @@ def pk_to_xi(Pk, Lbox, r_bins, poles=[0, 2, 4]):
     nmesh = Xi.shape[0]
     poles = np.asarray(poles)
     muedges = np.array([0.0, 1.0])
-    _, _, binned_poles, Npoles, r_avg = bin_kmu(
+    _, _, binned_poles, Npoles, _r_avg = bin_kmu(
         nmesh, Lbox, r_bins, muedges=muedges, weights=Xi, poles=poles, fourier=False
     )
     binned_poles *= nmesh**3
@@ -732,7 +734,7 @@ def calc_pk_from_deltak(
     k_bin_edges,
     mu_bin_edges,
     field2_fft=None,
-    poles=np.empty(0, 'i8'),
+    poles=NO_POLES,
     squeeze_mu_axis=True,
     nthread=MAX_THREADS,
 ):
@@ -795,13 +797,13 @@ def calc_pk_from_deltak(
         N_mode = N_mode[:, 0]
         k_avg = k_avg[:, 0]
 
-    return dict(
-        power=power,
-        N_mode=N_mode,
-        binned_poles=binned_poles,
-        N_mode_poles=N_mode_poles,
-        k_avg=k_avg,
-    )
+    return {
+        'power': power,
+        'N_mode': N_mode,
+        'binned_poles': binned_poles,
+        'N_mode_poles': N_mode_poles,
+        'k_avg': k_avg,
+    }
 
 
 def get_field(
@@ -1219,20 +1221,20 @@ def calc_power(
     if mubins is None:
         mubins = 1
 
-    meta = dict(
-        Lbox=Lbox,
-        logk=logk,
-        paste=paste,
-        nmesh=nmesh,
-        compensated=compensated,
-        interlaced=interlaced,
-        poles=poles,
-        nthread=nthread,
-        N_pos=len(pos),
-        is_weighted=w is not None,
-        field_dtype=dtype,
-        squeeze_mu_axis=squeeze_mu_axis,
-    )
+    meta = {
+        'Lbox': Lbox,
+        'logk': logk,
+        'paste': paste,
+        'nmesh': nmesh,
+        'compensated': compensated,
+        'interlaced': interlaced,
+        'poles': poles,
+        'nthread': nthread,
+        'N_pos': len(pos),
+        'is_weighted': w is not None,
+        'field_dtype': dtype,
+        'squeeze_mu_axis': squeeze_mu_axis,
+    }
     if pos2 is not None:
         meta['N_pos2'] = len(pos2)
         meta['is_weighted2'] = w2 is not None
@@ -1294,14 +1296,14 @@ def calc_power(
     k_binc = (kbins[1:] + kbins[:-1]) * 0.5
     mu_binc = (mubins[1:] + mubins[:-1]) * 0.5
 
-    res = dict(
-        k_min=kbins[:-1],
-        k_max=kbins[1:],
-        k_mid=k_binc,
-        k_avg=P['k_avg'],
-        power=P['power'],
-        N_mode=P['N_mode'],
-    )
+    res = {
+        'k_min': kbins[:-1],
+        'k_max': kbins[1:],
+        'k_mid': k_binc,
+        'k_avg': P['k_avg'],
+        'power': P['power'],
+        'N_mode': P['N_mode'],
+    }
     if len(poles) > 0:
         res.update(
             poles=P['binned_poles'].T,

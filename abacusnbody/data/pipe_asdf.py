@@ -96,7 +96,7 @@ except ImportError:
 try:
     asdf_compression.validate('blsc')
 except Exception as e:
-    raise Exception(
+    raise RuntimeError(
         'Abacus ASDF extension not properly loaded! Try reinstalling abacusutils, or updating ASDF: `pip install asdf>=2.8`'
     ) from e
 
