@@ -85,7 +85,7 @@ def test_subsamples_unclean():
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
-        subsamples=dict(A=True),
+        subsamples={'A': True},
         fields='all',
         cleaned=False,
     )
@@ -95,7 +95,7 @@ def test_subsamples_unclean():
 
     cat = CompaSOHaloCatalog(
         EXAMPLE_SIM / 'halos' / 'z0.000',
-        subsamples=dict(B=True),
+        subsamples={'B': True},
         fields='all',
         cleaned=False,
     )
@@ -162,7 +162,7 @@ def test_field_subset_loading():
     from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
 
     cat = CompaSOHaloCatalog(EXAMPLE_SIM / 'halos' / 'z0.000', fields=['N', 'x_com'])
-    assert set(cat.halos.colnames) == set(['N', 'x_com'])
+    assert set(cat.halos.colnames) == {'N', 'x_com'}
 
 
 def test_one_halo_info():

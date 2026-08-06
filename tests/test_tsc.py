@@ -128,7 +128,7 @@ class TestTSC:
         # compare with a saved result
         ref_fn = refdir / f'tsc_ngrid{ngrid}.asdf'
         if save_result and nthread == 1 and dtype == 'f8':
-            with asdf.AsdfFile(dict(pydens=pydens)) as af:
+            with asdf.AsdfFile({'pydens': pydens}) as af:
                 af.write_to(ref_fn, all_array_compression='blsc')
 
         with asdf.open(ref_fn) as af:
@@ -152,7 +152,7 @@ class TestTSC:
             )
             mesh *= weights.sum(dtype='f8') / ngrid**3
 
-            with asdf.AsdfFile(dict(mesh=mesh)) as af:
+            with asdf.AsdfFile({'mesh': mesh}) as af:
                 af.write_to(nbodykit_fn, all_array_compression='blsc')
         with asdf.open(nbodykit_fn) as af:
             savedens = af['mesh']

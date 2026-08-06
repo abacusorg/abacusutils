@@ -31,8 +31,9 @@ class SampleFileUtil:
             mode = 'a'
         else:
             mode = 'w'
-        self.samplesFile = open(self.filePrefix + '.txt', mode)
-        self.probFile = open(self.filePrefix + 'prob.txt', mode)
+        # handles outlive __init__; closed by close()
+        self.samplesFile = open(self.filePrefix + '.txt', mode)  # noqa: SIM115
+        self.probFile = open(self.filePrefix + 'prob.txt', mode)  # noqa: SIM115
 
     def persistSamplingValues(self, pos, prob):
         self.persistValues(self.samplesFile, self.probFile, pos, prob)
@@ -120,7 +121,7 @@ def inrange(p, params):
 def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
     if inrange(p, params):
         # read the parameters
-        for key in param_mapping.keys():
+        for key in param_mapping:
             mapping_idx = param_mapping[key]
             tracer_type = param_tracer[key]
             # tracer_type = param_tracer[params[mapping_idx, -1]]
@@ -140,7 +141,8 @@ def lnprob(p, params, param_mapping, param_tracer, Data, Ball):
 
 def main(path2config, time_likelihood):
     # load the yaml parameters
-    config = yaml.load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.load(fp)
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
@@ -159,7 +161,7 @@ def main(path2config, time_likelihood):
     param_mapping = {}
     param_tracer = {}
     params = np.zeros((nparams, 4))
-    for key in fit_params.keys():
+    for key in fit_params:
         mapping_idx = fit_params[key][0]
         tracer_type = fit_params[key][-1]
         param_mapping[key] = mapping_idx
@@ -228,7 +230,7 @@ def main(path2config, time_likelihood):
         pool=pool_use,
     )
     start = time.time()
-    print('Running %d samples' % nsteps_use)
+    print(f'Running {nsteps_use:d} samples')
 
     # record every iteration
     counter = 1

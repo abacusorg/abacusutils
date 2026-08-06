@@ -24,19 +24,19 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
         meta = dict(af.tree)
 
     del meta['history'], meta['asdf_library']
-    for k in meta:
+    for simmeta in meta.values():
         if rmstate:
-            del meta[k]['state']
+            del simmeta['state']
         if rmpk:
-            del meta[k]['CLASS_power_spectrum']
+            del simmeta['CLASS_power_spectrum']
 
     if dopickle:
-        for sim in meta:
-            meta[sim]['state'] = np.frombuffer(
-                pickle.dumps(meta[sim]['state']), dtype=np.byte
+        for simmeta in meta.values():
+            simmeta['state'] = np.frombuffer(
+                pickle.dumps(simmeta['state']), dtype=np.byte
             )
-            meta[sim]['param'] = np.frombuffer(
-                pickle.dumps(meta[sim]['param']), dtype=np.byte
+            simmeta['param'] = np.frombuffer(
+                pickle.dumps(simmeta['param']), dtype=np.byte
             )
 
         # p = pickle.dumps(meta)
@@ -45,21 +45,21 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
     if domsgpack:
         import msgpack
 
-        for sim in meta:
-            meta[sim]['state'] = np.frombuffer(
-                msgpack.dumps(meta[sim]['state']), dtype=np.byte
+        for simmeta in meta.values():
+            simmeta['state'] = np.frombuffer(
+                msgpack.dumps(simmeta['state']), dtype=np.byte
             )
-            meta[sim]['param'] = np.frombuffer(
-                msgpack.dumps(meta[sim]['param']), dtype=np.byte
+            simmeta['param'] = np.frombuffer(
+                msgpack.dumps(simmeta['param']), dtype=np.byte
             )
 
     if dojson:
-        for sim in meta:
-            meta[sim]['state'] = np.frombuffer(
-                json.dumps(meta[sim]['state']).encode(), dtype=np.byte
+        for simmeta in meta.values():
+            simmeta['state'] = np.frombuffer(
+                json.dumps(simmeta['state']).encode(), dtype=np.byte
             )
-            meta[sim]['param'] = np.frombuffer(
-                json.dumps(meta[sim]['param']).encode(), dtype=np.byte
+            simmeta['param'] = np.frombuffer(
+                json.dumps(simmeta['param']).encode(), dtype=np.byte
             )
 
         # p = pickle.dumps(meta)
@@ -91,14 +91,14 @@ def compress(fn, rmstate, rmpk, dopickle, domsgpack, dojson):
         af.write_to(
             fn.parent / (fn.stem + '_compressed.asdf'),
             all_array_compression='blsc',
-            compression_kwargs=dict(
-                shuffle='shuffle',
-                compression_block_size=1 << 22,
-                blosc_block_size=1 << 20,
-                clevel=9,
-                cname='zstd',
+            compression_kwargs={
+                'shuffle': 'shuffle',
+                'compression_block_size': 1 << 22,
+                'blosc_block_size': 1 << 20,
+                'clevel': 9,
+                'cname': 'zstd',
                 # typesize=16,
-            ),
+            },
         )
 
 

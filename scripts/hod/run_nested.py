@@ -17,7 +17,7 @@ DEFAULTS['path2config'] = 'config/boss_lrg_wp.yaml'
 
 def lnprob(p, param_mapping, param_tracer, Data, Ball):
     # read the parameters
-    for key in param_mapping.keys():
+    for key in param_mapping:
         mapping_idx = param_mapping[key]
         tracer_type = param_tracer[key]
         # tracer_type = param_tracer[params[mapping_idx, -1]]
@@ -42,7 +42,8 @@ def prior_transform(u, params_hod, params_hod_initial_range):
 
 def main(path2config):
     # load the yaml parameters
-    config = yaml.load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.load(fp)
     sim_params = config['sim_params']
     HOD_params = config['HOD_params']
     clustering_params = config['clustering_params']
@@ -61,7 +62,7 @@ def main(path2config):
     param_mapping = {}
     param_tracer = {}
     params = np.zeros((nparams, 2))
-    for key in fit_params.keys():
+    for key in fit_params:
         mapping_idx = fit_params[key][0]
         tracer_type = fit_params[key][-1]
         param_mapping[key] = mapping_idx

@@ -21,7 +21,8 @@ def get_samples(outfile, par_names, w_rat, n_par, b_iter):
 
 def main(path2config):
     # read parameters
-    config = yaml.load(open(path2config))
+    with open(path2config) as fp:
+        config = yaml.load(fp)
     fit_params = config['fit_params']
     ch_params = config['ch_config_params']
 
