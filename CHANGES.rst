@@ -6,6 +6,10 @@ Upcoming
 
 The minimum Python version is 3.10.
 
+Improvements
+~~~~~~~~~~~~
+- asdf: implement Blosc2 (``bsc2``) compression
+
 Fixes
 ~~~~~
 - HOD: fix reseed in NumPy 2 by updating ``parallel_numpy_rng`` dependency

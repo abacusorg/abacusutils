@@ -10,11 +10,16 @@ handle Blosc compression.
 
 import struct
 import time
+import warnings
 
 import blosc
 import blosc2  # TODO: blosc2 should be able to read blosc1 files
 import numpy as np
 from asdf.extension import Compressor, Extension
+
+# blosc2 stores the typesize in a single chunk-header byte and silently
+# degrades anything larger to 1
+_BLOSC2_MAX_TYPESIZE = 255
 
 
 def set_nthreads(nthreads):
@@ -194,9 +199,81 @@ class Blosc2Compressor(Compressor):
         return b'bsc2'
 
     def compress(self, data, **kwargs):
-        raise NotImplementedError(
-            'Blosc 2 compression not implemented yet, only decompression'
+        """Compress ``data`` into a single Blosc2 cframe, which becomes the
+        whole payload of one ASDF binary block.  Same as the Abacus C++
+        ASDF writer writes.
+
+        Parameters
+        ----------
+        data: buffer
+            The uncompressed data, as a contiguous buffer.
+
+        chunksize: int, optional
+            Bytes per blosc2 chunk, rounded up to a multiple of ``typesize``.
+            Chunks are compressed one at a time, while the blocks within a
+            chunk are compressed in parallel. Default: 16 MiB, i.e. 16 blocks
+
+        **kwargs: dict, optional
+            Passed to `blosc2.CParams`. The defaults for ``codec``, ``clevel``
+            and ``filters`` are: zstd, 1, and shuffle. ``blocksize`` is rounded
+            down to a multiple of ``typesize`` and defaults to 1 MiB, which
+            increases compression ratio at the cost of some performance
+            compared to blosc2's default.  ``typesize`` is the record size the
+            shuffle filter works on, e.g. 8 for int64; ASDF hands compressors a flat
+            ``uint8`` buffer, so it defaults to 1, disabling shuffle in effect.
+            Pass the array's real itemsize with ``AsdfFile.set_array_compression
+            (arr, 'bsc2', typesize=arr.dtype.itemsize)``.
+
+        Yields
+        ------
+        cframe: bytes
+            The compressed data, as one Blosc2 cframe.
+        """
+        chunksize = kwargs.pop('chunksize', 1 << 24)
+
+        data = memoryview(data)
+        if not data.contiguous:
+            raise ValueError('bsc2 compression requires a contiguous buffer')
+        data = data.cast('B')
+
+        kwargs.setdefault('codec', blosc2.Codec.ZSTD)
+        kwargs.setdefault('clevel', 1)
+        kwargs.setdefault('filters', [blosc2.Filter.SHUFFLE])
+
+        typesize = int(kwargs.setdefault('typesize', data.itemsize))
+        if typesize < 1:
+            raise ValueError(f'typesize must be >= 1, got {typesize}')
+        if data.nbytes % typesize:
+            # An all-zeros chunk whose length isn't a multiple of typesize makes
+            # blosc2 4.5.1 write a cframe that schunk_from_cframe() can't read.
+            warnings.warn(
+                f'typesize {typesize} does not divide the {data.nbytes}-byte '
+                'buffer; falling back to typesize 1, i.e. no shuffle',
+                stacklevel=2,
+            )
+            typesize = 1
+        elif typesize > _BLOSC2_MAX_TYPESIZE:
+            typesize = 1
+        kwargs['typesize'] = typesize
+
+        # Whole records per block too, rounding down to stay within whatever
+        # cache the block was sized for.  0 means blosc2 chooses.
+        blocksize = int(kwargs.setdefault('blocksize', 1 << 20))
+        if blocksize:
+            kwargs['blocksize'] = typesize * max(blocksize // typesize, 1)
+
+        # Whole records per chunk, for the reason given at the typesize fallback
+        chunksize = typesize * min(
+            -(-int(chunksize) // typesize), blosc2.MAX_BUFFERSIZE // typesize
         )
+
+        schunk = blosc2.SChunk(
+            chunksize=chunksize, data=data, cparams=blosc2.CParams(**kwargs)
+        )
+        cframe = schunk.to_cframe()
+
+        del schunk
+        yield cframe
 
     def decompress(self, blocks, out, **kwargs) -> int:
         block_list = list(blocks)
@@ -219,7 +296,7 @@ class Blosc2Compressor(Compressor):
 class AbacusExtension(Extension):
     """
     An ASDF Extension that deals with Abacus types and formats.
-    Currently implements Blosc compression, and Blosc and Blosc2 decompression.
+    Currently implements Blosc and Blosc2 compression and decompression.
     """
 
     @property
