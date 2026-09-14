@@ -298,19 +298,16 @@ class Blosc2Compressor(Compressor):
         yield cframe
 
     def decompress(self, blocks, out, **kwargs) -> int:
-        block_list = list(blocks)
-        cframe = bytearray(sum(len(b) for b in block_list))
-        offset = 0
-        for b in block_list:
-            n = len(b)
-            cframe[offset : offset + n] = b
-            offset += n
+        cframe = b''.join(blocks)
         schunk = blosc2.schunk_from_cframe(cframe, copy=False)
+        out = np.frombuffer(out, dtype=np.uint8)
+
         offset = 0
         for i in range(schunk.nchunks):
-            chunk = schunk.decompress_chunk(i)
-            n = len(chunk)
-            out[offset : offset + n] = chunk
+            # Sizes come from the chunk headers because the writer aggregates
+            # independently-finalized cframes, each ending short; schunk.chunksize is 0.
+            n = blosc2.get_cbuffer_sizes(schunk.get_lazychunk(i))[0]
+            schunk.decompress_chunk(i, dst=out[offset : offset + n])
             offset += n
         return offset
 

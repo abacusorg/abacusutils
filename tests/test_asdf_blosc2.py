@@ -131,6 +131,33 @@ def test_decompress_split_blocks(nsplit):
     assert np.array_equal(out.view(arr.dtype), arr)
 
 
+def test_decompress_aggregated_cframe():
+    """Aggregate_and_Write() builds one cframe by appending the chunks of several
+    independently-finalized cframes, so short chunks land mid-stream."""
+    chunksize = 1 << 16
+    cparams = {'typesize': 1}
+    combined = blosc2.SChunk(chunksize=chunksize, cparams=cparams)
+    parts = []
+    for i, nbytes in enumerate([3 * chunksize + 1234, 2 * chunksize + 55, chunksize + 7]):
+        part = np.full(nbytes, i + 1, dtype=np.uint8)
+        accum = blosc2.SChunk(chunksize=chunksize, cparams=cparams)
+        for off in range(0, nbytes, chunksize):
+            accum.append_data(part[off : off + chunksize])
+        for j in range(accum.nchunks):
+            combined.append_chunk(accum.get_chunk(j))
+        parts.append(part)
+    expect = np.concatenate(parts)
+
+    cframe = combined.to_cframe()
+    # blosc2 reports 0 rather than a size when the chunks are not all equal
+    assert blosc2.schunk_from_cframe(cframe).chunksize == 0
+
+    out = np.empty(expect.nbytes, dtype=np.uint8)
+    n = Blosc2Compressor().decompress([cframe], out.data)
+    assert n == expect.nbytes
+    assert np.array_equal(out, expect)
+
+
 def compress_to_cframe(data, **kwargs):
     (cframe,) = Blosc2Compressor().compress(memoryview(data).cast('B'), **kwargs)
     # copy=True: the schunk outlives `cframe` here
