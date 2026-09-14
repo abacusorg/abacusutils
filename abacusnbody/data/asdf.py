@@ -50,6 +50,7 @@ class BloscCompressor(Compressor):
         clevel
         """
         # Blosc code probably assumes contiguous buffer
+        data = memoryview(data)  # work around asdf 5.4 regression
         assert data.contiguous
 
         nthreads = kwargs.pop('nthreads', 1)
