@@ -8,6 +8,7 @@ It contains the reference to the Compressor subclass that knows how to
 handle Blosc compression.
 """
 
+import os
 import struct
 import time
 import warnings
@@ -21,8 +22,28 @@ from asdf.extension import Compressor, Extension
 # degrades anything larger to 1
 _BLOSC2_MAX_TYPESIZE = 255
 
+# The Abacus C++ writer targets this many blocks per chunk,
+# so more threads typically cannot help
+DEFAULT_BLOSC2_THREADS = 16
+
+
+def ncpu_in_mask():
+    """The number of CPUs this process may actually run on."""
+    try:
+        # Linux-only, but respects CPU pinning (taskset, cgroups)
+        return len(os.sched_getaffinity(0))
+    except AttributeError:
+        return os.cpu_count() or 1
+
+
+# Default to multi-threaded decompression
+# User can override with their own blosc2.set_nthreads() call.
+# TODO: proper decompression kwargs
+blosc2.set_nthreads(max(1, min(ncpu_in_mask(), DEFAULT_BLOSC2_THREADS)))
+
 
 def set_nthreads(nthreads):
+    """Set the thread count (blosc1 only)"""
     blosc.set_nthreads(nthreads)
 
 

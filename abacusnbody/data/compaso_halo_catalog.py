@@ -39,14 +39,7 @@ except Exception as e:
 
 
 # Default to 4 decompression threads, or fewer if fewer cores are available
-DEFAULT_BLOSC_THREADS = 4
-# os.sched_getaffinity is Linux-only and respects CPU pinning (taskset, cgroups);
-# fall back to os.cpu_count() on platforms that lack it (macOS, Windows).
-try:
-    _ncpu = len(os.sched_getaffinity(0))
-except AttributeError:
-    _ncpu = os.cpu_count() or 1
-DEFAULT_BLOSC_THREADS = max(1, min(_ncpu, DEFAULT_BLOSC_THREADS))
+DEFAULT_BLOSC_THREADS = max(1, min(_asdf.ncpu_in_mask(), 4))
 
 _asdf.set_nthreads(DEFAULT_BLOSC_THREADS)
 
