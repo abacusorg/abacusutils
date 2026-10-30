@@ -854,7 +854,7 @@ def get_field(
             cic_serial(pos, field, Lbox, weights=w)
     else:
         raise ValueError(f'Unknown pasting method: {paste}')
-    normalize_field(field, inplace=True, tot_weight=len(pos), nthread=nthread)
+    normalize_field(field, inplace=True, nthread=nthread)
     return field
 
 
