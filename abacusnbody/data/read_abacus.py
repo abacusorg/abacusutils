@@ -28,7 +28,12 @@ from astropy.table import Table
 
 from .bitpacked import unpack_pids, unpack_rvint
 from .healstruct import LAYOUT as _HEALSTRUCT_LAYOUT, unpack_healstruct
-from .maplog import LAYOUT as _MAPLOG_LAYOUT, unpack_maplog
+from .maplog import (
+    LAYOUT as _MAPLOG_LAYOUT,
+    select_maplog,
+    timesteps_in_redshift_range,
+    unpack_maplog,
+)
 from .output_particle import LAYOUT as _OUTPUT_PARTICLE_LAYOUT, unpack_output_particle
 from .pack9 import unpack_pack9
 
@@ -52,7 +57,9 @@ _DEFAULT_LOAD = {
 # anything for MAPs, and a caller who wants them will ask (or pass load='all').
 
 
-def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwargs):
+def read_asdf(
+    fn, load=None, colname=None, dtype=np.float32, verbose=True, select=None, **kwargs
+):
     """
     Read an Abacus ASDF file.  The result will be returned in an Astropy table.
 
@@ -101,6 +108,19 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
     verbose: bool, optional
         Print informational messages. Default: True
+
+    select: dict or None, optional
+        Only unpack the rows matching these criteria (AND-ed together). The rows
+        are chosen before unpacking, so memory use and time scale with the number
+        of rows kept rather than the file size. Currently supported only for
+        ``maplogs``, with keys ``'timestep'`` (an int or list of ints),
+        ``'node_type'`` (a string or list of strings from ``'formation'``,
+        ``'merger'``, ``'lightcone'``, ``'timeslice'``) and ``'redshift'`` (a
+        ``(zmin, zmax)`` pair, inclusive). ``'redshift'`` keeps the timesteps whose
+        starting redshift, from the header's ``Step_to_Z``, is in range; it is
+        combined with ``'timestep'`` if both are given. A lightcone node can lie
+        slightly below its timestep's starting redshift. The selection keys need
+        not appear in ``load``. Row order is preserved. Default: all rows.
 
     Returns
     -------
@@ -176,6 +196,12 @@ def read_asdf(fn, load=None, colname=None, dtype=np.float32, verbose=True, **kwa
 
         handler = _HANDLERS[colname]
         handler_kwargs = {k: kwargs[k] for k in ('ppd',) if k in kwargs}
+        if select is not None:
+            if colname != 'maplogs':
+                raise ValueError(
+                    f"`select` is only supported for 'maplogs', not {colname!r}"
+                )
+            handler_kwargs['select'] = select
         cols, nread = handler(
             data, header, load, dtype, colname=colname, **handler_kwargs
         )
@@ -300,7 +326,7 @@ def _handle_healstruct(data, header, load, dtype, **_unused):
     return cols, len(data)
 
 
-def _handle_maplog(data, header, load, dtype, **_unused):
+def _handle_maplog(data, header, load, dtype, select=None, **_unused):
     # Files written before the multiplicity word was split (count in the low 24 bits,
     # rel_vel_healpix in the top byte) carry no MapLogLayout key at all. Those predate
     # the split, so an absent key is accepted; a present-but-different one is not.
@@ -311,8 +337,35 @@ def _handle_maplog(data, header, load, dtype, **_unused):
             f'layout this reader supports ({_MAPLOG_LAYOUT!r})'
         )
     fields = None if load == 'all' else load
-    cols = unpack_maplog(data, fields=fields, float_dtype=dtype)
-    return cols, len(data)
+    index = None
+    if select is not None:
+        select = dict(select)
+        redshift = select.pop('redshift', None)
+        unknown = set(select) - {'timestep', 'node_type'}
+        if unknown:
+            raise ValueError(
+                f'unknown select keys {sorted(unknown)}; '
+                'valid: [timestep, node_type, redshift]'
+            )
+        if redshift is not None:
+            if 'Step_to_Z' not in header:
+                raise ValueError(
+                    'select by redshift needs the Step_to_Z table, which this '
+                    'file header does not have'
+                )
+            try:
+                zmin, zmax = redshift
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f'redshift must be a (zmin, zmax) pair; got {redshift!r}'
+                ) from None
+            steps = timesteps_in_redshift_range(header['Step_to_Z'], zmin, zmax)
+            if select.get('timestep') is not None:
+                steps = np.intersect1d(steps, np.atleast_1d(select['timestep']))
+            select['timestep'] = steps
+        index = select_maplog(data, **select)
+    cols = unpack_maplog(data, fields=fields, float_dtype=dtype, index=index)
+    return cols, len(data) if index is None else len(index)
 
 
 _HANDLERS = {
